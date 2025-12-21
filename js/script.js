@@ -12,7 +12,7 @@ const app = firebase.initializeApp(firebaseConfig);
 const firestoreDB = firebase.firestore();
 
 const DB_NAME = 'LearnariaDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3; 
 let localDB;
 
 function openDB() {
@@ -41,6 +41,9 @@ function openDB() {
                 }
                 if (!db.objectStoreNames.contains('attendance')) {
                      db.createObjectStore('attendance', { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains('payments')) {
+                     db.createObjectStore('payments', { keyPath: 'id' });
                 }
                 if (!db.objectStoreNames.contains('schedules')) {
                      const store = db.createObjectStore('schedules', { keyPath: 'id' });
@@ -156,6 +159,17 @@ const translations = {
         addNewAssignmentButton: "إضافة واجب جديد",
         enterGradesLabel: "أدخل الدرجات:",
         saveGradesButton: "حفظ درجات الواجب",
+        tabPayments: "التحصيل",
+        paymentsTitle: "متابعة تحصيل المصروفات",
+        selectMonthLabel: "اختر الشهر:",
+        markPaymentsLabel: "تسجيل الدفع:",
+        savePaymentsButton: "حفظ بيانات التحصيل",
+        paymentMonthMissing: "الرجاء اختيار الشهر.",
+        paymentsSavedSuccess: "تم حفظ بيانات الدفع بنجاح!",
+        paymentsSavedError: "فشل حفظ البيانات.",
+        paidLabel: "تم الدفع",
+        notPaidLabel: "لم يدفع",
+        scanPaymentsQR: "مسح دفع المصروفات بـ QR",
         scheduleTitle: "إدارة جدول الحصص",
         addRecurringScheduleTitle: "إضافة جدول متكرر جديد",
         subjectLabel: "المادة:",
@@ -278,6 +292,17 @@ const translations = {
         addNewAssignmentButton: "Add New Assignment",
         enterGradesLabel: "Enter Grades:",
         saveGradesButton: "Save Assignment Grades",
+        tabPayments: "Payments",
+        paymentsTitle: "Fees Collection",
+        selectMonthLabel: "Select Month:",
+        markPaymentsLabel: "Mark Payments:",
+        savePaymentsButton: "Save Payments",
+        paymentMonthMissing: "Please select a month.",
+        paymentsSavedSuccess: "Payments saved successfully!",
+        paymentsSavedError: "Failed to save payments.",
+        paidLabel: "Paid",
+        notPaidLabel: "Not Paid",
+        scanPaymentsQR: "Scan Fees Payment with QR",
         scheduleTitle: "Class Schedule Management",
         addRecurringScheduleTitle: "Add New Recurring Schedule",
         subjectLabel: "Subject:",
@@ -372,91 +397,56 @@ const translations = {
 };
 
 // ======================= START: UTILITY FUNCTIONS =======================
-/**
- * Validates an Egyptian phone number.
- * @param {string} phone - The phone number to validate.
- * @returns {boolean} - True if the number is valid, false otherwise.
- */
 function isValidEgyptianPhoneNumber(phone) {
     if (!phone) return false;
-    // Matches 11 digits starting with 010, 011, 012, or 015.
     const regex = /^01[0125]\d{8}$/;
     return regex.test(phone.trim());
 }
 
-/**
- * Formats a raw phone number into the international format (+20...).
- * @param {string} phone - The raw phone number (e.g., "01001234567").
- * @returns {string|null} - The formatted number or null if input is invalid.
- */
 function formatPhoneNumber(phone) {
     const trimmedPhone = phone.trim();
     if (isValidEgyptianPhoneNumber(trimmedPhone)) {
-        // Remove the leading '0' and prepend '+20'
         return `+20${trimmedPhone.substring(1)}`;
     }
-    return null; // Return null if the format is incorrect
+    return null;
 }
 
-/**
- * Converts Arabic/Persian numerals in a string to Western Arabic numerals.
- * @param {string} str - The string to convert.
- * @returns {string} - The converted string.
- */
 function toEnglishNumerals(str) {
     const persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
     const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    let result = String(str); // Ensure it's a string
+    let result = String(str);
     for (let i = 0; i < 10; i++) {
         result = result.replace(new RegExp(persian[i], 'g'), i).replace(new RegExp(arabic[i], 'g'), i);
     }
     return result;
 }
 
-/**
- * Sets up an input field to only accept 11 digits and converts numerals to English.
- * @param {string} inputId - The ID of the input element.
- */
 function setupPhoneNumberInput(inputId) {
     const phoneInput = document.getElementById(inputId);
     if (phoneInput) {
-        // Set maxlength attribute directly on the element
         phoneInput.setAttribute('maxlength', '11');
 
         phoneInput.addEventListener('input', (e) => {
             let value = e.target.value;
-            // 1. Convert any Arabic/Persian numerals to English numerals.
             value = toEnglishNumerals(value);
-            // 2. Remove any non-digit characters.
             value = value.replace(/\D/g, '');
-            // 3. The maxlength attribute will handle the length limit, but this is a fallback.
             if (value.length > 11) {
                 value = value.substring(0, 11);
             }
-            // 4. Update the input field's value.
             e.target.value = value;
         });
     }
 }
 
-/**
- * Formats a 24-hour time string (HH:mm) to a 12-hour format (hh:mm AM/PM).
- * @param {string} timeString - The 24-hour time string.
- * @returns {string} - The formatted 12-hour time string.
- */
 function formatTime12Hour(timeString) {
-    if (!timeString || !timeString.includes(':')) return timeString; // Return original if invalid
+    if (!timeString || !timeString.includes(':')) return timeString;
     const [hourString, minute] = timeString.split(':');
     const hour = parseInt(hourString, 10);
     const period = hour >= 12 ? 'PM' : 'AM';
-    const convertedHour = hour % 12 || 12; // Converts '0' to '12'
+    const convertedHour = hour % 12 || 12;
     return `${String(convertedHour).padStart(2, '0')}:${minute} ${period}`;
 }
 
-/**
- * Creates and injects a custom 12-hour time picker into a container.
- * @param {string} containerId - The ID of the container div.
- */
 function createTimePicker(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -475,11 +465,6 @@ function createTimePicker(containerId) {
     `;
 }
 
-/**
- * Reads the selected time from a custom picker and converts it to 24-hour format.
- * @param {string} containerId - The ID of the container div.
- * @returns {string} - The time in HH:mm format, or an empty string if invalid.
- */
 function getTimeFromPicker(containerId) {
     const hourSelect = document.getElementById(`${containerId}-hour`);
     const minuteSelect = document.getElementById(`${containerId}-minute`);
@@ -494,7 +479,7 @@ function getTimeFromPicker(containerId) {
     if (period === 'PM' && hour < 12) {
         hour += 12;
     }
-    if (period === 'AM' && hour === 12) { // Midnight case
+    if (period === 'AM' && hour === 12) {
         hour = 0;
     }
 
@@ -677,6 +662,7 @@ function setLanguage(lang) {
             fetchRecurringSchedules();
             renderAttendanceInputs();
             renderGradesInputs();
+            renderPaymentInputs(); 
         })();
     }
 }
@@ -697,13 +683,11 @@ function loadInitialPreferences() {
     updateDarkModeIcons(isDarkMode);
     const lastTeacherId = localStorage.getItem('learnaria-teacherId');
     if(lastTeacherId) {
-        // --- START: FIX for phone number loading ---
         let displayPhone = lastTeacherId;
         if (displayPhone.startsWith('+20')) {
             displayPhone = '0' + displayPhone.substring(3);
         }
         document.getElementById('teacherPhoneInput').value = displayPhone;
-        // --- END: FIX ---
         setTeacher();
     }
 }
@@ -779,6 +763,12 @@ function setupAllEventListeners() {
     document.getElementById('scanAttendanceButton').addEventListener('click', () => startScanner('attendance'));
     document.getElementById('scanHomeworkButton').addEventListener('click', () => startScanner('homework'));
     document.getElementById('printIdButton').addEventListener('click', () => window.print());
+    
+    // Payments Listeners
+    document.getElementById('paymentMonthInput').addEventListener('change', renderPaymentInputs);
+    document.getElementById('savePaymentsButton').addEventListener('click', saveMonthlyPayments);
+    document.getElementById('scanPaymentsButton').addEventListener('click', () => startScanner('payments'));
+
      const studentsListContainer = document.getElementById('studentsListDisplay');
     if (studentsListContainer) {
         studentsListContainer.addEventListener('click', function(event) {
@@ -827,10 +817,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     setupAllEventListeners();
 
-    // --- START: Create Time Pickers on Load ---
     createTimePicker('recurringTimeContainer');
     createTimePicker('exceptionNewTimeContainer');
-    // --- END: Create Time Pickers on Load ---
 
     initializeTabs();
     window.addEventListener('online', updateOnlineStatus);
@@ -873,7 +861,6 @@ function addEnterKeyListeners() {
     listenForEnter('newGroupName', addNewGroup);
     listenForEnter('newParentPhoneNumber', addNewStudent);
     listenForEnter('newAssignmentDate', addNewAssignment);
-    // Removed listener for exceptionNewTime as it's now a set of dropdowns
 }
 
 async function setTeacher() {
@@ -1025,8 +1012,14 @@ async function handleGroupSelection() {
         fetchAssignments();
         fetchRecurringSchedules();
         document.getElementById('attendanceDateInput').value = new Date().toISOString().split('T')[0];
+        
+        // Initialize Payment Month
+        document.getElementById('paymentMonthInput').value = new Date().toISOString().slice(0, 7);
+        
         renderAttendanceInputs();
         renderGradesInputs();
+        renderPaymentInputs();
+        
         document.querySelector('.tab-button[data-tab="students"]').click();
     } else {
         tabs.forEach(tab => {
@@ -1147,6 +1140,7 @@ async function addNewStudent() {
         await fetchStudents();
         renderAttendanceInputs();
         renderGradesInputs();
+        renderPaymentInputs();
 
     } catch (error) {
         console.error("Error adding student:", error);
@@ -1175,6 +1169,7 @@ async function deleteStudent(studentId) {
         await fetchStudents();
         renderAttendanceInputs();
         renderGradesInputs();
+        renderPaymentInputs();
 
     } catch (error) {
         console.error("Error deleting student:", error);
@@ -1670,6 +1665,19 @@ function processScannedData(dataString) {
                         checkboxElement.checked = true;
                         checkboxElement.closest('.student-row').style.backgroundColor = '#d1fecb';
                     }
+                } else if (currentScannerMode === 'payments') {
+                     const checkboxElement = document.querySelector(`#paymentsStudentsContainer .payment-checkbox[data-student-id="${data.studentId}"]`);
+                     if (checkboxElement) {
+                         checkboxElement.checked = true;
+                         // Manually trigger the visual update
+                         const row = checkboxElement.closest('.student-row');
+                         const statusText = row.querySelector('.payment-status-text');
+                         if(statusText) {
+                             statusText.innerText = translations[currentLang].paidLabel;
+                             statusText.className = "mx-2 text-sm font-semibold text-green-600 payment-status-text";
+                         }
+                         row.style.backgroundColor = '#d1fecb';
+                     }
                 }
             } else {
                 throw new Error("Student not found in this group.");
@@ -1684,5 +1692,117 @@ function processScannedData(dataString) {
         setTimeout(() => {
             overlay.classList.remove('error');
         }, 1500);
+    }
+}
+
+// ======================= NEW PAYMENT FUNCTIONS =======================
+
+async function renderPaymentInputs() {
+    try {
+        const month = document.getElementById('paymentMonthInput').value;
+        const container = document.getElementById('paymentsStudentsContainer');
+        container.innerHTML = ''; 
+
+        if (!month) {
+            container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].paymentMonthMissing}</p>`;
+            return;
+        }
+        if (!allStudents || allStudents.length === 0) {
+            container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].noStudentsAvailable}</p>`;
+            return;
+        }
+
+        const paymentId = `${SELECTED_GROUP_ID}_${month}`;
+        
+        const doc = await getFromDB('payments', paymentId);
+        let existingPayments = {};
+        if (doc && doc.records) {
+            doc.records.forEach(record => {
+                existingPayments[record.studentId] = record.paid;
+            });
+        }
+
+        const paidLabel = translations[currentLang].paidLabel;
+
+        allStudents.forEach(student => {
+            const isPaid = existingPayments[student.id] === true;
+            
+            const row = document.createElement('div');
+            row.className = 'student-row';
+            
+            if(isPaid) row.style.backgroundColor = '#d1fecb';
+
+            row.innerHTML = `
+                <span class="student-name">${student.name}</span>
+                <label class="flex items-center cursor-pointer">
+                    <span class="mx-2 text-sm font-semibold ${isPaid ? 'text-green-600' : 'text-gray-500'} payment-status-text">
+                        ${isPaid ? paidLabel : ''}
+                    </span>
+                    <input type="checkbox" class="payment-checkbox w-5 h-5 accent-green-600" 
+                           data-student-id="${student.id}" 
+                           ${isPaid ? 'checked' : ''}>
+                </label>
+            `;
+            
+            const checkbox = row.querySelector('.payment-checkbox');
+            checkbox.addEventListener('change', (e) => {
+                const statusText = row.querySelector('.payment-status-text');
+                if(e.target.checked) {
+                    statusText.innerText = translations[currentLang].paidLabel;
+                    statusText.className = "mx-2 text-sm font-semibold text-green-600 payment-status-text";
+                    row.style.backgroundColor = '#d1fecb';
+                } else {
+                    statusText.innerText = "";
+                    row.style.backgroundColor = 'transparent';
+                }
+            });
+
+            container.appendChild(row);
+        });
+    } catch (error) {
+        console.error("Error rendering payments:", error);
+    }
+}
+
+async function saveMonthlyPayments() {
+    try {
+        if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
+        
+        const month = document.getElementById('paymentMonthInput').value;
+        if (!month) {
+            showMessageBox('paymentMonthMissing');
+            return;
+        }
+
+        const records = [];
+        document.querySelectorAll('#paymentsStudentsContainer .payment-checkbox').forEach(checkbox => {
+            records.push({ 
+                studentId: checkbox.dataset.studentId, 
+                paid: checkbox.checked 
+            });
+        });
+
+        const paymentId = `${SELECTED_GROUP_ID}_${month}`;
+        const paymentData = {
+            id: paymentId,
+            month: month,
+            records: records
+        };
+
+        await putToDB('payments', paymentData);
+        
+        showMessageBox('paymentsSavedSuccess');
+
+        await addToSyncQueue({
+            type: 'set',
+            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`,
+            data: { month: month, records: records }
+        });
+        
+        processSyncQueue();
+
+    } catch (error) {
+        console.error("Error saving payments:", error);
+        showMessageBox('paymentsSavedError');
     }
 }

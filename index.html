@@ -60,6 +60,7 @@
                 <button class="tab-button" data-tab="students" data-key="tabStudents" disabled>الطلاب</button>
                 <button class="tab-button" data-tab="attendance" data-key="tabAttendance" disabled>الحضور</button>
                 <button class="tab-button" data-tab="grades" data-key="tabGrades" disabled>الدرجات</button>
+                <button class="tab-button" data-tab="payments" data-key="tabPayments" disabled>التحصيل</button>
                 <button class="tab-button" data-tab="schedule" data-key="tabSchedule" disabled>الجدول</button>
             </div>
 
@@ -162,6 +163,26 @@
                         <h4 class="text-lg font-bold mt-6 mb-2 text-gray-800" data-key="enterGradesLabel">أدخل الدرجات:</h4>
                          <div id="gradesStudentsContainer" class="p-1 bg-gray-50 rounded-lg border divide-y divide-gray-200"></div>
                         <button id="saveAssignmentGradesButton" class="btn-primary-custom mt-4" data-key="saveGradesButton">حفظ درجات الواجب</button>
+                    </section>
+                </div>
+
+                <div id="tab-payments" class="tab-content hidden">
+                    <section class="card-container">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800" data-key="paymentsTitle">متابعة تحصيل المصروفات</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="paymentMonthInput" class="block text-sm font-semibold text-grey-800 mb-1" data-key="selectMonthLabel">اختر الشهر:</label>
+                                <input type="month" id="paymentMonthInput" class="input-field">
+                            </div>
+                            <div class="flex items-end">
+                                <button id="scanPaymentsButton" class="btn-primary-custom w-full" data-key="scanPaymentsQR">مسح دفع المصروفات بـ QR</button>
+                            </div>
+                        </div>
+
+                        <h4 class="text-lg font-bold mt-6 mb-2 text-gray-800" data-key="markPaymentsLabel">تسجيل الدفع:</h4>
+                        <div id="paymentsStudentsContainer" class="p-1 bg-gray-50 rounded-lg border divide-y divide-gray-200"></div>
+                        <button id="savePaymentsButton" class="btn-primary-custom mt-4" data-key="savePaymentsButton">حفظ بيانات التحصيل</button>
                     </section>
                 </div>
                 
