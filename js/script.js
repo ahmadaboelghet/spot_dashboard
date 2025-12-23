@@ -129,7 +129,7 @@ let isAddingStudent = false;
 
 const translations = {
     ar: {
-        pageTitle: "ليرناريا - لوحة تحكم المعلم",
+        pageTitle: "Spot - لوحة تحكم المعلم",
         teacherDashboardTitle: "لوحة تحكم المعلم",
         teacherLoginTitle: "1. تسجيل دخول المعلم",
         teacherLoginPrompt: "الرجاء إدخال رقم هاتفك لتحميل بياناتك.",
@@ -262,7 +262,7 @@ const translations = {
         logoutButton: "تسجيل الخروج"
     },
     en: {
-        pageTitle: "Learnaria - Teacher Dashboard",
+        pageTitle: "Spot - Teacher Dashboard",
         teacherDashboardTitle: "Teacher Dashboard",
         teacherLoginTitle: "1. Teacher Login",
         teacherLoginPrompt: "Please enter your phone number to load your data.",
