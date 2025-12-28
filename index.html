@@ -403,11 +403,13 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="js/script.js"></script>
-    <style>
-        @keyframes scan {
-            0% { transform: translateY(-120px); opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { transform: translateY(120px); opacity: 0.5; }
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => console.log('ServiceWorker registration successful with scope: ', registration.scope))
+                    .catch(err => console.log('ServiceWorker registration failed: ', err));
+            });
         }
         .animate-scan {
             animation: scan 2s infinite linear;
