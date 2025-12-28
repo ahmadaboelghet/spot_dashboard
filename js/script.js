@@ -12,7 +12,7 @@ const app = firebase.initializeApp(firebaseConfig);
 const firestoreDB = firebase.firestore();
 
 const DB_NAME = 'LearnariaDB';
-const DB_VERSION = 3; 
+const DB_VERSION = 6; 
 let localDB;
 
 function openDB() {
