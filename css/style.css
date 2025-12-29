@@ -1,9 +1,8 @@
-/* css/style.css - Corrected Brand Color */
+/* css/style.css - Corrected Brand Color & Dark Mode Fixes */
 
 :root {
-    /* تم تعديل درجة الأصفر لتطابق اللوجو الأصلي */
     --primary: #F2CE5A; 
-    --primary-hover: #e6c045; /* درجة أغمق قليلاً للـ Hover */
+    --primary-hover: #e6c045;
     
     --secondary: #121212;
     --dark-bg: #121212;
@@ -76,7 +75,7 @@
 .input-field:focus {
     background-color: #ffffff;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(242, 206, 90, 0.2); /* Updated Shadow Color */
+    box-shadow: 0 0 0 4px rgba(242, 206, 90, 0.2);
 }
 
 .dark-mode .input-field:focus {
@@ -168,7 +167,7 @@
 .dark-mode .tab-button { color: #d1d5db; }
 
 .tab-button:hover:not(:disabled) {
-    background-color: #fff9c4; /* Light Yellow Tint */
+    background-color: #fff9c4;
     color: #a16207;
 }
 .dark-mode .tab-button:hover:not(:disabled) {
@@ -378,4 +377,64 @@ html[dir="rtl"] .record-item:hover {
         border: 2px solid black !important;
         -webkit-print-color-adjust: exact;
     }
+}
+
+/* --- إصلاحات هامة للدارك مود والـ Placeholders --- */
+
+/* 1. إظهار الـ Placeholder بوضوح */
+.dark-mode ::placeholder {
+    color: #a1a1aa !important;
+    opacity: 1;
+}
+
+.dark-mode .input-field::placeholder {
+    color: #a1a1aa !important;
+}
+
+/* 2. تحسين تباين حقول الإدخال */
+.dark-mode .input-field {
+    background-color: #1f1f1f !important;
+    border: 1px solid #3f3f46 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .input-field:focus {
+    border-color: var(--primary) !important;
+    background-color: #262626 !important;
+}
+
+/* 3. إصلاح قوائم الحضور والغياب */
+.dark-mode .student-row .attendance-status-select,
+.dark-mode .student-row .grade-input,
+.dark-mode select {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+    border: 1px solid #52525b !important;
+}
+
+.dark-mode select option {
+    background-color: #1f1f1f;
+    color: #ffffff;
+}
+
+/* 4. جعل الـ Checkboxes تلمع باللون الأصفر */
+.dark-mode input[type="checkbox"] {
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+/* 5. تحسين ظهور صفوف الطلاب */
+.dark-mode .student-row {
+    background-color: #18181b !important;
+    border-bottom: 1px solid #27272a !important;
+}
+
+.dark-mode .student-row:hover {
+    background-color: #27272a !important;
+}
+
+/* 6. التأكد من لون النصوص */
+.dark-mode .student-name {
+    color: #f4f4f5 !important;
+    font-weight: 700;
 }

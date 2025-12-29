@@ -23,7 +23,6 @@
             theme: {
                 extend: {
                     colors: {
-                        // هنا التعديل: استعادة درجة الأصفر الأصلية
                         brand: '#F2CE5A', 
                         brandHover: '#e6c045',
                         darkBg: '#121212',
@@ -177,9 +176,9 @@
                             </div>
                             
                             <div class="grid grid-cols-12 gap-2 text-xs font-bold text-gray-500 uppercase mb-2 px-2">
-                                <div class="col-span-6">الطالب</div>
-                                <div class="col-span-3 text-center">الحضور</div>
-                                <div class="col-span-3 text-center">الواجب</div>
+                                <div id="headerStudent" class="col-span-6 transition-all duration-300">الطالب</div>
+                                <div id="headerAttendance" class="col-span-3 text-center transition-all duration-300">الحضور</div>
+                                <div id="headerHomework" class="col-span-3 text-center transition-all duration-300">الواجب</div>
                             </div>
                             
                             <div id="dailyStudentsList" class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar p-1"></div>
@@ -403,14 +402,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="js/script.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(registration => console.log('ServiceWorker registration successful with scope: ', registration.scope))
-                    .catch(err => console.log('ServiceWorker registration failed: ', err));
-            });
-        }
+    <style>
         .animate-scan {
             animation: scan 2s infinite linear;
         }

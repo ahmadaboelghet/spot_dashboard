@@ -1,6 +1,6 @@
 /**
  * SPOT TEACHER - FINAL INTEGRATED VERSION
- * Features: Smart Scanner + Full Recurring Schedule (Days Selection) + Exceptions + Offline Sync
+ * Features: Smart Scanner + Full Recurring Schedule + Logic UI Fixes + Dark Mode
  */
 
 // ==========================================
@@ -135,7 +135,7 @@ const translations = {
         tabSchedule: "الجدول",
         dailyClassTitle: "إدارة الحصة",
         selectDateLabel: "تاريخ اليوم",
-        homeworkToggleLabel: "واجب اليوم؟",
+        homeworkToggleLabel: "يوجد واجب؟",
         startSmartScan: "بدء الرصد الذكي (QR)",
         liveLogTitle: "سجل الحصة المباشر",
         saveAllButton: "حفظ الكل",
@@ -391,9 +391,12 @@ function setupListeners() {
     });
     document.getElementById('addNewGroupButton').addEventListener('click', () => switchTab('profile'));
 
-    // Daily
+    // Daily - UPDATED LISTENER
     document.getElementById('startSmartScanBtn').addEventListener('click', () => startScanner('daily'));
-    document.getElementById('homeworkToggle').addEventListener('change', (e) => hasHomeworkToday = e.target.checked);
+    document.getElementById('homeworkToggle').addEventListener('change', (e) => {
+        hasHomeworkToday = e.target.checked;
+        renderDailyList(); // Re-render table on toggle
+    });
     document.getElementById('dailyDateInput').addEventListener('change', renderDailyList);
     document.getElementById('saveDailyBtn').addEventListener('click', saveDailyData);
     document.getElementById('hwYesBtn').addEventListener('click', () => resolveHomework(true));
@@ -403,7 +406,7 @@ function setupListeners() {
     document.getElementById('addNewStudentButton').addEventListener('click', addNewStudent);
     document.getElementById('studentSearchInput').addEventListener('input', (e) => renderStudents(e.target.value));
 
-    // SCHEDULE BUTTONS (Linked to new HTML logic)
+    // SCHEDULE BUTTONS
     document.getElementById('addRecurringScheduleButton').addEventListener('click', saveRecurringSchedule);
     document.getElementById('updateSingleClassButton').addEventListener('click', updateSingleClass);
     document.getElementById('cancelSingleClassButton').addEventListener('click', cancelSingleClass);
@@ -425,7 +428,7 @@ function setupListeners() {
 }
 
 // ==========================================
-// 6. SCHEDULE LOGIC (THE MISSING PART)
+// 6. SCHEDULE LOGIC
 // ==========================================
 function createTimePicker(containerId) {
     const container = document.getElementById(containerId);
@@ -701,46 +704,80 @@ async function renderDailyList() {
     const date = document.getElementById('dailyDateInput').value;
     const list = document.getElementById('dailyStudentsList');
     list.innerHTML = '';
+
+    // Handle Header Columns Visibility
+    const hStudent = document.getElementById('headerStudent');
+    const hAtt = document.getElementById('headerAttendance');
+    const hHw = document.getElementById('headerHomework');
+
+    if (hasHomeworkToday) {
+        hStudent.className = "col-span-6 transition-all duration-300";
+        hAtt.className = "col-span-3 text-center transition-all duration-300";
+        hHw.classList.remove('hidden');
+    } else {
+        hStudent.className = "col-span-8 transition-all duration-300";
+        hAtt.className = "col-span-4 text-center transition-all duration-300";
+        hHw.classList.add('hidden');
+    }
+
     if(!date || !allStudents.length) {
         list.innerHTML = `<p class="text-center text-gray-500 py-4">${translations[currentLang].noStudentsInGroup}</p>`;
         return;
     }
+
     const attId = `${SELECTED_GROUP_ID}_${date}`;
     const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
     const [attDoc, hwDoc] = await Promise.all([getFromDB('attendance', attId), getFromDB('assignments', hwId)]);
 
     const attMap = {};
     if(attDoc?.records) attDoc.records.forEach(r => attMap[r.studentId] = r.status);
+    
     const hwMap = {};
-    let isHwEnabled = false;
+    // Load HW state from saved data if available
     if(hwDoc?.scores) {
-        isHwEnabled = true;
         Object.entries(hwDoc.scores).forEach(([sid, val]) => hwMap[sid] = val.submitted);
+        hasHomeworkToday = true;
+        document.getElementById('homeworkToggle').checked = true;
+        // Re-apply header visibility in case it changed from saved data
+        hStudent.className = "col-span-6 transition-all duration-300";
+        hAtt.className = "col-span-3 text-center transition-all duration-300";
+        hHw.classList.remove('hidden');
     }
-    document.getElementById('homeworkToggle').checked = isHwEnabled;
-    hasHomeworkToday = isHwEnabled;
 
     let presentCount = 0;
     allStudents.forEach(s => {
         const status = attMap[s.id] || 'absent';
         if(status !== 'absent') presentCount++;
         const hwStatus = hwMap[s.id];
+        
+        // Determine column spans for this row
+        const studentColSpan = hasHomeworkToday ? 'col-span-6' : 'col-span-8';
+        const attColSpan = hasHomeworkToday ? 'col-span-3' : 'col-span-4';
+
         const row = document.createElement('div');
         row.dataset.sid = s.id;
         row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors ${status === 'present' ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-white dark:bg-black border-transparent hover:bg-gray-50'}`;
-        row.innerHTML = `
-            <div class="col-span-6 font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200">${s.name}</div>
-            <div class="col-span-3 flex justify-center">
+        
+        let html = `
+            <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300">${s.name}</div>
+            <div class="${attColSpan} flex justify-center transition-all duration-300">
                 <select class="att-select bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-xs py-1 px-1 outline-none">
                     <option value="present" ${status==='present'?'selected':''}>${translations[currentLang].present}</option>
                     <option value="absent" ${status==='absent'?'selected':''}>${translations[currentLang].absent}</option>
                     <option value="late" ${status==='late'?'selected':''}>${translations[currentLang].late}</option>
                 </select>
             </div>
-            <div class="col-span-3 flex justify-center">
-                <input type="checkbox" class="hw-check w-5 h-5 accent-brand rounded cursor-pointer" ${!hasHomeworkToday ? 'disabled opacity-30' : ''} ${hwStatus ? 'checked' : ''}>
-            </div>
         `;
+
+        if(hasHomeworkToday) {
+            html += `
+            <div class="col-span-3 flex justify-center fade-in-up">
+                <input type="checkbox" class="hw-check w-5 h-5 accent-brand rounded cursor-pointer" ${hwStatus ? 'checked' : ''}>
+            </div>`;
+        }
+
+        row.innerHTML = html;
+        
         row.querySelector('.att-select').addEventListener('change', (e) => {
             if(e.target.value === 'present') row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
             else { row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20'); row.classList.add('bg-white', 'dark:bg-black', 'border-transparent'); }
