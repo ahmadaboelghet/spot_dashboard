@@ -13,6 +13,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     
     <link rel="stylesheet" href="css/style.css">
@@ -249,13 +250,23 @@
 
                 <div id="tab-payments" class="tab-content hidden">
                     <section class="card-container glass-panel p-6">
-                        <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                            <div class="section-header mb-0"><i class="ri-wallet-3-line text-green-500"></i> <h3 data-key="paymentsTitle">التحصيل</h3></div>
-                            <div class="flex gap-2 w-full md:w-auto">
-                                <input type="month" id="paymentMonthInput" class="input-field w-full md:w-auto">
-                                <button id="scanPaymentsBtn" class="btn-icon bg-green-600 hover:bg-green-700 text-white"><i class="ri-scan-2-line text-xl"></i></button>
-                            </div>
-                        </div>
+                       <div class="bg-white dark:bg-darkSurface p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 mb-4 sticky top-20 z-10">
+    <div class="flex flex-col md:flex-row gap-4 items-end">
+        <div class="flex-1 w-full">
+            <label class="label-custom" data-key="selectMonthLabel">شهر التحصيل</label>
+            <input type="month" id="paymentMonthInput" class="input-field w-full">
+        </div>
+        
+        <div class="w-full md:w-32">
+            <label class="label-custom">قيمة المصاريف</label>
+            <input type="number" id="defaultAmountInput" class="input-field text-center font-bold text-green-600" placeholder="مثلاً 150" value="150">
+        </div>
+
+        <button id="scanPaymentsBtn" class="bg-gray-900 dark:bg-white text-white dark:text-black font-bold p-3 rounded-xl shadow-lg">
+            <i class="ri-qr-scan-2-line text-xl"></i>
+        </button>
+    </div>
+</div>
                         <div id="paymentsList" class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar"></div>
                         <button id="savePaymentsBtn" class="btn-primary-custom bg-green-600 hover:bg-green-700 text-white w-full mt-6" data-key="savePaymentsButton">حفظ التحصيل</button>
                     </section>
@@ -395,6 +406,33 @@
             <div class="bg-gray-50 p-4 flex gap-3 border-t border-gray-100">
                 <button id="printIdButton" class="flex-1 bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-black transition"><i class="ri-printer-line"></i> طباعة</button>
                 <button id="closeQrModal" class="flex-1 bg-white border border-gray-200 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-50 transition">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageModal" class="hidden fixed inset-0 z-[2200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="bg-white dark:bg-darkSurface w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-100">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center">
+                        <i class="ri-chat-1-line text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">رسالة لولي الأمر</h3>
+                        <p id="msgStudentName" class="text-xs text-gray-500">الطالب: ...</p>
+                    </div>
+                </div>
+                
+                <textarea id="customMessageInput" rows="4" 
+                    class="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all resize-none"
+                    placeholder="اكتب ملاحظاتك هنا (مثلاً: الطالب تحسن مستواه، يرجى متابعة الواجب...)"></textarea>
+            </div>
+            
+            <div class="bg-gray-50 dark:bg-black/20 p-4 flex gap-3 border-t border-gray-100 dark:border-gray-800">
+                <button id="confirmSendMsgBtn" class="flex-1 btn-primary-custom flex items-center justify-center gap-2">
+                    <span>إرسال</span> <i class="ri-send-plane-fill"></i>
+                </button>
+                <button id="closeMsgModal" class="px-6 py-2 rounded-xl font-bold text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 transition">إلغاء</button>
             </div>
         </div>
     </div>

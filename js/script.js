@@ -1,6 +1,6 @@
 /**
  * SPOT TEACHER - FINAL INTEGRATED VERSION
- * Features: Smart Scanner + Full Recurring Schedule + Logic UI Fixes + Dark Mode
+ * Features: Smart Scanner + Full Recurring Schedule + Logic UI Fixes + Dark Mode + Camera Mirror Fix
  */
 
 // ==========================================
@@ -121,6 +121,9 @@ let animationFrameId;
 let hasHomeworkToday = false;
 let currentPendingStudentId = null; 
 
+// Messaging
+let currentMessageStudentId = null;
+
 const translations = {
     ar: {
         pageTitle: "Spot - المعلم الذكي",
@@ -186,7 +189,8 @@ const translations = {
         paymentMonthMissing: "اختر الشهر أولاً",
         homeworkQuestion: "هل سلم الواجب؟",
         yes: "نعم",
-        no: "لا"
+        no: "لا",
+        noStudentsInGroup: "لا يوجد طلاب في هذه المجموعة."
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -248,7 +252,8 @@ const translations = {
         paymentMonthMissing: "Select Month",
         homeworkQuestion: "Submitted HW?",
         yes: "Yes",
-        no: "No"
+        no: "No",
+        noStudentsInGroup: "No students in this group."
     }
 };
 
@@ -375,7 +380,7 @@ function setupListeners() {
         btn.addEventListener('click', (e) => {
             const tab = e.currentTarget.dataset.tab;
             if(!SELECTED_GROUP_ID && tab !== 'profile') { 
-                showToast(translations[currentLang].selectGroupLabel, 'error'); 
+                showToast(translations[currentLang].selectGroupLabel || "اختر مجموعة أولاً", 'error'); 
                 return; 
             }
             switchTab(tab);
@@ -391,11 +396,11 @@ function setupListeners() {
     });
     document.getElementById('addNewGroupButton').addEventListener('click', () => switchTab('profile'));
 
-    // Daily - UPDATED LISTENER
+    // Daily
     document.getElementById('startSmartScanBtn').addEventListener('click', () => startScanner('daily'));
     document.getElementById('homeworkToggle').addEventListener('change', (e) => {
         hasHomeworkToday = e.target.checked;
-        renderDailyList(); // Re-render table on toggle
+        renderDailyList(); 
     });
     document.getElementById('dailyDateInput').addEventListener('change', renderDailyList);
     document.getElementById('saveDailyBtn').addEventListener('click', saveDailyData);
@@ -425,6 +430,12 @@ function setupListeners() {
     document.getElementById('printIdButton').addEventListener('click', () => window.print());
     document.getElementById('darkModeToggleButton').addEventListener('click', toggleDarkMode);
     document.getElementById('languageToggleButton').addEventListener('click', toggleLang);
+
+    // Message Modal Listeners (Added from previous fix)
+    document.getElementById('closeMsgModal').addEventListener('click', () => {
+        document.getElementById('messageModal').classList.add('hidden');
+    });
+    document.getElementById('confirmSendMsgBtn').addEventListener('click', sendCustomMessageAction);
 }
 
 // ==========================================
@@ -640,7 +651,7 @@ async function loadGroups() {
         } catch(e){}
     }
     const sel = document.getElementById('groupSelect');
-    sel.innerHTML = `<option value="" disabled selected>${translations[currentLang].selectGroupLabel}</option>`;
+    sel.innerHTML = `<option value="" disabled selected>${translations[currentLang].selectGroupLabel || "اختر مجموعة"}</option>`;
     groups.forEach(g => {
         const opt = document.createElement('option');
         opt.value = g.id;
@@ -698,7 +709,7 @@ function switchTab(tabId) {
 }
 
 // ==========================================
-// 8. DAILY & SCANNER
+// 8. DAILY & SCANNER (WITH MIRROR FIX)
 // ==========================================
 async function renderDailyList() {
     const date = document.getElementById('dailyDateInput').value;
@@ -733,12 +744,10 @@ async function renderDailyList() {
     if(attDoc?.records) attDoc.records.forEach(r => attMap[r.studentId] = r.status);
     
     const hwMap = {};
-    // Load HW state from saved data if available
     if(hwDoc?.scores) {
         Object.entries(hwDoc.scores).forEach(([sid, val]) => hwMap[sid] = val.submitted);
         hasHomeworkToday = true;
         document.getElementById('homeworkToggle').checked = true;
-        // Re-apply header visibility in case it changed from saved data
         hStudent.className = "col-span-6 transition-all duration-300";
         hAtt.className = "col-span-3 text-center transition-all duration-300";
         hHw.classList.remove('hidden');
@@ -750,7 +759,6 @@ async function renderDailyList() {
         if(status !== 'absent') presentCount++;
         const hwStatus = hwMap[s.id];
         
-        // Determine column spans for this row
         const studentColSpan = hasHomeworkToday ? 'col-span-6' : 'col-span-8';
         const attColSpan = hasHomeworkToday ? 'col-span-3' : 'col-span-4';
 
@@ -815,6 +823,20 @@ async function startScanner(mode) {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         videoElement.srcObject = stream;
+        
+        // ================== FIXED MIRROR ISSUE ==================
+        // If the camera is Front-facing (User), flip it via CSS
+        const videoTrack = stream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
+        
+        // Apply transform if 'user' (Front Camera)
+        if (settings.facingMode === 'user') {
+            videoElement.style.transform = "scaleX(-1)"; // Flip Horizontally
+        } else {
+            videoElement.style.transform = ""; // Reset
+        }
+        // ========================================================
+        
         await videoElement.play();
         requestAnimationFrame(tickScanner);
     } catch (e) { alert("Camera Error"); stopScanner(); }
@@ -824,6 +846,8 @@ function stopScanner() {
     isScannerPaused = true;
     if(videoElement && videoElement.srcObject) videoElement.srcObject.getTracks().forEach(t => t.stop());
     document.getElementById('scannerModal').classList.add('hidden');
+    // Clean up transform just in case
+    if(videoElement) videoElement.style.transform = "";
     if(animationFrameId) cancelAnimationFrame(animationFrameId);
 }
 
@@ -854,13 +878,14 @@ function handleScan(dataStr) {
         
         const overlay = document.getElementById('scannerOverlay');
         const feedback = document.getElementById('scannedStudentName');
-        feedback.innerText = student.name;
-        feedback.classList.remove('opacity-0', 'translate-y-4');
-        overlay.classList.add('border-green-500');
+        document.getElementById('feedbackNameText').innerText = student.name;
+        
+        feedback.classList.remove('opacity-0', 'translate-y-10', 'scale-90');
+        overlay.classList.add('success');
 
         setTimeout(() => {
-            feedback.classList.add('opacity-0', 'translate-y-4');
-            overlay.classList.remove('border-green-500');
+            feedback.classList.add('opacity-0', 'translate-y-10', 'scale-90');
+            overlay.classList.remove('success');
         }, 1500);
 
         if(currentScannerMode === 'daily') processDailyScan(student);
@@ -904,23 +929,41 @@ function resolveHomework(isSubmitted) {
 
 function processPaymentScan(student) {
     const row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
+    const defaultAmountInput = document.getElementById('defaultAmountInput');
+    
     if(row) {
-        const chk = row.querySelector('input[type="checkbox"]');
-        if(!chk.checked) {
-            chk.checked = true;
-            row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+        const checkbox = row.querySelector('.payment-check');
+        const input = row.querySelector('.payment-input');
+        
+        if(!checkbox.checked) {
+            checkbox.checked = true;
+            // حط المبلغ الموحد أوتوماتيك
+            input.value = defaultAmountInput.value || 0;
+            
+            // تحديث الشكل
+            checkbox.dispatchEvent(new Event('change')); 
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // وميض عشان المدرس ياخد باله
+            row.classList.add('ring-4', 'ring-green-300');
+            setTimeout(() => row.classList.remove('ring-4', 'ring-green-300'), 1000);
         }
     }
 }
 
 // ==========================================
-// 9. OTHER TABS (Students, Payments, Exams)
+// 9. OTHER TABS (Students, Payments, Exams) & MESSAGING (Merged)
 // ==========================================
 function renderStudents(filter = "") {
     const container = document.getElementById('studentsListDisplay');
     container.innerHTML = '';
     const filtered = allStudents.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
-    if(filtered.length === 0) { container.innerHTML = `<p class="text-center text-gray-500">${translations[currentLang].noStudentsInGroup}</p>`; return; }
+    
+    if(filtered.length === 0) { 
+        container.innerHTML = `<p class="text-center text-gray-500">${translations[currentLang].noStudentsInGroup}</p>`; 
+        return; 
+    }
+
     filtered.forEach(s => {
         const div = document.createElement('div');
         div.className = "record-item";
@@ -930,14 +973,63 @@ function renderStudents(filter = "") {
                 <p class="text-xs text-gray-500">${s.parentPhoneNumber || ''}</p>
             </div>
             <div class="flex gap-2">
-                <button class="btn-icon w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 qr-btn" data-sid="${s.id}"><i class="ri-qr-code-line"></i></button>
-                <button class="btn-icon w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/20 del-btn" data-sid="${s.id}"><i class="ri-delete-bin-line"></i></button>
+                <button class="btn-icon w-10 h-10 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 msg-btn" data-sid="${s.id}" title="إرسال رسالة">
+                    <i class="ri-chat-1-line"></i>
+                </button>
+                
+                <button class="btn-icon w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 qr-btn" data-sid="${s.id}">
+                    <i class="ri-qr-code-line"></i>
+                </button>
+                
+                <button class="btn-icon w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/20 del-btn" data-sid="${s.id}">
+                    <i class="ri-delete-bin-line"></i>
+                </button>
             </div>
         `;
+        
+        div.querySelector('.msg-btn').addEventListener('click', () => openMessageModal(s));
         div.querySelector('.qr-btn').addEventListener('click', () => showStudentQR(s));
         div.querySelector('.del-btn').addEventListener('click', () => deleteStudent(s.id));
+        
         container.appendChild(div);
     });
+}
+
+// Messaging Logic
+function openMessageModal(student) {
+    currentMessageStudentId = student.id;
+    document.getElementById('msgStudentName').innerText = `ولي أمر الطالب: ${student.name}`;
+    document.getElementById('customMessageInput').value = '';
+    document.getElementById('messageModal').classList.remove('hidden');
+}
+
+async function sendCustomMessageAction() {
+    const msg = document.getElementById('customMessageInput').value.trim();
+    if(!msg) return showToast("الرجاء كتابة رسالة", "error");
+    
+    const btn = document.getElementById('confirmSendMsgBtn');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> جاري الإرسال...`;
+    btn.disabled = true;
+
+    try {
+        const sendFunction = firebase.functions().httpsCallable('sendCustomMessage');
+        await sendFunction({
+            teacherId: TEACHER_ID,
+            groupId: SELECTED_GROUP_ID,
+            studentId: currentMessageStudentId,
+            messageBody: msg
+        });
+        
+        showToast("تم إرسال الرسالة بنجاح");
+        document.getElementById('messageModal').classList.add('hidden');
+    } catch (error) {
+        console.error(error);
+        showToast("فشل الإرسال. تأكد من الإنترنت", "error");
+    } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }
 }
 
 function showStudentQR(student) {
@@ -978,23 +1070,80 @@ async function deleteStudent(id) {
 
 async function renderPaymentsList() {
     const month = document.getElementById('paymentMonthInput').value;
+    const defaultAmountInput = document.getElementById('defaultAmountInput'); // المبلغ الموحد
     const container = document.getElementById('paymentsList');
     container.innerHTML = '';
+    
     if(!month || !allStudents.length) return;
+    
     const payId = `${SELECTED_GROUP_ID}_PAY_${month}`;
     const doc = await getFromDB('payments', payId);
+    
     const map = {};
-    if(doc?.records) doc.records.forEach(r => map[r.studentId] = r.paid);
+    if(doc?.records) {
+        doc.records.forEach(r => map[r.studentId] = r.amount);
+    }
+
     allStudents.forEach(s => {
-        const paid = map[s.id] === true;
+        let amount = map[s.id]; 
+        const isPaid = amount && amount > 0;
+
         const div = document.createElement('div');
-        div.className = `record-item ${paid ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : ''}`;
+        div.className = `record-item flex justify-between items-center p-3 border rounded-xl transition-colors ${isPaid ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-white dark:bg-darkSurface border-gray-100 dark:border-gray-700'}`;
         div.dataset.sid = s.id;
-        div.innerHTML = `<span class="font-bold text-gray-700 dark:text-gray-200">${s.name}</span><input type="checkbox" class="w-6 h-6 accent-green-600 cursor-pointer" ${paid ? 'checked' : ''}>`;
-        div.querySelector('input').addEventListener('change', (e) => {
-             if(e.target.checked) div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-             else div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+        
+        // الشكل الجديد: اسم + مبلغ + Checkbox
+        div.innerHTML = `
+            <span class="font-bold text-gray-700 dark:text-gray-200 w-1/3 truncate">${s.name}</span>
+            
+            <div class="flex items-center gap-3 justify-end w-2/3">
+                <input type="number" 
+                       class="payment-input input-field h-9 w-24 text-center text-sm ${isPaid ? 'text-green-600 font-bold' : 'text-gray-400'}" 
+                       placeholder="0" 
+                       value="${amount || ''}"
+                       min="0">
+                       
+                <input type="checkbox" 
+                       class="payment-check w-6 h-6 accent-green-600 cursor-pointer" 
+                       ${isPaid ? 'checked' : ''}>
+            </div>
+        `;
+
+        const checkbox = div.querySelector('.payment-check');
+        const input = div.querySelector('.payment-input');
+
+        // لو داس على الـ Checkbox
+        checkbox.addEventListener('change', (e) => {
+            const defaultVal = defaultAmountInput.value || 0; // هات القيمة من فوق
+            
+            if(e.target.checked) {
+                // لو علم صح، حط المبلغ الموحد (لو الخانة فاضية)
+                if(!input.value || input.value == 0) {
+                    input.value = defaultVal;
+                }
+                div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                input.classList.add('text-green-600', 'font-bold');
+                input.classList.remove('text-gray-400');
+            } else {
+                // لو شال الصح، صفر المبلغ
+                input.value = '';
+                div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                input.classList.remove('text-green-600', 'font-bold');
+                input.classList.add('text-gray-400');
+            }
         });
+
+        // لو عدل المبلغ يدوي
+        input.addEventListener('input', (e) => {
+            if(e.target.value > 0) {
+                checkbox.checked = true;
+                div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+            } else {
+                checkbox.checked = false;
+                div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+            }
+        });
+        
         container.appendChild(div);
     });
 }
@@ -1002,15 +1151,30 @@ async function renderPaymentsList() {
 async function savePayments() {
     const month = document.getElementById('paymentMonthInput').value;
     if(!month) return showToast(translations[currentLang].paymentMonthMissing, 'error');
+    
     const records = [];
     document.querySelectorAll('#paymentsList > div').forEach(div => {
-        records.push({ studentId: div.dataset.sid, paid: div.querySelector('input').checked });
+        const val = div.querySelector('.payment-input').value; // بناخد القيمة من الـ input مش الـ checkbox بس
+        const amount = val ? parseFloat(val) : 0;
+        
+        // بنحفظ لو المبلغ أكبر من صفر
+        records.push({ 
+            studentId: div.dataset.sid, 
+            amount: amount,
+            paid: amount > 0 
+        });
     });
+
     await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${month}`, month, records });
-    await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, data: { month, records } });
+    
+    await addToSyncQueue({ 
+        type: 'set', 
+        path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, 
+        data: { month, records } 
+    });
+    
     showToast(translations[currentLang].saved);
 }
-
 async function loadExams() {
     const exams = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
     const sel = document.getElementById('examSelect');
