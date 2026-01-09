@@ -52,13 +52,16 @@
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-/* Inputs */
+/* ابحث عن هذا الكلاس وعدله */
 .input-field {
     width: 100%;
     padding: 0.75rem 1rem;
     border-radius: 12px;
     background-color: #f9fafb;
-    border: 2px solid transparent;
+    
+    /* التعديل هنا: غيرنا transparent لـ لون رصاصي #e5e7eb */
+    border: 1px solid #e5e7eb; 
+    
     color: #1f2937;
     font-weight: 500;
     transition: all 0.2s;
@@ -66,10 +69,11 @@
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
 
+/* تأكد إن الدارك مود لسه زي ما هو بيغير اللون */
 .dark-mode .input-field {
-    background-color: #121212;
-    color: #ffffff;
-    border: 1px solid #333;
+    background-color: #1f1f1f !important;
+    border: 1px solid #374151 !important;
+    color: #ffffff !important;
 }
 
 .input-field:focus {
@@ -316,11 +320,48 @@ html[dir="rtl"] .record-item:hover {
     color: white;
 }
 
-/* Indicators */
-#statusIndicator.online { color: #15803d; background: #dcfce7; border: 1px solid #bbf7d0; }
-#statusIndicator.offline { color: #6b7280; background: #f3f4f6; border: 1px solid #e5e7eb; }
-.dark-mode #statusIndicator.online { background: rgba(22, 163, 74, 0.1); border-color: rgba(22, 163, 74, 0.2); color: #4ade80; }
-#statusIndicator .status-dot { background-color: currentColor; }
+/* ========================================= */
+/* FIX STATUS INDICATOR (CLEAN STYLE)        */
+/* ========================================= */
+
+#statusIndicator {
+    transition: all 0.3s ease;
+    background-color: transparent !important; /* إلغاء المربع الخلفي تماماً */
+    border: 1px solid transparent !important; /* إلغاء البرواز */
+    padding: 0 5px; /* مسافة بسيطة */
+}
+
+/* --- في الوضع الليلي (Dark Mode) --- */
+
+/* حالة الاتصال (Online) */
+.dark-mode #statusIndicator.online {
+    color: #ffffff !important; /* النص أبيض زي ما طلبت */
+}
+
+/* حالة عدم الاتصال (Offline) */
+.dark-mode #statusIndicator.offline {
+    color: #ffffff !important; /* النص أبيض برضه */
+    opacity: 0.7; /* نخلي النص باهت سنة بسيطة عشان يبان إنه أوفلاين */
+}
+
+/* --- ألوان النقطة (Dot Colors) --- */
+
+/* النقطة الخضراء (أونلاين) */
+#statusIndicator.online .status-dot {
+    background-color: #22c55e !important; /* أخضر */
+    box-shadow: 0 0 8px #22c55e; /* لمعة خضراء */
+}
+
+/* النقطة الحمراء (أوفلاين) */
+#statusIndicator.offline .status-dot {
+    background-color: #ef4444 !important; /* أحمر */
+    box-shadow: none;
+}
+
+/* --- (اختياري) الوضع النهاري Light Mode --- */
+/* عشان يفضل شكله حلو في الفاتح */
+#statusIndicator.online { color: #166534; }
+#statusIndicator.offline { color: #991b1b; }
 
 /* Section Header */
 .section-header {
@@ -379,62 +420,73 @@ html[dir="rtl"] .record-item:hover {
     }
 }
 
-/* --- إصلاحات هامة للدارك مود والـ Placeholders --- */
+/* ========================================= */
+/* CRITICAL DARK MODE & TRANSLATION FIXES   */
+/* ========================================= */
 
-/* 1. إظهار الـ Placeholder بوضوح */
-.dark-mode ::placeholder {
-    color: #a1a1aa !important;
-    opacity: 1;
+/* 1. Force Gray Text to be Visible in Dark Mode */
+.dark-mode .text-gray-500 { color: #9ca3af !important; } /* Equivalent to gray-400 */
+.dark-mode .text-gray-600 { color: #d1d5db !important; } /* Equivalent to gray-300 */
+.dark-mode .text-gray-700 { color: #e5e7eb !important; } /* Equivalent to gray-200 */
+.dark-mode .text-gray-800 { color: #f3f4f6 !important; } /* Equivalent to gray-100 */
+.dark-mode .text-gray-900 { color: #ffffff !important; } /* Pure White */
+
+/* 2. Input Fields & Placeholders */
+.dark-mode .input-field {
+    background-color: #1f1f1f !important;
+    border: 1px solid #374151 !important;
+    color: #ffffff !important;
 }
 
 .dark-mode .input-field::placeholder {
-    color: #a1a1aa !important;
+    color: #9ca3af !important; /* Make placeholders clearly visible */
+    opacity: 1;
 }
 
-/* 2. تحسين تباين حقول الإدخال */
-.dark-mode .input-field {
-    background-color: #1f1f1f !important;
-    border: 1px solid #3f3f46 !important;
-    color: #ffffff !important;
+.dark-mode select:not(.appearance-none) {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left 0.5rem center; /* مكان السهم لليسار لأننا RTL */
+    background-size: 1.5em;
+    padding-left: 2rem !important; /* مساحة للسهم */
 }
 
-.dark-mode .input-field:focus {
-    border-color: var(--primary) !important;
-    background-color: #262626 !important;
+/* 2. القائمة العلوية (Group Select) */
+/* هذه القائمة لديها class="appearance-none" ولديها أيقونة HTML خاصة */
+/* لذلك نمنع ظهور سهم الخلفية فيها حتى لا يتكرر */
+.dark-mode select.appearance-none {
+    background-image: none !important;
 }
 
-/* 3. إصلاح قوائم الحضور والغياب */
-.dark-mode .student-row .attendance-status-select,
-.dark-mode .student-row .grade-input,
-.dark-mode select {
+/* 3. Dropdowns inside tables */
+.dark-mode .att-select, 
+.dark-mode .grade-input {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
-    border: 1px solid #52525b !important;
+    border-color: #4b5563 !important;
 }
 
-.dark-mode select option {
-    background-color: #1f1f1f;
-    color: #ffffff;
+/* 4. Modal Backgrounds & Text */
+.dark-mode .glass-panel,
+.dark-mode .bg-white {
+    background-color: #1E1E1E !important;
+    color: white !important;
 }
 
-/* 4. جعل الـ Checkboxes تلمع باللون الأصفر */
-.dark-mode input[type="checkbox"] {
-    accent-color: var(--primary);
-    cursor: pointer;
+.dark-mode .modal-content {
+    background-color: #1E1E1E;
+    border: 1px solid #333;
 }
 
-/* 5. تحسين ظهور صفوف الطلاب */
-.dark-mode .student-row {
-    background-color: #18181b !important;
-    border-bottom: 1px solid #27272a !important;
+/* 5. Icons inside inputs */
+.dark-mode .ri-smartphone-line,
+.dark-mode .ri-lock-password-line,
+.dark-mode .ri-search-line {
+    color: #9ca3af !important;
 }
 
-.dark-mode .student-row:hover {
-    background-color: #27272a !important;
-}
-
-/* 6. التأكد من لون النصوص */
-.dark-mode .student-name {
-    color: #f4f4f5 !important;
-    font-weight: 700;
+/* 6. Tabs Background in Dark Mode */
+.dark-mode .tab-button:hover:not(.active) {
+    background-color: #333 !important;
+    color: var(--primary) !important;
 }

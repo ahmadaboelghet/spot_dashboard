@@ -1,6 +1,6 @@
 /**
- * SPOT TEACHER - FINAL INTEGRATED VERSION
- * Features: Smart Scanner + Full Recurring Schedule + Logic UI Fixes + Dark Mode + Camera Mirror Fix
+ * SPOT TEACHER - ULTIMATE EDITION (vFinal Fixed)
+ * Features: Smart Login + Parent Link + Unified Payments + Mirror Fix + Messages
  */
 
 // ==========================================
@@ -21,9 +21,9 @@ try {
     if (typeof firebase !== 'undefined') {
         app = firebase.initializeApp(firebaseConfig);
         firestoreDB = firebase.firestore();
-        firestoreDB.enablePersistence().catch(err => console.log("Persistence Error:", err.code));
+        firestoreDB.enablePersistence().catch(err => console.log("Persistence:", err.code));
     }
-} catch (e) { console.error("Firebase Init Error:", e); }
+} catch (e) { console.error("Firebase Error:", e); }
 
 // ==========================================
 // 2. LOCAL DATABASE (IndexedDB)
@@ -35,103 +35,76 @@ let localDB;
 function openDB() {
     if (localDB) return Promise.resolve(localDB);
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        
-        request.onupgradeneeded = event => {
-            const db = event.target.result;
-            const stores = ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions', 'syncQueue'];
-            
-            stores.forEach(name => {
-                if (!db.objectStoreNames.contains(name)) {
-                    if (name === 'syncQueue') {
-                        db.createObjectStore(name, { autoIncrement: true });
-                    } else {
-                        const store = db.createObjectStore(name, { keyPath: 'id' });
-                        if(['groups', 'students', 'assignments', 'schedules'].includes(name)) {
-                             try { 
-                                 const idx = name === 'groups' ? 'teacherId' : 'groupId';
-                                 store.createIndex(idx, idx, { unique: false }); 
-                             } catch(e){}
-                        }
-                    }
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions', 'syncQueue'].forEach(store => {
+                if (!db.objectStoreNames.contains(store)) {
+                    const params = store === 'syncQueue' ? { autoIncrement: true } : { keyPath: 'id' };
+                    const s = db.createObjectStore(store, params);
+                    if(['groups', 'students', 'assignments', 'schedules'].includes(store)) s.createIndex(store === 'groups' ? 'teacherId' : 'groupId', store === 'groups' ? 'teacherId' : 'groupId', {unique:false});
                 }
             });
         };
-
-        request.onsuccess = event => {
-            localDB = event.target.result;
-            resolve(localDB);
-        };
-        request.onerror = event => reject(event.target.error);
+        req.onsuccess = e => { localDB = e.target.result; resolve(localDB); };
+        req.onerror = e => reject(e.target.error);
     });
 }
 
 // --- DB HELPERS ---
 async function getFromDB(store, key) {
     if (!localDB) await openDB();
-    return new Promise((resolve, reject) => {
-        const tx = localDB.transaction(store, 'readonly');
-        const req = tx.objectStore(store).get(key);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+    return new Promise((res, rej) => {
+        const tx = localDB.transaction(store, 'readonly').objectStore(store).get(key);
+        tx.onsuccess = () => res(tx.result); tx.onerror = () => rej(tx.error);
     });
 }
-
-async function getAllFromDB(store, indexName, key) {
-    if (!localDB) await openDB();
-    return new Promise((resolve, reject) => {
-        const tx = localDB.transaction(store, 'readonly');
-        const s = tx.objectStore(store);
-        const req = indexName ? s.index(indexName).getAll(key) : s.getAll();
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-    });
-}
-
 async function putToDB(store, data) {
     if (!localDB) await openDB();
     const tx = localDB.transaction(store, 'readwrite');
     tx.objectStore(store).put(data);
     return tx.complete;
 }
-
-async function deleteFromDB(store, key) {
+async function getAllFromDB(store, idx, key) {
     if (!localDB) await openDB();
+    return new Promise((res, rej) => {
+        const s = localDB.transaction(store, 'readonly').objectStore(store);
+        const req = idx ? s.index(idx).getAll(key) : s.getAll();
+        req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+    });
+}
+async function deleteFromDB(store, key) {
+    if(!localDB) await openDB();
     const tx = localDB.transaction(store, 'readwrite');
     tx.objectStore(store).delete(key);
     return tx.complete;
 }
 
 // ==========================================
-// 3. GLOBAL STATE
+// 3. STATE & TRANSLATIONS
 // ==========================================
-let TEACHER_ID = null;
-let SELECTED_GROUP_ID = null;
-let allStudents = [];
-let currentLang = 'ar';
-let isSyncing = false;
-
-// Scanner
-let currentScannerMode = null; 
-let isScannerPaused = false;
-let videoElement;
-let animationFrameId;
-
-// Daily Logic
-let hasHomeworkToday = false;
-let currentPendingStudentId = null; 
-
-// Messaging
-let currentMessageStudentId = null;
+let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = 'ar';
+let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
+let hasHomeworkToday = false, currentPendingStudentId = null, currentMessageStudentId = null;
 
 const translations = {
     ar: {
         pageTitle: "Spot - المعلم الذكي",
         teacherLoginTitle: "تسجيل دخول المعلم",
-        teacherLoginPrompt: "أدخل رقم هاتفك للبدء",
-        loadDashboardButton: "دخول",
-        tabDaily: "الحصة اليومية",
+        teacherLoginPrompt: "أدخل رقمك للبدء",
+        loginButton: "دخول",
+        loginVerifying: "جاري التحقق...",
+        passwordLabel: "كلمة المرور",
+        phonePlaceholder: "01xxxxxxxxx",
+        passwordPlaceholder: "كلمة المرور",
+        welcomeTitle: "لوحة تحكم المعلم الذكي",
+        currentGroupLabel: "المجموعة الحالية",
+        selectGroupPlaceholder: "اختر مجموعة...",
+        addGroupTitle: "مجموعة جديدة",
+        groupNamePlaceholder: "اسم المجموعة",
+        addBtn: "إضافة",
         tabProfile: "الملف",
+        tabDaily: "الحصة اليومية",
         tabStudents: "الطلاب",
         tabGrades: "الامتحانات",
         tabPayments: "التحصيل",
@@ -139,121 +112,178 @@ const translations = {
         dailyClassTitle: "إدارة الحصة",
         selectDateLabel: "تاريخ اليوم",
         homeworkToggleLabel: "يوجد واجب؟",
-        startSmartScan: "بدء الرصد الذكي (QR)",
+        homeworkToggleSub: "تفعيل المطالبة بالتسليم",
+        startSmartScan: "بدء الرصد الذكي",
         liveLogTitle: "سجل الحصة المباشر",
         saveAllButton: "حفظ الكل",
-        // Schedule Keys
-        scheduleTitle: "إدارة الجدول",
+        tableHeaderStudent: "الطالب",
+        tableHeaderAttendance: "الحضور",
+        tableHeaderHomework: "الواجب",
+        myProfileTitle: "بياناتي",
+        fullNamePlaceholder: "الاسم",
+        subjectPlaceholder: "المادة",
+        changePasswordPlaceholder: "تغيير كلمة المرور",
+        saveProfileButton: "حفظ التغييرات",
+        manageStudentsTitle: "الطلاب",
+        newStudentPlaceholder: "اسم الطالب الجديد",
+        parentPhonePlaceholder: "رقم ولي الأمر",
+        addNewStudentButton: "إضافة للقائمة",
+        searchPlaceholder: "بحث عن طالب...",
+        msgModalTitle: "رسالة لولي الأمر",
+        msgPlaceholder: "اكتب ملاحظاتك هنا (مثلاً: الطالب تحسن مستواه...)",
+        sendMsgBtn: "إرسال",
+        sendingMsg: "جاري الإرسال...",
+        cancelBtn: "إلغاء",
+        examsTitle: "الامتحانات والدرجات",
+        newAssignmentNameLabel: "اسم الامتحان / الواجب",
+        addNewAssignmentButton: "إنشاء",
+        selectExamPlaceholder: "-- اختر الامتحان --",
+        saveGradesButton: "حفظ الدرجات",
+        gradePlaceholder: "الدرجة",
+        selectMonthLabel: "شهر التحصيل",
+        amountLabel: "قيمة المصاريف",
+        defaultAmountPlaceholder: "مثلاً 150",
+        savePaymentsButton: "حفظ التحصيل",
         addRecurringScheduleTitle: "إضافة موعد ثابت",
         subjectLabel: "المادة",
         timeLabel: "الوقت",
         locationLabel: "المكان",
-        selectDaysLabel: "الأيام (التكرار الأسبوعي)",
+        selectDaysLabel: "الأيام",
         saveRecurringScheduleButton: "إضافة للجدول",
         mySchedulesLabel: "مواعيدي",
         modifySingleClassTitle: "تعديل طارئ",
-        modifyClassPrompt: "تغيير موعد حصة معينة أو إلغاؤها.",
+        modifyClassPrompt: "تغيير أو إلغاء حصة محددة.",
         classDateLabel: "تاريخ الحصة",
         newTimeLabel: "الموعد الجديد",
-        updateClassButton: "تحديث الموعد",
-        cancelClassButton: "إلغاء الحصة",
+        updateClassButton: "تحديث",
         days: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
-        noSchedulesYet: "لا توجد مواعيد مسجلة.",
         repeatsOn: "كل:",
-        fillScheduleForm: "أدخل المادة والوقت واختر يوماً واحداً على الأقل.",
-        scheduleSavedSuccess: "تم حفظ الجدول!",
-        scheduleDeletedSuccess: "تم حذف الموعد.",
-        classUpdatedSuccess: "تم تحديث الحصة ليوم {date}.",
-        classCancelledSuccess: "تم إلغاء حصة يوم {date}.",
-        confirmScheduleDelete: "حذف هذا الموعد المتكرر؟",
-        // Common
-        present: "حاضر",
-        absent: "غائب",
-        late: "متأخر",
-        paid: "مدفوع",
-        saved: "تم الحفظ بنجاح!",
-        error: "حدث خطأ!",
-        studentAdded: "تمت الإضافة",
-        phonePlaceholder: "مثال: 010xxxxxxx",
-        fullNamePlaceholder: "الاسم",
-        subjectPlaceholder: "المادة",
-        locationPlaceholder: "المكان (اختياري)",
-        groupNamePlaceholder: "اسم المجموعة",
-        confirmDelete: "تأكيد الحذف؟",
-        online: "متصل",
-        offline: "غير متصل",
-        syncing: "جاري المزامنة...",
-        synced: "تمت المزامنة",
-        pending: "معلق",
         scanOverlayText: "وجه الكود داخل الإطار",
-        paymentMonthMissing: "اختر الشهر أولاً",
+        closeCamera: "إغلاق الكاميرا",
         homeworkQuestion: "هل سلم الواجب؟",
         yes: "نعم",
         no: "لا",
-        noStudentsInGroup: "لا يوجد طلاب في هذه المجموعة."
+        printBtn: "طباعة",
+        closeBtn: "إغلاق",
+        saved: "تم الحفظ بنجاح!",
+        error: "حدث خطأ!",
+        studentAdded: "تمت الإضافة",
+        confirmDelete: "تأكيد الحذف؟",
+        online: "متصل",
+        offline: "غير متصل",
+        noStudentsInGroup: "لا يوجد طلاب في هذه المجموعة.",
+        fillScheduleForm: "أدخل المادة والوقت واختر يوماً واحداً على الأقل.",
+        scheduleSavedSuccess: "تم حفظ الجدول!",
+        confirmScheduleDelete: "حذف هذا الموعد؟",
+        classUpdatedSuccess: "تم تحديث الحصة ليوم {date}.",
+        classCancelledSuccess: "تم إلغاء حصة يوم {date}.",
+        paymentMonthMissing: "اختر الشهر أولاً",
+        writeMsgFirst: "الرجاء كتابة رسالة",
+        msgSentSuccess: "تم إرسال الرسالة بنجاح",
+        msgSendFail: "فشل الإرسال. تأكد من الإنترنت",
+        wrongPassword: "كلمة المرور خاطئة! حاول مرة أخرى.",
+        present: "حاضر",
+        absent: "غائب",
+        late: "متأخر"
     },
     en: {
+        // (English translations kept for consistency)
         pageTitle: "Spot - Smart Teacher",
         teacherLoginTitle: "Teacher Login",
-        loadDashboardButton: "Login",
-        tabDaily: "Daily Class",
+        teacherLoginPrompt: "Enter phone to start",
+        loginButton: "Login",
+        loginVerifying: "Verifying...",
+        passwordLabel: "Password",
+        phonePlaceholder: "01xxxxxxxxx",
+        passwordPlaceholder: "Password",
+        welcomeTitle: "Smart Teacher Dashboard",
+        currentGroupLabel: "Current Group",
+        selectGroupPlaceholder: "Select Group...",
+        addGroupTitle: "New Group",
+        groupNamePlaceholder: "Group Name",
+        addBtn: "Add",
         tabProfile: "Profile",
+        tabDaily: "Daily Class",
         tabStudents: "Students",
         tabGrades: "Exams",
         tabPayments: "Payments",
         tabSchedule: "Schedule",
         dailyClassTitle: "Class Manager",
-        homeworkToggleLabel: "Homework Today?",
+        selectDateLabel: "Today's Date",
+        homeworkToggleLabel: "Homework?",
+        homeworkToggleSub: "Enable submission tracking",
         startSmartScan: "Smart Scan",
         liveLogTitle: "Live Log",
         saveAllButton: "Save All",
-        scheduleTitle: "Schedule",
+        tableHeaderStudent: "Student",
+        tableHeaderAttendance: "Status",
+        tableHeaderHomework: "Homework",
+        myProfileTitle: "My Profile",
+        fullNamePlaceholder: "Full Name",
+        subjectPlaceholder: "Subject",
+        changePasswordPlaceholder: "Change Password",
+        saveProfileButton: "Save Changes",
+        manageStudentsTitle: "Students",
+        newStudentPlaceholder: "New Student Name",
+        parentPhonePlaceholder: "Parent Phone",
+        addNewStudentButton: "Add to List",
+        searchPlaceholder: "Search student...",
+        msgModalTitle: "Message to Parent",
+        msgPlaceholder: "Write your notes here...",
+        sendMsgBtn: "Send",
+        sendingMsg: "Sending...",
+        cancelBtn: "Cancel",
+        examsTitle: "Exams & Grades",
+        newAssignmentNameLabel: "Exam / Assignment Name",
+        addNewAssignmentButton: "Create",
+        selectExamPlaceholder: "-- Select Exam --",
+        saveGradesButton: "Save Grades",
+        gradePlaceholder: "Score",
+        selectMonthLabel: "Collection Month",
+        amountLabel: "Amount",
+        defaultAmountPlaceholder: "e.g. 150",
+        savePaymentsButton: "Save Payments",
         addRecurringScheduleTitle: "Add Recurring Class",
         subjectLabel: "Subject",
         timeLabel: "Time",
         locationLabel: "Location",
-        selectDaysLabel: "Select Days:",
+        selectDaysLabel: "Days",
         saveRecurringScheduleButton: "Add to Schedule",
         mySchedulesLabel: "My Schedules",
-        modifySingleClassTitle: "Modify Single Class",
-        modifyClassPrompt: "Change time or cancel class for a specific date.",
+        modifySingleClassTitle: "Emergency Edit",
+        modifyClassPrompt: "Change or cancel specific class.",
         classDateLabel: "Class Date",
         newTimeLabel: "New Time",
-        updateClassButton: "Update Time",
-        cancelClassButton: "Cancel Class",
+        updateClassButton: "Update",
         days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-        noSchedulesYet: "No schedules.",
         repeatsOn: "Every:",
-        fillScheduleForm: "Fill data and select a day.",
-        scheduleSavedSuccess: "Schedule Saved!",
-        scheduleDeletedSuccess: "Schedule Deleted.",
-        classUpdatedSuccess: "Class updated for {date}.",
-        classCancelledSuccess: "Class cancelled for {date}.",
-        confirmScheduleDelete: "Delete schedule?",
-        present: "Present",
-        absent: "Absent",
-        late: "Late",
-        paid: "Paid",
-        saved: "Saved!",
-        error: "Error!",
-        studentAdded: "Added",
-        phonePlaceholder: "010xxxxxxx",
-        fullNamePlaceholder: "Full Name",
-        subjectPlaceholder: "Subject",
-        locationPlaceholder: "Location",
-        groupNamePlaceholder: "Group Name",
-        confirmDelete: "Confirm?",
-        online: "Online",
-        offline: "Offline",
-        syncing: "Syncing...",
-        synced: "Synced",
-        pending: "Pending",
-        scanOverlayText: "Align code",
-        paymentMonthMissing: "Select Month",
-        homeworkQuestion: "Submitted HW?",
+        scanOverlayText: "Align code in frame",
+        closeCamera: "Close Camera",
+        homeworkQuestion: "Submitted Homework?",
         yes: "Yes",
         no: "No",
-        noStudentsInGroup: "No students in this group."
+        printBtn: "Print",
+        closeBtn: "Close",
+        saved: "Saved Successfully!",
+        error: "Error Occurred!",
+        studentAdded: "Student Added",
+        confirmDelete: "Confirm Delete?",
+        online: "Online",
+        offline: "Offline",
+        noStudentsInGroup: "No students in this group.",
+        fillScheduleForm: "Fill subject, time and select a day.",
+        scheduleSavedSuccess: "Schedule Saved!",
+        confirmScheduleDelete: "Delete this schedule?",
+        classUpdatedSuccess: "Class updated for {date}.",
+        classCancelledSuccess: "Class cancelled for {date}.",
+        paymentMonthMissing: "Select Month First",
+        writeMsgFirst: "Please write a message",
+        msgSentSuccess: "Message sent successfully",
+        msgSendFail: "Sending failed. Check internet.",
+        wrongPassword: "Wrong Password! Try again.",
+        present: "Present",
+        absent: "Absent",
+        late: "Late"
     }
 };
 
@@ -292,17 +322,22 @@ async function addToSyncQueue(action) {
 
 function updateOnlineStatus() {
     const indicator = document.getElementById('statusIndicator');
+    if (!indicator) return;
+
+    const dot = indicator.querySelector('.status-dot');
+    const text = indicator.querySelector('.status-text');
+
     if (navigator.onLine) {
-        if(indicator) {
-            indicator.querySelector('.status-text').innerText = translations[currentLang].online;
-            indicator.querySelector('.status-dot').className = 'status-dot w-2.5 h-2.5 rounded-full bg-green-500';
-        }
+        indicator.classList.remove('offline');
+        indicator.classList.add('online');
+        text.innerText = translations[currentLang].online;
+        dot.className = 'status-dot w-2.5 h-2.5 rounded-full'; 
         processSyncQueue();
     } else {
-        if(indicator) {
-            indicator.querySelector('.status-text').innerText = translations[currentLang].offline;
-            indicator.querySelector('.status-dot').className = 'status-dot w-2.5 h-2.5 rounded-full bg-red-500';
-        }
+        indicator.classList.remove('online');
+        indicator.classList.add('offline');
+        text.innerText = translations[currentLang].offline;
+        dot.className = 'status-dot w-2.5 h-2.5 rounded-full';
     }
     updateSyncUI();
 }
@@ -361,7 +396,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dailyInput = document.getElementById('dailyDateInput');
     if(dailyInput) dailyInput.valueAsDate = new Date();
 
-    // Init UI for Schedule
     createTimePicker('recurringTimeContainer');
     createTimePicker('exceptionNewTimeContainer');
     renderDayCheckboxes();
@@ -371,23 +405,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function setupListeners() {
-    // Auth
     document.getElementById('setTeacherButton').addEventListener('click', loginTeacher);
     document.getElementById('logoutButton').addEventListener('click', logout);
 
-    // Navigation
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const tab = e.currentTarget.dataset.tab;
             if(!SELECTED_GROUP_ID && tab !== 'profile') { 
-                showToast(translations[currentLang].selectGroupLabel || "اختر مجموعة أولاً", 'error'); 
+                showToast(translations[currentLang].selectGroupPlaceholder, 'error'); 
                 return; 
             }
             switchTab(tab);
         });
     });
 
-    // Profile & Group
     document.getElementById('saveProfileButton').addEventListener('click', saveProfile);
     document.getElementById('createNewGroupBtn').addEventListener('click', createGroup);
     document.getElementById('groupSelect').addEventListener('change', async (e) => {
@@ -396,7 +427,6 @@ function setupListeners() {
     });
     document.getElementById('addNewGroupButton').addEventListener('click', () => switchTab('profile'));
 
-    // Daily
     document.getElementById('startSmartScanBtn').addEventListener('click', () => startScanner('daily'));
     document.getElementById('homeworkToggle').addEventListener('change', (e) => {
         hasHomeworkToday = e.target.checked;
@@ -407,16 +437,13 @@ function setupListeners() {
     document.getElementById('hwYesBtn').addEventListener('click', () => resolveHomework(true));
     document.getElementById('hwNoBtn').addEventListener('click', () => resolveHomework(false));
 
-    // Students
     document.getElementById('addNewStudentButton').addEventListener('click', addNewStudent);
     document.getElementById('studentSearchInput').addEventListener('input', (e) => renderStudents(e.target.value));
 
-    // SCHEDULE BUTTONS
     document.getElementById('addRecurringScheduleButton').addEventListener('click', saveRecurringSchedule);
     document.getElementById('updateSingleClassButton').addEventListener('click', updateSingleClass);
     document.getElementById('cancelSingleClassButton').addEventListener('click', cancelSingleClass);
 
-    // Payments & Exams
     document.getElementById('scanPaymentsBtn').addEventListener('click', () => startScanner('payments'));
     document.getElementById('paymentMonthInput').addEventListener('change', renderPaymentsList);
     document.getElementById('savePaymentsBtn').addEventListener('click', savePayments);
@@ -424,14 +451,12 @@ function setupListeners() {
     document.getElementById('examSelect').addEventListener('change', renderExamGrades);
     document.getElementById('saveExamGradesBtn').addEventListener('click', saveExamGrades);
 
-    // Utils
     document.getElementById('closeScannerModal').addEventListener('click', stopScanner);
     document.getElementById('closeQrModal').addEventListener('click', () => document.getElementById('qrCodeModal').classList.add('hidden'));
     document.getElementById('printIdButton').addEventListener('click', () => window.print());
     document.getElementById('darkModeToggleButton').addEventListener('click', toggleDarkMode);
     document.getElementById('languageToggleButton').addEventListener('click', toggleLang);
 
-    // Message Modal Listeners (Added from previous fix)
     document.getElementById('closeMsgModal').addEventListener('click', () => {
         document.getElementById('messageModal').classList.add('hidden');
     });
@@ -499,7 +524,6 @@ function renderDayCheckboxes() {
 
 async function saveRecurringSchedule() {
     if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
-    
     const subject = document.getElementById('recurringSubject').value.trim();
     const location = document.getElementById('recurringLocation').value.trim();
     const time = getTimeFromPicker('recurringTimeContainer');
@@ -541,7 +565,7 @@ async function fetchRecurringSchedules() {
         
         container.innerHTML = '';
         if (schedules.length === 0) {
-            container.innerHTML = `<p class="text-center text-gray-400 py-4">${translations[currentLang].noSchedulesYet}</p>`;
+            container.innerHTML = `<p class="text-center text-gray-400 py-4">No schedules.</p>`;
             return;
         }
 
@@ -579,7 +603,7 @@ async function updateSingleClass() {
     const date = document.getElementById('exceptionDate').value;
     const newTime = getTimeFromPicker('exceptionNewTimeContainer');
     
-    if (!date || !newTime) return showToast("اختر التاريخ والوقت الجديد", 'error');
+    if (!date || !newTime) return showToast("Check inputs", 'error');
     
     const id = `${SELECTED_GROUP_ID}_${date}`;
     const data = { id, groupId: SELECTED_GROUP_ID, date, newTime, type: 'modified' };
@@ -592,7 +616,7 @@ async function updateSingleClass() {
 async function cancelSingleClass() {
     if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
     const date = document.getElementById('exceptionDate').value;
-    if (!date) return showToast("اختر التاريخ", 'error');
+    if (!date) return showToast("Check date", 'error');
     
     const id = `${SELECTED_GROUP_ID}_${date}`;
     const data = { id, groupId: SELECTED_GROUP_ID, date, type: 'cancelled' };
@@ -607,35 +631,71 @@ async function cancelSingleClass() {
 // ==========================================
 async function loginTeacher() {
     const phone = document.getElementById('teacherPhoneInput').value;
+    const password = document.getElementById('teacherPasswordInput').value.trim();
+    
     const fmt = formatPhoneNumber(phone);
     if (!fmt) return showToast(translations[currentLang].phonePlaceholder, 'error');
     
-    TEACHER_ID = fmt;
-    localStorage.setItem('learnaria-tid', TEACHER_ID);
-    
-    document.getElementById('loginSection').classList.add('hidden');
-    document.getElementById('mainContent').classList.remove('hidden');
-    document.getElementById('logoutButton').classList.remove('hidden');
+    const btn = document.getElementById('setTeacherButton');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> ${translations[currentLang].loginVerifying}`;
+    btn.disabled = true;
 
-    let data = await getFromDB('teachers', TEACHER_ID);
-    if (!data && navigator.onLine) {
-        try {
-            const doc = await firestoreDB.collection('teachers').doc(TEACHER_ID).get();
-            if (doc.exists) { 
-                data = { id: doc.id, ...doc.data() }; 
-                await putToDB('teachers', data); 
+    try {
+        let data = await getFromDB('teachers', fmt);
+        if (!data && navigator.onLine) {
+            try {
+                const doc = await firestoreDB.collection('teachers').doc(fmt).get();
+                if (doc.exists) { 
+                    data = { id: doc.id, ...doc.data() }; 
+                    await putToDB('teachers', data); 
+                }
+            } catch(e) { console.error("Firestore Error:", e); }
+        }
+        
+        if (data) {
+            if (data.password && data.password.trim() !== "") {
+                if (data.password !== password) {
+                    showToast(translations[currentLang].wrongPassword, "error");
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    return; 
+                }
+            } else {
+                if (password) {
+                     data.password = password;
+                     await putToDB('teachers', data);
+                     if(navigator.onLine) {
+                        firestoreDB.collection('teachers').doc(fmt).set({ password: password }, { merge: true });
+                     }
+                }
             }
-        } catch(e){}
-    }
-    
-    if(data) {
-        document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${data.name}`;
-        document.getElementById('teacherNameInput').value = data.name || '';
-        document.getElementById('teacherSubjectInput').value = data.subject || '';
-    }
+        }
 
-    await loadGroups();
-    switchTab('profile');
+        TEACHER_ID = fmt;
+        localStorage.setItem('learnaria-tid', TEACHER_ID);
+        
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        document.getElementById('logoutButton').classList.remove('hidden');
+
+        if(data) {
+            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${data.name}`;
+            document.getElementById('teacherNameInput').value = data.name || '';
+            document.getElementById('teacherSubjectInput').value = data.subject || '';
+            document.getElementById('profilePasswordInput').value = data.password || ''; 
+        }
+
+        await loadGroups();
+        switchTab('students'); // Default tab to Students
+
+    } catch (error) {
+        console.error("Login Error:", error);
+        showToast(translations[currentLang].error, "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 function logout() { localStorage.removeItem('learnaria-tid'); location.reload(); }
@@ -651,7 +711,7 @@ async function loadGroups() {
         } catch(e){}
     }
     const sel = document.getElementById('groupSelect');
-    sel.innerHTML = `<option value="" disabled selected>${translations[currentLang].selectGroupLabel || "اختر مجموعة"}</option>`;
+    sel.innerHTML = `<option value="" disabled selected>${translations[currentLang].selectGroupPlaceholder}</option>`;
     groups.forEach(g => {
         const opt = document.createElement('option');
         opt.value = g.id;
@@ -683,7 +743,7 @@ async function loadGroupData() {
             allStudents = remote;
         } catch(e){}
     }
-    switchTab('daily');
+    switchTab('students');
 }
 
 function switchTab(tabId) {
@@ -709,12 +769,17 @@ function switchTab(tabId) {
 }
 
 // ==========================================
-// 8. DAILY & SCANNER (WITH MIRROR FIX)
+// 8. DAILY & SCANNER (WITH TRANSLATIONS)
 // ==========================================
 async function renderDailyList() {
     const date = document.getElementById('dailyDateInput').value;
     const list = document.getElementById('dailyStudentsList');
     list.innerHTML = '';
+
+    // Fix: Dynamic Header Translations
+    document.getElementById('headerStudent').innerText = translations[currentLang].tableHeaderStudent;
+    document.getElementById('headerAttendance').innerText = translations[currentLang].tableHeaderAttendance;
+    document.getElementById('headerHomework').innerText = translations[currentLang].tableHeaderHomework;
 
     // Handle Header Columns Visibility
     const hStudent = document.getElementById('headerStudent');
@@ -764,12 +829,12 @@ async function renderDailyList() {
 
         const row = document.createElement('div');
         row.dataset.sid = s.id;
-        row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors ${status === 'present' ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-white dark:bg-black border-transparent hover:bg-gray-50'}`;
+        row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors ${status === 'present' ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'}`;
         
         let html = `
             <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300">${s.name}</div>
             <div class="${attColSpan} flex justify-center transition-all duration-300">
-                <select class="att-select bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-xs py-1 px-1 outline-none">
+                <select class="att-select bg-gray-50 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded text-xs py-1 px-1 outline-none">
                     <option value="present" ${status==='present'?'selected':''}>${translations[currentLang].present}</option>
                     <option value="absent" ${status==='absent'?'selected':''}>${translations[currentLang].absent}</option>
                     <option value="late" ${status==='late'?'selected':''}>${translations[currentLang].late}</option>
@@ -788,7 +853,7 @@ async function renderDailyList() {
         
         row.querySelector('.att-select').addEventListener('change', (e) => {
             if(e.target.value === 'present') row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-            else { row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20'); row.classList.add('bg-white', 'dark:bg-black', 'border-transparent'); }
+            else { row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20'); row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent'); }
         });
         list.appendChild(row);
     });
@@ -823,19 +888,10 @@ async function startScanner(mode) {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         videoElement.srcObject = stream;
-        
-        // ================== FIXED MIRROR ISSUE ==================
-        // If the camera is Front-facing (User), flip it via CSS
         const videoTrack = stream.getVideoTracks()[0];
         const settings = videoTrack.getSettings();
-        
-        // Apply transform if 'user' (Front Camera)
-        if (settings.facingMode === 'user') {
-            videoElement.style.transform = "scaleX(-1)"; // Flip Horizontally
-        } else {
-            videoElement.style.transform = ""; // Reset
-        }
-        // ========================================================
+        if (settings.facingMode === 'user') videoElement.style.transform = "scaleX(-1)";
+        else videoElement.style.transform = "";
         
         await videoElement.play();
         requestAnimationFrame(tickScanner);
@@ -846,7 +902,6 @@ function stopScanner() {
     isScannerPaused = true;
     if(videoElement && videoElement.srcObject) videoElement.srcObject.getTracks().forEach(t => t.stop());
     document.getElementById('scannerModal').classList.add('hidden');
-    // Clean up transform just in case
     if(videoElement) videoElement.style.transform = "";
     if(animationFrameId) cancelAnimationFrame(animationFrameId);
 }
@@ -937,14 +992,9 @@ function processPaymentScan(student) {
         
         if(!checkbox.checked) {
             checkbox.checked = true;
-            // حط المبلغ الموحد أوتوماتيك
             input.value = defaultAmountInput.value || 0;
-            
-            // تحديث الشكل
             checkbox.dispatchEvent(new Event('change')); 
             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // وميض عشان المدرس ياخد باله
             row.classList.add('ring-4', 'ring-green-300');
             setTimeout(() => row.classList.remove('ring-4', 'ring-green-300'), 1000);
         }
@@ -952,7 +1002,7 @@ function processPaymentScan(student) {
 }
 
 // ==========================================
-// 9. OTHER TABS (Students, Payments, Exams) & MESSAGING (Merged)
+// 9. OTHER TABS & MESSAGING
 // ==========================================
 function renderStudents(filter = "") {
     const container = document.getElementById('studentsListDisplay');
@@ -973,43 +1023,59 @@ function renderStudents(filter = "") {
                 <p class="text-xs text-gray-500">${s.parentPhoneNumber || ''}</p>
             </div>
             <div class="flex gap-2">
+                <button class="btn-icon w-10 h-10 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 link-btn" title="Copy Parent Link">
+                    <i class="ri-link-m"></i>
+                </button>
+
                 <button class="btn-icon w-10 h-10 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 msg-btn" data-sid="${s.id}" title="إرسال رسالة">
                     <i class="ri-chat-1-line"></i>
                 </button>
-                
                 <button class="btn-icon w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 qr-btn" data-sid="${s.id}">
                     <i class="ri-qr-code-line"></i>
                 </button>
-                
                 <button class="btn-icon w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/20 del-btn" data-sid="${s.id}">
                     <i class="ri-delete-bin-line"></i>
                 </button>
             </div>
         `;
         
+        // --- BUTTON ACTIONS ---
+        // 1. Copy Link Logic
+        div.querySelector('.link-btn').onclick = () => {
+            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+            const link = `${baseUrl}/parent.html?t=${TEACHER_ID}&g=${SELECTED_GROUP_ID}&s=${s.id}&n=${encodeURIComponent(s.name)}`;
+            navigator.clipboard.writeText(link)
+                .then(() => showToast("تم نسخ رابط المتابعة"))
+                .catch(() => showToast("فشل النسخ", "error"));
+        };
+
+        // 2. Message Modal
         div.querySelector('.msg-btn').addEventListener('click', () => openMessageModal(s));
+        
+        // 3. QR Code
         div.querySelector('.qr-btn').addEventListener('click', () => showStudentQR(s));
+        
+        // 4. Delete
         div.querySelector('.del-btn').addEventListener('click', () => deleteStudent(s.id));
         
         container.appendChild(div);
     });
 }
 
-// Messaging Logic
 function openMessageModal(student) {
     currentMessageStudentId = student.id;
-    document.getElementById('msgStudentName').innerText = `ولي أمر الطالب: ${student.name}`;
+    document.getElementById('msgStudentName').innerText = `${student.name}`;
     document.getElementById('customMessageInput').value = '';
     document.getElementById('messageModal').classList.remove('hidden');
 }
 
 async function sendCustomMessageAction() {
     const msg = document.getElementById('customMessageInput').value.trim();
-    if(!msg) return showToast("الرجاء كتابة رسالة", "error");
+    if(!msg) return showToast(translations[currentLang].writeMsgFirst, "error");
     
     const btn = document.getElementById('confirmSendMsgBtn');
     const originalContent = btn.innerHTML;
-    btn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> جاري الإرسال...`;
+    btn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> ${translations[currentLang].sendingMsg}`;
     btn.disabled = true;
 
     try {
@@ -1021,11 +1087,11 @@ async function sendCustomMessageAction() {
             messageBody: msg
         });
         
-        showToast("تم إرسال الرسالة بنجاح");
+        showToast(translations[currentLang].msgSentSuccess);
         document.getElementById('messageModal').classList.add('hidden');
     } catch (error) {
         console.error(error);
-        showToast("فشل الإرسال. تأكد من الإنترنت", "error");
+        showToast(translations[currentLang].msgSendFail, "error");
     } finally {
         btn.innerHTML = originalContent;
         btn.disabled = false;
@@ -1070,7 +1136,7 @@ async function deleteStudent(id) {
 
 async function renderPaymentsList() {
     const month = document.getElementById('paymentMonthInput').value;
-    const defaultAmountInput = document.getElementById('defaultAmountInput'); // المبلغ الموحد
+    const defaultAmountInput = document.getElementById('defaultAmountInput'); 
     const container = document.getElementById('paymentsList');
     container.innerHTML = '';
     
@@ -1092,7 +1158,6 @@ async function renderPaymentsList() {
         div.className = `record-item flex justify-between items-center p-3 border rounded-xl transition-colors ${isPaid ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-white dark:bg-darkSurface border-gray-100 dark:border-gray-700'}`;
         div.dataset.sid = s.id;
         
-        // الشكل الجديد: اسم + مبلغ + Checkbox
         div.innerHTML = `
             <span class="font-bold text-gray-700 dark:text-gray-200 w-1/3 truncate">${s.name}</span>
             
@@ -1112,12 +1177,10 @@ async function renderPaymentsList() {
         const checkbox = div.querySelector('.payment-check');
         const input = div.querySelector('.payment-input');
 
-        // لو داس على الـ Checkbox
         checkbox.addEventListener('change', (e) => {
-            const defaultVal = defaultAmountInput.value || 0; // هات القيمة من فوق
+            const defaultVal = defaultAmountInput.value || 0; 
             
             if(e.target.checked) {
-                // لو علم صح، حط المبلغ الموحد (لو الخانة فاضية)
                 if(!input.value || input.value == 0) {
                     input.value = defaultVal;
                 }
@@ -1125,7 +1188,6 @@ async function renderPaymentsList() {
                 input.classList.add('text-green-600', 'font-bold');
                 input.classList.remove('text-gray-400');
             } else {
-                // لو شال الصح، صفر المبلغ
                 input.value = '';
                 div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.remove('text-green-600', 'font-bold');
@@ -1133,7 +1195,6 @@ async function renderPaymentsList() {
             }
         });
 
-        // لو عدل المبلغ يدوي
         input.addEventListener('input', (e) => {
             if(e.target.value > 0) {
                 checkbox.checked = true;
@@ -1154,31 +1215,20 @@ async function savePayments() {
     
     const records = [];
     document.querySelectorAll('#paymentsList > div').forEach(div => {
-        const val = div.querySelector('.payment-input').value; // بناخد القيمة من الـ input مش الـ checkbox بس
+        const val = div.querySelector('.payment-input').value; 
         const amount = val ? parseFloat(val) : 0;
-        
-        // بنحفظ لو المبلغ أكبر من صفر
-        records.push({ 
-            studentId: div.dataset.sid, 
-            amount: amount,
-            paid: amount > 0 
-        });
+        records.push({ studentId: div.dataset.sid, amount: amount, paid: amount > 0 });
     });
 
     await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${month}`, month, records });
-    
-    await addToSyncQueue({ 
-        type: 'set', 
-        path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, 
-        data: { month, records } 
-    });
-    
+    await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, data: { month, records } });
     showToast(translations[currentLang].saved);
 }
+
 async function loadExams() {
     const exams = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
     const sel = document.getElementById('examSelect');
-    sel.innerHTML = '<option value="">-- اختر الامتحان --</option>';
+    sel.innerHTML = `<option value="">${translations[currentLang].selectExamPlaceholder}</option>`;
     exams.filter(e => e.type === 'exam').forEach(e => {
         const opt = document.createElement('option');
         opt.value = e.id;
@@ -1186,6 +1236,7 @@ async function loadExams() {
         sel.appendChild(opt);
     });
 }
+
 async function addNewExam() {
     const name = document.getElementById('newExamName').value;
     if(!name) return;
@@ -1196,6 +1247,7 @@ async function addNewExam() {
     document.getElementById('newExamName').value = '';
     loadExams();
 }
+
 async function renderExamGrades() {
     const examId = document.getElementById('examSelect').value;
     const container = document.getElementById('examGradesList');
@@ -1206,11 +1258,12 @@ async function renderExamGrades() {
     allStudents.forEach(s => {
         const val = scores[s.id]?.score || '';
         const div = document.createElement('div');
-        div.className = "flex items-center gap-2 p-2 bg-white dark:bg-black border rounded-lg";
-        div.innerHTML = `<label class="text-sm font-bold w-1/2 truncate dark:text-white">${s.name}</label><input type="number" class="exam-score-input input-field w-1/2 h-10" data-sid="${s.id}" value="${val}" placeholder="الدرجة">`;
+        div.className = "flex items-center gap-2 p-2 bg-white dark:bg-darkSurface border dark:border-gray-700 rounded-lg";
+        div.innerHTML = `<label class="text-sm font-bold w-1/2 truncate dark:text-white">${s.name}</label><input type="number" class="exam-score-input input-field w-1/2 h-10" data-sid="${s.id}" value="${val}" placeholder="${translations[currentLang].gradePlaceholder}">`;
         container.appendChild(div);
     });
 }
+
 async function saveExamGrades() {
     const examId = document.getElementById('examSelect').value;
     if(!examId) return;
@@ -1229,9 +1282,13 @@ async function saveExamGrades() {
 function saveProfile() {
     const name = document.getElementById('teacherNameInput').value;
     const subject = document.getElementById('teacherSubjectInput').value;
+    const password = document.getElementById('profilePasswordInput').value.trim(); 
+    
     if(!name) return;
-    putToDB('teachers', { id: TEACHER_ID, name, subject });
-    addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}`, data: { name, subject } });
+    
+    putToDB('teachers', { id: TEACHER_ID, name, subject, password });
+    addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}`, data: { name, subject, password } });
+    
     document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${name}`;
     showToast(translations[currentLang].saved);
 }
@@ -1260,6 +1317,7 @@ function toggleLang() {
     currentLang = currentLang === 'ar' ? 'en' : 'ar';
     document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
     document.getElementById('languageToggleButton').innerText = currentLang === 'ar' ? 'EN' : 'ع';
+    
     document.querySelectorAll('[data-key]').forEach(el => {
         const key = el.dataset.key;
         if(translations[currentLang][key]) el.innerText = translations[currentLang][key];
@@ -1268,6 +1326,9 @@ function toggleLang() {
         const key = el.dataset.keyPlaceholder;
         if(translations[currentLang][key]) el.placeholder = translations[currentLang][key];
     });
+    
     if(SELECTED_GROUP_ID && !document.getElementById('tab-daily').classList.contains('hidden')) renderDailyList();
+    if(SELECTED_GROUP_ID && !document.getElementById('tab-students').classList.contains('hidden')) renderStudents();
+    loadGroups();
     renderDayCheckboxes(); 
 }

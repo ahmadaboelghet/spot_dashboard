@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متابعة الطالب</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-['Cairo'] flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
+        <div class="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-lg">🔔</div>
+        
+        <h1 class="text-2xl font-bold mb-2">تفعيل الإشعارات</h1>
+        <p class="text-gray-600 mb-8 text-sm">اضغط تفعيل لتصلك تقارير الغياب والدرجات للطالب <span id="studentName" class="font-bold text-black">...</span> فوراً.</p>
+
+        <button id="allowBtn" onclick="requestPermission()" class="w-full bg-black text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 transition transform hover:scale-105">
+            تفعيل التنبيهات الآن
+        </button>
+        
+        <p id="statusMsg" class="mt-4 text-xs font-bold hidden"></p>
+    </div>
+
+    <script>
+        // إعدادات فايربيز
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
+            authDomain: "learnaria-483e7.firebaseapp.com",
+            projectId: "learnaria-483e7",
+            storageBucket: "learnaria-483e7.firebasestorage.app",
+            messagingSenderId: "573038013067",
+            appId: "1:573038013067:web:db6a78e8370d33b07a828e"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const messaging = firebase.messaging();
+        const db = firebase.firestore();
+
+        // قراءة البيانات من الرابط
+        const urlParams = new URLSearchParams(window.location.search);
+        const tId = urlParams.get('t'); // Teacher ID
+        const gId = urlParams.get('g'); // Group ID
+        const sId = urlParams.get('s'); // Student ID
+        const name = urlParams.get('n'); // Student Name (Encoded)
+
+        if(name) document.getElementById('studentName').innerText = decodeURIComponent(name);
+
+        async function requestPermission() {
+            const btn = document.getElementById('allowBtn');
+            const status = document.getElementById('statusMsg');
+            
+            btn.disabled = true;
+            btn.innerText = "جاري التفعيل...";
+
+            try {
+                // 1. طلب الإذن من المتصفح
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    
+                    // 2. الحصول على التوكن
+                    // !هام! استبدل الكلام اللي تحت ده بالمفتاح اللي جبته من الكونسول
+                    const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE" });
+                    
+                    if(token && tId && gId && sId) {
+                        // 3. حفظ التوكن في بيانات الطالب
+                        await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).update({
+                            parentFcmToken: token // ده التوكن الجديد
+                        });
+
+                        btn.style.backgroundColor = "#22c55e"; // Green
+                        btn.innerText = "تم التفعيل بنجاح ✅";
+                        status.innerText = "يمكنك إغلاق هذه الصفحة الآن.";
+                        status.classList.remove('hidden', 'text-red-500');
+                        status.classList.add('text-green-600');
+                    } else {
+                        throw new Error("بيانات الرابط غير مكتملة");
+                    }
+                } else {
+                    throw new Error("تم رفض الإذن");
+                }
+            } catch (error) {
+                console.error(error);
+                btn.style.backgroundColor = "#ef4444"; // Red
+                btn.innerText = "فشل التفعيل";
+                status.innerText = "يرجى السماح بالإشعارات من إعدادات المتصفح.";
+                status.classList.remove('hidden');
+                status.classList.add('text-red-500');
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
