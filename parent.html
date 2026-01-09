@@ -26,71 +26,81 @@
     </div>
 
     <script>
-        // إعدادات فايربيز
-        const firebaseConfig = {
-            apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
-            authDomain: "learnaria-483e7.firebaseapp.com",
-            projectId: "learnaria-483e7",
-            storageBucket: "learnaria-483e7.firebasestorage.app",
-            messagingSenderId: "573038013067",
-            appId: "1:573038013067:web:db6a78e8370d33b07a828e"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const messaging = firebase.messaging();
-        const db = firebase.firestore();
+    // 1. إعدادات فايربيز (نفس القديمة)
+    const firebaseConfig = {
+        apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
+        authDomain: "learnaria-483e7.firebaseapp.com",
+        projectId: "learnaria-483e7",
+        storageBucket: "learnaria-483e7.firebasestorage.app",
+        messagingSenderId: "573038013067",
+        appId: "1:573038013067:web:db6a78e8370d33b07a828e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
+    const db = firebase.firestore();
 
-        // قراءة البيانات من الرابط
-        const urlParams = new URLSearchParams(window.location.search);
-        const tId = urlParams.get('t'); // Teacher ID
-        const gId = urlParams.get('g'); // Group ID
-        const sId = urlParams.get('s'); // Student ID
-        const name = urlParams.get('n'); // Student Name (Encoded)
+    // قراءة البيانات من الرابط
+    const urlParams = new URLSearchParams(window.location.search);
+    const tId = urlParams.get('t'); 
+    const gId = urlParams.get('g'); 
+    const sId = urlParams.get('s'); 
+    const name = urlParams.get('n'); 
 
-        if(name) document.getElementById('studentName').innerText = decodeURIComponent(name);
+    if(name) document.getElementById('studentName').innerText = decodeURIComponent(name);
 
-        async function requestPermission() {
-            const btn = document.getElementById('allowBtn');
-            const status = document.getElementById('statusMsg');
-            
-            btn.disabled = true;
-            btn.innerText = "جاري التفعيل...";
+    async function requestPermission() {
+        const btn = document.getElementById('allowBtn');
+        const status = document.getElementById('statusMsg');
+        
+        btn.disabled = true;
+        btn.innerText = "جاري التفعيل...";
 
-            try {
-                // 1. طلب الإذن من المتصفح
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    
-                    // 2. الحصول على التوكن
-                    // !هام! استبدل الكلام اللي تحت ده بالمفتاح اللي جبته من الكونسول
-                    const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE" });
-                    
-                    if(token && tId && gId && sId) {
-                        // 3. حفظ التوكن في بيانات الطالب
-                        await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).update({
-                            parentFcmToken: token // ده التوكن الجديد
-                        });
+        try {
+            // 1. طلب الإذن
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                
+                // === التعديل الهام جداً (تسجيل الـ Service Worker يدوياً) ===
+                // بنقوله دور على الملف في نفس الفولدر اللي احنا فيه (.)
+                const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                
+                // 2. الحصول على التوكن
+                // !هام! متنساش تحط مفتاح VAPID الحقيقي هنا مكان الجملة دي
+                const token = await messaging.getToken({ 
+                    vapidKey: "YOUR_PUBLIC_VAPID_KEY_HERE", 
+                    serviceWorkerRegistration: registration 
+                });
+                
+                if(token && tId && gId && sId) {
+                    // 3. حفظ التوكن
+                    await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).update({
+                        parentFcmToken: token
+                    });
 
-                        btn.style.backgroundColor = "#22c55e"; // Green
-                        btn.innerText = "تم التفعيل بنجاح ✅";
-                        status.innerText = "يمكنك إغلاق هذه الصفحة الآن.";
-                        status.classList.remove('hidden', 'text-red-500');
-                        status.classList.add('text-green-600');
-                    } else {
-                        throw new Error("بيانات الرابط غير مكتملة");
-                    }
+                    btn.style.backgroundColor = "#22c55e"; 
+                    btn.innerText = "تم التفعيل بنجاح ✅";
+                    status.innerText = "يمكنك إغلاق هذه الصفحة الآن.";
+                    status.classList.remove('hidden', 'text-red-500');
+                    status.classList.add('text-green-600');
                 } else {
-                    throw new Error("تم رفض الإذن");
+                    throw new Error("البيانات ناقصة (تأكد من الرابط)");
                 }
-            } catch (error) {
-                console.error(error);
-                btn.style.backgroundColor = "#ef4444"; // Red
-                btn.innerText = "فشل التفعيل";
-                status.innerText = "يرجى السماح بالإشعارات من إعدادات المتصفح.";
-                status.classList.remove('hidden');
-                status.classList.add('text-red-500');
-                btn.disabled = false;
+            } else {
+                throw new Error("تم رفض الإذن من المتصفح");
             }
+        } catch (error) {
+            console.error("خطأ التفعيل:", error);
+            btn.style.backgroundColor = "#ef4444"; 
+            btn.innerText = "فشل التفعيل";
+            // رسالة توضيحية لليوزر
+            if(error.code === 'messaging/token-subscribe-failed' || error.message.includes('registration')) {
+                 status.innerText = "مشكلة في الاتصال بالملفات، حاول تحديث الصفحة.";
+            } else {
+                 status.innerText = "يرجى الضغط على القفل بجانب الرابط وعمل Reset Permissions.";
+            }
+            status.classList.remove('hidden');
+            status.classList.add('text-red-500');
+            btn.disabled = false;
         }
-    </script>
-</body>
-</html>
+    }
+</script>
