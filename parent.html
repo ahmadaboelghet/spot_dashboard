@@ -60,22 +60,22 @@
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
                 
-                // === التعديل الهام جداً (تسجيل الـ Service Worker يدوياً) ===
-                // بنقوله دور على الملف في نفس الفولدر اللي احنا فيه (.)
+                // تسجيل الـ Service Worker
                 const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
                 
-                // 2. الحصول على التوكن
-                // !هام! متنساش تحط مفتاح VAPID الحقيقي هنا مكان الجملة دي
+                // 2. الحصول على التوكن (تأكد من وضع المفتاح الصحيح هنا)
                 const token = await messaging.getToken({ 
-                    vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
+                    vapidKey: "BOM...YOUR_REAL_KEY_HERE...Q8", // <--- حط مفتاحك الحقيقي هنا
                     serviceWorkerRegistration: registration 
                 });
                 
                 if(token && tId && gId && sId) {
-                    // 3. حفظ التوكن
-                    await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).update({
+                    // === التعديل الجذري هنا ===
+                    // بدل .update استخدمنا .set مع merge: true
+                    // ده هيحل مشكلة "No document to update"
+                    await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).set({
                         parentFcmToken: token
-                    });
+                    }, { merge: true });
 
                     btn.style.backgroundColor = "#22c55e"; 
                     btn.innerText = "تم التفعيل بنجاح ✅";
@@ -83,18 +83,20 @@
                     status.classList.remove('hidden', 'text-red-500');
                     status.classList.add('text-green-600');
                 } else {
-                    throw new Error("البيانات ناقصة (تأكد من الرابط)");
+                    throw new Error("بيانات الرابط ناقصة");
                 }
             } else {
-                throw new Error("تم رفض الإذن من المتصفح");
+                throw new Error("تم رفض الإذن");
             }
         } catch (error) {
-            console.error("خطأ التفعيل:", error);
+            console.error("خطأ:", error);
             btn.style.backgroundColor = "#ef4444"; 
             btn.innerText = "فشل التفعيل";
-            // رسالة توضيحية لليوزر
-            if(error.code === 'messaging/token-subscribe-failed' || error.message.includes('registration')) {
-                 status.innerText = "مشكلة في الاتصال بالملفات، حاول تحديث الصفحة.";
+            // رسائل توضيحية حسب الخطأ
+            if(error.code === 'not-found' || error.message.includes('No document')) {
+                 status.innerText = "جاري محاولة الإصلاح التلقائي... اضغط مرة أخرى.";
+            } else if (error.message.includes('Vapid')) {
+                 status.innerText = "خطأ في إعدادات السيرفر (Vapid Key).";
             } else {
                  status.innerText = "يرجى الضغط على القفل بجانب الرابط وعمل Reset Permissions.";
             }
