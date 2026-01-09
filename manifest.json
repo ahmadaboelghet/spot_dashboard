@@ -1,7 +1,6 @@
 {
   "name": "Spot - المعلم الذكي",
   "short_name": "Spot",
-  "start_url": "./parent.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#fbbf24",
