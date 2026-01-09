@@ -1041,8 +1041,9 @@ function renderStudents(filter = "") {
         // 1. Copy Link Logic
         div.querySelector('.link-btn').onclick = () => {
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const link = `${baseUrl}/parent.html?t=${TEACHER_ID}&g=${SELECTED_GROUP_ID}&s=${s.id}&n=${encodeURIComponent(s.name)}`;
-            navigator.clipboard.writeText(link)
+// التعديل: إضافة encodeURIComponent للمتغيرات عشان الرموز زي + توصل صح
+                const link = `${baseUrl}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}`;        
+                navigator.clipboard.writeText(link)
                 .then(() => showToast("تم نسخ رابط المتابعة"))
                 .catch(() => showToast("فشل النسخ", "error"));
         };

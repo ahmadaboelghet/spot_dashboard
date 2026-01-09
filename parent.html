@@ -2,107 +2,175 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>متابعة الطالب</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spot - متابعة الطالب</title>
+
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="./favicon.png">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Spot">
+    <meta name="theme-color" content="#fbbf24">
+
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Cairo', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .app-icon { box-shadow: 0 4px 6px -1px rgba(251, 191, 36, 0.5); }
+    </style>
 </head>
-<body class="bg-gray-100 font-['Cairo'] flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
 
-    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
-        <div class="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-lg">🔔</div>
+    <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-gray-100">
+        <div class="w-24 h-24 bg-yellow-400 rounded-2xl flex items-center justify-center mx-auto mb-6 text-4xl shadow-lg app-icon text-white transform hover:scale-105 transition-transform duration-300">
+            🔔
+        </div>
         
-        <h1 class="text-2xl font-bold mb-2">تفعيل الإشعارات</h1>
-        <p class="text-gray-600 mb-8 text-sm">اضغط تفعيل لتصلك تقارير الغياب والدرجات للطالب <span id="studentName" class="font-bold text-black">...</span> فوراً.</p>
+        <h1 class="text-2xl font-bold mb-2 text-gray-800">تفعيل الإشعارات</h1>
+        <p class="text-gray-500 mb-8 text-sm leading-relaxed">
+            اضغط تفعيل لتصلك تقارير الغياب والدرجات للطالب <br>
+            <span id="studentName" class="font-bold text-black text-lg bg-yellow-50 px-2 py-1 rounded mt-1 inline-block">...</span>
+            <br> فوراً على موبايلك.
+        </p>
 
-        <button id="allowBtn" onclick="requestPermission()" class="w-full bg-black text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 transition transform hover:scale-105">
-            تفعيل التنبيهات الآن
+        <button id="allowBtn" onclick="requestPermission()" class="w-full bg-black text-white font-bold py-4 rounded-xl shadow-xl hover:bg-gray-800 active:scale-95 transition-all duration-200 text-lg flex items-center justify-center gap-2">
+            <span>تفعيل التنبيهات الآن</span>
+            <i class="ri-notification-3-line"></i>
         </button>
         
-        <p id="statusMsg" class="mt-4 text-xs font-bold hidden"></p>
+        <p id="statusMsg" class="mt-6 text-xs font-bold text-gray-400 hidden"></p>
+        
+        <div class="mt-8 pt-6 border-t border-gray-100 text-center">
+            <p class="text-[10px] text-gray-400">Spot - Smart Education System</p>
+        </div>
     </div>
 
     <script>
-    // 1. إعدادات فايربيز (نفس القديمة)
-    const firebaseConfig = {
-        apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
-        authDomain: "learnaria-483e7.firebaseapp.com",
-        projectId: "learnaria-483e7",
-        storageBucket: "learnaria-483e7.firebasestorage.app",
-        messagingSenderId: "573038013067",
-        appId: "1:573038013067:web:db6a78e8370d33b07a828e"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const messaging = firebase.messaging();
-    const db = firebase.firestore();
+        // 1. Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
+            authDomain: "learnaria-483e7.firebaseapp.com",
+            projectId: "learnaria-483e7",
+            storageBucket: "learnaria-483e7.firebasestorage.app",
+            messagingSenderId: "573038013067",
+            appId: "1:573038013067:web:db6a78e8370d33b07a828e"
+        };
 
-    // قراءة البيانات من الرابط
-    const urlParams = new URLSearchParams(window.location.search);
-    const tId = urlParams.get('t'); 
-    const gId = urlParams.get('g'); 
-    const sId = urlParams.get('s'); 
-    const name = urlParams.get('n'); 
-
-    if(name) document.getElementById('studentName').innerText = decodeURIComponent(name);
-
-    async function requestPermission() {
-        const btn = document.getElementById('allowBtn');
-        const status = document.getElementById('statusMsg');
-        
-        btn.disabled = true;
-        btn.innerText = "جاري التفعيل...";
-
-        try {
-            // 1. طلب الإذن
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                
-                // تسجيل الـ Service Worker
-                const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-                
-                // 2. الحصول على التوكن (تأكد من وضع المفتاح الصحيح هنا)
-                const token = await messaging.getToken({ 
-                    vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", // <--- حط مفتاحك الحقيقي هنا
-                    serviceWorkerRegistration: registration 
-                });
-                
-                if(token && tId && gId && sId) {
-                    // === التعديل الجذري هنا ===
-                    // بدل .update استخدمنا .set مع merge: true
-                    // ده هيحل مشكلة "No document to update"
-                    await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).set({
-                        parentFcmToken: token
-                    }, { merge: true });
-
-                    btn.style.backgroundColor = "#22c55e"; 
-                    btn.innerText = "تم التفعيل بنجاح ✅";
-                    status.innerText = "يمكنك إغلاق هذه الصفحة الآن.";
-                    status.classList.remove('hidden', 'text-red-500');
-                    status.classList.add('text-green-600');
-                } else {
-                    throw new Error("بيانات الرابط ناقصة");
-                }
-            } else {
-                throw new Error("تم رفض الإذن");
-            }
-        } catch (error) {
-            console.error("خطأ:", error);
-            btn.style.backgroundColor = "#ef4444"; 
-            btn.innerText = "فشل التفعيل";
-            // رسائل توضيحية حسب الخطأ
-            if(error.code === 'not-found' || error.message.includes('No document')) {
-                 status.innerText = "جاري محاولة الإصلاح التلقائي... اضغط مرة أخرى.";
-            } else if (error.message.includes('Vapid')) {
-                 status.innerText = "خطأ في إعدادات السيرفر (Vapid Key).";
-            } else {
-                 status.innerText = "يرجى الضغط على القفل بجانب الرابط وعمل Reset Permissions.";
-            }
-            status.classList.remove('hidden');
-            status.classList.add('text-red-500');
-            btn.disabled = false;
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
         }
-    }
-</script>
+        const messaging = firebase.messaging();
+        const db = firebase.firestore();
+
+        // 2. معالجة الرابط (حل مشكلة المسافة +)
+        const urlParams = new URLSearchParams(window.location.search);
+        let tId = urlParams.get('t');
+        // تصحيح ذكي: لو الرقم فيه مسافة بدل + نصلحها
+        if (tId && tId.includes(' ') && !tId.includes('+')) {
+            tId = tId.replace(/ /g, '+');
+        }
+
+        const gId = urlParams.get('g'); 
+        const sId = urlParams.get('s'); 
+        const name = urlParams.get('n'); 
+
+        if(name) document.getElementById('studentName').innerText = decodeURIComponent(name);
+
+        // 3. دالة التفعيل الرئيسية
+        async function requestPermission() {
+            const btn = document.getElementById('allowBtn');
+            const status = document.getElementById('statusMsg');
+            
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-pulse">جاري الاتصال...</span>`;
+
+            try {
+                // طلب الإذن من المتصفح
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    
+                    // تسجيل الـ Service Worker في المسار الصحيح
+                    const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                    
+                    // الحصول على التوكن
+                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    // هام جداً: استبدل النص اللي تحت بالمفتاح الطويل اللي بيبدأ بـ B
+                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    const token = await messaging.getToken({ 
+                        vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
+                        serviceWorkerRegistration: registration 
+                    });
+                    
+                    if(token && tId && gId && sId) {
+                        // حفظ التوكن (استخدام set merge لحل مشكلة الملف المفقود)
+                        await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).set({
+                            parentFcmToken: token
+                        }, { merge: true });
+
+                        // نجاح
+                        btn.style.backgroundColor = "#22c55e"; // Green
+                        btn.innerText = "تم التفعيل بنجاح ✅";
+                        
+                        // رسالة خاصة للأيفون
+                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                        if (isIOS && !window.navigator.standalone) {
+                            status.innerText = "يمكنك الآن إغلاق هذه الصفحة.";
+                        } else {
+                            status.innerText = "سيصلك إشعار تجريبي الآن...";
+                        }
+                        
+                        status.classList.remove('hidden', 'text-red-500');
+                        status.classList.add('text-green-600');
+
+                    } else {
+                        throw new Error("بيانات الرابط غير مكتملة");
+                    }
+                } else {
+                    throw new Error("تم رفض الإذن من إعدادات المتصفح");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                btn.style.backgroundColor = "#ef4444"; // Red
+                btn.innerText = "فشل التفعيل";
+                
+                if(error.code === 'messaging/token-subscribe-failed' || error.message.includes('registration')) {
+                     status.innerText = "تأكد من فتح الرابط من Chrome أو Safari.";
+                } else {
+                     status.innerText = "يرجى الضغط على علامة القفل 🔒 بالأعلى وعمل Reset Permissions.";
+                }
+                
+                status.classList.remove('hidden');
+                status.classList.add('text-red-500');
+                btn.disabled = false;
+            }
+        }
+
+        // 4. استقبال الإشعار والصفحة مفتوحة (Foreground)
+        messaging.onMessage((payload) => {
+            console.log('Message received. ', payload);
+            const notificationTitle = payload.notification.title;
+            const notificationOptions = {
+                body: payload.notification.body,
+                icon: './favicon.png'
+            };
+
+            // محاولة عرض إشعار النظام
+            if (Notification.permission === "granted") {
+                new Notification(notificationTitle, notificationOptions);
+            } else {
+                // بديل لو الإشعار ممنوع: Alert
+                alert(`🔔 ${notificationTitle}\n${notificationOptions.body}`);
+            }
+        });
+    </script>
+</body>
+</html>
