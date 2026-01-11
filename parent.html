@@ -73,7 +73,6 @@
         // 2. معالجة الرابط (حل مشكلة المسافة +)
         const urlParams = new URLSearchParams(window.location.search);
         let tId = urlParams.get('t');
-        // تصحيح ذكي: لو الرقم فيه مسافة بدل + نصلحها
         if (tId && tId.includes(' ') && !tId.includes('+')) {
             tId = tId.replace(/ /g, '+');
         }
@@ -81,6 +80,7 @@
         const gId = urlParams.get('g'); 
         const sId = urlParams.get('s'); 
         const name = urlParams.get('n'); 
+        const pNum = urlParams.get('p'); // <<< استقبال رقم الموبايل
 
         if(name) document.getElementById('studentName').innerText = decodeURIComponent(name);
 
@@ -98,23 +98,34 @@
                 
                 if (permission === 'granted') {
                     
-                    // تسجيل الـ Service Worker في المسار الصحيح
+                    // تسجيل الـ Service Worker
                     const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
                     
-                    // الحصول على التوكن
-                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    // هام جداً: استبدل النص اللي تحت بالمفتاح الطويل اللي بيبدأ بـ B
-                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     const token = await messaging.getToken({ 
                         vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
                         serviceWorkerRegistration: registration 
                     });
                     
                     if(token && tId && gId && sId) {
-                        // حفظ التوكن (استخدام set merge لحل مشكلة الملف المفقود)
-                        await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).set({
+                        
+                        // <<< التعديل هنا: الربط الثنائي (للطالب ولولي الأمر العام)
+                        
+                        // 1. الحفظ التقليدي (للمدرس الحالي)
+                        const studentPromise = db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).set({
                             parentFcmToken: token
                         }, { merge: true });
+
+                        // 2. الحفظ العام (لأي مدرس آخر بيستخدم نفس رقم الموبايل)
+                        let parentPromise = Promise.resolve();
+                        if (pNum && pNum.length > 5) {
+                            parentPromise = db.collection('parents').doc(pNum).set({
+                                fcmToken: token,
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            }, { merge: true });
+                        }
+
+                        // انتظار العمليتين
+                        await Promise.all([studentPromise, parentPromise]);
 
                         // نجاح
                         btn.style.backgroundColor = "#22c55e"; // Green
@@ -167,7 +178,6 @@
             if (Notification.permission === "granted") {
                 new Notification(notificationTitle, notificationOptions);
             } else {
-                // بديل لو الإشعار ممنوع: Alert
                 alert(`🔔 ${notificationTitle}\n${notificationOptions.body}`);
             }
         });

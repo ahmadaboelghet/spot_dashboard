@@ -84,7 +84,7 @@ async function deleteFromDB(store, key) {
 // 3. STATE & TRANSLATIONS
 // ==========================================
 let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = 'ar';
-let isSyncing = false; // <--- (تم الإصلاح) المتغير المهم جداً
+let isSyncing = false; 
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
 let hasHomeworkToday = false, currentPendingStudentId = null, currentMessageStudentId = null;
 
@@ -1038,13 +1038,17 @@ function renderStudents(filter = "") {
         `;
         
         // --- Actions ---
-        // 1. Copy Link Logic
+        // 1. Copy Link Logic (MODIFIED FOR PARENT PHONE TRICK)
         div.querySelector('.link-btn').onclick = () => {
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-// التعديل: إضافة encodeURIComponent للمتغيرات عشان الرموز زي + توصل صح
-                const link = `${baseUrl}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}`;        
-                navigator.clipboard.writeText(link)
-                .then(() => showToast("تم نسخ رابط المتابعة"))
+            
+            // <<< التعديل هنا: جلب رقم الموبايل وإضافته للرابط
+            const pNum = s.parentPhoneNumber ? s.parentPhoneNumber.trim() : "";
+            
+            const link = `${baseUrl}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
+            
+            navigator.clipboard.writeText(link)
+                .then(() => showToast("تم نسخ رابط المتابعة الموحد"))
                 .catch(() => showToast("فشل النسخ", "error"));
         };
 
