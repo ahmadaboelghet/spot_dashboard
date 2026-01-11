@@ -25,8 +25,8 @@
                 extend: {
                     colors: {
                         brand: '#F2CE5A', 
-                        darkBg: '#000000', 
-                        darkCard: '#111111', 
+                        darkBg: '#000000', // أسود صريح
+                        darkCard: '#111111', // كروت سوداء
                         darkBorder: '#222222'
                     },
                     animation: {
@@ -169,12 +169,12 @@
     </div>
 
     <script>
-        // 1. فحص البيئة (مهم جداً لحل مشكلة عدم الاستجابة)
+        // 1. Check Env
         if (window.location.protocol === 'file:') {
-            alert("⚠️ تنبيه:\nأنت تفتح الملف مباشرة (file://).\nلن تعمل الإشعارات ولن يستجيب الزرار.\n\nالحل: افتح الملف باستخدام Live Server أو ارفعه على استضافة.");
+            alert("⚠️ تنبيه:\nلا يمكن تفعيل الإشعارات عند فتح الملف مباشرة (file://).\nيرجى استخدام سيرفر محلي (Live Server) أو استضافة.");
         }
 
-        // 2. إعدادات الثيم
+        // 2. Theme Logic
         function toggleDarkMode() {
             const html = document.documentElement;
             const icon = document.getElementById('themeIcon');
@@ -193,7 +193,7 @@
             document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
         }
 
-        // 3. إعدادات Firebase (مع حماية من الأخطاء)
+        // 3. Firebase Init
         const firebaseConfig = {
             apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
             authDomain: "learnaria-483e7.firebaseapp.com",
@@ -207,17 +207,14 @@
         try {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
-            // محاولة تهيئة Messaging فقط إذا كان مدعوماً
             if (firebase.messaging.isSupported()) {
                 messaging = firebase.messaging();
             } else {
-                console.warn("Firebase Messaging not supported in this browser/mode.");
+                console.log("Messaging not supported.");
             }
-        } catch (e) {
-            console.error("Firebase Init Error:", e);
-        }
+        } catch (e) { console.error(e); }
 
-        // 4. المتغيرات والبيانات
+        // 4. Params & Data
         const urlParams = new URLSearchParams(window.location.search);
         let tId = urlParams.get('t')?.replace(/ /g, '+');
         const gId = urlParams.get('g'); 
@@ -240,51 +237,101 @@
 
         async function loadData() {
             if(!tId || !gId || !sId || !db) return;
-            // ... (نفس كود جلب البيانات السابق - تم اختصاره للعرض) ...
-            // يمكنك نسخ دالة loadData الكاملة من الردود السابقة ولصقها هنا
-            // سأضع هنا الحد الأدنى للعمل:
             try {
-                const attendanceRef = db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(10);
-                attendanceRef.get().then(snap => {
-                    if(!snap.empty) {
-                        let html = '';
-                        let present=0, total=0;
-                        snap.forEach(doc => {
-                            const d = doc.data();
-                            const rec = d.records?.find(r => r.studentId === sId);
-                            if(rec) {
-                                total++;
-                                if(rec.status==='present') present++;
-                                // Render logic here (same as before)
+                // Attendance
+                db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(20).get().then(snap => {
+                    let html='', timelineHtml='', present=0, total=0;
+                    if(snap.empty) html='<div class="text-center text-gray-400 py-10 text-sm">لا توجد بيانات</div>';
+                    
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        const rec = d.records?.find(r => r.studentId === sId);
+                        if(rec) {
+                            total++;
+                            let statusColor = 'text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400';
+                            let statusText = 'غير محدد';
+                            let icon = 'ri-question-mark';
+
+                            if(rec.status === 'present') { 
+                                present++; 
+                                statusColor = 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400'; 
+                                statusText = 'حاضر'; 
+                                icon = 'ri-check-line';
+                            } else if (rec.status === 'absent') { 
+                                statusColor = 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400'; 
+                                statusText = 'غائب'; 
+                                icon = 'ri-close-line';
+                            } else if (rec.status === 'late') {
+                                present++;
+                                statusColor = 'text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400';
+                                statusText = 'تأخير';
+                                icon = 'ri-time-line';
                             }
-                        });
-                        document.getElementById('attendanceRate').innerText = total>0 ? Math.round((present/total)*100)+'%' : '0%';
-                    }
+
+                            html += `<div class="glass-card p-4 rounded-2xl flex justify-between items-center"><div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl flex items-center justify-center ${statusColor}"><i class="${icon} text-lg"></i></div><div><p class="font-bold text-sm text-gray-900 dark:text-white">${d.date}</p></div></div><span class="text-[10px] font-bold px-2 py-1 rounded-lg ${statusColor}">${statusText}</span></div>`;
+                            
+                            if(timelineHtml.length < 800) {
+                                timelineHtml += `<div class="flex gap-4 items-start"><div class="flex flex-col items-center"><div class="w-2 h-2 rounded-full mt-2 ${rec.status === 'present' ? 'bg-green-500' : 'bg-red-500'}"></div><div class="w-[1px] h-full bg-gray-200 dark:bg-darkBorder my-1"></div></div><div class="glass-card p-3 rounded-2xl flex-1 mb-4"><div class="flex justify-between items-center"><p class="text-xs font-bold text-gray-900 dark:text-white">${d.date}</p><span class="text-[10px] font-bold ${statusColor.split(' ')[0]}">${statusText}</span></div></div></div>`;
+                            }
+                        }
+                    });
+                    document.getElementById('attendanceList').innerHTML = html;
+                    document.getElementById('timelineList').innerHTML = timelineHtml || '<p class="text-center text-gray-400 py-4 text-xs">لا يوجد نشاط</p>';
+                    document.getElementById('attendanceRate').innerText = total>0 ? Math.round((present/total)*100)+'%' : '0%';
                 });
-            } catch(e) { console.log("Error loading data", e); }
+
+                // Grades (Simplified)
+                db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get().then(snap => {
+                    let html = '', lastScore = '-';
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        const s = d.scores?.[sId];
+                        if(s) {
+                            lastScore = s.score || 0;
+                            html += `<div class="glass-card p-4 rounded-2xl flex justify-between items-center"><div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${d.name}</h4><span class="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded mt-1 inline-block">${d.type||'واجب'}</span></div><div class="text-center"><span class="block text-xl font-black text-brand">${lastScore}</span></div></div>`;
+                        }
+                    });
+                    document.getElementById('gradesList').innerHTML = html || '<p class="text-center text-gray-400 py-10 text-sm">لا توجد درجات</p>';
+                    document.getElementById('lastExamScore').innerText = lastScore;
+                });
+
+                // Schedule
+                db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get().then(snap => {
+                    let html = '';
+                    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        html += `<div class="glass-card p-4 rounded-2xl border-r-4 border-brand"><div class="flex items-center gap-3 mb-2"><i class="ri-book-open-fill text-brand text-lg"></i><h4 class="font-bold text-sm text-gray-900 dark:text-white">${d.subject}</h4></div><div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"><span>${d.days.map(x=>days[x]).join('، ')}</span><span class="bg-brand/10 text-brand px-2 py-1 rounded font-bold">${d.time}</span></div></div>`;
+                    });
+                    document.getElementById('scheduleList').innerHTML = html || '<p class="text-center text-gray-400 py-10 text-sm">الجدول فارغ</p>';
+                });
+
+            } catch(e) { console.error(e); }
         }
 
-        // 5. وظيفة التفعيل (Wrapper)
+        // 5. Permission Handling (FIXED: Wait for SW Ready)
         function handlePermissionClick() {
-            if (!messaging) {
-                alert("تنبيه: المتصفح لا يدعم الإشعارات أو الموقع غير آمن (Not HTTPS).");
-                return;
-            }
+            if(!messaging) { alert("المتصفح لا يدعم التنبيهات"); return; }
             requestPermission();
         }
 
         async function requestPermission() {
             const banner = document.getElementById('bigNotifyBanner');
-            // إضافة مؤشر تحميل
-            banner.style.opacity = '0.7';
-            
+            banner.style.opacity = '0.5';
+
             try {
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
-                    const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                    // 1. Register
+                    const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                    
+                    // 2. WAIT FOR READY (Important Fix)
+                    const activeReg = await navigator.serviceWorker.ready;
+
+                    // 3. Get Token
                     const token = await messaging.getToken({ 
                         vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
-                        serviceWorkerRegistration: registration 
+                        serviceWorkerRegistration: activeReg 
                     });
                     
                     if(token && tId && gId && sId) {
@@ -297,20 +344,23 @@
 
                         banner.classList.add('hidden');
                         document.getElementById('successBanner').classList.remove('hidden');
-                        new Notification("تم بنجاح ✅", { body: "تم تفعيل الإشعارات.", icon: './favicon.png' });
+                        
+                        new Notification("تم بنجاح ✅", {
+                            body: "تم تفعيل الإشعارات.",
+                            icon: './favicon.png'
+                        });
                     }
                 } else {
-                    alert("تم رفض الإذن. يرجى تفعيل الإشعارات من إعدادات المتصفح.");
+                    alert("تم رفض الإذن.");
                 }
             } catch (error) {
                 console.error("Permission Error:", error);
-                alert("حدث خطأ أثناء التفعيل: " + error.message);
+                alert("حدث خطأ: " + error.message);
             } finally {
                 banner.style.opacity = '1';
             }
         }
 
-        // Check init permission
         if (Notification.permission !== 'granted') {
             document.getElementById('bigNotifyBanner').classList.remove('hidden');
         }
