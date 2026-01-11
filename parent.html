@@ -8,52 +8,116 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
     <link rel="icon" type="image/png" href="./favicon.png">
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Spot">
     <meta name="theme-color" content="#fbbf24">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
 
     <style>
-        body { font-family: 'Cairo', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .app-icon { box-shadow: 0 4px 6px -1px rgba(251, 191, 36, 0.5); }
+        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; background-color: #f9fafb; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .nav-item.active { color: #d97706; background-color: #fffbeb; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .loader { border-top-color: #fbbf24; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-50 pb-20">
 
-    <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-gray-100">
-        <div class="w-24 h-24 bg-yellow-400 rounded-2xl flex items-center justify-center mx-auto mb-6 text-4xl shadow-lg app-icon text-white transform hover:scale-105 transition-transform duration-300">
-            🔔
-        </div>
-        
-        <h1 class="text-2xl font-bold mb-2 text-gray-800">تفعيل الإشعارات</h1>
-        <p class="text-gray-500 mb-8 text-sm leading-relaxed">
-            اضغط تفعيل لتصلك تقارير الغياب والدرجات للطالب <br>
-            <span id="studentName" class="font-bold text-black text-lg bg-yellow-50 px-2 py-1 rounded mt-1 inline-block">...</span>
-            <br> فوراً على موبايلك.
-        </p>
-
-        <button id="allowBtn" onclick="requestPermission()" class="w-full bg-black text-white font-bold py-4 rounded-xl shadow-xl hover:bg-gray-800 active:scale-95 transition-all duration-200 text-lg flex items-center justify-center gap-2">
-            <span>تفعيل التنبيهات الآن</span>
-            <i class="ri-notification-3-line"></i>
-        </button>
-        
-        <p id="statusMsg" class="mt-6 text-xs font-bold text-gray-400 hidden"></p>
-        
-        <div class="mt-8 pt-6 border-t border-gray-100 text-center">
-            <p class="text-[10px] text-gray-400">Spot - Smart Education System</p>
+    <div class="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 border-b border-gray-100 shadow-sm">
+        <div class="flex justify-between items-center px-4 py-3 max-w-md mx-auto">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-brand bg-yellow-400 flex items-center justify-center text-white font-bold shadow-sm">
+                    <i class="ri-user-smile-line text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-gray-400">تقرير الطالب</h1>
+                    <h2 id="studentNameDisplay" class="text-lg font-black text-gray-900 leading-none">جاري التحميل...</h2>
+                </div>
+            </div>
+            <button id="notifyBtn" onclick="requestPermission()" class="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center active:scale-95 transition">
+                <i class="ri-notification-off-line text-xl"></i>
+            </button>
         </div>
     </div>
 
+    <main class="container mx-auto max-w-md px-4 pt-20 space-y-6">
+        
+        <div id="statusCard" class="hidden bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 animate-pulse">
+            <i class="ri-alarm-warning-line text-red-500 text-xl"></i>
+            <p class="text-xs font-bold text-red-600">الإشعارات غير مفعلة! اضغط على الجرس لتفعيلها.</p>
+        </div>
+
+        <div id="content-home" class="tab-content space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="glass-card p-4 rounded-2xl text-center">
+                    <p class="text-gray-400 text-xs font-bold mb-1">الحضور</p>
+                    <h3 id="attendanceRate" class="text-2xl font-black text-gray-800">--%</h3>
+                </div>
+                <div class="glass-card p-4 rounded-2xl text-center">
+                    <p class="text-gray-400 text-xs font-bold mb-1">آخر امتحان</p>
+                    <h3 id="lastExamScore" class="text-2xl font-black text-brand text-yellow-600">--</h3>
+                </div>
+            </div>
+
+            <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2 mt-4">
+                <i class="ri-time-line text-brand text-yellow-500"></i> أحدث النشاطات
+            </h3>
+            <div id="timelineList" class="space-y-3 pb-4">
+                <div class="text-center py-10"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mx-auto"></div></div>
+            </div>
+        </div>
+
+        <div id="content-attendance" class="tab-content hidden space-y-4">
+            <h3 class="font-bold text-gray-800 text-lg">سجل الغياب والحضور</h3>
+            <div id="attendanceList" class="space-y-2">Loading...</div>
+        </div>
+
+        <div id="content-grades" class="tab-content hidden space-y-4">
+            <h3 class="font-bold text-gray-800 text-lg">درجات الامتحانات والواجبات</h3>
+            <div id="gradesList" class="space-y-3">Loading...</div>
+        </div>
+
+        <div id="content-schedule" class="tab-content hidden space-y-4">
+            <h3 class="font-bold text-gray-800 text-lg">جدول المواعيد</h3>
+            <div id="scheduleList" class="space-y-3">Loading...</div>
+        </div>
+
+    </main>
+
+    <nav class="fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 pb-safe z-50">
+        <div class="flex justify-around items-center max-w-md mx-auto py-2">
+            <button onclick="switchTab('home')" class="nav-item active flex flex-col items-center p-2 rounded-xl transition w-16" data-target="home">
+                <i class="ri-home-4-line text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">الرئيسية</span>
+            </button>
+            <button onclick="switchTab('attendance')" class="nav-item flex flex-col items-center p-2 rounded-xl transition w-16 text-gray-400" data-target="attendance">
+                <i class="ri-calendar-check-line text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">الحضور</span>
+            </button>
+            <button onclick="switchTab('grades')" class="nav-item flex flex-col items-center p-2 rounded-xl transition w-16 text-gray-400" data-target="grades">
+                <i class="ri-award-line text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">الدرجات</span>
+            </button>
+            <button onclick="switchTab('schedule')" class="nav-item flex flex-col items-center p-2 rounded-xl transition w-16 text-gray-400" data-target="schedule">
+                <i class="ri-time-line text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">الجدول</span>
+            </button>
+        </div>
+    </nav>
+
     <script>
-        // 1. Firebase Configuration
+        // 1. Config
         const firebaseConfig = {
             apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
             authDomain: "learnaria-483e7.firebaseapp.com",
@@ -62,125 +126,233 @@
             messagingSenderId: "573038013067",
             appId: "1:573038013067:web:db6a78e8370d33b07a828e"
         };
-
-        // Initialize Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const messaging = firebase.messaging();
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const messaging = firebase.messaging();
 
-        // 2. معالجة الرابط (حل مشكلة المسافة +)
+        // 2. Parse URL Params
         const urlParams = new URLSearchParams(window.location.search);
-        let tId = urlParams.get('t');
-        if (tId && tId.includes(' ') && !tId.includes('+')) {
-            tId = tId.replace(/ /g, '+');
-        }
-
+        let tId = urlParams.get('t')?.replace(/ /g, '+');
         const gId = urlParams.get('g'); 
         const sId = urlParams.get('s'); 
-        const name = urlParams.get('n'); 
-        const pNum = urlParams.get('p'); // <<< استقبال رقم الموبايل
+        const urlName = urlParams.get('n');
+        const pNum = urlParams.get('p');
 
-        if(name) document.getElementById('studentName').innerText = decodeURIComponent(name);
+        // Setup UI
+        if(urlName) document.getElementById('studentNameDisplay').innerText = decodeURIComponent(urlName);
 
-        // 3. دالة التفعيل الرئيسية
-        async function requestPermission() {
-            const btn = document.getElementById('allowBtn');
-            const status = document.getElementById('statusMsg');
+        // 3. Navigation Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`content-${tabId}`).classList.remove('hidden');
             
-            btn.disabled = true;
-            btn.innerHTML = `<span class="animate-pulse">جاري الاتصال...</span>`;
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active', 'text-yellow-600', 'bg-yellow-50');
+                el.classList.add('text-gray-400');
+            });
+            const activeBtn = document.querySelector(`.nav-item[data-target="${tabId}"]`);
+            activeBtn.classList.add('active', 'text-yellow-600', 'bg-yellow-50');
+            activeBtn.classList.remove('text-gray-400');
+        }
+
+        // 4. Data Fetching
+        async function loadData() {
+            if(!tId || !gId || !sId) return;
+
+            // أ. جلب الحضور (Attendance)
+            const attendanceRef = db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(20);
+            attendanceRef.get().then(snapshot => {
+                let html = '';
+                let present = 0, total = 0;
+                let timelineHtml = '';
+
+                if(snapshot.empty) {
+                    html = '<div class="text-center text-gray-400 py-10">لا توجد بيانات حضور</div>';
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const record = data.records?.find(r => r.studentId === sId);
+                    
+                    if (record) {
+                        total++;
+                        let statusColor = 'bg-gray-100 text-gray-500';
+                        let statusText = 'غير مسجل';
+                        let icon = 'ri-question-line';
+
+                        if(record.status === 'present') { 
+                            present++; 
+                            statusColor = 'bg-green-100 text-green-700'; 
+                            statusText = 'حاضر';
+                            icon = 'ri-check-line';
+                        } else if (record.status === 'absent') { 
+                            statusColor = 'bg-red-100 text-red-700'; 
+                            statusText = 'غائب';
+                            icon = 'ri-close-line';
+                        } else if (record.status === 'late') {
+                            present++;
+                            statusColor = 'bg-orange-100 text-orange-700';
+                            statusText = 'تأخير';
+                            icon = 'ri-time-line';
+                        }
+
+                        // List Item
+                        html += `
+                        <div class="glass-card p-3 rounded-xl flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full ${statusColor} flex items-center justify-center">
+                                    <i class="${icon} text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-800 text-sm">${data.date}</p>
+                                    <p class="text-[10px] text-gray-400">سجل الحضور</p>
+                                </div>
+                            </div>
+                            <span class="text-xs font-bold ${statusColor.split(' ')[1]}">${statusText}</span>
+                        </div>`;
+
+                        // Add to Timeline (Home Screen)
+                        if(timelineHtml.length < 500) { // Limit timeline items
+                            timelineHtml += `
+                            <div class="flex gap-3 relative pb-6 border-l border-gray-200 mr-3 pr-4 last:border-0 last:pb-0">
+                                <div class="absolute -right-[5px] top-1 w-2.5 h-2.5 rounded-full ${record.status === 'present' ? 'bg-green-500' : 'bg-red-500'}"></div>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-800">حصة يوم ${data.date}</p>
+                                    <p class="text-[10px] text-gray-500">تم تسجيل الحالة: ${statusText}</p>
+                                </div>
+                            </div>`;
+                        }
+                    }
+                });
+
+                document.getElementById('attendanceList').innerHTML = html || '<p class="text-center">لا توجد سجلات</p>';
+                document.getElementById('timelineList').innerHTML = timelineHtml || '<p class="text-center text-gray-400">لا يوجد نشاط حديث</p>';
+                
+                // Calc Rate
+                const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+                document.getElementById('attendanceRate').innerText = `%${rate}`;
+            });
+
+            // ب. جلب الدرجات (Grades)
+            db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get().then(snapshot => {
+                let html = '';
+                let lastScore = '-';
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const studentScore = data.scores?.[sId];
+                    
+                    if(studentScore) {
+                        const scoreVal = studentScore.score || 0;
+                        const isSubmitted = studentScore.submitted;
+                        lastScore = scoreVal; // Just update to latest found
+
+                        html += `
+                        <div class="glass-card p-4 rounded-xl mb-2">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-bold text-gray-800">${data.name}</h4>
+                                <span class="bg-yellow-100 text-yellow-700 text-[10px] px-2 py-1 rounded-full font-bold">${data.type || 'واجب/امتحان'}</span>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <p class="text-xs text-gray-400">${data.date || ''}</p>
+                                <div class="text-xl font-black ${isSubmitted ? 'text-green-600' : 'text-red-500'}">
+                                    ${isSubmitted ? scoreVal : 'لم يسلم'}
+                                </div>
+                            </div>
+                        </div>`;
+                    }
+                });
+                document.getElementById('gradesList').innerHTML = html || '<div class="text-center text-gray-400 py-10">لا توجد درجات مسجلة</div>';
+                document.getElementById('lastExamScore').innerText = lastScore;
+            });
+
+            // ج. جلب الجدول (Schedule)
+            db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get().then(snapshot => {
+                let html = '';
+                const daysMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const dayNames = data.days.map(d => daysMap[d]).join('، ');
+                    
+                    html += `
+                    <div class="bg-white border border-gray-100 p-4 rounded-xl shadow-sm flex items-center gap-4">
+                        <div class="bg-blue-50 text-blue-600 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl">
+                            <i class="ri-book-mark-line"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-900">${data.subject}</h4>
+                            <p class="text-xs text-gray-500 mt-1"><i class="ri-calendar-line"></i> ${dayNames}</p>
+                            <p class="text-xs text-brand text-yellow-600 mt-1 font-bold"><i class="ri-time-line"></i> ${formatTime(data.time)}</p>
+                        </div>
+                    </div>`;
+                });
+                document.getElementById('scheduleList').innerHTML = html || '<div class="text-center text-gray-400 py-10">لم يتم تحديد جدول</div>';
+            });
+        }
+
+        // Helper: Format Time
+        function formatTime(timeString) {
+            if (!timeString) return '';
+            const [h, m] = timeString.split(':');
+            const hour = parseInt(h);
+            const ampm = hour >= 12 ? 'م' : 'ص';
+            const formattedHour = hour % 12 || 12;
+            return `${formattedHour}:${m} ${ampm}`;
+        }
+
+        // 5. Notification Logic (Original Logic Preserved & Enhanced)
+        async function requestPermission() {
+            const btn = document.getElementById('notifyBtn');
+            const statusCard = document.getElementById('statusCard');
+            
+            btn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i>`;
 
             try {
-                // طلب الإذن من المتصفح
                 const permission = await Notification.requestPermission();
-                
                 if (permission === 'granted') {
-                    
-                    // تسجيل الـ Service Worker
                     const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-                    
                     const token = await messaging.getToken({ 
                         vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
                         serviceWorkerRegistration: registration 
                     });
                     
                     if(token && tId && gId && sId) {
-                        
-                        // <<< التعديل هنا: الربط الثنائي (للطالب ولولي الأمر العام)
-                        
-                        // 1. الحفظ التقليدي (للمدرس الحالي)
-                        const studentPromise = db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).set({
-                            parentFcmToken: token
-                        }, { merge: true });
-
-                        // 2. الحفظ العام (لأي مدرس آخر بيستخدم نفس رقم الموبايل)
+                        // Save Token
+                        const studentPromise = db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).set({ parentFcmToken: token }, { merge: true });
                         let parentPromise = Promise.resolve();
                         if (pNum && pNum.length > 5) {
-                            parentPromise = db.collection('parents').doc(pNum).set({
-                                fcmToken: token,
-                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                            }, { merge: true });
+                            parentPromise = db.collection('parents').doc(pNum).set({ fcmToken: token, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
                         }
-
-                        // انتظار العمليتين
                         await Promise.all([studentPromise, parentPromise]);
 
-                        // نجاح
-                        btn.style.backgroundColor = "#22c55e"; // Green
-                        btn.innerText = "تم التفعيل بنجاح ✅";
-                        
-                        // رسالة خاصة للأيفون
-                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                        if (isIOS && !window.navigator.standalone) {
-                            status.innerText = "يمكنك الآن إغلاق هذه الصفحة.";
-                        } else {
-                            status.innerText = "سيصلك إشعار تجريبي الآن...";
-                        }
-                        
-                        status.classList.remove('hidden', 'text-red-500');
-                        status.classList.add('text-green-600');
-
-                    } else {
-                        throw new Error("بيانات الرابط غير مكتملة");
+                        // UI Success
+                        btn.className = "w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center shadow-sm";
+                        btn.innerHTML = `<i class="ri-notification-3-fill"></i>`;
+                        statusCard.className = "hidden"; // Hide warning
+                        alert("تم تفعيل الإشعارات بنجاح! ✅");
                     }
                 } else {
-                    throw new Error("تم رفض الإذن من إعدادات المتصفح");
+                    throw new Error("Permission denied");
                 }
             } catch (error) {
-                console.error("Error:", error);
-                btn.style.backgroundColor = "#ef4444"; // Red
-                btn.innerText = "فشل التفعيل";
-                
-                if(error.code === 'messaging/token-subscribe-failed' || error.message.includes('registration')) {
-                     status.innerText = "تأكد من فتح الرابط من Chrome أو Safari.";
-                } else {
-                     status.innerText = "يرجى الضغط على علامة القفل 🔒 بالأعلى وعمل Reset Permissions.";
-                }
-                
-                status.classList.remove('hidden');
-                status.classList.add('text-red-500');
-                btn.disabled = false;
+                console.error(error);
+                btn.innerHTML = `<i class="ri-notification-off-line"></i>`;
+                alert("فشل التفعيل. تأكد من إعدادات المتصفح.");
             }
         }
 
-        // 4. استقبال الإشعار والصفحة مفتوحة (Foreground)
-        messaging.onMessage((payload) => {
-            console.log('Message received. ', payload);
-            const notificationTitle = payload.notification.title;
-            const notificationOptions = {
-                body: payload.notification.body,
-                icon: './favicon.png'
-            };
+        // Check Notification Permission on Load
+        if (Notification.permission === 'granted') {
+            document.getElementById('notifyBtn').className = "w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center shadow-sm";
+            document.getElementById('notifyBtn').innerHTML = `<i class="ri-notification-3-fill"></i>`;
+        } else {
+            document.getElementById('statusCard').classList.remove('hidden');
+        }
 
-            // محاولة عرض إشعار النظام
-            if (Notification.permission === "granted") {
-                new Notification(notificationTitle, notificationOptions);
-            } else {
-                alert(`🔔 ${notificationTitle}\n${notificationOptions.body}`);
-            }
-        });
+        // Start Fetching
+        loadData();
+
     </script>
 </body>
 </html>
