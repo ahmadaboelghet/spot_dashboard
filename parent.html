@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Spot - Student Panel</title>
+    <title>Spot - لوحة الطالب</title>
 
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
     <link rel="icon" type="image/png" href="./favicon.png">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#000000" id="themeColorMeta">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -25,139 +25,165 @@
                 extend: {
                     colors: {
                         brand: '#F2CE5A',
-                        darkBg: '#020617', // Slate 950 (أشيك من الأسود الصريح)
-                        darkCard: '#0f172a', // Slate 900
-                        darkBorder: '#1e293b' // Slate 800
+                        // ألوان الوضع الليلي (أسود حيادي بدون زراق)
+                        darkBg: '#050505', 
+                        darkCard: '#121212',
+                        darkBorder: '#262626',
+                        // ألوان الوضع النهاري
+                        lightBg: '#F9FAFB',
+                        lightCard: '#FFFFFF',
+                        lightBorder: '#E5E7EB'
                     },
-                    fontFamily: { cairo: ['Cairo', 'sans-serif'] }
+                    fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+                    boxShadow: {
+                        'glow': '0 0 20px rgba(242, 206, 90, 0.15)',
+                    }
                 }
             }
         }
     </script>
 
     <style>
-        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; background-color: #020617; color: white; }
+        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s ease, color 0.3s ease; }
         
-        /* Modern Glass Effect */
+        /* Glass Card - Light Mode */
         .glass-card {
-            background: linear-gradient(145deg, #0f172a, #0b1120);
-            border: 1px solid #1e293b;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Glass Card - Dark Mode */
+        .dark .glass-card {
+            background: #121212;
+            border: 1px solid #262626;
+            box-shadow: none;
         }
 
         /* Floating Nav */
         .floating-nav {
-            background: rgba(15, 23, 42, 0.9);
-            backdrop-filter: blur(16px);
-            border: 1px solid #1e293b;
-            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.7);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .dark .floating-nav {
+            background: rgba(18, 18, 18, 0.85);
+            border: 1px solid #262626;
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
         }
 
-        .nav-item.active { color: #F2CE5A; background: rgba(242, 206, 90, 0.1); }
-        .nav-item { color: #64748b; }
-
+        /* Active Tabs */
+        .nav-item.active { color: #d97706; background-color: #FFFBEB; }
+        .dark .nav-item.active { color: #F2CE5A; background-color: rgba(242, 206, 90, 0.1); }
+        .nav-item { color: #9CA3AF; } /* Gray-400 */
+        
+        /* Loader */
         .loader { border-top-color: #F2CE5A; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="pb-32">
+<body class="bg-lightBg text-gray-900 dark:bg-darkBg dark:text-white pb-32">
 
-    <div id="loadingScreen" class="fixed inset-0 z-[60] bg-darkBg flex items-center justify-center transition-opacity duration-500">
+    <div id="loadingScreen" class="fixed inset-0 z-[60] bg-white dark:bg-darkBg flex items-center justify-center transition-opacity duration-500">
         <div class="flex flex-col items-center gap-4">
-            <div class="w-12 h-12 border-4 border-darkBorder rounded-full loader"></div>
+            <div class="w-12 h-12 border-4 border-gray-200 dark:border-darkBorder rounded-full loader"></div>
             <p class="text-sm text-gray-500 font-bold">جاري تحميل البيانات...</p>
         </div>
     </div>
 
-    <div id="errorScreen" class="hidden fixed inset-0 z-[55] bg-darkBg flex items-center justify-center p-6 text-center">
+    <div id="errorScreen" class="hidden fixed inset-0 z-[55] bg-white dark:bg-darkBg flex items-center justify-center p-6 text-center">
         <div class="max-w-xs">
             <i class="ri-link-unlink-m text-6xl text-red-500 mb-4 block"></i>
             <h2 class="text-xl font-bold mb-2">رابط غير صالح</h2>
-            <p class="text-gray-400 text-sm">الرابط لا يحتوي على بيانات الطالب. يرجى طلب الرابط الصحيح من المدرس.</p>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">الرابط لا يحتوي على بيانات الطالب.</p>
         </div>
     </div>
 
-    <div class="fixed top-0 w-full bg-darkBg/80 backdrop-blur-xl z-50 border-b border-darkBorder">
-        <div class="flex justify-between items-center px-5 py-4 max-w-md mx-auto">
+    <div class="fixed top-0 w-full bg-white/90 dark:bg-darkBg/90 backdrop-blur-md z-50 border-b border-gray-100 dark:border-darkBorder transition-colors duration-300">
+        <div class="flex justify-between items-center px-5 py-3 max-w-md mx-auto">
             <div class="flex items-center gap-3">
                 <img src="assets/images/learnaria_logo.png" class="w-9 h-9 object-contain" onerror="this.src='assets/images/favicon.png'">
                 <div>
-                    <h1 class="text-2xl font-black tracking-tight leading-none">
+                    <h1 class="text-2xl font-black tracking-tight leading-none text-gray-900 dark:text-white">
                         Spot<span class="text-brand text-3xl">.</span>
                     </h1>
                 </div>
-                <div class="h-8 w-[1px] bg-darkBorder mx-2"></div>
+                <div class="h-8 w-[1px] bg-gray-200 dark:bg-darkBorder mx-2"></div>
                 <div>
-                    <h1 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Student Panel</h1>
-                    <h2 id="studentNameDisplay" class="text-sm font-bold text-gray-200 leading-none truncate max-w-[120px]">...</h2>
+                    <h1 class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Student Panel</h1>
+                    <h2 id="studentNameDisplay" class="text-sm font-bold text-gray-800 dark:text-gray-200 leading-none truncate max-w-[120px]">...</h2>
                 </div>
             </div>
+            <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-darkCard text-gray-600 dark:text-gray-400 flex items-center justify-center transition-all hover:bg-gray-200 dark:hover:bg-gray-800 active:scale-95 border border-transparent dark:border-darkBorder">
+                <i id="themeIcon" class="ri-moon-line text-lg"></i>
+            </button>
         </div>
     </div>
 
-    <main class="container mx-auto max-w-md px-5 pt-28 space-y-6 min-h-screen">
+    <main class="container mx-auto max-w-md px-5 pt-24 space-y-6 min-h-screen">
         
-        <div id="bigNotifyBanner" class="hidden relative group cursor-pointer" onclick="handlePermissionClick()">
-            <div class="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-brand rounded-2xl blur opacity-30 group-hover:opacity-60 transition"></div>
-            <div class="relative bg-darkCard border border-darkBorder rounded-2xl p-5 flex items-center gap-4">
-                <div class="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center text-red-500 animate-pulse">
+        <div id="bigNotifyBanner" class="hidden relative group cursor-pointer transform transition hover:scale-[1.02]" onclick="handlePermissionClick()">
+            <div class="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-orange-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+            <div class="relative bg-white dark:bg-darkCard border border-gray-100 dark:border-darkBorder rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+                <div class="w-12 h-12 bg-red-50 dark:bg-red-900/10 rounded-xl flex items-center justify-center text-red-500 animate-pulse">
                     <i class="ri-notification-3-fill text-2xl"></i>
                 </div>
                 <div class="flex-1">
-                    <h3 class="font-bold text-white">تفعيل التنبيهات</h3>
-                    <p class="text-xs text-gray-400">اضغط لاستلام الإشعارات</p>
+                    <h3 class="font-bold text-gray-900 dark:text-white">تفعيل التنبيهات</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">اضغط لاستلام الإشعارات</p>
                 </div>
-                <i class="ri-arrow-left-s-line text-gray-500"></i>
+                <i class="ri-arrow-left-s-line text-gray-400"></i>
             </div>
         </div>
 
-        <div id="successBanner" class="hidden bg-green-500/10 border border-green-500/20 rounded-2xl p-4 flex items-center gap-3">
+        <div id="successBanner" class="hidden bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-4 flex items-center gap-3">
             <i class="ri-checkbox-circle-fill text-green-500 text-xl"></i>
-            <p class="text-xs font-bold text-green-400">الإشعارات مفعلة بنجاح</p>
+            <p class="text-xs font-bold text-green-700 dark:text-green-400">الإشعارات مفعلة بنجاح</p>
         </div>
 
         <div id="content-home" class="tab-content space-y-5 fade-in-up">
             <div class="grid grid-cols-2 gap-4">
                 <div class="glass-card p-5 rounded-2xl relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition"><i class="ri-calendar-check-fill text-6xl text-white"></i></div>
-                    <p class="text-gray-400 text-xs font-bold mb-1">نسبة الحضور</p>
-                    <h3 id="attendanceRate" class="text-3xl font-black text-white">--%</h3>
+                    <div class="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 group-hover:scale-110 transition"><i class="ri-calendar-check-fill text-6xl text-gray-900 dark:text-white"></i></div>
+                    <p class="text-gray-500 dark:text-gray-400 text-xs font-bold mb-1">نسبة الحضور</p>
+                    <h3 id="attendanceRate" class="text-3xl font-black text-gray-900 dark:text-white">--%</h3>
                 </div>
                 <div class="glass-card p-5 rounded-2xl relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition"><i class="ri-medal-fill text-6xl text-brand"></i></div>
-                    <p class="text-gray-400 text-xs font-bold mb-1">آخر درجة</p>
+                    <div class="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 group-hover:scale-110 transition"><i class="ri-medal-fill text-6xl text-brand"></i></div>
+                    <p class="text-gray-500 dark:text-gray-400 text-xs font-bold mb-1">آخر درجة</p>
                     <h3 id="lastExamScore" class="text-3xl font-black text-brand">--</h3>
                 </div>
             </div>
 
             <div>
-                <h3 class="font-bold text-white text-base mb-4 flex items-center gap-2">
+                <h3 class="font-bold text-gray-900 dark:text-white text-base mb-4 flex items-center gap-2">
                     <i class="ri-history-line text-brand"></i> النشاط الأخير
                 </h3>
-                <div id="timelineList" class="space-y-4"></div>
+                <div id="timelineList" class="space-y-0"></div>
             </div>
         </div>
 
         <div id="content-attendance" class="tab-content hidden space-y-4 fade-in-up">
             <div id="attendanceList" class="space-y-3"></div>
         </div>
-
         <div id="content-grades" class="tab-content hidden space-y-4 fade-in-up">
             <div id="gradesList" class="space-y-3"></div>
         </div>
-
         <div id="content-schedule" class="tab-content hidden space-y-4 fade-in-up">
             <div id="scheduleList" class="space-y-3"></div>
         </div>
     </main>
 
-    <div class="fixed bottom-8 left-0 right-0 z-50 px-6 pointer-events-none">
-        <nav class="floating-nav max-w-xs mx-auto rounded-full p-2 pointer-events-auto flex justify-between items-center">
-            <button onclick="switchTab('home')" class="nav-item active flex-1 h-12 rounded-full flex items-center justify-center transition-all" data-target="home"><i class="ri-home-5-fill text-xl"></i></button>
-            <button onclick="switchTab('attendance')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all" data-target="attendance"><i class="ri-calendar-check-fill text-xl"></i></button>
-            <button onclick="switchTab('grades')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all" data-target="grades"><i class="ri-medal-fill text-xl"></i></button>
-            <button onclick="switchTab('schedule')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all" data-target="schedule"><i class="ri-time-fill text-xl"></i></button>
+    <div class="fixed bottom-6 left-0 right-0 z-50 px-6 pointer-events-none">
+        <nav class="floating-nav max-w-xs mx-auto rounded-full p-2 pointer-events-auto flex justify-between items-center transition-colors duration-300">
+            <button onclick="switchTab('home')" class="nav-item active flex-1 h-12 rounded-full flex items-center justify-center transition-all hover:bg-gray-100 dark:hover:bg-white/5" data-target="home"><i class="ri-home-5-fill text-xl"></i></button>
+            <button onclick="switchTab('attendance')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all hover:bg-gray-100 dark:hover:bg-white/5" data-target="attendance"><i class="ri-calendar-check-fill text-xl"></i></button>
+            <button onclick="switchTab('grades')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all hover:bg-gray-100 dark:hover:bg-white/5" data-target="grades"><i class="ri-medal-fill text-xl"></i></button>
+            <button onclick="switchTab('schedule')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all hover:bg-gray-100 dark:hover:bg-white/5" data-target="schedule"><i class="ri-time-fill text-xl"></i></button>
         </nav>
     </div>
 
@@ -179,16 +205,14 @@
             if (firebase.messaging.isSupported()) messaging = firebase.messaging();
         } catch (e) { console.error("Firebase Init Error:", e); }
 
-        // --- 2. URL PARSING (CRITICAL) ---
+        // --- 2. URL PARSING ---
         const urlParams = new URLSearchParams(window.location.search);
-        // التعامل مع المسافات في الـ ID
         let tId = urlParams.get('t') ? urlParams.get('t').replace(/ /g, '+') : null;
         const gId = urlParams.get('g'); 
         const sId = urlParams.get('s'); 
         const urlName = urlParams.get('n');
         const pNum = urlParams.get('p');
 
-        // Check if params exist
         if (!tId || !gId || !sId) {
             document.getElementById('loadingScreen').classList.add('hidden');
             document.getElementById('errorScreen').classList.remove('hidden');
@@ -197,7 +221,39 @@
 
         if(urlName) document.getElementById('studentNameDisplay').innerText = decodeURIComponent(urlName);
 
-        // --- 3. UI FUNCTIONS ---
+        // --- 3. THEME LOGIC (LIGHT/DARK) ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            const meta = document.getElementById('themeColorMeta');
+
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = 'ri-moon-line text-lg'; // Show Moon icon in Light Mode
+                meta.content = "#FFFFFF";
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                icon.className = 'ri-sun-line text-lg'; // Show Sun icon in Dark Mode
+                meta.content = "#000000";
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Apply theme on load
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            document.documentElement.classList.remove('dark');
+            document.getElementById('themeIcon').className = 'ri-moon-line text-lg';
+            document.getElementById('themeColorMeta').content = "#FFFFFF";
+        } else {
+            // Default to Dark
+            document.documentElement.classList.add('dark');
+            document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
+            document.getElementById('themeColorMeta').content = "#000000";
+        }
+
+        // --- 4. UI FUNCTIONS ---
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`content-${tabId}`).classList.remove('hidden');
@@ -207,13 +263,15 @@
 
         function renderEmptyState(message) {
             return `
-            <div class="flex flex-col items-center justify-center py-10 text-gray-600">
-                <i class="ri-inbox-2-line text-4xl mb-2 opacity-50"></i>
+            <div class="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-600">
+                <div class="bg-gray-100 dark:bg-darkCard p-4 rounded-full mb-3">
+                    <i class="ri-inbox-2-line text-3xl opacity-50"></i>
+                </div>
                 <p class="text-xs font-medium">${message}</p>
             </div>`;
         }
 
-        // --- 4. DATA LOADING ---
+        // --- 5. DATA LOADING ---
         async function loadData() {
             try {
                 // A. Attendance
@@ -232,34 +290,47 @@
                             const rec = d.records?.find(r => r.studentId === sId);
                             if(rec) {
                                 total++;
-                                let color = 'text-gray-400 bg-gray-800';
+                                // Dynamic Colors for Light/Dark
+                                let colorClass = 'text-gray-500 bg-gray-100 dark:bg-darkCard dark:text-gray-400 border-gray-200 dark:border-darkBorder';
                                 let text = 'غير محدد';
                                 let icon = 'ri-question-mark';
 
-                                if(rec.status === 'present') { present++; color='text-green-400 bg-green-500/10 border-green-500/20'; text='حاضر'; icon='ri-check-line'; }
-                                else if(rec.status === 'absent') { color='text-red-400 bg-red-500/10 border-red-500/20'; text='غائب'; icon='ri-close-line'; }
-                                else if(rec.status === 'late') { present++; color='text-orange-400 bg-orange-500/10 border-orange-500/20'; text='تأخير'; icon='ri-time-line'; }
+                                if(rec.status === 'present') { 
+                                    present++; 
+                                    colorClass = 'text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-900/10 dark:border-green-900/30'; 
+                                    text='حاضر'; icon='ri-check-line'; 
+                                } else if(rec.status === 'absent') { 
+                                    colorClass = 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-900/10 dark:border-red-900/30'; 
+                                    text='غائب'; icon='ri-close-line'; 
+                                } else if(rec.status === 'late') { 
+                                    present++; 
+                                    colorClass = 'text-orange-600 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-900/10 dark:border-orange-900/30'; 
+                                    text='تأخير'; icon='ri-time-line'; 
+                                }
 
                                 // List Item
                                 html += `
                                 <div class="glass-card p-4 rounded-xl flex justify-between items-center mb-2">
                                     <div class="flex items-center gap-4">
-                                        <div class="w-10 h-10 rounded-lg flex items-center justify-center border ${color.split(' ')[2]} ${color.split(' ')[1]} ${color.split(' ')[0]}">
+                                        <div class="w-10 h-10 rounded-lg flex items-center justify-center border ${colorClass.split(' ').slice(1).join(' ')}">
                                             <i class="${icon} text-lg"></i>
                                         </div>
-                                        <div><p class="font-bold text-sm text-gray-200">${d.date}</p></div>
+                                        <div><p class="font-bold text-sm text-gray-800 dark:text-gray-200">${d.date}</p></div>
                                     </div>
-                                    <span class="text-[10px] font-bold px-3 py-1 rounded-full border ${color.split(' ')[2]} ${color.split(' ')[1]} ${color.split(' ')[0]}">${text}</span>
+                                    <span class="text-[10px] font-bold px-3 py-1 rounded-full border ${colorClass}">${text}</span>
                                 </div>`;
 
                                 // Timeline Item
-                                if(timeline.length < 1000) { // Limit items
+                                if(timeline.length < 1000) { 
                                     timeline += `
-                                    <div class="flex gap-4 relative pb-6 last:pb-0 border-r border-darkBorder pr-4 mr-2">
-                                        <div class="absolute -right-[5px] top-1 w-2.5 h-2.5 rounded-full ${rec.status==='present'?'bg-green-500':(rec.status==='absent'?'bg-red-500':'bg-orange-500')}"></div>
-                                        <div>
-                                            <p class="text-xs font-bold text-gray-300">حصة يوم ${d.date}</p>
-                                            <p class="text-[10px] text-gray-500 mt-1">تم تسجيل الحالة: <span class="${color.split(' ')[0]}">${text}</span></p>
+                                    <div class="flex gap-4 relative pb-8 last:pb-0">
+                                        <div class="flex flex-col items-center">
+                                            <div class="w-3 h-3 rounded-full ${rec.status==='present'?'bg-green-500':(rec.status==='absent'?'bg-red-500':'bg-orange-500')} ring-4 ring-white dark:ring-darkBg z-10"></div>
+                                            <div class="w-[2px] h-full bg-gray-100 dark:bg-darkBorder absolute top-3"></div>
+                                        </div>
+                                        <div class="pb-1">
+                                            <p class="text-xs font-bold text-gray-800 dark:text-gray-200">حصة يوم ${d.date}</p>
+                                            <p class="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">تم تسجيل الحالة: <span class="${colorClass.split(' ')[0]} font-bold">${text}</span></p>
                                         </div>
                                     </div>`;
                                 }
@@ -267,7 +338,7 @@
                         });
                     }
 
-                    document.getElementById('attendanceList').innerHTML = html || renderEmptyState("لم يتم تسجيل حضور للطالب بعد");
+                    document.getElementById('attendanceList').innerHTML = html || renderEmptyState("لم يتم تسجيل حضور");
                     document.getElementById('timelineList').innerHTML = timeline || renderEmptyState("لا يوجد نشاط حديث");
                     document.getElementById('attendanceRate').innerText = total > 0 ? Math.round((present/total)*100)+'%' : '0%';
                 });
@@ -275,7 +346,7 @@
                 // B. Grades
                 db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get().then(snap => {
                     let html = '', lastScore = '-';
-                    if(snap.empty) html = renderEmptyState("لا توجد واجبات أو امتحانات");
+                    if(snap.empty) html = renderEmptyState("لا توجد درجات");
                     else {
                         snap.forEach(doc => {
                             const d = doc.data();
@@ -285,12 +356,12 @@
                                 html += `
                                 <div class="glass-card p-4 rounded-xl flex justify-between items-center">
                                     <div>
-                                        <h4 class="font-bold text-sm text-gray-200">${d.name}</h4>
-                                        <span class="text-[10px] text-gray-500 bg-darkBg px-2 py-1 rounded mt-1 inline-block border border-darkBorder">${d.type||'واجب'}</span>
+                                        <h4 class="font-bold text-sm text-gray-800 dark:text-gray-200">${d.name}</h4>
+                                        <span class="text-[10px] text-gray-500 bg-gray-50 dark:bg-darkBg px-2 py-1 rounded mt-1 inline-block border border-gray-100 dark:border-darkBorder">${d.type||'واجب'}</span>
                                     </div>
                                     <div class="text-center">
                                         <span class="block text-xl font-black text-brand">${lastScore}</span>
-                                        <span class="text-[10px] text-gray-600">الدرجة</span>
+                                        <span class="text-[10px] text-gray-400">الدرجة</span>
                                     </div>
                                 </div>`;
                             }
@@ -311,12 +382,12 @@
                             html += `
                             <div class="glass-card p-4 rounded-xl border-r-4 border-brand flex items-center justify-between">
                                 <div>
-                                    <h4 class="font-bold text-sm text-white mb-1">${d.subject}</h4>
+                                    <h4 class="font-bold text-sm text-gray-800 dark:text-white mb-1">${d.subject}</h4>
                                     <div class="text-xs text-gray-500 flex items-center gap-1">
                                         <i class="ri-calendar-line"></i> ${d.days.map(x=>days[x]).join('، ')}
                                     </div>
                                 </div>
-                                <span class="bg-brand text-black px-3 py-1 rounded-lg font-bold text-xs shadow-lg shadow-brand/20">${d.time}</span>
+                                <span class="bg-brand text-black px-3 py-1 rounded-lg font-bold text-xs shadow-glow">${d.time}</span>
                             </div>`;
                         });
                     }
@@ -326,15 +397,14 @@
             } catch(e) { 
                 console.error(e); 
             } finally {
-                // Hide Loader
                 setTimeout(() => {
                     document.getElementById('loadingScreen').classList.add('opacity-0');
                     setTimeout(()=>document.getElementById('loadingScreen').classList.add('hidden'), 500);
-                }, 1000);
+                }, 800);
             }
         }
 
-        // --- 5. PERMISSIONS ---
+        // --- 6. PERMISSIONS ---
         function handlePermissionClick() {
             if(!messaging) return alert("غير مدعوم على هذا المتصفح");
             requestPermission();
@@ -347,7 +417,7 @@
                 const perm = await Notification.requestPermission();
                 if(perm === 'granted') {
                     const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-                    const activeReg = await navigator.serviceWorker.ready; // Fix timing
+                    const activeReg = await navigator.serviceWorker.ready; 
                     const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", serviceWorkerRegistration: activeReg });
                     
                     if(token && tId && gId && sId) {
@@ -365,7 +435,6 @@
 
         if(Notification.permission !== 'granted') document.getElementById('bigNotifyBanner').classList.remove('hidden');
 
-        // Start
         loadData();
     </script>
 </body>
