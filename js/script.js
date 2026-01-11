@@ -792,11 +792,21 @@ function switchTab(tabId) {
         renderPaymentsList();
     }
     if(tabId === 'exams') loadExams();
+
+    // التعديل هنا 👇
     if(tabId === 'schedule') {
         fetchRecurringSchedules();
         createTimePicker('recurringTimeContainer');
         createTimePicker('exceptionNewTimeContainer');
         renderDayCheckboxes();
+        
+        // (جديد) ملء خانة المادة في الجدول تلقائياً من بروفايل المدرس
+        const profileSubject = document.getElementById('teacherSubjectInput').value;
+        if(profileSubject) {
+            document.getElementById('recurringSubject').value = profileSubject;
+            // لو عايز تمنعه يغيرها شيل العلامة من السطر اللي تحته:
+            // document.getElementById('recurringSubject').readOnly = true;
+        }
     }
 }
 
@@ -1181,17 +1191,22 @@ async function shareCardAction() {
 }
 
 function showStudentQR(student) {
+    // 1. عرض اسم الطالب
     document.getElementById('idStudentName').innerText = student.name;
-    // التأكد من جلب اسم المدرس بشكل صحيح
+    
+    // 2. جلب اسم المعلم من البروفايل
     const teacherName = document.getElementById('teacherNameInput').value || "المعلم";
     document.getElementById('idTeacherName').innerText = teacherName;
 
+    // 3. (جديد) جلب اسم المادة من البروفايل ووضعها في الكارت
+    const subjectName = document.getElementById('teacherSubjectInput').value || "";
+    document.getElementById('idSubjectName').innerText = subjectName;
+
+    // 4. إنشاء الـ QR Code
     document.getElementById('idQrcode').innerHTML = '';
-    
-    // QR Code كبير وواضح
     new QRCode(document.getElementById('idQrcode'), {
         text: JSON.stringify({ teacherId: TEACHER_ID, groupId: SELECTED_GROUP_ID, studentId: student.id }),
-        width: 200, // كبرنا الحجم لـ 200
+        width: 200,
         height: 200,
         colorDark : "#000000",
         colorLight : "#ffffff",

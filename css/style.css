@@ -490,3 +490,63 @@ html[dir="rtl"] .record-item:hover {
     background-color: #333 !important;
     color: var(--primary) !important;
 }
+/* ============================================================ */
+/* FORCE ID CARD TO STAY LIGHT IN DARK MODE (FIX FOR SCREENSHOT) */
+/* ============================================================ */
+
+/* 1. إجبار خلفية الكارت تكون بيضاء دائماً */
+.dark-mode #printableIdCard {
+    background-color: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* 2. إجبار النصوص الأساسية تكون سوداء */
+.dark-mode #printableIdCard h2, 
+.dark-mode #printableIdCard #idStudentName {
+    color: #111827 !important; /* أسود غامق */
+}
+
+/* 3. النصوص الفرعية تكون رصاصي (مش أبيض) */
+.dark-mode #printableIdCard h4,
+.dark-mode #printableIdCard p,
+.dark-mode #printableIdCard span {
+    color: #4b5563 !important; /* رصاصي متوسط */
+}
+
+/* 4. إصلاح خلفية مربع اللوجو ومربع اسم المعلم */
+.dark-mode #printableIdCard .bg-white {
+    background-color: #ffffff !important;
+    border-color: #f3f4f6 !important;
+}
+.dark-mode #printableIdCard .bg-gray-50 {
+    background-color: #f9fafb !important; /* خلفية فاتحة جداً */
+    color: #374151 !important;
+}
+
+/* 5. أيقونة واسم المعلم */
+.dark-mode #printableIdCard #idTeacherName {
+    color: #374151 !important;
+}
+
+/* 6. التأكد إن الـ QR Code خلفيته بيضاء */
+.dark-mode #idQrcode, 
+.dark-mode #idQrcode img {
+    background-color: #ffffff !important;
+}
+/* ========================================= */
+/* FIX DOUBLE ARROWS IN DARK MODE            */
+/* ========================================= */
+
+.dark-mode select:not(.appearance-none) {
+    /* إخفاء سهم المتصفح الافتراضي عشان السهم الأبيض بتاعنا يظهر لوحده */
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+
+    /* التأكد من إعدادات السهم المخصص */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: left 0.5rem center !important;
+    padding-left: 2.5rem !important; /* وسعنا المسافة شوية عشان الكلام ميدخلش في السهم */
+}
