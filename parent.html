@@ -8,116 +8,220 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
     <link rel="icon" type="image/png" href="./favicon.png">
-    <meta name="theme-color" content="#fbbf24">
+    <meta name="theme-color" content="#000000">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
 
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#F2CE5A', 
+                        darkBg: '#000000', // أسود صريح
+                        darkCard: '#111111', // كروت سوداء
+                        darkBorder: '#222222'
+                    },
+                    animation: {
+                        'bounce-slow': 'bounce 3s infinite',
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; background-color: #f9fafb; }
+        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        /* Glass Card */
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: background-color 0.3s, border-color 0.3s;
         }
-        .nav-item.active { color: #d97706; background-color: #fffbeb; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Dark Mode Glass */
+        .dark .glass-card {
+            background: #111111;
+            border: 1px solid #222222;
+            color: white;
+            box-shadow: none;
+        }
+
+        /* Floating Navbar */
+        .floating-nav {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+        }
+        .dark .floating-nav {
+            background: rgba(17, 17, 17, 0.85);
+            border: 1px solid #222222;
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+        }
+
+        /* Active Tabs */
+        .nav-item.active { background-color: #FFFBEB; color: #d97706; }
+        .dark .nav-item.active { background-color: #222222; color: #F2CE5A; }
+        
         .loader { border-top-color: #fbbf24; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-gray-50 pb-20">
+<body class="bg-gray-50 text-gray-800 transition-colors duration-300 dark:bg-darkBg dark:text-gray-100 pb-28">
 
-    <div class="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 border-b border-gray-100 shadow-sm">
-        <div class="flex justify-between items-center px-4 py-3 max-w-md mx-auto">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-brand bg-yellow-400 flex items-center justify-center text-white font-bold shadow-sm">
-                    <i class="ri-user-smile-line text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-sm font-bold text-gray-400">تقرير الطالب</h1>
-                    <h2 id="studentNameDisplay" class="text-lg font-black text-gray-900 leading-none">جاري التحميل...</h2>
+    <div class="fixed top-0 w-full bg-white/90 dark:bg-darkBg/90 backdrop-blur-xl z-50 border-b border-gray-100 dark:border-darkBorder transition-colors duration-300">
+        <div class="flex justify-between items-center px-5 py-4 max-w-md mx-auto">
+            
+            <div class="flex items-center gap-2">
+                <img src="assets/images/learnaria_logo.png" class="w-8 h-8 object-contain" onerror="this.src='assets/images/favicon.png'" alt="Logo">
+                
+                <h1 class="text-3xl font-black tracking-tighter text-gray-900 dark:text-white leading-none mt-1" style="font-family: 'Cairo', sans-serif;">
+                    Spot<span class="text-brand text-4xl leading-none">.</span>
+                </h1>
+
+                <div class="h-8 w-[1px] bg-gray-200 dark:bg-darkBorder mx-3"></div>
+
+                <div class="flex flex-col justify-center">
+                    <h1 class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">Student Panel</h1>
+                    <h2 id="studentNameDisplay" class="text-sm font-bold text-gray-800 dark:text-gray-200 leading-none truncate max-w-[120px]">جاري التحميل...</h2>
                 </div>
             </div>
-            <button id="notifyBtn" onclick="requestPermission()" class="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center active:scale-95 transition">
-                <i class="ri-notification-off-line text-xl"></i>
+            
+            <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-full bg-gray-50 dark:bg-darkCard text-gray-500 dark:text-gray-400 flex items-center justify-center transition-all hover:scale-105 active:scale-95 border border-gray-100 dark:border-darkBorder">
+                <i id="themeIcon" class="ri-moon-line text-lg"></i>
             </button>
         </div>
     </div>
 
-    <main class="container mx-auto max-w-md px-4 pt-20 space-y-6">
+    <main class="container mx-auto max-w-md px-5 pt-28 space-y-6">
         
-        <div id="statusCard" class="hidden bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 animate-pulse">
-            <i class="ri-alarm-warning-line text-red-500 text-xl"></i>
-            <p class="text-xs font-bold text-red-600">الإشعارات غير مفعلة! اضغط على الجرس لتفعيلها.</p>
+        <div id="bigNotifyBanner" class="hidden transform transition-all duration-500 hover:translate-y-1">
+            <div class="bg-gradient-to-br from-red-600 to-orange-600 rounded-3xl p-6 shadow-2xl shadow-orange-500/20 text-white relative overflow-hidden group cursor-pointer border border-white/10" onclick="requestPermission()">
+                <div class="relative z-10 flex items-center gap-5">
+                    <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center animate-pulse">
+                        <i class="ri-notification-3-fill text-2xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold mb-1">تفعيل التنبيهات</h3>
+                        <p class="text-xs font-medium text-white/80 leading-relaxed">اضغط هنا لتصلك إشعارات الدرجات والحضور فوراً.</p>
+                    </div>
+                    <i class="ri-arrow-left-s-line text-2xl opacity-50"></i>
+                </div>
+            </div>
         </div>
 
-        <div id="content-home" class="tab-content space-y-4">
-            <div class="grid grid-cols-2 gap-3">
-                <div class="glass-card p-4 rounded-2xl text-center">
-                    <p class="text-gray-400 text-xs font-bold mb-1">الحضور</p>
-                    <h3 id="attendanceRate" class="text-2xl font-black text-gray-800">--%</h3>
+        <div id="successBanner" class="hidden glass-card !bg-green-500/5 !border-green-500/20 p-4 rounded-2xl flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
+                <i class="ri-check-fill"></i>
+            </div>
+            <p class="text-xs font-bold text-green-600 dark:text-green-400">تم تفعيل الإشعارات بنجاح</p>
+        </div>
+
+        <div id="content-home" class="tab-content space-y-5 fade-in-up">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="glass-card p-5 rounded-3xl flex flex-col justify-between h-32 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
+                    <p class="text-gray-400 text-xs font-bold">نسبة الحضور</p>
+                    <h3 id="attendanceRate" class="text-4xl font-black text-gray-900 dark:text-white mt-auto">--%</h3>
                 </div>
-                <div class="glass-card p-4 rounded-2xl text-center">
-                    <p class="text-gray-400 text-xs font-bold mb-1">آخر امتحان</p>
-                    <h3 id="lastExamScore" class="text-2xl font-black text-brand text-yellow-600">--</h3>
+                <div class="glass-card p-5 rounded-3xl flex flex-col justify-between h-32 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-brand"></div>
+                    <p class="text-gray-400 text-xs font-bold">آخر درجة</p>
+                    <h3 id="lastExamScore" class="text-4xl font-black text-brand mt-auto">--</h3>
                 </div>
             </div>
 
-            <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2 mt-4">
-                <i class="ri-time-line text-brand text-yellow-500"></i> أحدث النشاطات
+            <div>
+                <h3 class="font-bold text-gray-900 dark:text-white text-base mb-4 flex items-center gap-2">
+                    <span class="w-1 h-5 bg-brand rounded-full"></span>
+                    النشاط الأخير
+                </h3>
+                <div id="timelineList" class="space-y-4">
+                    <div class="text-center py-10"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 mx-auto"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="content-attendance" class="tab-content hidden space-y-4 fade-in-up">
+            <h3 class="font-bold text-gray-900 dark:text-white text-base mb-4 flex items-center gap-2">
+                <span class="w-1 h-5 bg-blue-500 rounded-full"></span> سجل الحضور
             </h3>
-            <div id="timelineList" class="space-y-3 pb-4">
-                <div class="text-center py-10"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mx-auto"></div></div>
-            </div>
+            <div id="attendanceList" class="space-y-3"></div>
         </div>
 
-        <div id="content-attendance" class="tab-content hidden space-y-4">
-            <h3 class="font-bold text-gray-800 text-lg">سجل الغياب والحضور</h3>
-            <div id="attendanceList" class="space-y-2">Loading...</div>
+        <div id="content-grades" class="tab-content hidden space-y-4 fade-in-up">
+            <h3 class="font-bold text-gray-900 dark:text-white text-base mb-4 flex items-center gap-2">
+                <span class="w-1 h-5 bg-purple-500 rounded-full"></span> كشف الدرجات
+            </h3>
+            <div id="gradesList" class="space-y-3"></div>
         </div>
 
-        <div id="content-grades" class="tab-content hidden space-y-4">
-            <h3 class="font-bold text-gray-800 text-lg">درجات الامتحانات والواجبات</h3>
-            <div id="gradesList" class="space-y-3">Loading...</div>
-        </div>
-
-        <div id="content-schedule" class="tab-content hidden space-y-4">
-            <h3 class="font-bold text-gray-800 text-lg">جدول المواعيد</h3>
-            <div id="scheduleList" class="space-y-3">Loading...</div>
+        <div id="content-schedule" class="tab-content hidden space-y-4 fade-in-up">
+            <h3 class="font-bold text-gray-900 dark:text-white text-base mb-4 flex items-center gap-2">
+                <span class="w-1 h-5 bg-pink-500 rounded-full"></span> الجدول الدراسي
+            </h3>
+            <div id="scheduleList" class="space-y-3"></div>
         </div>
 
     </main>
 
-    <nav class="fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 pb-safe z-50">
-        <div class="flex justify-around items-center max-w-md mx-auto py-2">
-            <button onclick="switchTab('home')" class="nav-item active flex flex-col items-center p-2 rounded-xl transition w-16" data-target="home">
-                <i class="ri-home-4-line text-xl mb-1"></i>
-                <span class="text-[10px] font-bold">الرئيسية</span>
+    <div class="fixed bottom-8 left-0 right-0 z-50 px-6 pointer-events-none">
+        <nav class="floating-nav max-w-xs mx-auto rounded-full p-1.5 pointer-events-auto flex justify-between items-center transition-colors duration-300">
+            <button onclick="switchTab('home')" class="nav-item active flex-1 h-12 rounded-full flex items-center justify-center transition-all duration-300" data-target="home">
+                <i class="ri-home-5-fill text-xl"></i>
             </button>
-            <button onclick="switchTab('attendance')" class="nav-item flex flex-col items-center p-2 rounded-xl transition w-16 text-gray-400" data-target="attendance">
-                <i class="ri-calendar-check-line text-xl mb-1"></i>
-                <span class="text-[10px] font-bold">الحضور</span>
+            <button onclick="switchTab('attendance')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all duration-300 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" data-target="attendance">
+                <i class="ri-calendar-check-fill text-xl"></i>
             </button>
-            <button onclick="switchTab('grades')" class="nav-item flex flex-col items-center p-2 rounded-xl transition w-16 text-gray-400" data-target="grades">
-                <i class="ri-award-line text-xl mb-1"></i>
-                <span class="text-[10px] font-bold">الدرجات</span>
+            <button onclick="switchTab('grades')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all duration-300 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" data-target="grades">
+                <i class="ri-medal-fill text-xl"></i>
             </button>
-            <button onclick="switchTab('schedule')" class="nav-item flex flex-col items-center p-2 rounded-xl transition w-16 text-gray-400" data-target="schedule">
-                <i class="ri-time-line text-xl mb-1"></i>
-                <span class="text-[10px] font-bold">الجدول</span>
+            <button onclick="switchTab('schedule')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all duration-300 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" data-target="schedule">
+                <i class="ri-time-fill text-xl"></i>
             </button>
-        </div>
-    </nav>
+        </nav>
+    </div>
 
     <script>
-        // 1. Config
+        // 1. Dark Mode
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = 'ri-moon-line text-lg';
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                icon.className = 'ri-sun-line text-lg';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
+        }
+
+        // 2. Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
             authDomain: "learnaria-483e7.firebaseapp.com",
@@ -126,11 +230,12 @@
             messagingSenderId: "573038013067",
             appId: "1:573038013067:web:db6a78e8370d33b07a828e"
         };
-        firebase.initializeApp(firebaseConfig);
+        
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const messaging = firebase.messaging();
 
-        // 2. Parse URL Params
+        // 3. Params
         const urlParams = new URLSearchParams(window.location.search);
         let tId = urlParams.get('t')?.replace(/ /g, '+');
         const gId = urlParams.get('g'); 
@@ -138,37 +243,35 @@
         const urlName = urlParams.get('n');
         const pNum = urlParams.get('p');
 
-        // Setup UI
         if(urlName) document.getElementById('studentNameDisplay').innerText = decodeURIComponent(urlName);
 
-        // 3. Navigation Logic
+        // 4. Tabs
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`content-${tabId}`).classList.remove('hidden');
             
             document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('active', 'text-yellow-600', 'bg-yellow-50');
-                el.classList.add('text-gray-400');
+                el.classList.remove('active');
+                el.classList.add('text-gray-400', 'dark:text-gray-500');
             });
+            
             const activeBtn = document.querySelector(`.nav-item[data-target="${tabId}"]`);
-            activeBtn.classList.add('active', 'text-yellow-600', 'bg-yellow-50');
-            activeBtn.classList.remove('text-gray-400');
+            activeBtn.classList.add('active');
+            activeBtn.classList.remove('text-gray-400', 'dark:text-gray-500');
         }
 
-        // 4. Data Fetching
+        // 5. Data
         async function loadData() {
             if(!tId || !gId || !sId) return;
 
-            // أ. جلب الحضور (Attendance)
+            // Attendance
             const attendanceRef = db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(20);
             attendanceRef.get().then(snapshot => {
                 let html = '';
-                let present = 0, total = 0;
                 let timelineHtml = '';
+                let present = 0, total = 0;
 
-                if(snapshot.empty) {
-                    html = '<div class="text-center text-gray-400 py-10">لا توجد بيانات حضور</div>';
-                }
+                if(snapshot.empty) html = '<div class="text-center text-gray-400 py-10 text-sm">لا توجد بيانات</div>';
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
@@ -176,64 +279,65 @@
                     
                     if (record) {
                         total++;
-                        let statusColor = 'bg-gray-100 text-gray-500';
-                        let statusText = 'غير مسجل';
-                        let icon = 'ri-question-line';
+                        let statusColor = 'text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400';
+                        let statusText = 'غير محدد';
+                        let icon = 'ri-question-mark';
 
                         if(record.status === 'present') { 
                             present++; 
-                            statusColor = 'bg-green-100 text-green-700'; 
-                            statusText = 'حاضر';
+                            statusColor = 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400'; 
+                            statusText = 'حاضر'; 
                             icon = 'ri-check-line';
                         } else if (record.status === 'absent') { 
-                            statusColor = 'bg-red-100 text-red-700'; 
-                            statusText = 'غائب';
+                            statusColor = 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400'; 
+                            statusText = 'غائب'; 
                             icon = 'ri-close-line';
                         } else if (record.status === 'late') {
                             present++;
-                            statusColor = 'bg-orange-100 text-orange-700';
+                            statusColor = 'text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400';
                             statusText = 'تأخير';
                             icon = 'ri-time-line';
                         }
 
-                        // List Item
                         html += `
-                        <div class="glass-card p-3 rounded-xl flex justify-between items-center">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full ${statusColor} flex items-center justify-center">
+                        <div class="glass-card p-4 rounded-2xl flex justify-between items-center">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center ${statusColor}">
                                     <i class="${icon} text-lg"></i>
                                 </div>
                                 <div>
-                                    <p class="font-bold text-gray-800 text-sm">${data.date}</p>
-                                    <p class="text-[10px] text-gray-400">سجل الحضور</p>
+                                    <p class="font-bold text-sm text-gray-900 dark:text-white">${data.date}</p>
                                 </div>
                             </div>
-                            <span class="text-xs font-bold ${statusColor.split(' ')[1]}">${statusText}</span>
+                            <span class="text-[10px] font-bold px-2 py-1 rounded-lg ${statusColor}">${statusText}</span>
                         </div>`;
 
-                        // Add to Timeline (Home Screen)
-                        if(timelineHtml.length < 500) { // Limit timeline items
+                        if(timelineHtml.length < 800) {
                             timelineHtml += `
-                            <div class="flex gap-3 relative pb-6 border-l border-gray-200 mr-3 pr-4 last:border-0 last:pb-0">
-                                <div class="absolute -right-[5px] top-1 w-2.5 h-2.5 rounded-full ${record.status === 'present' ? 'bg-green-500' : 'bg-red-500'}"></div>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-800">حصة يوم ${data.date}</p>
-                                    <p class="text-[10px] text-gray-500">تم تسجيل الحالة: ${statusText}</p>
+                            <div class="flex gap-4 items-start">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-2 h-2 rounded-full mt-2 ${record.status === 'present' ? 'bg-green-500' : 'bg-red-500'}"></div>
+                                    <div class="w-[1px] h-full bg-gray-200 dark:bg-darkBorder my-1"></div>
+                                </div>
+                                <div class="glass-card p-3 rounded-2xl flex-1 mb-4">
+                                    <div class="flex justify-between items-center">
+                                        <p class="text-xs font-bold text-gray-900 dark:text-white">${data.date}</p>
+                                        <span class="text-[10px] font-bold ${statusColor.split(' ')[0]}">${statusText}</span>
+                                    </div>
                                 </div>
                             </div>`;
                         }
                     }
                 });
 
-                document.getElementById('attendanceList').innerHTML = html || '<p class="text-center">لا توجد سجلات</p>';
-                document.getElementById('timelineList').innerHTML = timelineHtml || '<p class="text-center text-gray-400">لا يوجد نشاط حديث</p>';
+                document.getElementById('attendanceList').innerHTML = html;
+                document.getElementById('timelineList').innerHTML = timelineHtml || '<p class="text-center text-gray-400 py-4 text-xs">لا يوجد نشاط حديث</p>';
                 
-                // Calc Rate
                 const rate = total > 0 ? Math.round((present / total) * 100) : 0;
                 document.getElementById('attendanceRate').innerText = `%${rate}`;
             });
 
-            // ب. جلب الدرجات (Grades)
+            // Grades
             db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get().then(snapshot => {
                 let html = '';
                 let lastScore = '-';
@@ -241,72 +345,66 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const studentScore = data.scores?.[sId];
-                    
                     if(studentScore) {
                         const scoreVal = studentScore.score || 0;
-                        const isSubmitted = studentScore.submitted;
-                        lastScore = scoreVal; // Just update to latest found
-
+                        lastScore = scoreVal;
+                        
                         html += `
-                        <div class="glass-card p-4 rounded-xl mb-2">
-                            <div class="flex justify-between items-start mb-2">
-                                <h4 class="font-bold text-gray-800">${data.name}</h4>
-                                <span class="bg-yellow-100 text-yellow-700 text-[10px] px-2 py-1 rounded-full font-bold">${data.type || 'واجب/امتحان'}</span>
+                        <div class="glass-card p-4 rounded-2xl flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-sm text-gray-900 dark:text-white">${data.name}</h4>
+                                <span class="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded mt-1 inline-block">${data.type || 'واجب'}</span>
                             </div>
-                            <div class="flex justify-between items-end">
-                                <p class="text-xs text-gray-400">${data.date || ''}</p>
-                                <div class="text-xl font-black ${isSubmitted ? 'text-green-600' : 'text-red-500'}">
-                                    ${isSubmitted ? scoreVal : 'لم يسلم'}
-                                </div>
+                            <div class="text-center">
+                                <span class="block text-xl font-black text-brand">${scoreVal}</span>
                             </div>
                         </div>`;
                     }
                 });
-                document.getElementById('gradesList').innerHTML = html || '<div class="text-center text-gray-400 py-10">لا توجد درجات مسجلة</div>';
+                document.getElementById('gradesList').innerHTML = html || '<div class="text-center text-gray-400 py-10 text-sm">لا توجد درجات</div>';
                 document.getElementById('lastExamScore').innerText = lastScore;
             });
 
-            // ج. جلب الجدول (Schedule)
+            // Schedule
             db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get().then(snapshot => {
                 let html = '';
-                const daysMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
                 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const dayNames = data.days.map(d => daysMap[d]).join('، ');
+                    const dayNames = data.days.map(d => days[d]).join('، ');
                     
                     html += `
-                    <div class="bg-white border border-gray-100 p-4 rounded-xl shadow-sm flex items-center gap-4">
-                        <div class="bg-blue-50 text-blue-600 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl">
-                            <i class="ri-book-mark-line"></i>
+                    <div class="glass-card p-4 rounded-2xl border-r-4 border-brand">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i class="ri-book-open-fill text-brand text-lg"></i>
+                            <h4 class="font-bold text-sm text-gray-900 dark:text-white">${data.subject}</h4>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-gray-900">${data.subject}</h4>
-                            <p class="text-xs text-gray-500 mt-1"><i class="ri-calendar-line"></i> ${dayNames}</p>
-                            <p class="text-xs text-brand text-yellow-600 mt-1 font-bold"><i class="ri-time-line"></i> ${formatTime(data.time)}</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                            <span>${dayNames}</span>
+                            <span class="bg-brand/10 text-brand px-2 py-1 rounded font-bold">${formatTime(data.time)}</span>
                         </div>
                     </div>`;
                 });
-                document.getElementById('scheduleList').innerHTML = html || '<div class="text-center text-gray-400 py-10">لم يتم تحديد جدول</div>';
+                document.getElementById('scheduleList').innerHTML = html || '<div class="text-center text-gray-400 py-10 text-sm">الجدول غير محدد</div>';
             });
         }
 
-        // Helper: Format Time
-        function formatTime(timeString) {
-            if (!timeString) return '';
-            const [h, m] = timeString.split(':');
+        function formatTime(t) {
+            if(!t) return '';
+            const [h, m] = t.split(':');
             const hour = parseInt(h);
-            const ampm = hour >= 12 ? 'م' : 'ص';
-            const formattedHour = hour % 12 || 12;
-            return `${formattedHour}:${m} ${ampm}`;
+            return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'م' : 'ص'}`;
         }
 
-        // 5. Notification Logic (Original Logic Preserved & Enhanced)
+        // 6. Request Permission
         async function requestPermission() {
-            const btn = document.getElementById('notifyBtn');
-            const statusCard = document.getElementById('statusCard');
+            const banner = document.getElementById('bigNotifyBanner');
+            const btn = banner.querySelector('button');
+            const originalText = btn.innerText;
             
             btn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i>`;
+            btn.disabled = true;
 
             try {
                 const permission = await Notification.requestPermission();
@@ -318,7 +416,6 @@
                     });
                     
                     if(token && tId && gId && sId) {
-                        // Save Token
                         const studentPromise = db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).set({ parentFcmToken: token }, { merge: true });
                         let parentPromise = Promise.resolve();
                         if (pNum && pNum.length > 5) {
@@ -326,33 +423,29 @@
                         }
                         await Promise.all([studentPromise, parentPromise]);
 
-                        // UI Success
-                        btn.className = "w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center shadow-sm";
-                        btn.innerHTML = `<i class="ri-notification-3-fill"></i>`;
-                        statusCard.className = "hidden"; // Hide warning
-                        alert("تم تفعيل الإشعارات بنجاح! ✅");
-                    }
-                } else {
-                    throw new Error("Permission denied");
-                }
+                        banner.classList.add('hidden');
+                        document.getElementById('successBanner').classList.remove('hidden');
+                        
+                        new Notification("تم بنجاح ✅", {
+                            body: "تم تفعيل الإشعارات.",
+                            icon: './favicon.png'
+                        });
+
+                    } else { throw new Error("Missing Data"); }
+                } else { throw new Error("Denied"); }
             } catch (error) {
                 console.error(error);
-                btn.innerHTML = `<i class="ri-notification-off-line"></i>`;
-                alert("فشل التفعيل. تأكد من إعدادات المتصفح.");
+                alert("تعذر التفعيل.");
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
         }
 
-        // Check Notification Permission on Load
-        if (Notification.permission === 'granted') {
-            document.getElementById('notifyBtn').className = "w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center shadow-sm";
-            document.getElementById('notifyBtn').innerHTML = `<i class="ri-notification-3-fill"></i>`;
-        } else {
-            document.getElementById('statusCard').classList.remove('hidden');
+        if (Notification.permission !== 'granted') {
+            document.getElementById('bigNotifyBanner').classList.remove('hidden');
         }
 
-        // Start Fetching
         loadData();
-
     </script>
 </body>
 </html>
