@@ -17,6 +17,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 
     <link rel="stylesheet" href="css/style.css">
@@ -503,34 +504,50 @@
         </div>
     </div>
 
-    <div id="qrCodeModal"
-        class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-            <div id="printableIdCard" class="bg-white p-6 relative">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-100 rounded-bl-full -mr-10 -mt-10 opacity-50">
-                </div>
-                <div class="relative z-10 flex items-center mb-6 border-b border-gray-100 pb-4">
-                    <img src="assets/images/learnaria_logo.png" class="w-12 h-12 rounded-lg shadow-sm bg-white mr-3">
-                    <div>
-                        <h4 class="font-bold text-lg leading-tight">Spot ID Card</h4>
-                        <p id="idTeacherName" class="text-xs text-gray-500">Teacher Name</p>
+    <div id="qrCodeModal" class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm transition-opacity duration-300">
+        <div class="w-full max-w-sm transform transition-all scale-100">
+            
+            <div id="printableIdCard" class="relative bg-white rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.1)] mb-6 mx-auto">
+                <div class="absolute top-0 w-full h-32 bg-brand rounded-b-[50%] scale-150 -translate-y-16 opacity-20"></div>
+                <div class="absolute bottom-0 w-full h-32 bg-gray-100 rounded-t-[50%] scale-150 translate-y-16 opacity-50"></div>
+
+                <div class="relative z-10 p-8 flex flex-col items-center text-center">
+                    <div class="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-4 border border-gray-100">
+                        <img src="assets/images/learnaria_logo.png" class="w-12 h-12 object-contain">
+                    </div>
+
+                    <h4 class="text-gray-400 text-xs font-bold tracking-[0.2em] uppercase mb-1">Student ID Card</h4>
+                    <h2 id="idStudentName" class="text-2xl font-black text-gray-900 mb-6 leading-tight">اسم الطالب</h2>
+
+                    <div class="p-4 bg-white rounded-2xl shadow-inner border border-gray-100 mb-6">
+                        <div id="idQrcode" class="opacity-90"></div>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-gray-500 text-sm font-medium bg-gray-50 px-4 py-2 rounded-full">
+                        <i class="ri-user-star-line text-brand"></i>
+                        <span id="idTeacherName">اسم المعلم</span>
                     </div>
                 </div>
-                <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 flex justify-center mb-4 bg-gray-50">
-                    <div id="idQrcode"></div>
-                </div>
-                <div class="text-center">
-                    <p class="text-xs text-gray-400 uppercase tracking-widest font-bold">Student Name</p>
-                    <h3 id="idStudentName" class="text-2xl font-black text-gray-800 mt-1">Full Name</h3>
-                </div>
+                
+                <div class="h-2 w-full bg-gradient-to-r from-yellow-200 via-brand to-yellow-500"></div>
             </div>
-            <div class="bg-gray-50 dark:bg-darkSurface p-4 flex gap-3 border-t border-gray-100 dark:border-gray-800">
-                <button id="printIdButton"
-                    class="flex-1 bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-black transition"><i
-                        class="ri-printer-line"></i> <span data-key="printBtn">طباعة</span></button>
-                <button id="closeQrModal"
-                    class="flex-1 bg-white dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl hover:bg-gray-50 transition" data-key="closeBtn">إغلاق</button>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button id="shareIdBtn" class="col-span-2 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                    <span class="text-lg">مشاركة واتساب / صورة</span> 
+                    <i class="ri-whatsapp-line text-2xl"></i>
+                </button>
+                
+                <button id="printIdButton" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                    <span>طباعة</span> <i class="ri-printer-line"></i>
+                </button>
+                
+                <button id="closeQrModal" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-bold py-3 rounded-xl">
+                    إغلاق
+                </button>
             </div>
+            
+            <p class="text-center text-gray-500 text-xs mt-4">يمكن للطالب حفظ الصورة واستخدامها للدخول</p>
         </div>
     </div>
 

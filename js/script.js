@@ -185,7 +185,9 @@ const translations = {
         wrongPassword: "كلمة المرور خاطئة! حاول مرة أخرى.",
         present: "حاضر",
         absent: "غائب",
-        late: "متأخر"
+        late: "متأخر",
+        accountNotRegistered: "هذا الحساب غير مسجل! يرجى التواصل مع الإدارة.",
+        offlineFirstLogin: "يجب الاتصال بالإنترنت لتسجيل الدخول لأول مرة"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -283,7 +285,9 @@ const translations = {
         wrongPassword: "Wrong Password! Try again.",
         present: "Present",
         absent: "Absent",
-        late: "Late"
+        late: "Late",
+        accountNotRegistered: "Account not registered! Please contact admin.",
+        offlineFirstLogin: "Internet connection required for first login"
     }
 };
 
@@ -461,6 +465,7 @@ function setupListeners() {
         document.getElementById('messageModal').classList.add('hidden');
     });
     document.getElementById('confirmSendMsgBtn').addEventListener('click', sendCustomMessageAction);
+    document.getElementById('shareIdBtn').addEventListener('click', shareCardAction);
 }
 
 // ==========================================
@@ -629,10 +634,14 @@ async function cancelSingleClass() {
 // ==========================================
 // 7. CORE LOGIC (Auth, Load, Switch)
 // ==========================================
+
 async function loginTeacher() {
-    const phone = document.getElementById('teacherPhoneInput').value;
-    const password = document.getElementById('teacherPasswordInput').value.trim();
+    const phoneInput = document.getElementById('teacherPhoneInput');
+    const passInput = document.getElementById('teacherPasswordInput');
+    const phone = phoneInput.value;
+    const password = passInput.value.trim();
     
+    // تنسيق الرقم المصري
     const fmt = formatPhoneNumber(phone);
     if (!fmt) return showToast(translations[currentLang].phonePlaceholder, 'error');
     
@@ -642,36 +651,58 @@ async function loginTeacher() {
     btn.disabled = true;
 
     try {
+        // 1. البحث في الداتابيز المحلية أولاً
         let data = await getFromDB('teachers', fmt);
-        if (!data && navigator.onLine) {
-            try {
-                const doc = await firestoreDB.collection('teachers').doc(fmt).get();
-                if (doc.exists) { 
-                    data = { id: doc.id, ...doc.data() }; 
-                    await putToDB('teachers', data); 
-                }
-            } catch(e) { console.error("Firestore Error:", e); }
+
+        // 2. لو مش موجود محلياً، نسأل السيرفر (أونلاين)
+        if (!data) {
+            if (!navigator.onLine) {
+                // استخدام الترجمة لرسالة الأوفلاين
+                showToast(translations[currentLang].offlineFirstLogin || "Internet required for first login", "error");
+                throw new Error("Offline first login");
+            }
+
+            // هنا التريكاية: بنسأل فايربيس هل المدرس ده موجود؟
+            const doc = await firestoreDB.collection('teachers').doc(fmt).get();
+            
+            if (!doc.exists) {
+                // <<< التعديل هنا: استخدام الترجمة بدلاً من النص الثابت >>>
+                showToast(translations[currentLang].accountNotRegistered, "error");
+                
+                // تفريغ الخانات عشان يفهم إنه غلط
+                passInput.value = '';
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return; // وقف الكود هنا وميكملش
+            }
+
+            // لو موجود -> نحفظه عندنا محلياً عشان المرات الجاية
+            data = { id: doc.id, ...doc.data() };
+            await putToDB('teachers', data);
         }
         
+        // 3. التحقق من الباسورد
         if (data) {
-            if (data.password && data.password.trim() !== "") {
-                if (data.password !== password) {
-                    showToast(translations[currentLang].wrongPassword, "error");
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    return; 
-                }
-            } else {
-                if (password) {
-                     data.password = password;
-                     await putToDB('teachers', data);
-                     if(navigator.onLine) {
-                        firestoreDB.collection('teachers').doc(fmt).set({ password: password }, { merge: true });
-                     }
+            const storedPass = data.password ? data.password.toString().trim() : "";
+            
+            if (storedPass !== "" && storedPass !== password) {
+                showToast(translations[currentLang].wrongPassword, "error");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return; 
+            }
+            
+            // السماح بتعيين كلمة مرور لأول مرة لو الأدمن سابها فاضية
+            if (storedPass === "" && password !== "") {
+                data.password = password;
+                await putToDB('teachers', data);
+                if(navigator.onLine) {
+                    firestoreDB.collection('teachers').doc(fmt).set({ password: password }, { merge: true });
                 }
             }
         }
 
+        // 4. تسجيل الدخول ناجح
         TEACHER_ID = fmt;
         localStorage.setItem('learnaria-tid', TEACHER_ID);
         
@@ -680,7 +711,7 @@ async function loginTeacher() {
         document.getElementById('logoutButton').classList.remove('hidden');
 
         if(data) {
-            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${data.name}`;
+            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${data.name || ''}`;
             document.getElementById('teacherNameInput').value = data.name || '';
             document.getElementById('teacherSubjectInput').value = data.subject || '';
             document.getElementById('profilePasswordInput').value = data.password || ''; 
@@ -690,14 +721,15 @@ async function loginTeacher() {
         switchTab('students'); 
 
     } catch (error) {
-        console.error("Login Error:", error);
-        showToast(translations[currentLang].error, "error");
+        if(error.message !== "Offline first login") {
+            console.error("Login Error:", error);
+            showToast(translations[currentLang].error, "error");
+        }
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
 }
-
 function logout() { localStorage.removeItem('learnaria-tid'); location.reload(); }
 
 async function loadGroups() {
@@ -1096,15 +1128,76 @@ async function sendCustomMessageAction() {
     }
 }
 
+async function shareCardAction() {
+    const card = document.getElementById('printableIdCard');
+    const btn = document.getElementById('shareIdBtn');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = `<i class="ri-loader-4-line animate-spin text-xl"></i> جاري التجهيز...`;
+    btn.disabled = true;
+
+    try {
+        // 1. تحويل التصميم لصورة عالية الجودة
+        const canvas = await html2canvas(card, {
+            scale: 3, // جودة عالية (x3)
+            backgroundColor: "#ffffff", // خلفية بيضاء عشان الـ QR
+            useCORS: true // السماح بتحميل الصور الخارجية زي اللوجو
+        });
+
+        // 2. تحويل الـ Canvas لملف (Blob)
+        canvas.toBlob(async (blob) => {
+            const file = new File([blob], "student_id_card.png", { type: "image/png" });
+
+            // 3. محاولة المشاركة المباشرة (واتساب، وغيره)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Spot Student ID',
+                        text: 'بطاقة الطالب الرقمية - Spot System'
+                    });
+                } catch (err) {
+                    if (err.name !== 'AbortError') console.error(err);
+                }
+            } else {
+                // 4. البديل: تحميل الصورة لو المتصفح مش بيدعم المشاركة (زي الكمبيوتر)
+                const link = document.createElement('a');
+                link.download = `Spot_ID_${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                showToast("تم تحميل الصورة بنجاح");
+            }
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+
+    } catch (error) {
+        console.error("Share Error:", error);
+        showToast("فشل إنشاء الصورة", "error");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
 function showStudentQR(student) {
     document.getElementById('idStudentName').innerText = student.name;
-    document.getElementById('idTeacherName').innerText = document.getElementById('dashboardTitle').innerText.split('-')[1]?.trim() || "";
+    // التأكد من جلب اسم المدرس بشكل صحيح
+    const teacherName = document.getElementById('teacherNameInput').value || "المعلم";
+    document.getElementById('idTeacherName').innerText = teacherName;
+
     document.getElementById('idQrcode').innerHTML = '';
+    
+    // QR Code كبير وواضح
     new QRCode(document.getElementById('idQrcode'), {
         text: JSON.stringify({ teacherId: TEACHER_ID, groupId: SELECTED_GROUP_ID, studentId: student.id }),
-        width: 150, height: 150,
-        colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H
+        width: 200, // كبرنا الحجم لـ 200
+        height: 200,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
     });
+    
     document.getElementById('qrCodeModal').classList.remove('hidden');
 }
 
