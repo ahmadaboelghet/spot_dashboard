@@ -1,40 +1,55 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Learnaria - متابعة الطالب</title>
-
-    <link rel="manifest" href="./manifest.json">
-    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
-    <link rel="icon" type="image/png" href="./favicon.png">
-    <meta name="theme-color" content="#F5F5F5">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <title>Spot - ولي الأمر</title>
     
+    <link rel="icon" href="assets/images/favicon.png" type="image/x-icon">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;600;700;900&family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
 
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        // مطابقة لألوان ملف app_styles.dart
-                        brand: '#E5AD35',       // primaryYello
-                        primaryBlack: '#212121', // primaryBlack
-                        bgLight: '#F5F5F5',      // lightGrey
-                        textGrey: '#616161',     // darkGrey
-                        iconGrey: '#AAA9A2',     // mediumGrey
-                        success: '#4CAF50'       // greenSuccess
+                        primary: '#F2CE5A', 
+                        brand: '#F2CE5A',        // Added brand to match your snippet
+                        darkBg: '#121212',       
+                        darkCard: '#1E1E1E',     
+                        lightBg: '#F3F4F6',
+                        lightCard: '#FFFFFF',
+                        borderDark: 'rgba(255,255,255,0.08)',
                     },
-                    fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+                    fontFamily: { 
+                        cairo: ['Cairo', 'sans-serif'], 
+                        readex: ['Readex Pro', 'sans-serif'],
+                        inter: ['Inter', 'sans-serif'],
+                    },
                     boxShadow: {
-                        'card': '0 2px 10px rgba(0, 0, 0, 0.05)',
-                        'nav': '0 -2px 10px rgba(0, 0, 0, 0.05)'
+                        'glow': '0 0 20px rgba(242, 206, 90, 0.15)',
+                        'floating': '0 8px 32px 0 rgba(0, 0, 0, 0.2)', 
+                    },
+                    animation: {
+                        'fade-up': 'fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'pulse-slow': 'pulse 3s infinite ease-in-out'
+                    },
+                    keyframes: {
+                        fadeUp: {
+                            '0%': { opacity: '0', transform: 'translateY(15px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
                     }
                 }
             }
@@ -42,159 +57,232 @@
     </script>
 
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #F5F5F5; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Readex Pro', sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        .app-card {
-            background-color: white;
-            border-radius: 16px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-            transition: transform 0.2s;
+        /* Grid Background */
+        .bg-grid-pattern {
+            background-color: #F3F4F6;
+            background-image: 
+                linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
         }
-        .app-card:active { transform: scale(0.98); }
+        .dark .bg-grid-pattern {
+            background-color: #121212;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
 
-        .loader { border-top-color: #E5AD35; animation: spin 1s linear infinite; }
+        /* Floating Header */
+        .glass-header {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+        .dark .glass-header {
+            background: rgba(30, 30, 30, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+
+        /* Card Styling */
+        .spot-card {
+            border-radius: 20px;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+        .spot-card:active { transform: scale(0.98); }
+
+        .card-light { background: #FFFFFF; border: 1px solid #E5E7EB; }
+        .dark .card-dark { background: #1E1E1E; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); }
+
+        /* Tabs */
+        .tab-btn { transition: all 0.3s; }
+        .tab-btn.active { background-color: #F2CE5A; color: #000; font-weight: 700; box-shadow: 0 2px 10px rgba(242,206,90,0.3); }
+
+        /* Inputs */
+        .input-field { background: #FFFFFF; border: 1px solid #E5E7EB; color: #111827; }
+        .dark .input-field { background: #1E1E1E; border: 1px solid rgba(255,255,255,0.1); color: white; }
+        .input-field:focus { border-color: #F2CE5A; box-shadow: 0 0 0 2px rgba(242, 206, 90, 0.2); }
+
+        .loader { border-top-color: #F2CE5A; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="text-primaryBlack pb-24">
+<body class="bg-grid-pattern text-gray-900 dark:text-white min-h-screen transition-colors duration-300 pb-10">
 
-    <div id="loadingScreen" class="fixed inset-0 z-[60] bg-bgLight flex items-center justify-center hidden">
-        <div class="flex flex-col items-center gap-3">
-            <div class="w-10 h-10 border-4 border-gray-200 rounded-full loader"></div>
-            <p class="text-sm font-bold text-gray-400">جاري التحميل...</p>
+    <div id="loadingScreen" class="fixed inset-0 z-[100] bg-lightBg dark:bg-darkBg flex flex-col items-center justify-center hidden">
+        <div class="relative">
+            <div class="w-16 h-16 border-4 border-gray-200 dark:border-gray-800 border-t-primary rounded-full loader"></div>
+            <div class="absolute inset-0 flex items-center justify-center animate-pulse">
+                <span class="text-xl font-black text-primary" style="font-family: 'Inter', sans-serif;">S</span>
+            </div>
         </div>
     </div>
 
-    <div id="loginSection" class="hidden min-h-screen flex flex-col items-center justify-center px-6">
-        <div class="w-24 h-24 bg-white rounded-3xl shadow-card flex items-center justify-center mb-6">
-            <img src="assets/images/learnaria_logo.png" class="w-16 h-16 object-contain">
-        </div>
-        <h2 class="text-2xl font-bold mb-2">تسجيل دخول ولي الأمر</h2>
-        <p class="text-textGrey text-sm mb-8 text-center">أدخل رقم الهاتف المسجل لعرض لوحة الطالب</p>
-        
-        <div class="w-full relative mb-4">
-            <i class="ri-smartphone-line absolute top-4 right-4 text-iconGrey text-xl"></i>
-            <input type="tel" id="parentPhoneInput" placeholder="01xxxxxxxxx" 
-                   class="w-full bg-white border-none rounded-xl p-4 pr-12 text-primaryBlack shadow-sm outline-none focus:ring-2 focus:ring-brand/50 font-bold tracking-wider">
-        </div>
-        
-        <button onclick="handleLogin()" class="w-full bg-primaryBlack text-white font-bold py-4 rounded-xl shadow-lg hover:bg-black transition active:scale-95">
-            دخول
-        </button>
-    </div>
-
-    <div id="appScaffold" class="hidden">
-        
-        <div class="fixed top-0 w-full bg-white z-50 px-4 py-3 shadow-sm flex justify-between items-center">
+    <header class="fixed top-4 left-4 right-4 z-50 glass-header rounded-2xl transition-all duration-300">
+        <div class="px-5 py-3 flex justify-between items-center">
+            
             <div class="flex items-center gap-3">
-                <img src="assets/images/learnaria_logo.png" class="w-8 h-8">
-                <h1 class="text-xl font-bold text-primaryBlack">Learnaria</h1>
+                <div class="relative w-11 h-11 rounded-xl bg-white border-2 border-primary flex items-center justify-center shadow-sm">
+                    <img src="assets/images/learnaria_logo.png" class="w-7 h-7 object-contain" onerror="this.src='assets/images/favicon.png'">
+                    <div class="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-white dark:border-[#1E1E1E]"></div>
+                </div>
+                
+                <div>
+                    <h1 class="text-2xl font-black text-gray-900 dark:text-white font-inter tracking-tight">
+                        Spot<span class="text-brand">.</span>
+                    </h1>
+                </div>
             </div>
-            <button class="w-10 h-10 rounded-full hover:bg-gray-50 flex items-center justify-center">
-                <i class="ri-settings-4-line text-xl text-textGrey"></i>
-            </button>
+
+            <div class="flex items-center gap-2">
+                <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center transition text-gray-600 dark:text-gray-300 hover:text-primary hover:bg-gray-200 dark:hover:bg-white/10">
+                    <i id="themeIcon" class="ri-moon-line text-lg"></i>
+                </button>
+                <button onclick="logout()" class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center transition hover:bg-red-100 dark:hover:bg-red-500/20">
+                    <i class="ri-logout-box-r-line text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-5 pt-32 max-w-lg">
+
+        <div id="loginSection" class="hidden min-h-[60vh] flex flex-col items-center justify-center animate-fade-up">
+            <div class="w-24 h-24 bg-white dark:bg-darkCard rounded-[2rem] shadow-floating flex items-center justify-center mb-8 border border-gray-100 dark:border-white/5 relative">
+                <div class="absolute -right-2 -bottom-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white dark:border-darkBg z-10"></div>
+                <img src="assets/images/learnaria_logo.png" class="w-14 h-14 object-contain" onerror="this.src='assets/images/favicon.png'">
+            </div>
+            <h2 class="text-3xl font-black mb-2 text-center" style="font-family: 'Inter', sans-serif;">بوابة ولي الأمر</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mb-10 text-center px-6 leading-relaxed font-medium">
+                أدخل رقم الهاتف لمتابعة التقارير الدراسية
+            </p>
+            
+            <div class="w-full space-y-4">
+                <div class="relative group">
+                    <input type="tel" id="parentPhoneInput" placeholder="01xxxxxxxxx" 
+                           class="w-full input-field rounded-2xl p-4 text-center text-xl font-bold outline-none transition-all placeholder-gray-400 dark:placeholder-gray-600 font-mono">
+                    <i class="ri-smartphone-line absolute top-1/2 -translate-y-1/2 right-5 text-gray-400 text-xl group-focus-within:text-primary transition-colors"></i>
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-primary hover:bg-yellow-400 text-black font-black py-4 rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all text-lg flex items-center justify-center gap-2">
+                    <span>دخول</span>
+                    <i class="ri-arrow-left-line"></i>
+                </button>
+            </div>
         </div>
 
-        <main class="container mx-auto max-w-md px-4 pt-20 space-y-6">
+        <div id="dashboardSection" class="hidden space-y-8 animate-fade-up">
+            
+            <div class="flex justify-between items-end px-1 mt-4">
+                <div>
+                    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wide">لوحة المتابعة</p>
+                    <h2 id="headerGuardianText" class="text-2xl font-black leading-tight text-gray-900 dark:text-white" style="font-family: 'Cairo', sans-serif;">...</h2>
+                </div>
+            </div>
 
-            <div class="flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="w-14 h-14 rounded-full bg-brand flex items-center justify-center text-white text-2xl font-bold border-2 border-white shadow-md">
-                        <i class="ri-user-smile-line"></i>
+            <div onclick="requestPermission()" id="notifyBanner" class="hidden cursor-pointer relative group overflow-hidden rounded-[2rem] border border-primary/20 bg-darkCard/50 backdrop-blur-sm">
+                <div class="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent"></div>
+                <div class="relative p-5 flex items-center gap-5">
+                    <div class="w-12 h-12 bg-primary text-black rounded-full flex items-center justify-center shadow-glow animate-pulse-slow">
+                        <i class="ri-notification-3-fill text-xl"></i>
                     </div>
                     <div>
-                        <h2 class="text-lg font-bold text-primaryBlack leading-tight">مرحباً، <span id="studentNameDisplay">...</span></h2>
-                        <p id="currentDateDisplay" class="text-xs text-textGrey font-medium mt-1">...</p>
-                    </div>
-                </div>
-                <div onclick="requestPermission()" class="w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center relative cursor-pointer active:scale-95">
-                    <i class="ri-notification-3-line text-xl text-primaryBlack"></i>
-                    <div id="notifyDot" class="hidden absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></div>
-                </div>
-            </div>
-
-            <div>
-                <h3 class="text-lg font-bold text-primaryBlack mb-3">التقارير</h3>
-                <div class="flex gap-4">
-                    <div class="app-card flex-1 p-4 flex flex-col justify-between h-32 relative overflow-hidden">
-                        <div class="flex justify-between items-start">
-                            <span class="text-sm font-bold text-primaryBlack">الواجبات</span>
-                            <i class="ri-file-list-3-line text-brand text-xl"></i>
-                        </div>
-                        <div>
-                            <h4 id="assignmentsCount" class="text-2xl font-black text-brand">--</h4>
-                            <p id="assignmentsStatus" class="text-[10px] text-brand font-bold opacity-80">...</p>
-                        </div>
-                    </div>
-
-                    <div class="app-card flex-1 p-4 flex flex-col justify-between h-32 relative overflow-hidden">
-                        <div class="flex justify-between items-start">
-                            <span class="text-sm font-bold text-primaryBlack">الحضور</span>
-                            <i class="ri-calendar-check-line text-success text-xl"></i>
-                        </div>
-                        <div>
-                            <h4 id="attendancePercent" class="text-2xl font-black text-success">--%</h4>
-                            <p id="attendanceText" class="text-[10px] text-success font-bold opacity-80">...</p>
-                        </div>
+                        <h3 class="font-bold text-lg text-gray-900 dark:text-white" style="font-family: 'Cairo', sans-serif;">تفعيل التنبيهات</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">ليصلك كل جديد عن الغياب والدرجات</p>
                     </div>
                 </div>
             </div>
 
             <div>
-                <h3 class="text-lg font-bold text-primaryBlack mb-3">جدول اليوم</h3>
-                <div id="todaysCoursesList" class="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
-                    <div class="min-w-[140px] h-24 bg-white rounded-2xl border border-gray-100 flex items-center justify-center text-textGrey text-xs">
-                        لا توجد حصص اليوم
-                    </div>
-                </div>
+                <h3 class="font-bold text-lg mb-5 flex items-center gap-2 px-1 text-gray-900 dark:text-white" style="font-family: 'Cairo', sans-serif;">
+                    <i class="ri-dashboard-fill text-primary"></i>
+                    المواد الدراسية
+                </h3>
+                <div id="coursesList" class="space-y-5"></div>
             </div>
-
-            <div>
-                <h3 class="text-lg font-bold text-primaryBlack mb-3">المعلمون</h3>
-                <div id="teachersList" class="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
-                    </div>
-            </div>
-
-            <div id="detailsModal" class="fixed inset-0 z-[100] bg-white transform translate-y-full transition-transform duration-300 flex flex-col">
-                <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-white shadow-sm">
-                    <div>
-                        <h2 id="modalTitle" class="font-bold text-lg text-primaryBlack">التفاصيل</h2>
-                        <p id="modalSubtitle" class="text-xs text-textGrey">...</p>
-                    </div>
-                    <button onclick="closeDetails()" class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-primaryBlack">
-                        <i class="ri-close-line text-xl"></i>
-                    </button>
-                </div>
-                <div class="flex-1 overflow-y-auto p-5 bg-bgLight space-y-4">
-                    <div id="modalContent" class="space-y-3"></div>
-                </div>
-            </div>
-
-        </main>
-
-        <div class="fixed bottom-0 w-full bg-white border-t border-gray-100 pb-safe pt-2 px-6 flex justify-between items-center shadow-nav z-40">
-            <button class="flex flex-col items-center gap-1 p-2 text-brand">
-                <i class="ri-home-5-fill text-2xl"></i>
-                <span class="text-[10px] font-bold">الرئيسية</span>
-            </button>
-            <button class="flex flex-col items-center gap-1 p-2 text-iconGrey hover:text-primaryBlack transition">
-                <i class="ri-bar-chart-box-line text-2xl"></i>
-                <span class="text-[10px] font-medium">التقدم</span>
-            </button>
-            <button class="flex flex-col items-center gap-1 p-2 text-iconGrey hover:text-primaryBlack transition">
-                <i class="ri-mail-line text-2xl"></i>
-                <span class="text-[10px] font-medium">الرسائل</span>
-            </button>
-            <button class="flex flex-col items-center gap-1 p-2 text-iconGrey hover:text-primaryBlack transition">
-                <i class="ri-user-3-line text-2xl"></i>
-                <span class="text-[10px] font-medium">الملف</span>
-            </button>
         </div>
 
-    </div>
+        <div id="detailsModal" class="fixed inset-0 z-[60] pointer-events-none opacity-0 transition-opacity duration-300 flex items-end sm:items-center justify-center">
+            
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeDetails()"></div>
+            
+            <div id="modalContainer" class="relative w-full max-w-lg h-[85vh] bg-lightBg dark:bg-darkBg rounded-t-[2.5rem] transform translate-y-full transition-transform duration-300 pointer-events-auto flex flex-col shadow-2xl overflow-hidden border-t border-white/10">
+                
+                <div class="px-6 py-6 bg-white dark:bg-darkCard border-b border-gray-100 dark:border-white/5 z-10">
+                    <div class="w-12 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mx-auto mb-6"></div>
+                    
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20">المادة</span>
+                            </div>
+                            <h2 id="modalSubject" class="text-2xl font-black text-gray-900 dark:text-white leading-none" style="font-family: 'Cairo', sans-serif;">...</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 font-bold">معلم: <span id="modalTeacher" class="text-primary">...</span></p>
+                        </div>
+                        <button onclick="closeDetails()" class="w-10 h-10 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 dark:hover:bg-red-500/10 transition-colors">
+                            <i class="ri-close-line text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex bg-gray-100 dark:bg-black/30 p-1.5 rounded-2xl mt-8">
+                        <button onclick="switchTab('home')" class="tab-btn active flex-1 py-3 text-xs font-bold rounded-xl" id="btn-home">ملخص</button>
+                        <button onclick="switchTab('grades')" class="tab-btn flex-1 py-3 text-xs font-bold rounded-xl text-gray-500 dark:text-gray-400" id="btn-grades">الدرجات</button>
+                        <button onclick="switchTab('payments')" class="tab-btn flex-1 py-3 text-xs font-bold rounded-xl text-gray-500 dark:text-gray-400" id="btn-payments">المصاريف</button>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-6 bg-transparent custom-scroll">
+                    
+                    <div id="view-home" class="tab-content space-y-6 animate-fade-up">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="spot-card card-light dark:card-dark p-5 text-center">
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2">نسبة الحضور</p>
+                                <h3 id="modalAttPerc" class="text-3xl font-black text-gray-900 dark:text-white">--%</h3>
+                            </div>
+                            <div class="spot-card card-light dark:card-dark p-5 text-center">
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2">آخر تقييم</p>
+                                <h3 id="modalLastGrade" class="text-3xl font-black text-primary">--</h3>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 mb-4 flex items-center gap-2">
+                                <i class="ri-history-line text-primary"></i> النشاط الأخير
+                            </h3>
+                            <div id="modalAttendanceList" class="space-y-0 relative border-r-2 border-gray-200 dark:border-white/5 mr-2 pr-5 pb-2"></div>
+                        </div>
+                    </div>
+
+                    <div id="view-grades" class="tab-content hidden space-y-4 animate-fade-up">
+                        <div id="modalGradesList" class="space-y-3"></div>
+                    </div>
+
+                    <div id="view-payments" class="tab-content hidden space-y-5 animate-fade-up">
+                        <div id="paymentStatusBanner" class="spot-card card-light dark:card-dark p-6 flex items-center justify-between border-r-4">
+                            <div>
+                                <p class="text-sm font-bold text-gray-900 dark:text-white">الشهر الحالي</p>
+                                <p class="text-xs text-gray-500 mt-1" id="currentMonthName">...</p>
+                            </div>
+                            <span id="currentMonthStatus" class="px-4 py-2 rounded-xl text-xs font-bold">--</span>
+                        </div>
+                        <h3 class="text-xs font-bold text-gray-400 mt-6 mb-3 flex items-center gap-2">
+                            <i class="ri-wallet-3-fill text-primary"></i> السجل المالي
+                        </h3>
+                        <div id="modalPaymentsList" class="space-y-3"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </main>
 
     <script>
         // --- CONFIG ---
@@ -212,18 +300,21 @@
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             if (firebase.messaging.isSupported()) messaging = firebase.messaging();
-        } catch (e) { console.error("Firebase Init Error", e); }
+        } catch (e) { console.error(e); }
 
         let currentParentPhone = "";
-        let dashboardData = { reports: [] };
 
-        // --- INIT ---
+        // --- INIT & THEME ---
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage))) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.getElementById('themeIcon').className = 'ri-moon-line text-lg';
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const urlPhone = urlParams.get('p');
-
-        // Set Date
-        const dateOptions = { weekday: 'long', day: 'numeric', month: 'long' };
-        document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('ar-EG', dateOptions);
 
         if (urlPhone) {
             currentParentPhone = urlPhone;
@@ -232,269 +323,223 @@
             document.getElementById('loginSection').classList.remove('hidden');
         }
 
-        // --- APP LOGIC ---
+        // --- FUNCTIONS ---
         function handleLogin() {
             const phone = document.getElementById('parentPhoneInput').value.trim();
-            if (!phone || phone.length < 10) return alert("رقم الهاتف غير صحيح");
+            if (phone.length < 10) return alert("رقم غير صحيح");
             currentParentPhone = phone;
             document.getElementById('loginSection').classList.add('hidden');
             loadApp();
         }
 
+        function logout() { window.location.href = window.location.pathname; }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark'); localStorage.setItem('theme', 'light');
+                document.getElementById('themeIcon').className = 'ri-moon-line text-lg';
+            } else {
+                html.classList.add('dark'); localStorage.setItem('theme', 'dark');
+                document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('text-gray-500', 'dark:text-gray-400');
+            });
+            const btn = document.getElementById(`btn-${tab}`);
+            if(btn) {
+                btn.classList.add('active');
+                btn.classList.remove('text-gray-500', 'dark:text-gray-400');
+            }
+        }
+
         async function loadApp() {
             document.getElementById('loadingScreen').classList.remove('hidden');
-            
             try {
-                // 1. Fetch Students
-                const snapshot = await db.collectionGroup('students')
-                                         .where('parentPhoneNumber', '==', currentParentPhone)
-                                         .get();
+                const snapshot = await db.collectionGroup('students').where('parentPhoneNumber', '==', currentParentPhone).get();
+                if (snapshot.empty) { alert("لم يتم العثور على بيانات"); location.reload(); return; }
 
-                if (snapshot.empty) {
-                    alert("لم يتم العثور على طلاب مسجلين بهذا الرقم");
-                    document.getElementById('loadingScreen').classList.add('hidden');
-                    document.getElementById('loginSection').classList.remove('hidden');
-                    return;
-                }
-
-                document.getElementById('appScaffold').classList.remove('hidden');
+                document.getElementById('dashboardSection').classList.remove('hidden');
                 
-                // 2. Fetch Data Aggregation
-                let totalAssignments = 0;
-                let submittedAssignments = 0;
-                let presentDays = 0;
-                let totalAttendanceDays = 0;
-                let scheduleList = [];
-                let teachersList = [];
-
-                // Name Greeting
-                const firstStudent = snapshot.docs[0].data();
-                document.getElementById('studentNameDisplay').innerText = firstStudent.name.split(' ')[0];
+                let studentNames = new Set();
+                let listHtml = '';
 
                 for (const doc of snapshot.docs) {
                     const sData = doc.data();
-                    const pathSegments = doc.ref.path.split('/'); 
-                    const tId = pathSegments[1];
-                    const gId = pathSegments[3];
-                    const sId = doc.id;
+                    studentNames.add(sData.name.split(' ')[0]);
+                    const path = doc.ref.path.split('/');
+                    const tId = path[1], gId = path[3], sId = doc.id;
 
-                    // Get Teacher/Subject
-                    let teacherName = "مدرس";
-                    let subject = "مادة";
+                    let tName = "مدرس", subName = "مادة";
                     const tDoc = await db.collection('teachers').doc(tId).get();
-                    if(tDoc.exists) {
-                        teacherName = tDoc.data().name;
-                        subject = tDoc.data().subject || "عام";
+                    if(tDoc.exists) { tName = tDoc.data().name; subName = tDoc.data().subject || "عام"; }
+
+                    // Stats
+                    const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).limit(20).get();
+                    let totalDays=0, presentDays=0;
+                    attSnap.forEach(d => {
+                        const r = d.data().records?.find(x => x.studentId === sId);
+                        if(r) { totalDays++; if(r.status==='present') presentDays++; }
+                    });
+                    const attPerc = totalDays > 0 ? Math.round((presentDays/totalDays)*100) : 0;
+
+                    const assSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).orderBy('date', 'desc').limit(1).get();
+                    let lastGrade = '--';
+                    if(!assSnap.empty) {
+                        const score = assSnap.docs[0].data().scores?.[sId];
+                        if(score) lastGrade = score.score || (score.submitted ? '✅' : '❌');
                     }
 
-                    // Add to Teachers List
-                    teachersList.push({ name: teacherName, subject, id: tId, sId, gId });
+                    const currentMonth = new Date().toISOString().slice(0, 7);
+                    const payDoc = await db.collection(`teachers/${tId}/groups/${gId}/payments`).doc(`${gId}_PAY_${currentMonth}`).get();
+                    let isPaid = false;
+                    if(payDoc.exists) {
+                        const r = payDoc.data().records?.find(x => x.studentId === sId);
+                        if(r && r.paid) isPaid = true;
+                    }
 
-                    // Stats: Attendance
-                    const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).limit(20).get();
-                    attSnap.forEach(d => {
-                        const rec = d.data().records?.find(r => r.studentId === sId);
-                        if(rec) {
-                            totalAttendanceDays++;
-                            if(rec.status === 'present') presentDays++;
-                        }
-                    });
-
-                    // Stats: Grades
-                    const assSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(20).get();
-                    assSnap.forEach(d => {
-                        const score = d.data().scores?.[sId];
-                        totalAssignments++;
-                        if(score && (score.submitted === true || score.score)) submittedAssignments++;
-                    });
-
-                    // Schedule
-                    const schedSnap = await db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get();
-                    schedSnap.forEach(d => {
-                        const sch = d.data();
-                        const todayIndex = new Date().getDay(); 
-                        if(sch.days && sch.days.includes(todayIndex)) {
-                            scheduleList.push({
-                                subject: subject,
-                                time: sch.time,
-                                teacher: teacherName,
-                                tId, gId, sId // For click navigation
-                            });
-                        }
-                    });
-                }
-
-                // 3. Update Stats UI
-                document.getElementById('assignmentsCount').innerText = totalAssignments > 0 ? `${submittedAssignments}/${totalAssignments}` : '-';
-                document.getElementById('assignmentsStatus').innerText = totalAssignments > 0 ? (submittedAssignments === totalAssignments ? 'مكتمل' : 'مطلوب تسليم') : 'لا يوجد';
-                
-                const attPercent = totalAttendanceDays > 0 ? Math.round((presentDays / totalAttendanceDays) * 100) : 0;
-                document.getElementById('attendancePercent').innerText = `${attPercent}%`;
-                document.getElementById('attendanceText').innerText = attPercent > 85 ? 'حضور ممتاز' : (attPercent > 60 ? 'جيد' : 'يحتاج تحسين');
-
-                // 4. Render Lists
-                renderTeachers(teachersList);
-                renderSchedule(scheduleList);
-
-                // Check Notifications
-                if(Notification.permission !== 'granted') document.getElementById('notifyDot').classList.remove('hidden');
-
-            } catch (e) {
-                console.error(e);
-                // Handle Index Error specifically
-                if(e.code === 'failed-precondition') alert("النظام يحتاج لتهيئة (Index). راجع الـ Console");
-            } finally {
-                document.getElementById('loadingScreen').classList.add('hidden');
-            }
-        }
-
-        function renderTeachers(list) {
-            const container = document.getElementById('teachersList');
-            container.innerHTML = '';
-            list.forEach(t => {
-                const div = document.createElement('div');
-                div.className = "min-w-[130px] bg-white rounded-2xl shadow-card overflow-hidden cursor-pointer active:scale-95 transition";
-                div.onclick = () => openDetails(t.id, t.gId, t.sId, t.name, t.subject);
-                
-                // Avatar
-                const avatarUrl = `https://avatar.iran.liara.run/username?username=${t.name.replace(' ','+')}`;
-                
-                div.innerHTML = `
-                    <div class="h-24 bg-gray-50">
-                        <img src="${avatarUrl}" class="w-full h-full object-cover">
-                    </div>
-                    <div class="p-3">
-                        <h4 class="text-sm font-bold text-primaryBlack truncate">${t.name}</h4>
-                        <p class="text-[10px] text-textGrey truncate">${t.subject}</p>
-                        <div class="mt-2 flex justify-end">
-                            <div class="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center text-textGrey">
-                                <i class="ri-chat-3-line text-xs"></i>
+                    listHtml += `
+                    <div class="spot-card card-light dark:card-dark p-5 cursor-pointer group relative overflow-hidden" onclick="openDetails('${tId}', '${gId}', '${sId}', '${tName}', '${subName}')">
+                        <div class="absolute -right-5 -top-5 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition"></div>
+                        
+                        <div class="flex justify-between items-start mb-5 relative z-10">
+                            <div class="flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/5 flex items-center justify-center shadow-inner">
+                                    <span class="text-2xl font-black text-primary">${subName.charAt(0)}</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-black text-gray-900 dark:text-white leading-tight mb-1" style="font-family: 'Cairo', sans-serif;">${subName}</h3>
+                                    <div class="flex items-center gap-2">
+                                        <i class="ri-user-line text-xs text-primary"></i>
+                                        <p class="text-xs text-gray-500 font-bold">${tName}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <span class="text-[10px] bg-gray-100 dark:bg-white/5 text-gray-500 px-2 py-0.5 rounded-md font-bold">${sData.name.split(' ')[0]}</span>
+                                ${isPaid 
+                                    ? '<span class="text-[10px] text-green-500 bg-green-500/10 px-2 py-0.5 rounded-md font-bold border border-green-500/20">مدفوع</span>' 
+                                    : '<span class="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md font-bold border border-red-500/20">غير مدفوع</span>'}
                             </div>
                         </div>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
+                        <div class="grid grid-cols-2 gap-3 mt-2 border-t border-gray-100 dark:border-white/5 pt-3">
+                            <div><p class="text-[10px] text-gray-400 font-bold">نسبة الحضور</p><p class="text-lg font-black ${attPerc>85?'text-green-500':'text-primary'}">${attPerc}%</p></div>
+                            <div><p class="text-[10px] text-gray-400 font-bold">آخر تقييم</p><p class="text-lg font-black text-gray-900 dark:text-white">${lastGrade}</p></div>
+                        </div>
+                    </div>`;
+                }
+
+                if(studentNames.size > 0) document.getElementById('headerGuardianText').innerHTML = `ولي أمر الطالب <span class="text-primary">${Array.from(studentNames).join('، ')}</span>`;
+                document.getElementById('coursesList').innerHTML = listHtml;
+                if(Notification.permission !== 'granted') document.getElementById('notifyBanner').classList.remove('hidden');
+
+            } catch (e) { console.error(e); } 
+            finally { document.getElementById('loadingScreen').classList.add('hidden'); }
         }
 
-        function renderSchedule(list) {
-            const container = document.getElementById('todaysCoursesList');
-            container.innerHTML = '';
-            if(list.length === 0) {
-                container.innerHTML = `<div class="min-w-full text-center text-xs text-textGrey py-6 bg-white rounded-2xl border border-gray-100">لا توجد حصص مجدولة اليوم</div>`;
-                return;
-            }
-
-            list.sort((a,b) => a.time.localeCompare(b.time));
-
-            list.forEach(s => {
-                const div = document.createElement('div');
-                div.className = "min-w-[150px] bg-white rounded-2xl border border-gray-100 p-4 flex flex-col justify-between shadow-sm";
-                div.onclick = () => openDetails(s.tId, s.gId, s.sId, s.teacher, s.subject); // clickable schedule
-                
-                div.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-sm font-bold text-primaryBlack truncate max-w-[90px]">${s.subject}</span>
-                        <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">قادم</span>
-                    </div>
-                    <p class="text-[10px] text-textGrey mb-1">${s.teacher}</p>
-                    <p class="text-sm font-mono text-primaryBlack font-bold">${formatTime(s.time)}</p>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function formatTime(timeStr) {
-            if(!timeStr) return '';
-            let [h, m] = timeStr.split(':');
-            h = parseInt(h);
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12 || 12;
-            return `${h}:${m} ${ampm}`;
-        }
-
-        // --- DETAILS OVERLAY (Modal Logic) ---
         async function openDetails(tId, gId, sId, tName, subject) {
+            document.getElementById('modalSubject').innerText = subject;
+            document.getElementById('modalTeacher').innerText = tName;
             const modal = document.getElementById('detailsModal');
-            const content = document.getElementById('modalContent');
+            const cont = document.getElementById('modalContainer');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            cont.classList.remove('translate-y-full');
+
+            const loader = '<div class="flex justify-center py-10"><div class="loader w-8 h-8 border-4 border-gray-700 border-t-primary rounded-full"></div></div>';
+            const attList = document.getElementById('modalAttendanceList');
+            const grList = document.getElementById('modalGradesList');
+            const payList = document.getElementById('modalPaymentsList');
             
-            document.getElementById('modalTitle').innerText = subject;
-            document.getElementById('modalSubtitle').innerText = `مع أ/ ${tName}`;
-            content.innerHTML = '<div class="text-center py-10"><div class="w-8 h-8 border-4 border-brand rounded-full loader mx-auto"></div></div>';
+            if(attList) attList.innerHTML = loader;
+            if(grList) grList.innerHTML = '';
+            if(payList) payList.innerHTML = '';
             
-            modal.classList.remove('translate-y-full');
+            switchTab('home');
 
             try {
-                // Fetch Details Logic (Same as before)
-                const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(10).get();
-                let attHtml = '';
+                // A. Attendance
+                const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(20).get();
+                let attHtml = '', total=0, present=0;
                 attSnap.forEach(d => {
                     const r = d.data().records?.find(x => x.studentId === sId);
                     if(r) {
-                        let color = 'text-gray-400';
-                        let icon = 'ri-question-mark';
-                        let status = 'غير محدد';
-                        if(r.status === 'present') { color='text-success'; icon='ri-check-double-line'; status='حاضر'; }
-                        else if(r.status === 'absent') { color='text-red-500'; icon='ri-close-line'; status='غائب'; }
-                        else if(r.status === 'late') { color='text-orange-500'; icon='ri-time-line'; status='تأخير'; }
-
-                        attHtml += `
-                        <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm border border-gray-50">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center ${color}">
-                                    <i class="${icon}"></i>
-                                </div>
-                                <span class="text-sm font-bold text-primaryBlack">${d.data().date}</span>
-                            </div>
-                            <span class="text-xs font-medium ${color}">${status}</span>
-                        </div>`;
+                        total++; if(r.status==='present') present++;
+                        let col = r.status==='present'?'bg-green-500':(r.status==='absent'?'bg-red-500':'bg-yellow-500');
+                        let txt = r.status==='present'?'حاضر':(r.status==='absent'?'غائب':'تأخير');
+                        let txtCol = r.status==='present'?'text-green-500':(r.status==='absent'?'text-red-500':'text-yellow-500');
+                        attHtml += `<div class="relative pl-6 pb-8 last:pb-0 border-l-2 border-gray-200 dark:border-white/10 last:border-0"><div class="absolute -right-[7px] top-0 w-3.5 h-3.5 rounded-full ${col} ring-4 ring-white dark:ring-darkBg z-10"></div><div class="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5"><span class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.data().date}</span><span class="text-xs font-bold px-2 py-0.5 rounded bg-black/5 dark:bg-white/10 ${txtCol}">${txt}</span></div></div>`;
                     }
                 });
+                if(attList) attList.innerHTML = attHtml || '<p class="text-center text-gray-500">لا يوجد سجل</p>';
+                document.getElementById('modalAttPerc').innerText = total>0 ? Math.round((present/total)*100)+'%' : '0%';
 
-                const gradeSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get();
-                let gradeHtml = '';
-                gradeSnap.forEach(d => {
-                    const s = d.data().scores?.[sId];
-                    if(s) {
-                        gradeHtml += `
-                        <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm border-l-4 border-l-brand">
-                            <div>
-                                <p class="text-sm font-bold text-primaryBlack">${d.data().name}</p>
-                                <span class="text-[10px] text-textGrey bg-gray-100 px-2 rounded">${d.data().type || 'واجب'}</span>
-                            </div>
-                            <span class="text-lg font-black text-primaryBlack">${s.score || '-'}</span>
-                        </div>`;
+                // B. Grades
+                const grSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(20).orderBy('date', 'desc').get();
+                let grHtml = '', lastG='--';
+                if(!grSnap.empty) {
+                    grSnap.forEach((doc, idx) => {
+                        const d = doc.data();
+                        const s = d.scores?.[sId];
+                        let scoreDisp='--', stCol='border-gray-500', stTxt='لم يسلم', stBg='bg-gray-500/10 text-gray-500';
+                        if(s) {
+                            if(s.score) { scoreDisp=s.score; stCol='border-primary'; stTxt='تم الرصد'; stBg='bg-primary/10 text-primary'; if(idx===0) lastG=s.score; }
+                            else if(s.submitted) { scoreDisp='<i class="ri-check-line"></i>'; stCol='border-green-500'; stTxt='تم التسليم'; stBg='bg-green-500/10 text-green-500'; }
+                            else { stCol='border-red-500'; stTxt='غائب'; stBg='bg-red-500/10 text-red-500'; }
+                        } else { stCol='border-red-500'; stTxt='لم يسلم'; stBg='bg-red-500/10 text-red-500'; }
+
+                        grHtml += `<div class="spot-card card-light dark:card-dark p-4 flex justify-between items-center border-l-4 ${stCol}"><div><h4 class="font-bold text-sm text-gray-900 dark:text-white mb-1">${d.name}</h4><span class="text-[10px] ${stBg} px-2 py-0.5 rounded font-bold">${stTxt}</span></div><div class="text-center min-w-[50px]"><span class="block text-xl font-black text-gray-900 dark:text-white">${scoreDisp}</span><span class="text-[9px] text-gray-400">الدرجة</span></div></div>`;
+                    });
+                }
+                if(grList) grList.innerHTML = grHtml || '<p class="text-center text-gray-500">لا توجد درجات</p>';
+                document.getElementById('modalLastGrade').innerText = lastG;
+
+                // C. Payments
+                const paySnap = await db.collection(`teachers/${tId}/groups/${gId}/payments`).limit(12).get();
+                let payHtml = '';
+                const currM = new Date().toISOString().slice(0, 7);
+                let currStatus = 'غير مدفوع', currClass = 'bg-red-500 border-red-500 text-white';
+
+                paySnap.forEach(d => {
+                    const m = d.data().month;
+                    const r = d.data().records?.find(x => x.studentId === sId);
+                    const p = r && r.paid;
+                    if(m===currM) { 
+                        if(p) { currStatus='تم الدفع ✅'; currClass='bg-green-500 border-green-500 text-white'; }
+                        else { currStatus='مطلوب سداد ⚠️'; currClass='bg-red-500 border-red-500 text-white'; }
                     }
+                    payHtml += `<div class="flex justify-between items-center p-4 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${p?'bg-green-500/20 text-green-500':'bg-red-500/20 text-red-500'} flex items-center justify-center"><i class="${p?'ri-checkbox-circle-fill':'ri-close-circle-fill'} text-lg"></i></div><span class="font-bold text-sm text-gray-800 dark:text-gray-200">${m}</span></div><span class="text-xs font-bold ${p?'text-green-500':'text-red-500'}">${p?(r.amount+' ج.م'):'غير مدفوع'}</span></div>`;
                 });
+                if(payList) payList.innerHTML = payHtml;
+                document.getElementById('currentMonthName').innerText = currM;
+                const statusBadge = document.getElementById('currentMonthStatus');
+                statusBadge.innerText = currStatus;
+                statusBadge.className = `px-3 py-1.5 rounded-lg text-xs font-bold border ${currClass}`;
+                document.getElementById('paymentStatusBanner').className = `spot-card card-light dark:card-dark p-6 flex items-center justify-between border-r-4 ${currStatus.includes('الدفع')?'border-green-500':'border-red-500'}`;
 
-                content.innerHTML = `
-                    <h4 class="text-sm font-bold text-textGrey mt-2 mb-2">سجل الحضور</h4>
-                    <div class="space-y-2">${attHtml || '<p class="text-center text-xs text-gray-400">لا يوجد سجل</p>'}</div>
-                    <h4 class="text-sm font-bold text-textGrey mt-6 mb-2">الدرجات والواجبات</h4>
-                    <div class="space-y-2">${gradeHtml || '<p class="text-center text-xs text-gray-400">لا توجد درجات</p>'}</div>
-                `;
-
-            } catch(e) {
-                content.innerHTML = '<p class="text-center text-red-500">حدث خطأ في تحميل التفاصيل</p>';
-            }
+            } catch(e) { console.error(e); }
         }
 
         function closeDetails() {
-            document.getElementById('detailsModal').classList.add('translate-y-full');
+            document.getElementById('modalContainer').classList.add('translate-y-full');
+            setTimeout(() => document.getElementById('detailsModal').classList.add('opacity-0', 'pointer-events-none'), 300);
         }
 
         async function requestPermission() {
             if(!messaging) return alert("غير مدعوم");
             try {
-                const perm = await Notification.requestPermission();
-                if(perm === 'granted') {
+                if((await Notification.requestPermission()) === 'granted') {
                     const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
                     const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", serviceWorkerRegistration: reg });
-                    
                     if(currentParentPhone) {
                         await db.collection('parents').doc(currentParentPhone).set({ fcmToken: token }, { merge: true });
-                        document.getElementById('notifyDot').classList.add('hidden');
-                        alert("تم تفعيل الإشعارات بنجاح ✅");
+                        document.getElementById('notifyBanner').classList.add('hidden');
+                        alert("تم التفعيل بنجاح ✅");
                     }
                 }
             } catch(e) { console.error(e); }
