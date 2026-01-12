@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="dark">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Spot - ولي الأمر</title>
+    <title>Learnaria - متابعة الطالب</title>
 
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
     <link rel="icon" type="image/png" href="./favicon.png">
-    <meta name="theme-color" content="#000000">
+    <meta name="theme-color" content="#F5F5F5">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -20,140 +20,184 @@
 
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        brand: '#F2CE5A',
-                        darkBg: '#050505', 
-                        darkCard: '#121212',
-                        darkBorder: '#262626',
+                        // نفس ألوان ملف app_styles.dart
+                        brand: '#E5AD35',       // primaryYello
+                        primaryBlack: '#212121', // primaryBlack
+                        bgLight: '#F5F5F5',      // lightGrey
+                        textGrey: '#616161',     // darkGrey
+                        iconGrey: '#AAA9A2',     // mediumGrey
+                        success: '#4CAF50'       // greenSuccess
                     },
-                    fontFamily: { cairo: ['Cairo', 'sans-serif'] }
+                    fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+                    boxShadow: {
+                        'card': '0 2px 10px rgba(0, 0, 0, 0.05)',
+                        'nav': '0 -2px 10px rgba(0, 0, 0, 0.05)'
+                    }
                 }
             }
         }
     </script>
 
     <style>
-        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Cairo', sans-serif; background-color: #F5F5F5; -webkit-tap-highlight-color: transparent; }
         
-        .glass-card {
-            background: #121212;
-            border: 1px solid #262626;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-            transition: all 0.3s ease;
+        .app-card {
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            transition: transform 0.2s;
         }
-        .glass-card:active { transform: scale(0.98); }
+        .app-card:active { transform: scale(0.98); }
 
-        .loader { border-top-color: #F2CE5A; animation: spin 1s linear infinite; }
+        .loader { border-top-color: #E5AD35; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-darkBg text-gray-900 dark:text-white pb-32 min-h-screen">
+<body class="text-primaryBlack pb-24">
 
-    <div id="loadingScreen" class="fixed inset-0 z-[60] bg-darkBg flex items-center justify-center hidden">
-        <div class="w-10 h-10 border-4 border-darkBorder rounded-full loader"></div>
+    <div id="loadingScreen" class="fixed inset-0 z-[60] bg-bgLight flex items-center justify-center hidden">
+        <div class="flex flex-col items-center gap-3">
+            <div class="w-10 h-10 border-4 border-gray-200 rounded-full loader"></div>
+            <p class="text-sm font-bold text-gray-400">جاري التحميل...</p>
+        </div>
     </div>
 
-    <div class="fixed top-0 w-full bg-darkBg/90 backdrop-blur-md z-50 border-b border-darkBorder">
-        <div class="flex justify-between items-center px-5 py-3 max-w-md mx-auto">
+    <div id="loginSection" class="hidden min-h-screen flex flex-col items-center justify-center px-6">
+        <div class="w-24 h-24 bg-white rounded-3xl shadow-card flex items-center justify-center mb-6">
+            <img src="assets/images/learnaria_logo.png" class="w-16 h-16 object-contain">
+        </div>
+        <h2 class="text-2xl font-bold mb-2">تسجيل دخول ولي الأمر</h2>
+        <p class="text-textGrey text-sm mb-8 text-center">أدخل رقم الهاتف المسجل لعرض لوحة الطالب</p>
+        
+        <div class="w-full relative mb-4">
+            <i class="ri-smartphone-line absolute top-4 right-4 text-iconGrey text-xl"></i>
+            <input type="tel" id="parentPhoneInput" placeholder="01xxxxxxxxx" 
+                   class="w-full bg-white border-none rounded-xl p-4 pr-12 text-primaryBlack shadow-sm outline-none focus:ring-2 focus:ring-brand/50 font-bold tracking-wider">
+        </div>
+        
+        <button onclick="handleLogin()" class="w-full bg-primaryBlack text-white font-bold py-4 rounded-xl shadow-lg hover:bg-black transition active:scale-95">
+            دخول
+        </button>
+    </div>
+
+    <div id="appScaffold" class="hidden">
+        
+        <div class="fixed top-0 w-full bg-white z-50 px-4 py-3 shadow-sm flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <button id="backButton" onclick="showDashboard()" class="hidden text-gray-400 hover:text-white">
-                    <i class="ri-arrow-right-line text-xl"></i>
-                </button>
-
-                <img src="assets/images/learnaria_logo.png" class="w-8 h-8 object-contain" onerror="this.src='assets/images/favicon.png'">
-                <div>
-                    <h1 class="text-2xl font-black tracking-tight leading-none text-white">
-                        Spot<span class="text-brand text-3xl">.</span>
-                    </h1>
-                </div>
+                <img src="assets/images/learnaria_logo.png" class="w-8 h-8">
+                <h1 class="text-xl font-bold text-primaryBlack">Learnaria</h1>
             </div>
-            <button onclick="toggleTheme()" class="text-gray-400 hover:text-white">
-                <i id="themeIcon" class="ri-sun-line text-xl"></i>
+            <button class="w-10 h-10 rounded-full hover:bg-gray-50 flex items-center justify-center">
+                <i class="ri-settings-4-line text-xl text-textGrey"></i>
             </button>
         </div>
+
+        <main class="container mx-auto max-w-md px-4 pt-20 space-y-6">
+
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-14 h-14 rounded-full bg-brand flex items-center justify-center text-white text-2xl font-bold border-2 border-white shadow-md">
+                        <i class="ri-user-smile-line"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-primaryBlack leading-tight">مرحباً، <span id="studentNameDisplay">...</span></h2>
+                        <p id="currentDateDisplay" class="text-xs text-textGrey font-medium mt-1">...</p>
+                    </div>
+                </div>
+                <div onclick="requestPermission()" class="w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center relative cursor-pointer active:scale-95">
+                    <i class="ri-notification-3-line text-xl text-primaryBlack"></i>
+                    <div id="notifyDot" class="hidden absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-bold text-primaryBlack mb-3">التقارير</h3>
+                <div class="flex gap-4">
+                    <div class="app-card flex-1 p-4 flex flex-col justify-between h-32 relative overflow-hidden" onclick="scrollToSection('grades')">
+                        <div class="flex justify-between items-start">
+                            <span class="text-sm font-bold text-primaryBlack">الواجبات</span>
+                            <i class="ri-file-list-3-line text-brand text-xl"></i>
+                        </div>
+                        <div>
+                            <h4 id="assignmentsCount" class="text-2xl font-black text-brand">--</h4>
+                            <p id="assignmentsStatus" class="text-[10px] text-brand font-bold opacity-80">...</p>
+                        </div>
+                    </div>
+
+                    <div class="app-card flex-1 p-4 flex flex-col justify-between h-32 relative overflow-hidden" onclick="scrollToSection('attendance')">
+                        <div class="flex justify-between items-start">
+                            <span class="text-sm font-bold text-primaryBlack">الحضور</span>
+                            <i class="ri-calendar-check-line text-success text-xl"></i>
+                        </div>
+                        <div>
+                            <h4 id="attendancePercent" class="text-2xl font-black text-success">--%</h4>
+                            <p id="attendanceText" class="text-[10px] text-success font-bold opacity-80">...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-bold text-primaryBlack mb-3">جدول اليوم</h3>
+                <div id="todaysCoursesList" class="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+                    <div class="min-w-[140px] h-24 bg-white rounded-2xl border border-gray-100 flex items-center justify-center text-textGrey text-xs">
+                        لا توجد حصص اليوم
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-bold text-primaryBlack mb-3">المعلمون</h3>
+                <div id="teachersList" class="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+                    </div>
+            </div>
+
+            <div id="detailsModal" class="fixed inset-0 z-[100] bg-white transform translate-y-full transition-transform duration-300 flex flex-col">
+                <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <div>
+                        <h2 id="modalTitle" class="font-bold text-lg">التفاصيل</h2>
+                        <p id="modalSubtitle" class="text-xs text-textGrey">...</p>
+                    </div>
+                    <button onclick="closeDetails()" class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-5 bg-bgLight space-y-4">
+                    <div id="modalContent" class="space-y-3"></div>
+                </div>
+            </div>
+
+        </main>
+
+        <div class="fixed bottom-0 w-full bg-white border-t border-gray-100 pb-safe pt-2 px-6 flex justify-between items-center shadow-nav z-40">
+            <button class="flex flex-col items-center gap-1 p-2 text-brand">
+                <i class="ri-home-5-fill text-2xl"></i>
+                <span class="text-[10px] font-bold">الرئيسية</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 p-2 text-iconGrey hover:text-primaryBlack transition">
+                <i class="ri-bar-chart-box-line text-2xl"></i>
+                <span class="text-[10px] font-medium">التقدم</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 p-2 text-iconGrey hover:text-primaryBlack transition">
+                <i class="ri-mail-line text-2xl"></i>
+                <span class="text-[10px] font-medium">الرسائل</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 p-2 text-iconGrey hover:text-primaryBlack transition">
+                <i class="ri-user-3-line text-2xl"></i>
+                <span class="text-[10px] font-medium">الملف</span>
+            </button>
+        </div>
+
     </div>
-
-    <main class="container mx-auto max-w-md px-5 pt-24 space-y-6">
-
-        <div id="loginSection" class="hidden flex flex-col items-center justify-center pt-20">
-            <div class="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center mb-4">
-                <i class="ri-parent-line text-3xl text-brand"></i>
-            </div>
-            <h2 class="text-xl font-bold mb-2">تسجيل دخول ولي الأمر</h2>
-            <p class="text-gray-500 text-sm mb-6 text-center">أدخل رقم الهاتف المسجل لدى المدرسين لعرض كل المواد</p>
-            
-            <input type="tel" id="parentPhoneInput" placeholder="رقم الهاتف (01xxxxxxxxx)" 
-                   class="w-full bg-darkCard border border-darkBorder rounded-xl p-4 text-center text-white mb-4 outline-none focus:border-brand">
-            
-            <button onclick="handleLogin()" class="w-full bg-brand text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition">
-                عرض التقارير
-            </button>
-        </div>
-
-        <div id="dashboardSection" class="hidden fade-in-up">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-                <i class="ri-dashboard-line text-brand"></i> المواد المشتركة
-            </h2>
-            <div id="subjectsList" class="space-y-3">
-                </div>
-        </div>
-
-        <div id="detailsSection" class="hidden fade-in-up">
-            
-            <div class="bg-darkCard border border-darkBorder rounded-2xl p-4 mb-6 flex justify-between items-center">
-                <div>
-                    <h2 id="detailStudentName" class="font-bold text-lg text-white">...</h2>
-                    <p id="detailSubjectName" class="text-xs text-gray-400">...</p>
-                </div>
-                <div class="bg-brand/10 text-brand px-3 py-1 rounded-lg text-xs font-bold">نشط</div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="glass-card p-4 rounded-2xl text-center">
-                    <p class="text-gray-400 text-xs font-bold mb-1">الحضور</p>
-                    <h3 id="attendanceRate" class="text-2xl font-black text-white">--%</h3>
-                </div>
-                <div class="glass-card p-4 rounded-2xl text-center">
-                    <p class="text-gray-400 text-xs font-bold mb-1">آخر درجة</p>
-                    <h3 id="lastExamScore" class="text-2xl font-black text-brand">--</h3>
-                </div>
-            </div>
-
-            <div class="flex bg-darkCard p-1 rounded-xl mb-6">
-                <button onclick="switchInnerTab('home')" class="flex-1 py-2 text-xs font-bold rounded-lg bg-darkBorder text-white inner-tab" data-target="home">الرئيسية</button>
-                <button onclick="switchInnerTab('attendance')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-white inner-tab" data-target="attendance">الغياب</button>
-                <button onclick="switchInnerTab('grades')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-white inner-tab" data-target="grades">الدرجات</button>
-            </div>
-
-            <div id="content-home" class="inner-content space-y-4">
-                <h3 class="font-bold text-white text-sm">النشاط الأخير</h3>
-                <div id="timelineList" class="space-y-4 relative border-r border-darkBorder mr-2 pr-4"></div>
-            </div>
-            <div id="content-attendance" class="inner-content hidden space-y-3">
-                <div id="attendanceList" class="space-y-2"></div>
-            </div>
-            <div id="content-grades" class="inner-content hidden space-y-3">
-                <div id="gradesList" class="space-y-2"></div>
-            </div>
-
-            <div id="bigNotifyBanner" class="mt-8 bg-gradient-to-r from-red-900/20 to-red-600/20 border border-red-500/30 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hidden" onclick="requestPermission()">
-                <div class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white"><i class="ri-notification-3-fill"></i></div>
-                <div>
-                    <h4 class="font-bold text-sm text-white">تفعيل التنبيهات</h4>
-                    <p class="text-xs text-gray-400">اضغط لتفعيل إشعارات هذا الطالب</p>
-                </div>
-            </div>
-        </div>
-
-    </main>
 
     <script>
-        // --- 1. CONFIG ---
+        // --- CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
             authDomain: "learnaria-483e7.firebaseapp.com",
@@ -170,323 +214,303 @@
             if (firebase.messaging.isSupported()) messaging = firebase.messaging();
         } catch (e) { console.error("Firebase Init Error", e); }
 
-        // --- 2. GLOBAL STATE ---
         let currentParentPhone = "";
-        let currentContext = { tId: null, gId: null, sId: null };
+        // Store all data fetched to avoid re-fetching
+        let dashboardData = { students: [], reports: [] };
 
-        // --- 3. INIT LOGIC ---
+        // --- INIT ---
         const urlParams = new URLSearchParams(window.location.search);
-        // Check if we have specific student link OR just parent phone
         const urlPhone = urlParams.get('p');
-        const urlTid = urlParams.get('t');
 
-        if (urlTid && urlPhone) {
-            // Direct Link Mode (Old behavior but integrated)
+        // Set Date
+        const dateOptions = { weekday: 'long', day: 'numeric', month: 'long' };
+        document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('ar-EG', dateOptions);
+
+        if (urlPhone) {
             currentParentPhone = urlPhone;
-            loadStudentDetails(urlParams.get('t'), urlParams.get('g'), urlParams.get('s'), decodeURIComponent(urlParams.get('n') || ''));
-        } else if (urlPhone) {
-            // Dashboard Mode (via URL)
-            currentParentPhone = urlPhone;
-            loadDashboard();
+            loadApp();
         } else {
-            // Login Mode
             document.getElementById('loginSection').classList.remove('hidden');
         }
 
-        // --- 4. DASHBOARD FUNCTIONS ---
+        // --- APP LOGIC ---
         function handleLogin() {
             const phone = document.getElementById('parentPhoneInput').value.trim();
             if (!phone || phone.length < 10) return alert("رقم الهاتف غير صحيح");
             currentParentPhone = phone;
             document.getElementById('loginSection').classList.add('hidden');
-            loadDashboard();
+            loadApp();
         }
 
-        async function loadDashboard() {
-            showLoader(true);
-            const list = document.getElementById('subjectsList');
-            list.innerHTML = '';
-
+        async function loadApp() {
+            document.getElementById('loadingScreen').classList.remove('hidden');
+            
             try {
-                // Collection Group Query: Find ALL students with this parent phone
-                // NOTE: Requires Firestore Index: students (Collection) -> parentPhoneNumber (Asc/Desc)
+                // 1. Fetch Students linked to parent
                 const snapshot = await db.collectionGroup('students')
                                          .where('parentPhoneNumber', '==', currentParentPhone)
                                          .get();
 
                 if (snapshot.empty) {
-                    list.innerHTML = `
-                        <div class="text-center py-10 text-gray-500">
-                            <i class="ri-user-unfollow-line text-4xl mb-2"></i>
-                            <p>لم يتم العثور على طلاب مسجلين بهذا الرقم.</p>
-                            <p class="text-xs mt-2">تأكد من الرقم أو تواصل مع المدرس.</p>
-                        </div>
-                        <button onclick="location.reload()" class="w-full mt-4 bg-darkCard border border-darkBorder py-2 rounded-xl text-gray-400">جرب رقم تاني</button>
-                    `;
-                    showLoader(false);
-                    document.getElementById('dashboardSection').classList.remove('hidden');
+                    alert("لم يتم العثور على طلاب مسجلين بهذا الرقم");
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                    document.getElementById('loginSection').classList.remove('hidden');
                     return;
                 }
 
-                // Process each student found
+                document.getElementById('appScaffold').classList.remove('hidden');
+                
+                // 2. Fetch Data for each student/subject
+                // This mimics the "FutureBuilder" in Flutter
+                let totalAssignments = 0;
+                let submittedAssignments = 0;
+                let presentDays = 0;
+                let totalAttendanceDays = 0;
+                let scheduleList = [];
+                let teachersList = [];
+
+                // Use the first student name found for the greeting
+                const firstStudent = snapshot.docs[0].data();
+                document.getElementById('studentNameDisplay').innerText = firstStudent.name.split(' ')[0]; // First name only
+
                 for (const doc of snapshot.docs) {
-                    const studentData = doc.data();
-                    // Extract IDs from path: teachers/{tId}/groups/{gId}/students/{sId}
-                    const pathSegments = doc.ref.path.split('/');
+                    const sData = doc.data();
+                    const pathSegments = doc.ref.path.split('/'); // teachers/{tid}/groups/{gid}/students/{sid}
                     const tId = pathSegments[1];
                     const gId = pathSegments[3];
                     const sId = doc.id;
 
-                    // Get Teacher Name (Subject)
+                    // Get Teacher/Subject Info
                     let teacherName = "مدرس";
-                    let subjectName = "مادة";
-                    try {
-                        const teacherDoc = await db.collection('teachers').doc(tId).get();
-                        if(teacherDoc.exists) {
-                            teacherName = teacherDoc.data().name;
-                            subjectName = teacherDoc.data().subject || "عام";
+                    let subject = "مادة";
+                    const tDoc = await db.collection('teachers').doc(tId).get();
+                    if(tDoc.exists) {
+                        teacherName = tDoc.data().name;
+                        subject = tDoc.data().subject || "عام";
+                    }
+
+                    // Save to global data for details view
+                    dashboardData.reports.push({
+                        id: sId, tId, gId, name: sData.name, teacherName, subject
+                    });
+
+                    // Add to Teachers List
+                    teachersList.push({ name: teacherName, subject, id: tId, sId, gId });
+
+                    // Get Attendance Stats
+                    const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).limit(50).get();
+                    attSnap.forEach(d => {
+                        const rec = d.data().records?.find(r => r.studentId === sId);
+                        if(rec) {
+                            totalAttendanceDays++;
+                            if(rec.status === 'present') presentDays++;
                         }
-                    } catch(e) {}
+                    });
 
-                    // Render Card
-                    const card = document.createElement('div');
-                    card.className = "glass-card p-4 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-darkCard/50";
-                    card.onclick = () => loadStudentDetails(tId, gId, sId, studentData.name, subjectName);
-                    
-                    card.innerHTML = `
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-xl">
-                                ${studentData.name.charAt(0)}
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-white text-lg">${studentData.name}</h3>
-                                <p class="text-sm text-gray-400">${subjectName} - ${teacherName}</p>
-                            </div>
-                        </div>
-                        <i class="ri-arrow-left-s-line text-gray-500 text-xl"></i>
-                    `;
-                    list.appendChild(card);
+                    // Get Grades Stats
+                    const assSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(50).get();
+                    assSnap.forEach(d => {
+                        const score = d.data().scores?.[sId];
+                        totalAssignments++;
+                        if(score && (score.submitted === true || score.score)) submittedAssignments++;
+                    });
+
+                    // Get Schedule
+                    const schedSnap = await db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get();
+                    schedSnap.forEach(d => {
+                        const sch = d.data();
+                        // Check if day is today (0=Sunday in some logic, verify mapping)
+                        // JS Day: 0=Sunday, 1=Monday...
+                        // DB Days might match. Assuming they do.
+                        const todayIndex = new Date().getDay(); 
+                        if(sch.days && sch.days.includes(todayIndex)) {
+                            scheduleList.push({
+                                subject: subject,
+                                time: sch.time,
+                                teacher: teacherName
+                            });
+                        }
+                    });
                 }
 
-                document.getElementById('dashboardSection').classList.remove('hidden');
-
-            } catch (error) {
-                console.error(error);
-                if(error.code === 'failed-precondition') {
-                    alert("النظام يحتاج تحديث (Index Required). يرجى إبلاغ الدعم الفني.");
-                } else {
-                    alert("حدث خطأ أثناء تحميل البيانات.");
-                }
-            } finally {
-                showLoader(false);
-            }
-        }
-
-        function showDashboard() {
-            document.getElementById('detailsSection').classList.add('hidden');
-            document.getElementById('backButton').classList.add('hidden');
-            document.getElementById('dashboardSection').classList.remove('hidden');
-            // Reset context
-            currentContext = { tId: null, gId: null, sId: null };
-        }
-
-        // --- 5. DETAILS FUNCTIONS (Logic ported from previous version) ---
-        async function loadStudentDetails(tId, gId, sId, studentName, subjectName = "تفاصيل المادة") {
-            currentContext = { tId, gId, sId };
-            
-            // UI Switch
-            document.getElementById('dashboardSection').classList.add('hidden');
-            document.getElementById('detailsSection').classList.remove('hidden');
-            document.getElementById('backButton').classList.remove('hidden');
-            
-            // Set Header Info
-            document.getElementById('detailStudentName').innerText = studentName;
-            document.getElementById('detailSubjectName').innerText = subjectName;
-            
-            showLoader(true);
-
-            try {
-                // 1. Attendance
-                const attRef = db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`)
-                                 .orderBy('date', 'desc').limit(15);
-                const attSnap = await attRef.get();
+                // 3. Update UI Stats
+                document.getElementById('assignmentsCount').innerText = totalAssignments > 0 ? `${submittedAssignments}/${totalAssignments}` : '-';
+                document.getElementById('assignmentsStatus').innerText = totalAssignments > 0 ? (submittedAssignments === totalAssignments ? 'ممتاز' : 'مطلوب تسليم') : 'لا يوجد';
                 
-                let attHtml = '';
-                let timelineHtml = '';
-                let present = 0, total = 0;
+                const attPercent = totalAttendanceDays > 0 ? Math.round((presentDays / totalAttendanceDays) * 100) : 0;
+                document.getElementById('attendancePercent').innerText = `${attPercent}%`;
+                document.getElementById('attendanceText').innerText = attPercent > 85 ? 'حضور ممتاز' : (attPercent > 60 ? 'جيد' : 'يحتاج تحسين');
 
-                if (attSnap.empty) {
-                    attHtml = `<p class="text-center text-gray-500 text-sm py-4">لا يوجد سجل حضور</p>`;
-                } else {
-                    attSnap.forEach(doc => {
-                        const d = doc.data();
-                        const record = d.records?.find(r => r.studentId === sId);
-                        if (record) {
-                            total++;
-                            let color = 'text-gray-500 border-gray-700';
-                            let icon = 'ri-question-mark';
-                            let text = 'غير محدد';
+                // 4. Render Horizontal Lists
+                renderTeachers(teachersList);
+                renderSchedule(scheduleList);
 
-                            if (record.status === 'present') {
-                                present++;
-                                color = 'text-green-500 border-green-500/30 bg-green-500/10';
-                                icon = 'ri-check-line';
-                                text = 'حاضر';
-                            } else if (record.status === 'absent') {
-                                color = 'text-red-500 border-red-500/30 bg-red-500/10';
-                                icon = 'ri-close-line';
-                                text = 'غائب';
-                            } else if (record.status === 'late') {
-                                present++;
-                                color = 'text-orange-500 border-orange-500/30 bg-orange-500/10';
-                                icon = 'ri-time-line';
-                                text = 'تأخير';
-                            }
-
-                            // Timeline Item
-                            timelineHtml += `
-                                <div class="flex gap-4 relative pb-6 last:pb-0">
-                                    <div class="absolute -right-[5px] top-1.5 w-2.5 h-2.5 rounded-full ${record.status === 'present' ? 'bg-green-500' : 'bg-red-500'}"></div>
-                                    <div class="w-full">
-                                        <div class="flex justify-between items-center mb-1">
-                                            <p class="text-xs font-bold text-gray-300">${d.date}</p>
-                                            <span class="text-[10px] px-2 py-0.5 rounded ${color}">${text}</span>
-                                        </div>
-                                    </div>
-                                </div>`;
-                            
-                            // List Item
-                            attHtml += `
-                                <div class="bg-darkCard p-3 rounded-xl flex justify-between items-center border border-darkBorder">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center ${color}">
-                                            <i class="${icon}"></i>
-                                        </div>
-                                        <span class="text-sm font-bold text-gray-300">${d.date}</span>
-                                    </div>
-                                    <span class="text-xs font-bold text-gray-500">${text}</span>
-                                </div>
-                            `;
-                        }
-                    });
-                }
-
-                document.getElementById('attendanceList').innerHTML = attHtml;
-                document.getElementById('timelineList').innerHTML = timelineHtml || '<p class="text-center text-gray-600 text-xs">لا يوجد نشاط حديث</p>';
-                document.getElementById('attendanceRate').innerText = total > 0 ? Math.round((present / total) * 100) + '%' : '0%';
-
-                // 2. Grades
-                const gradesSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get();
-                let gradesHtml = '';
-                let lastScore = '-';
-
-                if (gradesSnap.empty) {
-                    gradesHtml = `<p class="text-center text-gray-500 text-sm py-4">لا توجد درجات</p>`;
-                } else {
-                    gradesSnap.forEach(doc => {
-                        const d = doc.data();
-                        const s = d.scores?.[sId];
-                        if (s) {
-                            lastScore = s.score || 0;
-                            gradesHtml += `
-                                <div class="bg-darkCard p-3 rounded-xl flex justify-between items-center border border-darkBorder">
-                                    <div>
-                                        <p class="text-sm font-bold text-white">${d.name}</p>
-                                        <span class="text-[10px] text-gray-500 bg-black px-2 rounded">${d.type || 'واجب'}</span>
-                                    </div>
-                                    <div class="text-center">
-                                        <span class="block text-lg font-black text-brand">${s.score}</span>
-                                        <span class="text-[10px] text-gray-600">الدرجة</span>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    });
-                }
-                document.getElementById('gradesList').innerHTML = gradesHtml;
-                document.getElementById('lastExamScore').innerText = lastScore;
-
-                // Check Notifications Permission
-                if (Notification.permission !== 'granted') {
-                    document.getElementById('bigNotifyBanner').classList.remove('hidden');
-                } else {
-                    document.getElementById('bigNotifyBanner').classList.add('hidden');
-                }
+                // Check Notification Permission
+                if(Notification.permission !== 'granted') document.getElementById('notifyDot').classList.remove('hidden');
 
             } catch (e) {
                 console.error(e);
+                alert("حدث خطأ في تحميل البيانات");
             } finally {
-                showLoader(false);
+                document.getElementById('loadingScreen').classList.add('hidden');
             }
         }
 
-        // --- 6. HELPERS ---
-        function switchInnerTab(tab) {
-            document.querySelectorAll('.inner-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`content-${tab}`).classList.remove('hidden');
-            
-            document.querySelectorAll('.inner-tab').forEach(el => {
-                el.classList.remove('bg-darkBorder', 'text-white');
-                el.classList.add('text-gray-500');
+        function renderTeachers(list) {
+            const container = document.getElementById('teachersList');
+            container.innerHTML = '';
+            list.forEach(t => {
+                const div = document.createElement('div');
+                div.className = "min-w-[140px] bg-white rounded-2xl shadow-card p-0 overflow-hidden cursor-pointer active:scale-95 transition";
+                div.onclick = () => openDetails(t.tId, t.gId, t.sId, t.name, t.subject);
+                
+                // Generate Avatar URL
+                const avatarUrl = `https://avatar.iran.liara.run/username?username=${t.name.replace(' ','+')}`;
+                
+                div.innerHTML = `
+                    <div class="h-20 bg-gray-100">
+                        <img src="${avatarUrl}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-3">
+                        <h4 class="text-sm font-bold text-primaryBlack truncate">${t.name}</h4>
+                        <p class="text-[10px] text-textGrey truncate">${t.subject}</p>
+                        <div class="mt-2 flex justify-end">
+                            <div class="w-7 h-7 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
+                                <i class="ri-chat-3-line text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
             });
-            const activeBtn = document.querySelector(`.inner-tab[data-target="${tab}"]`);
-            activeBtn.classList.remove('text-gray-500');
-            activeBtn.classList.add('bg-darkBorder', 'text-white');
         }
 
-        function showLoader(show) {
-            const l = document.getElementById('loadingScreen');
-            if (show) l.classList.remove('hidden');
-            else l.classList.add('hidden');
+        function renderSchedule(list) {
+            const container = document.getElementById('todaysCoursesList');
+            container.innerHTML = '';
+            if(list.length === 0) {
+                container.innerHTML = `<div class="min-w-full text-center text-xs text-textGrey py-4 bg-white rounded-2xl border border-gray-100">لا توجد حصص اليوم</div>`;
+                return;
+            }
+
+            // Sort by time
+            list.sort((a,b) => a.time.localeCompare(b.time));
+
+            list.forEach(s => {
+                const div = document.createElement('div');
+                div.className = "min-w-[160px] bg-white rounded-2xl border border-gray-100 p-4 flex flex-col justify-between";
+                
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-sm font-bold text-primaryBlack truncate max-w-[80px]">${s.subject}</span>
+                        <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">قادم</span>
+                    </div>
+                    <p class="text-xs text-textGrey mb-1">${s.teacher}</p>
+                    <p class="text-sm font-mono text-primaryBlack">${formatTime(s.time)}</p>
+                `;
+                container.appendChild(div);
+            });
         }
 
-        function toggleTheme() {
-            document.documentElement.classList.toggle('dark');
-            const icon = document.getElementById('themeIcon');
-            if(document.documentElement.classList.contains('dark')) {
-                icon.className = 'ri-sun-line text-xl';
-            } else {
-                icon.className = 'ri-moon-line text-xl';
+        function formatTime(timeStr) {
+            if(!timeStr) return '';
+            let [h, m] = timeStr.split(':');
+            h = parseInt(h);
+            const ampm = h >= 12 ? 'م' : 'ص';
+            h = h % 12 || 12;
+            return `${h}:${m} ${ampm}`;
+        }
+
+        // --- DETAILS OVERLAY ---
+        async function openDetails(tId, gId, sId, tName, subject) {
+            const modal = document.getElementById('detailsModal');
+            const content = document.getElementById('modalContent');
+            
+            document.getElementById('modalTitle').innerText = subject;
+            document.getElementById('modalSubtitle').innerText = `مع أ/ ${tName}`;
+            content.innerHTML = '<div class="text-center py-10"><div class="w-8 h-8 border-4 border-brand rounded-full loader mx-auto"></div></div>';
+            
+            modal.classList.remove('translate-y-full');
+
+            // Fetch Details
+            try {
+                // 1. Attendance List
+                const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(10).get();
+                let attHtml = '';
+                attSnap.forEach(d => {
+                    const r = d.data().records?.find(x => x.studentId === sId);
+                    if(r) {
+                        let color = 'text-gray-400';
+                        let icon = 'ri-question-mark';
+                        let status = 'غير محدد';
+                        if(r.status === 'present') { color='text-success'; icon='ri-check-double-line'; status='حاضر'; }
+                        else if(r.status === 'absent') { color='text-red-500'; icon='ri-close-line'; status='غائب'; }
+                        else if(r.status === 'late') { color='text-orange-500'; icon='ri-time-line'; status='تأخير'; }
+
+                        attHtml += `
+                        <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center ${color}">
+                                    <i class="${icon}"></i>
+                                </div>
+                                <span class="text-sm font-bold text-primaryBlack">${d.data().date}</span>
+                            </div>
+                            <span class="text-xs font-medium ${color}">${status}</span>
+                        </div>`;
+                    }
+                });
+
+                // 2. Grades List
+                const gradeSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get();
+                let gradeHtml = '';
+                gradeSnap.forEach(d => {
+                    const s = d.data().scores?.[sId];
+                    if(s) {
+                        gradeHtml += `
+                        <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm border-l-4 border-l-brand">
+                            <div>
+                                <p class="text-sm font-bold text-primaryBlack">${d.data().name}</p>
+                                <span class="text-[10px] text-gray-400 bg-gray-50 px-2 rounded">${d.data().type || 'واجب'}</span>
+                            </div>
+                            <span class="text-lg font-black text-primaryBlack">${s.score || '-'}</span>
+                        </div>`;
+                    }
+                });
+
+                content.innerHTML = `
+                    <h4 class="text-sm font-bold text-textGrey mt-2 mb-2">سجل الحضور</h4>
+                    <div class="space-y-2">${attHtml || '<p class="text-center text-xs text-gray-400">لا يوجد سجل</p>'}</div>
+                    
+                    <h4 class="text-sm font-bold text-textGrey mt-6 mb-2">الدرجات والواجبات</h4>
+                    <div class="space-y-2">${gradeHtml || '<p class="text-center text-xs text-gray-400">لا توجد درجات</p>'}</div>
+                `;
+
+            } catch(e) {
+                content.innerHTML = '<p class="text-center text-red-500">حدث خطأ في تحميل التفاصيل</p>';
             }
         }
 
-        // --- 7. NOTIFICATIONS ---
+        function closeDetails() {
+            document.getElementById('detailsModal').classList.add('translate-y-full');
+        }
+
         async function requestPermission() {
-            if(!messaging) return alert("المتصفح لا يدعم التنبيهات");
-            
+            if(!messaging) return alert("غير مدعوم");
             try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
+                const perm = await Notification.requestPermission();
+                if(perm === 'granted') {
                     const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-                    const activeReg = await navigator.serviceWorker.ready;
-                    const token = await messaging.getToken({ 
-                        vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
-                        serviceWorkerRegistration: activeReg 
-                    });
-
-                    if (token && currentContext.tId && currentContext.gId && currentContext.sId) {
-                        // 1. Save token to Student Doc
-                        await db.doc(`teachers/${currentContext.tId}/groups/${currentContext.gId}/students/${currentContext.sId}`)
-                                .set({ parentFcmToken: token }, { merge: true });
-                        
-                        // 2. Save token to Parents Collection (General)
-                        if(currentParentPhone) {
-                            await db.collection('parents').doc(currentParentPhone)
-                                    .set({ fcmToken: token }, { merge: true });
-                        }
-
-                        document.getElementById('bigNotifyBanner').classList.add('hidden');
+                    const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", serviceWorkerRegistration: reg });
+                    
+                    // Save to Parent Collection
+                    if(currentParentPhone) {
+                        await db.collection('parents').doc(currentParentPhone).set({ fcmToken: token }, { merge: true });
+                        document.getElementById('notifyDot').classList.add('hidden');
                         alert("تم تفعيل الإشعارات بنجاح ✅");
                     }
                 }
-            } catch (e) {
-                console.error(e);
-                alert("حدث خطأ أثناء التفعيل");
-            }
+            } catch(e) { console.error(e); }
         }
-
-        // Initial Theme
-        document.documentElement.classList.add('dark');
     </script>
 </body>
 </html>
