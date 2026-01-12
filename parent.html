@@ -25,7 +25,7 @@
                 extend: {
                     colors: {
                         primary: '#F2CE5A', 
-                        brand: '#F2CE5A',        // Added brand to match your snippet
+                        brand: '#F2CE5A',
                         darkBg: '#121212',       
                         darkCard: '#1E1E1E',     
                         lightBg: '#F3F4F6',
@@ -119,11 +119,15 @@
 
     <div id="loadingScreen" class="fixed inset-0 z-[100] bg-lightBg dark:bg-darkBg flex flex-col items-center justify-center hidden">
         <div class="relative">
-            <div class="w-16 h-16 border-4 border-gray-200 dark:border-gray-800 border-t-primary rounded-full loader"></div>
+            <div class="w-20 h-20 border-4 border-gray-200 dark:border-gray-800 border-t-primary rounded-full loader"></div>
             <div class="absolute inset-0 flex items-center justify-center animate-pulse">
-                <span class="text-xl font-black text-primary" style="font-family: 'Inter', sans-serif;">S</span>
+                <img src="assets/images/learnaria_logo.png" 
+                     class="w-10 h-10 object-contain" 
+                     onerror="this.src='assets/images/favicon.png'" 
+                     alt="Loading...">
             </div>
         </div>
+        <p class="mt-6 text-xs font-bold text-gray-400 tracking-widest uppercase font-mono">جاري التحميل...</p>
     </div>
 
     <header class="fixed top-4 left-4 right-4 z-50 glass-header rounded-2xl transition-all duration-300">
@@ -132,7 +136,8 @@
             <div class="flex items-center gap-3">
                 <div class="relative w-11 h-11 rounded-xl bg-white border-2 border-primary flex items-center justify-center shadow-sm">
                     <img src="assets/images/learnaria_logo.png" class="w-7 h-7 object-contain" onerror="this.src='assets/images/favicon.png'">
-                    <div class="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-white dark:border-[#1E1E1E]"></div>
+                    
+                    <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-white dark:border-[#1E1E1E]"></div>
                 </div>
                 
                 <div>
