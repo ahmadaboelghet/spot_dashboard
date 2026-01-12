@@ -23,7 +23,7 @@
             theme: {
                 extend: {
                     colors: {
-                        // نفس ألوان ملف app_styles.dart
+                        // مطابقة لألوان ملف app_styles.dart
                         brand: '#E5AD35',       // primaryYello
                         primaryBlack: '#212121', // primaryBlack
                         bgLight: '#F5F5F5',      // lightGrey
@@ -119,7 +119,7 @@
             <div>
                 <h3 class="text-lg font-bold text-primaryBlack mb-3">التقارير</h3>
                 <div class="flex gap-4">
-                    <div class="app-card flex-1 p-4 flex flex-col justify-between h-32 relative overflow-hidden" onclick="scrollToSection('grades')">
+                    <div class="app-card flex-1 p-4 flex flex-col justify-between h-32 relative overflow-hidden">
                         <div class="flex justify-between items-start">
                             <span class="text-sm font-bold text-primaryBlack">الواجبات</span>
                             <i class="ri-file-list-3-line text-brand text-xl"></i>
@@ -130,7 +130,7 @@
                         </div>
                     </div>
 
-                    <div class="app-card flex-1 p-4 flex flex-col justify-between h-32 relative overflow-hidden" onclick="scrollToSection('attendance')">
+                    <div class="app-card flex-1 p-4 flex flex-col justify-between h-32 relative overflow-hidden">
                         <div class="flex justify-between items-start">
                             <span class="text-sm font-bold text-primaryBlack">الحضور</span>
                             <i class="ri-calendar-check-line text-success text-xl"></i>
@@ -159,12 +159,12 @@
             </div>
 
             <div id="detailsModal" class="fixed inset-0 z-[100] bg-white transform translate-y-full transition-transform duration-300 flex flex-col">
-                <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+                <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-white shadow-sm">
                     <div>
-                        <h2 id="modalTitle" class="font-bold text-lg">التفاصيل</h2>
+                        <h2 id="modalTitle" class="font-bold text-lg text-primaryBlack">التفاصيل</h2>
                         <p id="modalSubtitle" class="text-xs text-textGrey">...</p>
                     </div>
-                    <button onclick="closeDetails()" class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                    <button onclick="closeDetails()" class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-primaryBlack">
                         <i class="ri-close-line text-xl"></i>
                     </button>
                 </div>
@@ -215,8 +215,7 @@
         } catch (e) { console.error("Firebase Init Error", e); }
 
         let currentParentPhone = "";
-        // Store all data fetched to avoid re-fetching
-        let dashboardData = { students: [], reports: [] };
+        let dashboardData = { reports: [] };
 
         // --- INIT ---
         const urlParams = new URLSearchParams(window.location.search);
@@ -246,7 +245,7 @@
             document.getElementById('loadingScreen').classList.remove('hidden');
             
             try {
-                // 1. Fetch Students linked to parent
+                // 1. Fetch Students
                 const snapshot = await db.collectionGroup('students')
                                          .where('parentPhoneNumber', '==', currentParentPhone)
                                          .get();
@@ -260,8 +259,7 @@
 
                 document.getElementById('appScaffold').classList.remove('hidden');
                 
-                // 2. Fetch Data for each student/subject
-                // This mimics the "FutureBuilder" in Flutter
+                // 2. Fetch Data Aggregation
                 let totalAssignments = 0;
                 let submittedAssignments = 0;
                 let presentDays = 0;
@@ -269,18 +267,18 @@
                 let scheduleList = [];
                 let teachersList = [];
 
-                // Use the first student name found for the greeting
+                // Name Greeting
                 const firstStudent = snapshot.docs[0].data();
-                document.getElementById('studentNameDisplay').innerText = firstStudent.name.split(' ')[0]; // First name only
+                document.getElementById('studentNameDisplay').innerText = firstStudent.name.split(' ')[0];
 
                 for (const doc of snapshot.docs) {
                     const sData = doc.data();
-                    const pathSegments = doc.ref.path.split('/'); // teachers/{tid}/groups/{gid}/students/{sid}
+                    const pathSegments = doc.ref.path.split('/'); 
                     const tId = pathSegments[1];
                     const gId = pathSegments[3];
                     const sId = doc.id;
 
-                    // Get Teacher/Subject Info
+                    // Get Teacher/Subject
                     let teacherName = "مدرس";
                     let subject = "مادة";
                     const tDoc = await db.collection('teachers').doc(tId).get();
@@ -289,16 +287,11 @@
                         subject = tDoc.data().subject || "عام";
                     }
 
-                    // Save to global data for details view
-                    dashboardData.reports.push({
-                        id: sId, tId, gId, name: sData.name, teacherName, subject
-                    });
-
                     // Add to Teachers List
                     teachersList.push({ name: teacherName, subject, id: tId, sId, gId });
 
-                    // Get Attendance Stats
-                    const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).limit(50).get();
+                    // Stats: Attendance
+                    const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).limit(20).get();
                     attSnap.forEach(d => {
                         const rec = d.data().records?.find(r => r.studentId === sId);
                         if(rec) {
@@ -307,50 +300,49 @@
                         }
                     });
 
-                    // Get Grades Stats
-                    const assSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(50).get();
+                    // Stats: Grades
+                    const assSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(20).get();
                     assSnap.forEach(d => {
                         const score = d.data().scores?.[sId];
                         totalAssignments++;
                         if(score && (score.submitted === true || score.score)) submittedAssignments++;
                     });
 
-                    // Get Schedule
+                    // Schedule
                     const schedSnap = await db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get();
                     schedSnap.forEach(d => {
                         const sch = d.data();
-                        // Check if day is today (0=Sunday in some logic, verify mapping)
-                        // JS Day: 0=Sunday, 1=Monday...
-                        // DB Days might match. Assuming they do.
                         const todayIndex = new Date().getDay(); 
                         if(sch.days && sch.days.includes(todayIndex)) {
                             scheduleList.push({
                                 subject: subject,
                                 time: sch.time,
-                                teacher: teacherName
+                                teacher: teacherName,
+                                tId, gId, sId // For click navigation
                             });
                         }
                     });
                 }
 
-                // 3. Update UI Stats
+                // 3. Update Stats UI
                 document.getElementById('assignmentsCount').innerText = totalAssignments > 0 ? `${submittedAssignments}/${totalAssignments}` : '-';
-                document.getElementById('assignmentsStatus').innerText = totalAssignments > 0 ? (submittedAssignments === totalAssignments ? 'ممتاز' : 'مطلوب تسليم') : 'لا يوجد';
+                document.getElementById('assignmentsStatus').innerText = totalAssignments > 0 ? (submittedAssignments === totalAssignments ? 'مكتمل' : 'مطلوب تسليم') : 'لا يوجد';
                 
                 const attPercent = totalAttendanceDays > 0 ? Math.round((presentDays / totalAttendanceDays) * 100) : 0;
                 document.getElementById('attendancePercent').innerText = `${attPercent}%`;
                 document.getElementById('attendanceText').innerText = attPercent > 85 ? 'حضور ممتاز' : (attPercent > 60 ? 'جيد' : 'يحتاج تحسين');
 
-                // 4. Render Horizontal Lists
+                // 4. Render Lists
                 renderTeachers(teachersList);
                 renderSchedule(scheduleList);
 
-                // Check Notification Permission
+                // Check Notifications
                 if(Notification.permission !== 'granted') document.getElementById('notifyDot').classList.remove('hidden');
 
             } catch (e) {
                 console.error(e);
-                alert("حدث خطأ في تحميل البيانات");
+                // Handle Index Error specifically
+                if(e.code === 'failed-precondition') alert("النظام يحتاج لتهيئة (Index). راجع الـ Console");
             } finally {
                 document.getElementById('loadingScreen').classList.add('hidden');
             }
@@ -361,21 +353,21 @@
             container.innerHTML = '';
             list.forEach(t => {
                 const div = document.createElement('div');
-                div.className = "min-w-[140px] bg-white rounded-2xl shadow-card p-0 overflow-hidden cursor-pointer active:scale-95 transition";
-                div.onclick = () => openDetails(t.tId, t.gId, t.sId, t.name, t.subject);
+                div.className = "min-w-[130px] bg-white rounded-2xl shadow-card overflow-hidden cursor-pointer active:scale-95 transition";
+                div.onclick = () => openDetails(t.id, t.gId, t.sId, t.name, t.subject);
                 
-                // Generate Avatar URL
+                // Avatar
                 const avatarUrl = `https://avatar.iran.liara.run/username?username=${t.name.replace(' ','+')}`;
                 
                 div.innerHTML = `
-                    <div class="h-20 bg-gray-100">
+                    <div class="h-24 bg-gray-50">
                         <img src="${avatarUrl}" class="w-full h-full object-cover">
                     </div>
                     <div class="p-3">
                         <h4 class="text-sm font-bold text-primaryBlack truncate">${t.name}</h4>
                         <p class="text-[10px] text-textGrey truncate">${t.subject}</p>
                         <div class="mt-2 flex justify-end">
-                            <div class="w-7 h-7 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
+                            <div class="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center text-textGrey">
                                 <i class="ri-chat-3-line text-xs"></i>
                             </div>
                         </div>
@@ -389,24 +381,24 @@
             const container = document.getElementById('todaysCoursesList');
             container.innerHTML = '';
             if(list.length === 0) {
-                container.innerHTML = `<div class="min-w-full text-center text-xs text-textGrey py-4 bg-white rounded-2xl border border-gray-100">لا توجد حصص اليوم</div>`;
+                container.innerHTML = `<div class="min-w-full text-center text-xs text-textGrey py-6 bg-white rounded-2xl border border-gray-100">لا توجد حصص مجدولة اليوم</div>`;
                 return;
             }
 
-            // Sort by time
             list.sort((a,b) => a.time.localeCompare(b.time));
 
             list.forEach(s => {
                 const div = document.createElement('div');
-                div.className = "min-w-[160px] bg-white rounded-2xl border border-gray-100 p-4 flex flex-col justify-between";
+                div.className = "min-w-[150px] bg-white rounded-2xl border border-gray-100 p-4 flex flex-col justify-between shadow-sm";
+                div.onclick = () => openDetails(s.tId, s.gId, s.sId, s.teacher, s.subject); // clickable schedule
                 
                 div.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
-                        <span class="text-sm font-bold text-primaryBlack truncate max-w-[80px]">${s.subject}</span>
+                        <span class="text-sm font-bold text-primaryBlack truncate max-w-[90px]">${s.subject}</span>
                         <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">قادم</span>
                     </div>
-                    <p class="text-xs text-textGrey mb-1">${s.teacher}</p>
-                    <p class="text-sm font-mono text-primaryBlack">${formatTime(s.time)}</p>
+                    <p class="text-[10px] text-textGrey mb-1">${s.teacher}</p>
+                    <p class="text-sm font-mono text-primaryBlack font-bold">${formatTime(s.time)}</p>
                 `;
                 container.appendChild(div);
             });
@@ -416,12 +408,12 @@
             if(!timeStr) return '';
             let [h, m] = timeStr.split(':');
             h = parseInt(h);
-            const ampm = h >= 12 ? 'م' : 'ص';
+            const ampm = h >= 12 ? 'PM' : 'AM';
             h = h % 12 || 12;
             return `${h}:${m} ${ampm}`;
         }
 
-        // --- DETAILS OVERLAY ---
+        // --- DETAILS OVERLAY (Modal Logic) ---
         async function openDetails(tId, gId, sId, tName, subject) {
             const modal = document.getElementById('detailsModal');
             const content = document.getElementById('modalContent');
@@ -432,9 +424,8 @@
             
             modal.classList.remove('translate-y-full');
 
-            // Fetch Details
             try {
-                // 1. Attendance List
+                // Fetch Details Logic (Same as before)
                 const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(10).get();
                 let attHtml = '';
                 attSnap.forEach(d => {
@@ -448,7 +439,7 @@
                         else if(r.status === 'late') { color='text-orange-500'; icon='ri-time-line'; status='تأخير'; }
 
                         attHtml += `
-                        <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm">
+                        <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm border border-gray-50">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center ${color}">
                                     <i class="${icon}"></i>
@@ -460,7 +451,6 @@
                     }
                 });
 
-                // 2. Grades List
                 const gradeSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get();
                 let gradeHtml = '';
                 gradeSnap.forEach(d => {
@@ -470,7 +460,7 @@
                         <div class="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm border-l-4 border-l-brand">
                             <div>
                                 <p class="text-sm font-bold text-primaryBlack">${d.data().name}</p>
-                                <span class="text-[10px] text-gray-400 bg-gray-50 px-2 rounded">${d.data().type || 'واجب'}</span>
+                                <span class="text-[10px] text-textGrey bg-gray-100 px-2 rounded">${d.data().type || 'واجب'}</span>
                             </div>
                             <span class="text-lg font-black text-primaryBlack">${s.score || '-'}</span>
                         </div>`;
@@ -480,7 +470,6 @@
                 content.innerHTML = `
                     <h4 class="text-sm font-bold text-textGrey mt-2 mb-2">سجل الحضور</h4>
                     <div class="space-y-2">${attHtml || '<p class="text-center text-xs text-gray-400">لا يوجد سجل</p>'}</div>
-                    
                     <h4 class="text-sm font-bold text-textGrey mt-6 mb-2">الدرجات والواجبات</h4>
                     <div class="space-y-2">${gradeHtml || '<p class="text-center text-xs text-gray-400">لا توجد درجات</p>'}</div>
                 `;
@@ -502,7 +491,6 @@
                     const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
                     const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", serviceWorkerRegistration: reg });
                     
-                    // Save to Parent Collection
                     if(currentParentPhone) {
                         await db.collection('parents').doc(currentParentPhone).set({ fcmToken: token }, { merge: true });
                         document.getElementById('notifyDot').classList.add('hidden');
