@@ -1,6 +1,7 @@
 /**
  * SPOT TEACHER - FINAL INTEGRATED VERSION
  * Features: Smart Login + Parent Link + Unified Payments + Mirror Fix + Messages + Sync Fix
+ * FIX: Database Connection Handling (InvalidStateError)
  */
 
 // ==========================================
@@ -26,16 +27,22 @@ try {
 } catch (e) { console.error("Firebase Error:", e); }
 
 // ==========================================
-// 2. LOCAL DATABASE (IndexedDB)
+// 2. LOCAL DATABASE (IndexedDB) - FIXED
 // ==========================================
 const DB_NAME = 'LearnariaDB';
 const DB_VERSION = 6; 
-let localDB;
+let localDB = null;
 
 function openDB() {
-    if (localDB) return Promise.resolve(localDB);
     return new Promise((resolve, reject) => {
+        // إذا كان الاتصال مفتوحاً، نستخدمه
+        if (localDB) {
+            resolve(localDB);
+            return;
+        }
+
         const req = indexedDB.open(DB_NAME, DB_VERSION);
+
         req.onupgradeneeded = e => {
             const db = e.target.result;
             ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions', 'syncQueue'].forEach(store => {
@@ -46,38 +53,109 @@ function openDB() {
                 }
             });
         };
-        req.onsuccess = e => { localDB = e.target.result; resolve(localDB); };
+
+        req.onsuccess = e => { 
+            localDB = e.target.result;
+            
+            // FIX: التعامل مع إغلاق الاتصال غير المتوقع
+            localDB.onclose = () => { localDB = null; };
+            localDB.onversionchange = () => { localDB.close(); localDB = null; };
+
+            resolve(localDB); 
+        };
+
         req.onerror = e => reject(e.target.error);
     });
 }
 
-// --- DB HELPERS ---
+// --- DB HELPERS (With Retry Logic) ---
 async function getFromDB(store, key) {
-    if (!localDB) await openDB();
-    return new Promise((res, rej) => {
-        const tx = localDB.transaction(store, 'readonly').objectStore(store).get(key);
-        tx.onsuccess = () => res(tx.result); tx.onerror = () => rej(tx.error);
-    });
+    try {
+        await openDB();
+        return new Promise((res, rej) => {
+            const tx = localDB.transaction(store, 'readonly').objectStore(store).get(key);
+            tx.onsuccess = () => res(tx.result); 
+            tx.onerror = () => rej(tx.error);
+        });
+    } catch (e) {
+        // Retry once if connection failed
+        if (e.name === 'InvalidStateError' || !localDB) {
+            localDB = null;
+            await openDB();
+            return new Promise((res, rej) => {
+                const tx = localDB.transaction(store, 'readonly').objectStore(store).get(key);
+                tx.onsuccess = () => res(tx.result); tx.onerror = () => rej(tx.error);
+            });
+        }
+        throw e;
+    }
 }
+
 async function putToDB(store, data) {
-    if (!localDB) await openDB();
-    const tx = localDB.transaction(store, 'readwrite');
-    tx.objectStore(store).put(data);
-    return tx.complete;
+    try {
+        await openDB();
+        const tx = localDB.transaction(store, 'readwrite');
+        tx.objectStore(store).put(data);
+        return new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        if (e.name === 'InvalidStateError' || !localDB) {
+            localDB = null;
+            await openDB();
+            const tx = localDB.transaction(store, 'readwrite');
+            tx.objectStore(store).put(data);
+            return new Promise((resolve, reject) => {
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+        throw e;
+    }
 }
+
 async function getAllFromDB(store, idx, key) {
-    if (!localDB) await openDB();
-    return new Promise((res, rej) => {
-        const s = localDB.transaction(store, 'readonly').objectStore(store);
-        const req = idx ? s.index(idx).getAll(key) : s.getAll();
-        req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
-    });
+    try {
+        await openDB();
+        return new Promise((res, rej) => {
+            const s = localDB.transaction(store, 'readonly').objectStore(store);
+            const req = idx ? s.index(idx).getAll(key) : s.getAll();
+            req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+        });
+    } catch (e) {
+        if (e.name === 'InvalidStateError' || !localDB) {
+            localDB = null;
+            await openDB();
+            return new Promise((res, rej) => {
+                const s = localDB.transaction(store, 'readonly').objectStore(store);
+                const req = idx ? s.index(idx).getAll(key) : s.getAll();
+                req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+            });
+        }
+        throw e;
+    }
 }
+
 async function deleteFromDB(store, key) {
-    if(!localDB) await openDB();
-    const tx = localDB.transaction(store, 'readwrite');
-    tx.objectStore(store).delete(key);
-    return tx.complete;
+    try {
+        await openDB();
+        const tx = localDB.transaction(store, 'readwrite');
+        tx.objectStore(store).delete(key);
+        return new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        localDB = null;
+        await openDB();
+        const tx = localDB.transaction(store, 'readwrite');
+        tx.objectStore(store).delete(key);
+        return new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
 }
 
 // ==========================================

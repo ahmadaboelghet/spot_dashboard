@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Spot - لوحة الطالب</title>
+    <title>Spot - ولي الأمر</title>
 
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
     <link rel="icon" type="image/png" href="./favicon.png">
-    <meta name="theme-color" content="#000000" id="themeColorMeta">
+    <meta name="theme-color" content="#000000">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -25,170 +25,135 @@
                 extend: {
                     colors: {
                         brand: '#F2CE5A',
-                        // ألوان الوضع الليلي (أسود حيادي بدون زراق)
                         darkBg: '#050505', 
                         darkCard: '#121212',
                         darkBorder: '#262626',
-                        // ألوان الوضع النهاري
-                        lightBg: '#F9FAFB',
-                        lightCard: '#FFFFFF',
-                        lightBorder: '#E5E7EB'
                     },
-                    fontFamily: { cairo: ['Cairo', 'sans-serif'] },
-                    boxShadow: {
-                        'glow': '0 0 20px rgba(242, 206, 90, 0.15)',
-                    }
+                    fontFamily: { cairo: ['Cairo', 'sans-serif'] }
                 }
             }
         }
     </script>
 
     <style>
-        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s ease, color 0.3s ease; }
+        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        /* Glass Card - Light Mode */
         .glass-card {
-            background: #FFFFFF;
-            border: 1px solid #E5E7EB;
-            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Glass Card - Dark Mode */
-        .dark .glass-card {
             background: #121212;
             border: 1px solid #262626;
-            box-shadow: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
         }
+        .glass-card:active { transform: scale(0.98); }
 
-        /* Floating Nav */
-        .floating-nav {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(0,0,0,0.05);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        }
-        .dark .floating-nav {
-            background: rgba(18, 18, 18, 0.85);
-            border: 1px solid #262626;
-            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
-        }
-
-        /* Active Tabs */
-        .nav-item.active { color: #d97706; background-color: #FFFBEB; }
-        .dark .nav-item.active { color: #F2CE5A; background-color: rgba(242, 206, 90, 0.1); }
-        .nav-item { color: #9CA3AF; } /* Gray-400 */
-        
-        /* Loader */
         .loader { border-top-color: #F2CE5A; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-lightBg text-gray-900 dark:bg-darkBg dark:text-white pb-32">
+<body class="bg-gray-50 dark:bg-darkBg text-gray-900 dark:text-white pb-32 min-h-screen">
 
-    <div id="loadingScreen" class="fixed inset-0 z-[60] bg-white dark:bg-darkBg flex items-center justify-center transition-opacity duration-500">
-        <div class="flex flex-col items-center gap-4">
-            <div class="w-12 h-12 border-4 border-gray-200 dark:border-darkBorder rounded-full loader"></div>
-            <p class="text-sm text-gray-500 font-bold">جاري تحميل البيانات...</p>
-        </div>
+    <div id="loadingScreen" class="fixed inset-0 z-[60] bg-darkBg flex items-center justify-center hidden">
+        <div class="w-10 h-10 border-4 border-darkBorder rounded-full loader"></div>
     </div>
 
-    <div id="errorScreen" class="hidden fixed inset-0 z-[55] bg-white dark:bg-darkBg flex items-center justify-center p-6 text-center">
-        <div class="max-w-xs">
-            <i class="ri-link-unlink-m text-6xl text-red-500 mb-4 block"></i>
-            <h2 class="text-xl font-bold mb-2">رابط غير صالح</h2>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">الرابط لا يحتوي على بيانات الطالب.</p>
-        </div>
-    </div>
-
-    <div class="fixed top-0 w-full bg-white/90 dark:bg-darkBg/90 backdrop-blur-md z-50 border-b border-gray-100 dark:border-darkBorder transition-colors duration-300">
+    <div class="fixed top-0 w-full bg-darkBg/90 backdrop-blur-md z-50 border-b border-darkBorder">
         <div class="flex justify-between items-center px-5 py-3 max-w-md mx-auto">
             <div class="flex items-center gap-3">
-                <img src="assets/images/learnaria_logo.png" class="w-9 h-9 object-contain" onerror="this.src='assets/images/favicon.png'">
+                <button id="backButton" onclick="showDashboard()" class="hidden text-gray-400 hover:text-white">
+                    <i class="ri-arrow-right-line text-xl"></i>
+                </button>
+
+                <img src="assets/images/learnaria_logo.png" class="w-8 h-8 object-contain" onerror="this.src='assets/images/favicon.png'">
                 <div>
-                    <h1 class="text-2xl font-black tracking-tight leading-none text-gray-900 dark:text-white">
+                    <h1 class="text-2xl font-black tracking-tight leading-none text-white">
                         Spot<span class="text-brand text-3xl">.</span>
                     </h1>
                 </div>
-                <div class="h-8 w-[1px] bg-gray-200 dark:bg-darkBorder mx-2"></div>
-                <div>
-                    <h1 class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Student Panel</h1>
-                    <h2 id="studentNameDisplay" class="text-sm font-bold text-gray-800 dark:text-gray-200 leading-none truncate max-w-[120px]">...</h2>
-                </div>
             </div>
-            <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-darkCard text-gray-600 dark:text-gray-400 flex items-center justify-center transition-all hover:bg-gray-200 dark:hover:bg-gray-800 active:scale-95 border border-transparent dark:border-darkBorder">
-                <i id="themeIcon" class="ri-moon-line text-lg"></i>
+            <button onclick="toggleTheme()" class="text-gray-400 hover:text-white">
+                <i id="themeIcon" class="ri-sun-line text-xl"></i>
             </button>
         </div>
     </div>
 
-    <main class="container mx-auto max-w-md px-5 pt-24 space-y-6 min-h-screen">
-        
-        <div id="bigNotifyBanner" class="hidden relative group cursor-pointer transform transition hover:scale-[1.02]" onclick="handlePermissionClick()">
-            <div class="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-orange-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
-            <div class="relative bg-white dark:bg-darkCard border border-gray-100 dark:border-darkBorder rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-                <div class="w-12 h-12 bg-red-50 dark:bg-red-900/10 rounded-xl flex items-center justify-center text-red-500 animate-pulse">
-                    <i class="ri-notification-3-fill text-2xl"></i>
+    <main class="container mx-auto max-w-md px-5 pt-24 space-y-6">
+
+        <div id="loginSection" class="hidden flex flex-col items-center justify-center pt-20">
+            <div class="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center mb-4">
+                <i class="ri-parent-line text-3xl text-brand"></i>
+            </div>
+            <h2 class="text-xl font-bold mb-2">تسجيل دخول ولي الأمر</h2>
+            <p class="text-gray-500 text-sm mb-6 text-center">أدخل رقم الهاتف المسجل لدى المدرسين لعرض كل المواد</p>
+            
+            <input type="tel" id="parentPhoneInput" placeholder="رقم الهاتف (01xxxxxxxxx)" 
+                   class="w-full bg-darkCard border border-darkBorder rounded-xl p-4 text-center text-white mb-4 outline-none focus:border-brand">
+            
+            <button onclick="handleLogin()" class="w-full bg-brand text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition">
+                عرض التقارير
+            </button>
+        </div>
+
+        <div id="dashboardSection" class="hidden fade-in-up">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                <i class="ri-dashboard-line text-brand"></i> المواد المشتركة
+            </h2>
+            <div id="subjectsList" class="space-y-3">
                 </div>
-                <div class="flex-1">
-                    <h3 class="font-bold text-gray-900 dark:text-white">تفعيل التنبيهات</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">اضغط لاستلام الإشعارات</p>
+        </div>
+
+        <div id="detailsSection" class="hidden fade-in-up">
+            
+            <div class="bg-darkCard border border-darkBorder rounded-2xl p-4 mb-6 flex justify-between items-center">
+                <div>
+                    <h2 id="detailStudentName" class="font-bold text-lg text-white">...</h2>
+                    <p id="detailSubjectName" class="text-xs text-gray-400">...</p>
                 </div>
-                <i class="ri-arrow-left-s-line text-gray-400"></i>
+                <div class="bg-brand/10 text-brand px-3 py-1 rounded-lg text-xs font-bold">نشط</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="glass-card p-4 rounded-2xl text-center">
+                    <p class="text-gray-400 text-xs font-bold mb-1">الحضور</p>
+                    <h3 id="attendanceRate" class="text-2xl font-black text-white">--%</h3>
+                </div>
+                <div class="glass-card p-4 rounded-2xl text-center">
+                    <p class="text-gray-400 text-xs font-bold mb-1">آخر درجة</p>
+                    <h3 id="lastExamScore" class="text-2xl font-black text-brand">--</h3>
+                </div>
+            </div>
+
+            <div class="flex bg-darkCard p-1 rounded-xl mb-6">
+                <button onclick="switchInnerTab('home')" class="flex-1 py-2 text-xs font-bold rounded-lg bg-darkBorder text-white inner-tab" data-target="home">الرئيسية</button>
+                <button onclick="switchInnerTab('attendance')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-white inner-tab" data-target="attendance">الغياب</button>
+                <button onclick="switchInnerTab('grades')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-white inner-tab" data-target="grades">الدرجات</button>
+            </div>
+
+            <div id="content-home" class="inner-content space-y-4">
+                <h3 class="font-bold text-white text-sm">النشاط الأخير</h3>
+                <div id="timelineList" class="space-y-4 relative border-r border-darkBorder mr-2 pr-4"></div>
+            </div>
+            <div id="content-attendance" class="inner-content hidden space-y-3">
+                <div id="attendanceList" class="space-y-2"></div>
+            </div>
+            <div id="content-grades" class="inner-content hidden space-y-3">
+                <div id="gradesList" class="space-y-2"></div>
+            </div>
+
+            <div id="bigNotifyBanner" class="mt-8 bg-gradient-to-r from-red-900/20 to-red-600/20 border border-red-500/30 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hidden" onclick="requestPermission()">
+                <div class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white"><i class="ri-notification-3-fill"></i></div>
+                <div>
+                    <h4 class="font-bold text-sm text-white">تفعيل التنبيهات</h4>
+                    <p class="text-xs text-gray-400">اضغط لتفعيل إشعارات هذا الطالب</p>
+                </div>
             </div>
         </div>
 
-        <div id="successBanner" class="hidden bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-4 flex items-center gap-3">
-            <i class="ri-checkbox-circle-fill text-green-500 text-xl"></i>
-            <p class="text-xs font-bold text-green-700 dark:text-green-400">الإشعارات مفعلة بنجاح</p>
-        </div>
-
-        <div id="content-home" class="tab-content space-y-5 fade-in-up">
-            <div class="grid grid-cols-2 gap-4">
-                <div class="glass-card p-5 rounded-2xl relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 group-hover:scale-110 transition"><i class="ri-calendar-check-fill text-6xl text-gray-900 dark:text-white"></i></div>
-                    <p class="text-gray-500 dark:text-gray-400 text-xs font-bold mb-1">نسبة الحضور</p>
-                    <h3 id="attendanceRate" class="text-3xl font-black text-gray-900 dark:text-white">--%</h3>
-                </div>
-                <div class="glass-card p-5 rounded-2xl relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 group-hover:scale-110 transition"><i class="ri-medal-fill text-6xl text-brand"></i></div>
-                    <p class="text-gray-500 dark:text-gray-400 text-xs font-bold mb-1">آخر درجة</p>
-                    <h3 id="lastExamScore" class="text-3xl font-black text-brand">--</h3>
-                </div>
-            </div>
-
-            <div>
-                <h3 class="font-bold text-gray-900 dark:text-white text-base mb-4 flex items-center gap-2">
-                    <i class="ri-history-line text-brand"></i> النشاط الأخير
-                </h3>
-                <div id="timelineList" class="space-y-0"></div>
-            </div>
-        </div>
-
-        <div id="content-attendance" class="tab-content hidden space-y-4 fade-in-up">
-            <div id="attendanceList" class="space-y-3"></div>
-        </div>
-        <div id="content-grades" class="tab-content hidden space-y-4 fade-in-up">
-            <div id="gradesList" class="space-y-3"></div>
-        </div>
-        <div id="content-schedule" class="tab-content hidden space-y-4 fade-in-up">
-            <div id="scheduleList" class="space-y-3"></div>
-        </div>
     </main>
 
-    <div class="fixed bottom-6 left-0 right-0 z-50 px-6 pointer-events-none">
-        <nav class="floating-nav max-w-xs mx-auto rounded-full p-2 pointer-events-auto flex justify-between items-center transition-colors duration-300">
-            <button onclick="switchTab('home')" class="nav-item active flex-1 h-12 rounded-full flex items-center justify-center transition-all hover:bg-gray-100 dark:hover:bg-white/5" data-target="home"><i class="ri-home-5-fill text-xl"></i></button>
-            <button onclick="switchTab('attendance')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all hover:bg-gray-100 dark:hover:bg-white/5" data-target="attendance"><i class="ri-calendar-check-fill text-xl"></i></button>
-            <button onclick="switchTab('grades')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all hover:bg-gray-100 dark:hover:bg-white/5" data-target="grades"><i class="ri-medal-fill text-xl"></i></button>
-            <button onclick="switchTab('schedule')" class="nav-item flex-1 h-12 rounded-full flex items-center justify-center transition-all hover:bg-gray-100 dark:hover:bg-white/5" data-target="schedule"><i class="ri-time-fill text-xl"></i></button>
-        </nav>
-    </div>
-
     <script>
-        // --- 1. CONFIG & SETUP ---
+        // --- 1. CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
             authDomain: "learnaria-483e7.firebaseapp.com",
@@ -203,239 +168,325 @@
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             if (firebase.messaging.isSupported()) messaging = firebase.messaging();
-        } catch (e) { console.error("Firebase Init Error:", e); }
+        } catch (e) { console.error("Firebase Init Error", e); }
 
-        // --- 2. URL PARSING ---
+        // --- 2. GLOBAL STATE ---
+        let currentParentPhone = "";
+        let currentContext = { tId: null, gId: null, sId: null };
+
+        // --- 3. INIT LOGIC ---
         const urlParams = new URLSearchParams(window.location.search);
-        let tId = urlParams.get('t') ? urlParams.get('t').replace(/ /g, '+') : null;
-        const gId = urlParams.get('g'); 
-        const sId = urlParams.get('s'); 
-        const urlName = urlParams.get('n');
-        const pNum = urlParams.get('p');
+        // Check if we have specific student link OR just parent phone
+        const urlPhone = urlParams.get('p');
+        const urlTid = urlParams.get('t');
 
-        if (!tId || !gId || !sId) {
-            document.getElementById('loadingScreen').classList.add('hidden');
-            document.getElementById('errorScreen').classList.remove('hidden');
-            throw new Error("Missing Parameters");
+        if (urlTid && urlPhone) {
+            // Direct Link Mode (Old behavior but integrated)
+            currentParentPhone = urlPhone;
+            loadStudentDetails(urlParams.get('t'), urlParams.get('g'), urlParams.get('s'), decodeURIComponent(urlParams.get('n') || ''));
+        } else if (urlPhone) {
+            // Dashboard Mode (via URL)
+            currentParentPhone = urlPhone;
+            loadDashboard();
+        } else {
+            // Login Mode
+            document.getElementById('loginSection').classList.remove('hidden');
         }
 
-        if(urlName) document.getElementById('studentNameDisplay').innerText = decodeURIComponent(urlName);
+        // --- 4. DASHBOARD FUNCTIONS ---
+        function handleLogin() {
+            const phone = document.getElementById('parentPhoneInput').value.trim();
+            if (!phone || phone.length < 10) return alert("رقم الهاتف غير صحيح");
+            currentParentPhone = phone;
+            document.getElementById('loginSection').classList.add('hidden');
+            loadDashboard();
+        }
 
-        // --- 3. THEME LOGIC (LIGHT/DARK) ---
-        function toggleTheme() {
-            const html = document.documentElement;
-            const icon = document.getElementById('themeIcon');
-            const meta = document.getElementById('themeColorMeta');
+        async function loadDashboard() {
+            showLoader(true);
+            const list = document.getElementById('subjectsList');
+            list.innerHTML = '';
 
-            if (html.classList.contains('dark')) {
-                html.classList.remove('dark');
-                icon.className = 'ri-moon-line text-lg'; // Show Moon icon in Light Mode
-                meta.content = "#FFFFFF";
-                localStorage.setItem('theme', 'light');
-            } else {
-                html.classList.add('dark');
-                icon.className = 'ri-sun-line text-lg'; // Show Sun icon in Dark Mode
-                meta.content = "#000000";
-                localStorage.setItem('theme', 'dark');
+            try {
+                // Collection Group Query: Find ALL students with this parent phone
+                // NOTE: Requires Firestore Index: students (Collection) -> parentPhoneNumber (Asc/Desc)
+                const snapshot = await db.collectionGroup('students')
+                                         .where('parentPhoneNumber', '==', currentParentPhone)
+                                         .get();
+
+                if (snapshot.empty) {
+                    list.innerHTML = `
+                        <div class="text-center py-10 text-gray-500">
+                            <i class="ri-user-unfollow-line text-4xl mb-2"></i>
+                            <p>لم يتم العثور على طلاب مسجلين بهذا الرقم.</p>
+                            <p class="text-xs mt-2">تأكد من الرقم أو تواصل مع المدرس.</p>
+                        </div>
+                        <button onclick="location.reload()" class="w-full mt-4 bg-darkCard border border-darkBorder py-2 rounded-xl text-gray-400">جرب رقم تاني</button>
+                    `;
+                    showLoader(false);
+                    document.getElementById('dashboardSection').classList.remove('hidden');
+                    return;
+                }
+
+                // Process each student found
+                for (const doc of snapshot.docs) {
+                    const studentData = doc.data();
+                    // Extract IDs from path: teachers/{tId}/groups/{gId}/students/{sId}
+                    const pathSegments = doc.ref.path.split('/');
+                    const tId = pathSegments[1];
+                    const gId = pathSegments[3];
+                    const sId = doc.id;
+
+                    // Get Teacher Name (Subject)
+                    let teacherName = "مدرس";
+                    let subjectName = "مادة";
+                    try {
+                        const teacherDoc = await db.collection('teachers').doc(tId).get();
+                        if(teacherDoc.exists) {
+                            teacherName = teacherDoc.data().name;
+                            subjectName = teacherDoc.data().subject || "عام";
+                        }
+                    } catch(e) {}
+
+                    // Render Card
+                    const card = document.createElement('div');
+                    card.className = "glass-card p-4 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-darkCard/50";
+                    card.onclick = () => loadStudentDetails(tId, gId, sId, studentData.name, subjectName);
+                    
+                    card.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-xl">
+                                ${studentData.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-lg">${studentData.name}</h3>
+                                <p class="text-sm text-gray-400">${subjectName} - ${teacherName}</p>
+                            </div>
+                        </div>
+                        <i class="ri-arrow-left-s-line text-gray-500 text-xl"></i>
+                    `;
+                    list.appendChild(card);
+                }
+
+                document.getElementById('dashboardSection').classList.remove('hidden');
+
+            } catch (error) {
+                console.error(error);
+                if(error.code === 'failed-precondition') {
+                    alert("النظام يحتاج تحديث (Index Required). يرجى إبلاغ الدعم الفني.");
+                } else {
+                    alert("حدث خطأ أثناء تحميل البيانات.");
+                }
+            } finally {
+                showLoader(false);
             }
         }
 
-        // Apply theme on load
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light') {
-            document.documentElement.classList.remove('dark');
-            document.getElementById('themeIcon').className = 'ri-moon-line text-lg';
-            document.getElementById('themeColorMeta').content = "#FFFFFF";
-        } else {
-            // Default to Dark
-            document.documentElement.classList.add('dark');
-            document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
-            document.getElementById('themeColorMeta').content = "#000000";
+        function showDashboard() {
+            document.getElementById('detailsSection').classList.add('hidden');
+            document.getElementById('backButton').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            // Reset context
+            currentContext = { tId: null, gId: null, sId: null };
         }
 
-        // --- 4. UI FUNCTIONS ---
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`content-${tabId}`).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.querySelector(`.nav-item[data-target="${tabId}"]`).classList.add('active');
-        }
+        // --- 5. DETAILS FUNCTIONS (Logic ported from previous version) ---
+        async function loadStudentDetails(tId, gId, sId, studentName, subjectName = "تفاصيل المادة") {
+            currentContext = { tId, gId, sId };
+            
+            // UI Switch
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('detailsSection').classList.remove('hidden');
+            document.getElementById('backButton').classList.remove('hidden');
+            
+            // Set Header Info
+            document.getElementById('detailStudentName').innerText = studentName;
+            document.getElementById('detailSubjectName').innerText = subjectName;
+            
+            showLoader(true);
 
-        function renderEmptyState(message) {
-            return `
-            <div class="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-600">
-                <div class="bg-gray-100 dark:bg-darkCard p-4 rounded-full mb-3">
-                    <i class="ri-inbox-2-line text-3xl opacity-50"></i>
-                </div>
-                <p class="text-xs font-medium">${message}</p>
-            </div>`;
-        }
-
-        // --- 5. DATA LOADING ---
-        async function loadData() {
             try {
-                // A. Attendance
+                // 1. Attendance
                 const attRef = db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`)
-                                 .orderBy('date', 'desc').limit(20);
+                                 .orderBy('date', 'desc').limit(15);
+                const attSnap = await attRef.get();
                 
-                attRef.get().then(snap => {
-                    let html = '', timeline = '', present = 0, total = 0;
-                    
-                    if(snap.empty) {
-                        html = renderEmptyState("لا يوجد سجل حضور");
-                        timeline = renderEmptyState("لا يوجد نشاط حديث");
-                    } else {
-                        snap.forEach(doc => {
-                            const d = doc.data();
-                            const rec = d.records?.find(r => r.studentId === sId);
-                            if(rec) {
-                                total++;
-                                // Dynamic Colors for Light/Dark
-                                let colorClass = 'text-gray-500 bg-gray-100 dark:bg-darkCard dark:text-gray-400 border-gray-200 dark:border-darkBorder';
-                                let text = 'غير محدد';
-                                let icon = 'ri-question-mark';
+                let attHtml = '';
+                let timelineHtml = '';
+                let present = 0, total = 0;
 
-                                if(rec.status === 'present') { 
-                                    present++; 
-                                    colorClass = 'text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-900/10 dark:border-green-900/30'; 
-                                    text='حاضر'; icon='ri-check-line'; 
-                                } else if(rec.status === 'absent') { 
-                                    colorClass = 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-900/10 dark:border-red-900/30'; 
-                                    text='غائب'; icon='ri-close-line'; 
-                                } else if(rec.status === 'late') { 
-                                    present++; 
-                                    colorClass = 'text-orange-600 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-900/10 dark:border-orange-900/30'; 
-                                    text='تأخير'; icon='ri-time-line'; 
-                                }
+                if (attSnap.empty) {
+                    attHtml = `<p class="text-center text-gray-500 text-sm py-4">لا يوجد سجل حضور</p>`;
+                } else {
+                    attSnap.forEach(doc => {
+                        const d = doc.data();
+                        const record = d.records?.find(r => r.studentId === sId);
+                        if (record) {
+                            total++;
+                            let color = 'text-gray-500 border-gray-700';
+                            let icon = 'ri-question-mark';
+                            let text = 'غير محدد';
 
-                                // List Item
-                                html += `
-                                <div class="glass-card p-4 rounded-xl flex justify-between items-center mb-2">
-                                    <div class="flex items-center gap-4">
-                                        <div class="w-10 h-10 rounded-lg flex items-center justify-center border ${colorClass.split(' ').slice(1).join(' ')}">
-                                            <i class="${icon} text-lg"></i>
-                                        </div>
-                                        <div><p class="font-bold text-sm text-gray-800 dark:text-gray-200">${d.date}</p></div>
-                                    </div>
-                                    <span class="text-[10px] font-bold px-3 py-1 rounded-full border ${colorClass}">${text}</span>
-                                </div>`;
-
-                                // Timeline Item
-                                if(timeline.length < 1000) { 
-                                    timeline += `
-                                    <div class="flex gap-4 relative pb-8 last:pb-0">
-                                        <div class="flex flex-col items-center">
-                                            <div class="w-3 h-3 rounded-full ${rec.status==='present'?'bg-green-500':(rec.status==='absent'?'bg-red-500':'bg-orange-500')} ring-4 ring-white dark:ring-darkBg z-10"></div>
-                                            <div class="w-[2px] h-full bg-gray-100 dark:bg-darkBorder absolute top-3"></div>
-                                        </div>
-                                        <div class="pb-1">
-                                            <p class="text-xs font-bold text-gray-800 dark:text-gray-200">حصة يوم ${d.date}</p>
-                                            <p class="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">تم تسجيل الحالة: <span class="${colorClass.split(' ')[0]} font-bold">${text}</span></p>
-                                        </div>
-                                    </div>`;
-                                }
+                            if (record.status === 'present') {
+                                present++;
+                                color = 'text-green-500 border-green-500/30 bg-green-500/10';
+                                icon = 'ri-check-line';
+                                text = 'حاضر';
+                            } else if (record.status === 'absent') {
+                                color = 'text-red-500 border-red-500/30 bg-red-500/10';
+                                icon = 'ri-close-line';
+                                text = 'غائب';
+                            } else if (record.status === 'late') {
+                                present++;
+                                color = 'text-orange-500 border-orange-500/30 bg-orange-500/10';
+                                icon = 'ri-time-line';
+                                text = 'تأخير';
                             }
-                        });
-                    }
 
-                    document.getElementById('attendanceList').innerHTML = html || renderEmptyState("لم يتم تسجيل حضور");
-                    document.getElementById('timelineList').innerHTML = timeline || renderEmptyState("لا يوجد نشاط حديث");
-                    document.getElementById('attendanceRate').innerText = total > 0 ? Math.round((present/total)*100)+'%' : '0%';
-                });
+                            // Timeline Item
+                            timelineHtml += `
+                                <div class="flex gap-4 relative pb-6 last:pb-0">
+                                    <div class="absolute -right-[5px] top-1.5 w-2.5 h-2.5 rounded-full ${record.status === 'present' ? 'bg-green-500' : 'bg-red-500'}"></div>
+                                    <div class="w-full">
+                                        <div class="flex justify-between items-center mb-1">
+                                            <p class="text-xs font-bold text-gray-300">${d.date}</p>
+                                            <span class="text-[10px] px-2 py-0.5 rounded ${color}">${text}</span>
+                                        </div>
+                                    </div>
+                                </div>`;
+                            
+                            // List Item
+                            attHtml += `
+                                <div class="bg-darkCard p-3 rounded-xl flex justify-between items-center border border-darkBorder">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center ${color}">
+                                            <i class="${icon}"></i>
+                                        </div>
+                                        <span class="text-sm font-bold text-gray-300">${d.date}</span>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-500">${text}</span>
+                                </div>
+                            `;
+                        }
+                    });
+                }
 
-                // B. Grades
-                db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get().then(snap => {
-                    let html = '', lastScore = '-';
-                    if(snap.empty) html = renderEmptyState("لا توجد درجات");
-                    else {
-                        snap.forEach(doc => {
-                            const d = doc.data();
-                            const s = d.scores?.[sId];
-                            if(s) {
-                                lastScore = s.score || 0;
-                                html += `
-                                <div class="glass-card p-4 rounded-xl flex justify-between items-center">
+                document.getElementById('attendanceList').innerHTML = attHtml;
+                document.getElementById('timelineList').innerHTML = timelineHtml || '<p class="text-center text-gray-600 text-xs">لا يوجد نشاط حديث</p>';
+                document.getElementById('attendanceRate').innerText = total > 0 ? Math.round((present / total) * 100) + '%' : '0%';
+
+                // 2. Grades
+                const gradesSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(10).get();
+                let gradesHtml = '';
+                let lastScore = '-';
+
+                if (gradesSnap.empty) {
+                    gradesHtml = `<p class="text-center text-gray-500 text-sm py-4">لا توجد درجات</p>`;
+                } else {
+                    gradesSnap.forEach(doc => {
+                        const d = doc.data();
+                        const s = d.scores?.[sId];
+                        if (s) {
+                            lastScore = s.score || 0;
+                            gradesHtml += `
+                                <div class="bg-darkCard p-3 rounded-xl flex justify-between items-center border border-darkBorder">
                                     <div>
-                                        <h4 class="font-bold text-sm text-gray-800 dark:text-gray-200">${d.name}</h4>
-                                        <span class="text-[10px] text-gray-500 bg-gray-50 dark:bg-darkBg px-2 py-1 rounded mt-1 inline-block border border-gray-100 dark:border-darkBorder">${d.type||'واجب'}</span>
+                                        <p class="text-sm font-bold text-white">${d.name}</p>
+                                        <span class="text-[10px] text-gray-500 bg-black px-2 rounded">${d.type || 'واجب'}</span>
                                     </div>
                                     <div class="text-center">
-                                        <span class="block text-xl font-black text-brand">${lastScore}</span>
-                                        <span class="text-[10px] text-gray-400">الدرجة</span>
-                                    </div>
-                                </div>`;
-                            }
-                        });
-                    }
-                    document.getElementById('gradesList').innerHTML = html || renderEmptyState("لا توجد درجات مسجلة");
-                    document.getElementById('lastExamScore').innerText = lastScore;
-                });
-
-                // C. Schedule
-                db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get().then(snap => {
-                    let html = '';
-                    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-                    if(snap.empty) html = renderEmptyState("لم يتم تحديد جدول");
-                    else {
-                        snap.forEach(doc => {
-                            const d = doc.data();
-                            html += `
-                            <div class="glass-card p-4 rounded-xl border-r-4 border-brand flex items-center justify-between">
-                                <div>
-                                    <h4 class="font-bold text-sm text-gray-800 dark:text-white mb-1">${d.subject}</h4>
-                                    <div class="text-xs text-gray-500 flex items-center gap-1">
-                                        <i class="ri-calendar-line"></i> ${d.days.map(x=>days[x]).join('، ')}
+                                        <span class="block text-lg font-black text-brand">${s.score}</span>
+                                        <span class="text-[10px] text-gray-600">الدرجة</span>
                                     </div>
                                 </div>
-                                <span class="bg-brand text-black px-3 py-1 rounded-lg font-bold text-xs shadow-glow">${d.time}</span>
-                            </div>`;
-                        });
-                    }
-                    document.getElementById('scheduleList').innerHTML = html;
-                });
+                            `;
+                        }
+                    });
+                }
+                document.getElementById('gradesList').innerHTML = gradesHtml;
+                document.getElementById('lastExamScore').innerText = lastScore;
 
-            } catch(e) { 
-                console.error(e); 
+                // Check Notifications Permission
+                if (Notification.permission !== 'granted') {
+                    document.getElementById('bigNotifyBanner').classList.remove('hidden');
+                } else {
+                    document.getElementById('bigNotifyBanner').classList.add('hidden');
+                }
+
+            } catch (e) {
+                console.error(e);
             } finally {
-                setTimeout(() => {
-                    document.getElementById('loadingScreen').classList.add('opacity-0');
-                    setTimeout(()=>document.getElementById('loadingScreen').classList.add('hidden'), 500);
-                }, 800);
+                showLoader(false);
             }
         }
 
-        // --- 6. PERMISSIONS ---
-        function handlePermissionClick() {
-            if(!messaging) return alert("غير مدعوم على هذا المتصفح");
-            requestPermission();
+        // --- 6. HELPERS ---
+        function switchInnerTab(tab) {
+            document.querySelectorAll('.inner-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.inner-tab').forEach(el => {
+                el.classList.remove('bg-darkBorder', 'text-white');
+                el.classList.add('text-gray-500');
+            });
+            const activeBtn = document.querySelector(`.inner-tab[data-target="${tab}"]`);
+            activeBtn.classList.remove('text-gray-500');
+            activeBtn.classList.add('bg-darkBorder', 'text-white');
         }
 
+        function showLoader(show) {
+            const l = document.getElementById('loadingScreen');
+            if (show) l.classList.remove('hidden');
+            else l.classList.add('hidden');
+        }
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('themeIcon');
+            if(document.documentElement.classList.contains('dark')) {
+                icon.className = 'ri-sun-line text-xl';
+            } else {
+                icon.className = 'ri-moon-line text-xl';
+            }
+        }
+
+        // --- 7. NOTIFICATIONS ---
         async function requestPermission() {
-            const btn = document.getElementById('bigNotifyBanner');
-            btn.style.opacity = '0.5';
+            if(!messaging) return alert("المتصفح لا يدعم التنبيهات");
+            
             try {
-                const perm = await Notification.requestPermission();
-                if(perm === 'granted') {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
                     const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-                    const activeReg = await navigator.serviceWorker.ready; 
-                    const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", serviceWorkerRegistration: activeReg });
-                    
-                    if(token && tId && gId && sId) {
-                        await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).set({ parentFcmToken: token }, { merge: true });
-                        if(pNum) await db.collection('parents').doc(pNum).set({ fcmToken: token }, { merge: true });
+                    const activeReg = await navigator.serviceWorker.ready;
+                    const token = await messaging.getToken({ 
+                        vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
+                        serviceWorkerRegistration: activeReg 
+                    });
+
+                    if (token && currentContext.tId && currentContext.gId && currentContext.sId) {
+                        // 1. Save token to Student Doc
+                        await db.doc(`teachers/${currentContext.tId}/groups/${currentContext.gId}/students/${currentContext.sId}`)
+                                .set({ parentFcmToken: token }, { merge: true });
                         
-                        btn.classList.add('hidden');
-                        document.getElementById('successBanner').classList.remove('hidden');
-                        new Notification("تم بنجاح ✅", { body: "تم تفعيل الإشعارات.", icon: './favicon.png' });
+                        // 2. Save token to Parents Collection (General)
+                        if(currentParentPhone) {
+                            await db.collection('parents').doc(currentParentPhone)
+                                    .set({ fcmToken: token }, { merge: true });
+                        }
+
+                        document.getElementById('bigNotifyBanner').classList.add('hidden');
+                        alert("تم تفعيل الإشعارات بنجاح ✅");
                     }
-                } else { alert("تم رفض الإذن"); }
-            } catch(e) { alert("خطأ: " + e.message); } 
-            finally { btn.style.opacity = '1'; }
+                }
+            } catch (e) {
+                console.error(e);
+                alert("حدث خطأ أثناء التفعيل");
+            }
         }
 
-        if(Notification.permission !== 'granted') document.getElementById('bigNotifyBanner').classList.remove('hidden');
-
-        loadData();
+        // Initial Theme
+        document.documentElement.classList.add('dark');
     </script>
 </body>
 </html>
