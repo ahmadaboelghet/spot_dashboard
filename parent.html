@@ -74,7 +74,7 @@
                 linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
         }
 
-        /* Cards */
+        /* Card Colors Fix */
         .spot-card {
             border-radius: 20px;
             transition: all 0.2s ease-in-out;
@@ -89,8 +89,12 @@
             color: #FFFFFF !important;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        .dark-mode .text-gray-500, .dark-mode .text-gray-400 { color: #9CA3AF !important; }
-        .dark-mode .text-gray-900 { color: #FFFFFF !important; }
+        .dark-mode .spot-card h3, .dark-mode .spot-card p.text-lg, .dark-mode .spot-card span.font-bold, .dark-mode .text-gray-900 {
+            color: #FFFFFF !important;
+        }
+        .dark-mode .spot-card p.text-gray-500, .dark-mode .spot-card .text-gray-400, .dark-mode .text-gray-500 {
+            color: #9CA3AF !important;
+        }
 
         /* Header */
         .glass-header {
@@ -213,7 +217,7 @@
 
         <div id="detailsModal" class="fixed inset-0 z-[60] pointer-events-none opacity-0 transition-opacity duration-300 flex items-end sm:items-center justify-center">
             
-            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeDetails()"></div>
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" id="modalBackdrop"></div>
             
             <div id="modalContainer" class="relative w-full max-w-lg h-[85vh] bg-lightBg dark:bg-darkBg rounded-t-[2.5rem] transform translate-y-full transition-transform duration-300 pointer-events-auto flex flex-col shadow-2xl overflow-hidden border-t border-white/10">
                 
@@ -228,8 +232,8 @@
                             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 font-bold">معلم: <span id="modalTeacher" class="text-primary">...</span></p>
                         </div>
                         
-                        <button type="button" onclick="closeDetails()" class="relative z-[100] w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 dark:hover:bg-red-500/20 transition-colors cursor-pointer shadow-md">
-                            <i class="ri-close-line text-xl"></i>
+                        <button type="button" id="closeDetailsBtn" class="relative z-50 w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 dark:hover:bg-red-500/20 transition-colors cursor-pointer shadow-md">
+                            <i class="ri-close-line text-xl pointer-events-none"></i>
                         </button>
                     </div>
 
@@ -308,24 +312,28 @@
             document.getElementById('themeIcon').className = 'ri-moon-line text-lg';
         }
 
+        // ✅ SETUP LISTENERS (Fixed Close Button)
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('closeDetailsBtn').addEventListener('click', closeDetails);
+            document.getElementById('modalBackdrop').addEventListener('click', closeDetails);
+        });
+
         const urlParams = new URLSearchParams(window.location.search);
         const urlT = urlParams.get('t');
         const urlG = urlParams.get('g');
         const urlS = urlParams.get('s');
         const urlP = urlParams.get('p'); 
 
-        // ✅ Main Logic: Detect link type
+        // Main Logic
         if (urlP) {
             currentParentPhone = urlP;
             loadApp();
         } else if (urlT && urlG && urlS) {
-            // New: Resolve parent phone first, THEN load ALL kids
             resolveParentPhoneFromStudent(urlT, urlG, urlS);
         } else {
             document.getElementById('loginSection').classList.remove('hidden');
         }
 
-        // ✅ Function to get Parent Phone from Single Student ID, then load ALL kids
         async function resolveParentPhoneFromStudent(tId, gId, sId) {
             document.getElementById('loadingScreen').classList.remove('hidden');
             try {
@@ -334,11 +342,9 @@
                     const data = doc.data();
                     if (data.parentPhoneNumber) {
                         currentParentPhone = data.parentPhoneNumber;
-                        console.log("Resolved Phone: ", currentParentPhone);
-                        loadApp(); // Now load ALL kids using this phone
+                        loadApp(); 
                     } else {
-                        // Fallback: If no phone found, just load this student (Old Behavior) or Alert
-                        alert("لم يتم العثور على رقم ولي الأمر المسجل لهذا الطالب. سيتم عرض الطالب فقط.");
+                        alert("لم يتم العثور على رقم ولي الأمر في بيانات الطالب");
                         loadSingleStudent(tId, gId, sId, data);
                     }
                 } else {
@@ -352,7 +358,6 @@
             }
         }
 
-        // Fallback for single student if no phone found
         async function loadSingleStudent(tId, gId, sId, sData) {
             document.getElementById('dashboardSection').classList.remove('hidden');
             document.getElementById('loadingScreen').classList.add('hidden');
@@ -450,7 +455,6 @@
                 const snapshot = await db.collectionGroup('students').where('parentPhoneNumber', '==', currentParentPhone).get();
                 if (snapshot.empty) { 
                     alert("لم يتم العثور على بيانات"); 
-                    // Go back to login if fetch fails
                     document.getElementById('loadingScreen').classList.add('hidden');
                     document.getElementById('loginSection').classList.remove('hidden');
                     return; 
@@ -599,6 +603,14 @@
                 document.getElementById('paymentStatusBanner').className = `spot-card p-6 flex items-center justify-between border-r-4 ${currStatus.includes('الدفع')?'border-green-500':'border-red-500'}`;
 
             } catch(e) { console.error(e); }
+        }
+
+        // ✅ IMPORTANT: Correct Close Function
+        function closeDetails() {
+            document.getElementById('modalContainer').classList.add('translate-y-full');
+            setTimeout(() => {
+                document.getElementById('detailsModal').classList.add('opacity-0', 'pointer-events-none');
+            }, 300);
         }
 
         async function requestPermission() {
