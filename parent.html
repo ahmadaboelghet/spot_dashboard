@@ -302,6 +302,7 @@
         } catch (e) { console.error(e); }
 
         let currentParentPhone = "";
+        let unsubscribeStudents = null; // ✅ تم إضافة هذا المتغير للتحكم في Real-time listener
 
         // Dark Mode Logic
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage))) {
@@ -319,103 +320,14 @@
         });
 
         const urlParams = new URLSearchParams(window.location.search);
-        const urlT = urlParams.get('t');
-        const urlG = urlParams.get('g');
-        const urlS = urlParams.get('s');
         const urlP = urlParams.get('p'); 
 
         // Main Logic
         if (urlP) {
             currentParentPhone = urlP;
-            loadApp();
-        } else if (urlT && urlG && urlS) {
-            resolveParentPhoneFromStudent(urlT, urlG, urlS);
+            loadAppRealtime(); // ✅ تم التعديل لاستدعاء الدالة الجديدة
         } else {
             document.getElementById('loginSection').classList.remove('hidden');
-        }
-
-        async function resolveParentPhoneFromStudent(tId, gId, sId) {
-            document.getElementById('loadingScreen').classList.remove('hidden');
-            try {
-                const doc = await db.doc(`teachers/${tId}/groups/${gId}/students/${sId}`).get();
-                if (doc.exists) {
-                    const data = doc.data();
-                    if (data.parentPhoneNumber) {
-                        currentParentPhone = data.parentPhoneNumber;
-                        loadApp(); 
-                    } else {
-                        alert("لم يتم العثور على رقم ولي الأمر في بيانات الطالب");
-                        loadSingleStudent(tId, gId, sId, data);
-                    }
-                } else {
-                    document.getElementById('loadingScreen').classList.add('hidden');
-                    document.getElementById('loginSection').classList.remove('hidden');
-                }
-            } catch (e) {
-                console.error(e);
-                document.getElementById('loadingScreen').classList.add('hidden');
-                document.getElementById('loginSection').classList.remove('hidden');
-            }
-        }
-
-        async function loadSingleStudent(tId, gId, sId, sData) {
-            document.getElementById('dashboardSection').classList.remove('hidden');
-            document.getElementById('loadingScreen').classList.add('hidden');
-            document.getElementById('headerGuardianText').innerHTML = `ولي أمر الطالب <span class="text-primary">${sData.name.split(' ')[0]}</span>`;
-            
-            const tDoc = await db.collection('teachers').doc(tId).get();
-            let tName = tDoc.exists ? tDoc.data().name : "مدرس";
-            let subName = tDoc.exists ? (tDoc.data().subject || "عام") : "مادة";
-
-            // Same stats logic...
-            const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).limit(20).get();
-            let totalDays=0, presentDays=0;
-            attSnap.forEach(d => {
-                const r = d.data().records?.find(x => x.studentId === sId);
-                if(r) { totalDays++; if(r.status==='present') presentDays++; }
-            });
-            const attPerc = totalDays > 0 ? Math.round((presentDays/totalDays)*100) : 0;
-
-            const assSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).orderBy('date', 'desc').limit(1).get();
-            let lastGrade = '--';
-            if(!assSnap.empty) {
-                const score = assSnap.docs[0].data().scores?.[sId];
-                if(score) lastGrade = score.score || (score.submitted ? '✅' : '❌');
-            }
-
-            const currentMonth = new Date().toISOString().slice(0, 7);
-            const payDoc = await db.collection(`teachers/${tId}/groups/${gId}/payments`).doc(`${gId}_PAY_${currentMonth}`).get();
-            let isPaid = false;
-            if(payDoc.exists) {
-                const r = payDoc.data().records?.find(x => x.studentId === sId);
-                if(r && r.paid) isPaid = true;
-            }
-
-            const listHtml = `
-            <div class="spot-card p-5 cursor-pointer group relative overflow-hidden" onclick="openDetails('${tId}', '${gId}', '${sId}', '${tName}', '${subName}')">
-                <div class="absolute -right-5 -top-5 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition"></div>
-                <div class="flex justify-between items-start mb-5 relative z-10">
-                    <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/5 flex items-center justify-center shadow-inner">
-                            <span class="text-2xl font-black text-primary">${subName.charAt(0)}</span>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-black text-gray-900 dark:text-white leading-tight mb-1" style="font-family: 'Cairo', sans-serif;">${subName}</h3>
-                            <div class="flex items-center gap-2"><i class="ri-user-line text-xs text-primary"></i><p class="text-xs text-gray-500 dark:text-gray-400 font-bold">${tName}</p></div>
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-end gap-1">
-                        <span class="text-[10px] bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-300 px-2 py-0.5 rounded-md font-bold">${sData.name.split(' ')[0]}</span>
-                        ${isPaid ? '<span class="text-[10px] text-green-500 bg-green-500/10 px-2 py-0.5 rounded-md font-bold border border-green-500/20">مدفوع</span>' : '<span class="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md font-bold border border-red-500/20">غير مدفوع</span>'}
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3 mt-2 border-t border-gray-100 dark:border-white/5 pt-3">
-                    <div><p class="text-[10px] text-gray-400 font-bold">نسبة الحضور</p><p class="text-lg font-black ${attPerc>85?'text-green-500':'text-primary'}">${attPerc}%</p></div>
-                    <div><p class="text-[10px] text-gray-400 font-bold">آخر تقييم</p><p class="text-lg font-black text-gray-900 dark:text-white">${lastGrade}</p></div>
-                </div>
-            </div>`;
-            
-            document.getElementById('coursesList').innerHTML = listHtml;
         }
 
         function handleLogin() {
@@ -423,10 +335,13 @@
             if (phone.length < 10) return alert("رقم غير صحيح");
             currentParentPhone = phone;
             document.getElementById('loginSection').classList.add('hidden');
-            loadApp();
+            loadAppRealtime(); // ✅ تم التعديل
         }
 
-        function logout() { window.location.href = window.location.pathname; }
+        function logout() { 
+            if(unsubscribeStudents) unsubscribeStudents(); // ✅ إيقاف الاستماع عند الخروج
+            window.location.href = window.location.pathname; 
+        }
 
         function toggleDarkMode() {
             const html = document.documentElement;
@@ -448,86 +363,119 @@
             document.getElementById(`btn-${tab}`).classList.add('active');
         }
 
-        async function loadApp() {
+        // ✅ دالة جديدة تماماً للعمل بنظام Real-time
+        function loadAppRealtime() {
             document.getElementById('loadingScreen').classList.remove('hidden');
-            try {
-                // ✅ Fetch ALL students
-                const snapshot = await db.collectionGroup('students').where('parentPhoneNumber', '==', currentParentPhone).get();
-                if (snapshot.empty) { 
-                    alert("لم يتم العثور على بيانات"); 
-                    document.getElementById('loadingScreen').classList.add('hidden');
-                    document.getElementById('loginSection').classList.remove('hidden');
-                    return; 
-                }
 
-                document.getElementById('dashboardSection').classList.remove('hidden');
-                let listHtml = '';
-                let studentNames = new Set();
+            // ✅ استخدام onSnapshot بدلاً من get
+            unsubscribeStudents = db.collectionGroup('students')
+                .where('parentPhoneNumber', '==', currentParentPhone)
+                .onSnapshot(async (snapshot) => {
+                    if (snapshot.empty) { 
+                        alert("لم يتم العثور على بيانات"); 
+                        document.getElementById('loadingScreen').classList.add('hidden');
+                        document.getElementById('loginSection').classList.remove('hidden');
+                        return; 
+                    }
 
-                for (const doc of snapshot.docs) {
-                    const sData = doc.data();
-                    studentNames.add(sData.name.split(' ')[0]);
-                    const path = doc.ref.path.split('/');
-                    const tId = path[1], gId = path[3], sId = doc.id;
-
-                    let tName = "مدرس", subName = "مادة";
-                    const tDoc = await db.collection('teachers').doc(tId).get();
-                    if(tDoc.exists) { tName = tDoc.data().name; subName = tDoc.data().subject || "عام"; }
-
-                    const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).limit(20).get();
-                    let totalDays=0, presentDays=0;
-                    attSnap.forEach(d => {
-                        const r = d.data().records?.find(x => x.studentId === sId);
-                        if(r) { totalDays++; if(r.status==='present') presentDays++; }
+                    document.getElementById('dashboardSection').classList.remove('hidden');
+                    const coursesContainer = document.getElementById('coursesList');
+                    coursesContainer.innerHTML = ''; // تنظيف القائمة قبل إعادة الرسم
+                    
+                    let studentNames = new Set();
+                    
+                    // استخدام Promise.all لضمان تحميل كل البيانات قبل العرض
+                    const promises = snapshot.docs.map(async (doc) => {
+                        const sData = doc.data();
+                        studentNames.add(sData.name.split(' ')[0]);
+                        const path = doc.ref.path.split('/');
+                        const studentObj = {
+                            sId: doc.id,
+                            tId: path[1],
+                            gId: path[3],
+                            name: sData.name
+                        };
+                        return await createStudentCardHTML(studentObj);
                     });
-                    const attPerc = totalDays > 0 ? Math.round((presentDays/totalDays)*100) : 0;
 
-                    const assSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).orderBy('date', 'desc').limit(1).get();
-                    let lastGrade = '--';
-                    if(!assSnap.empty) {
-                        const score = assSnap.docs[0].data().scores?.[sId];
-                        if(score) lastGrade = score.score || (score.submitted ? '✅' : '❌');
-                    }
+                    const cardsHTML = await Promise.all(promises);
+                    coursesContainer.innerHTML = cardsHTML.join('');
 
-                    const currentMonth = new Date().toISOString().slice(0, 7);
-                    const payDoc = await db.collection(`teachers/${tId}/groups/${gId}/payments`).doc(`${gId}_PAY_${currentMonth}`).get();
-                    let isPaid = false;
-                    if(payDoc.exists) {
-                        const r = payDoc.data().records?.find(x => x.studentId === sId);
-                        if(r && r.paid) isPaid = true;
-                    }
+                    if(studentNames.size > 0) document.getElementById('headerGuardianText').innerHTML = `ولي أمر الطالب <span class="text-primary">${Array.from(studentNames).join('، ')}</span>`;
+                    
+                    if(Notification.permission !== 'granted') document.getElementById('notifyBanner').classList.remove('hidden');
+                    else document.getElementById('notifyBanner').classList.add('hidden');
 
-                    listHtml += `
-                    <div class="spot-card p-5 cursor-pointer group relative overflow-hidden" onclick="openDetails('${tId}', '${gId}', '${sId}', '${tName}', '${subName}')">
-                        <div class="absolute -right-5 -top-5 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition"></div>
-                        <div class="flex justify-between items-start mb-5 relative z-10">
-                            <div class="flex items-center gap-4">
-                                <div class="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/5 flex items-center justify-center shadow-inner">
-                                    <span class="text-2xl font-black text-primary">${subName.charAt(0)}</span>
-                                </div>
-                                <div>
-                                    <h3 class="text-xl font-black text-gray-900 dark:text-white leading-tight mb-1" style="font-family: 'Cairo', sans-serif;">${subName}</h3>
-                                    <div class="flex items-center gap-2"><i class="ri-user-line text-xs text-primary"></i><p class="text-xs text-gray-500 dark:text-gray-400 font-bold">${tName}</p></div>
-                                </div>
-                            </div>
-                            <div class="flex flex-col items-end gap-1">
-                                <span class="text-[10px] bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-300 px-2 py-0.5 rounded-md font-bold">${sData.name.split(' ')[0]}</span>
-                                ${isPaid ? '<span class="text-[10px] text-green-500 bg-green-500/10 px-2 py-0.5 rounded-md font-bold border border-green-500/20">مدفوع</span>' : '<span class="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md font-bold border border-red-500/20">غير مدفوع</span>'}
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3 mt-2 border-t border-gray-100 dark:border-white/5 pt-3">
-                            <div><p class="text-[10px] text-gray-400 font-bold">نسبة الحضور</p><p class="text-lg font-black ${attPerc>85?'text-green-500':'text-primary'}">${attPerc}%</p></div>
-                            <div><p class="text-[10px] text-gray-400 font-bold">آخر تقييم</p><p class="text-lg font-black text-gray-900 dark:text-white">${lastGrade}</p></div>
-                        </div>
-                    </div>`;
+                    document.getElementById('loadingScreen').classList.add('hidden');
+
+                }, (error) => {
+                    console.error("Error fetching data:", error);
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                });
+        }
+
+        // ✅ دالة مساعدة لإنشاء HTML الكارت بنفس التصميم المطلوب
+        async function createStudentCardHTML(student) {
+            let tName = "مدرس", subName = "مادة";
+            try {
+                const tDoc = await db.collection('teachers').doc(student.tId).get();
+                if(tDoc.exists) { tName = tDoc.data().name; subName = tDoc.data().subject || "عام"; }
+            } catch(e) {}
+
+            let attPerc = 0;
+            try {
+                const attSnap = await db.collection(`teachers/${student.tId}/groups/${student.gId}/dailyAttendance`).limit(20).get();
+                let totalDays=0, presentDays=0;
+                attSnap.forEach(d => {
+                    const r = d.data().records?.find(x => x.studentId === student.sId);
+                    if(r) { totalDays++; if(r.status==='present') presentDays++; }
+                });
+                attPerc = totalDays > 0 ? Math.round((presentDays/totalDays)*100) : 0;
+            } catch(e){}
+
+            let lastGrade = '--';
+            try {
+                const assSnap = await db.collection(`teachers/${student.tId}/groups/${student.gId}/assignments`).orderBy('date', 'desc').limit(1).get();
+                if(!assSnap.empty) {
+                    const score = assSnap.docs[0].data().scores?.[student.sId];
+                    if(score) lastGrade = score.score || (score.submitted ? '✅' : '❌');
                 }
-                
-                if(studentNames.size > 0) document.getElementById('headerGuardianText').innerHTML = `ولي أمر الطالب <span class="text-primary">${Array.from(studentNames).join('، ')}</span>`;
-                document.getElementById('coursesList').innerHTML = listHtml;
-                if(Notification.permission !== 'granted') document.getElementById('notifyBanner').classList.remove('hidden');
+            } catch(e){}
 
-            } catch (e) { console.error(e); } 
-            finally { document.getElementById('loadingScreen').classList.add('hidden'); }
+            let isPaid = false;
+            try {
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                const payDoc = await db.collection(`teachers/${student.tId}/groups/${student.gId}/payments`).doc(`${student.gId}_PAY_${currentMonth}`).get();
+                if(payDoc.exists) {
+                    const r = payDoc.data().records?.find(x => x.studentId === student.sId);
+                    if(r && r.paid) isPaid = true;
+                }
+            } catch(e){}
+
+            // نفس كود الـ HTML الخاص بالتصميم الجديد
+            return `
+            <div class="spot-card p-5 cursor-pointer group relative overflow-hidden" onclick="openDetails('${student.tId}', '${student.gId}', '${student.sId}', '${tName}', '${subName}')">
+                <div class="absolute -right-5 -top-5 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition"></div>
+                <div class="flex justify-between items-start mb-5 relative z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/5 flex items-center justify-center shadow-inner">
+                            <span class="text-2xl font-black text-primary">${subName.charAt(0)}</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black text-gray-900 dark:text-white leading-tight mb-1" style="font-family: 'Cairo', sans-serif;">${subName}</h3>
+                            <div class="flex items-center gap-2"><i class="ri-user-line text-xs text-primary"></i><p class="text-xs text-gray-500 dark:text-gray-400 font-bold">${tName}</p></div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="text-[10px] bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-300 px-2 py-0.5 rounded-md font-bold">${student.name.split(' ')[0]}</span>
+                        ${isPaid ? '<span class="text-[10px] text-green-500 bg-green-500/10 px-2 py-0.5 rounded-md font-bold border border-green-500/20">مدفوع</span>' : '<span class="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md font-bold border border-red-500/20">غير مدفوع</span>'}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mt-2 border-t border-gray-100 dark:border-white/5 pt-3">
+                    <div><p class="text-[10px] text-gray-400 font-bold">نسبة الحضور</p><p class="text-lg font-black ${attPerc>85?'text-green-500':'text-primary'}">${attPerc}%</p></div>
+                    <div><p class="text-[10px] text-gray-400 font-bold">آخر تقييم</p><p class="text-lg font-black text-gray-900 dark:text-white">${lastGrade}</p></div>
+                </div>
+            </div>`;
         }
 
         async function openDetails(tId, gId, sId, tName, subject) {
@@ -613,6 +561,7 @@
             }, 300);
         }
 
+        // ✅ إصلاح دالة تفعيل الإشعارات وتحديث توكن الطلاب
         async function requestPermission() {
             if(!messaging) return alert("غير مدعوم");
             try {
@@ -620,7 +569,17 @@
                     const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
                     const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", serviceWorkerRegistration: reg });
                     if(currentParentPhone) {
+                        // حفظ في collection الآباء
                         await db.collection('parents').doc(currentParentPhone).set({ fcmToken: token }, { merge: true });
+                        
+                        // ✅ تحديث التوكن في جميع مستندات الطلاب المرتبطة بهذا الرقم
+                        const snapshot = await db.collectionGroup('students').where('parentPhoneNumber', '==', currentParentPhone).get();
+                        const batch = db.batch();
+                        snapshot.docs.forEach(doc => {
+                            batch.update(doc.ref, { parentFcmToken: token });
+                        });
+                        await batch.commit();
+
                         document.getElementById('notifyBanner').classList.add('hidden');
                         alert("تم التفعيل بنجاح ✅");
                     }

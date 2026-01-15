@@ -810,22 +810,42 @@ async function loginTeacher() {
 }
 function logout() { localStorage.removeItem('learnaria-tid'); location.reload(); }
 
+// استبدل دالة loadGroups القديمة بهذه
 async function loadGroups() {
+    // 1. اعرض البيانات المحلية فوراً (عشان السرعة)
     let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
-    if(groups.length === 0 && navigator.onLine) {
+    renderGroupsDropdown(groups);
+
+    // 2. لو في نت، هات البيانات الحديثة من السيرفر
+    if (navigator.onLine) {
         try {
             const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups`).get();
-            const remote = snap.docs.map(doc => ({id: doc.id, teacherId: TEACHER_ID, ...doc.data()}));
-            for(const g of remote) await putToDB('groups', g);
-            groups = remote;
-        } catch(e){}
+            const remoteGroups = snap.docs.map(doc => ({id: doc.id, teacherId: TEACHER_ID, ...doc.data()}));
+            
+            // تحديث الداتابيز المحلية بالبيانات الجديدة
+            for(const g of remoteGroups) {
+                await putToDB('groups', g);
+            }
+            
+            // تحديث القائمة تاني بالبيانات الجديدة (عشان لو فيه مجموعة انضافت من جهاز تاني تظهر)
+            renderGroupsDropdown(remoteGroups);
+        } catch(e) {
+            console.error("Failed to sync groups:", e);
+        }
     }
+}
+
+// دالة مساعدة لرسم القائمة عشان منكررش الكود
+function renderGroupsDropdown(groupsList) {
     const sel = document.getElementById('groupSelect');
-    sel.innerHTML = `<option value="" disabled selected>${translations[currentLang].selectGroupPlaceholder}</option>`;
-    groups.forEach(g => {
+    const currentVal = sel.value; // عشان نحافظ على الاختيار لو كان موجود
+    sel.innerHTML = `<option value="" disabled ${!currentVal ? 'selected' : ''}>${translations[currentLang].selectGroupPlaceholder}</option>`;
+    
+    groupsList.forEach(g => {
         const opt = document.createElement('option');
         opt.value = g.id;
         opt.innerText = g.name;
+        if(currentVal === g.id) opt.selected = true;
         sel.appendChild(opt);
     });
 }
@@ -844,16 +864,31 @@ async function loadGroupData() {
     if(!SELECTED_GROUP_ID) return;
     document.querySelectorAll('.tab-button').forEach(b => b.disabled = false);
     
+    // 1. محلي
     allStudents = await getAllFromDB('students', 'groupId', SELECTED_GROUP_ID);
-    if(allStudents.length === 0 && navigator.onLine) {
+    if(document.getElementById('tab-students').classList.contains('active')) renderStudents();
+    if(document.getElementById('tab-daily').classList.contains('active')) renderDailyList();
+
+    // 2. أونلاين (Sync)
+    if (navigator.onLine) {
         try {
             const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get();
-            const remote = snap.docs.map(d => ({id:d.id, groupId:SELECTED_GROUP_ID, ...d.data()}));
-            await Promise.all(remote.map(s => putToDB('students', s)));
-            allStudents = remote;
-        } catch(e){}
+            const remoteStudents = snap.docs.map(d => ({id:d.id, groupId:SELECTED_GROUP_ID, ...d.data()}));
+            
+            // تحديث المحلي
+            await Promise.all(remoteStudents.map(s => putToDB('students', s)));
+            
+            // تحديث المتغير والواجهة
+            allStudents = remoteStudents;
+            
+            // إعادة رسم التبويب المفتوح حالياً
+            if(document.getElementById('tab-students').classList.contains('active')) renderStudents();
+            if(document.getElementById('tab-daily').classList.contains('active')) renderDailyList();
+        } catch(e) { console.error("Sync students failed", e); }
     }
-    switchTab('daily');
+
+    // لو كنا واقفين في تبويب "الحصة اليومية"، لازم نحدثها
+    if(!document.querySelector('.tab-button.active')) switchTab('daily');
 }
 
 function switchTab(tabId) {
