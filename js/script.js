@@ -1,7 +1,7 @@
 /**
  * SPOT TEACHER - FINAL INTEGRATED VERSION
- * Features: Smart Login + Parent Link + Unified Payments + Mirror Fix + Messages + Sync Fix + Fail-Safe Loading + Auto-Switch Tab
- * FIX: Auto Switch to Daily Tab on Group Select
+ * Features: Smart Login + Parent Link + Unified Payments + Mirror Fix + Messages + Sync Fix + Fail-Safe Loading + Auto-Switch + UI Protection
+ * FIX: Disable Add Student Inputs until Group is Selected
  */
 
 // ==========================================
@@ -260,7 +260,8 @@ const translations = {
         absent: "غائب",
         late: "متأخر",
         accountNotRegistered: "هذا الحساب غير مسجل! يرجى التواصل مع الإدارة.",
-        offlineFirstLogin: "يجب الاتصال بالإنترنت لتسجيل الدخول لأول مرة"
+        offlineFirstLogin: "يجب الاتصال بالإنترنت لتسجيل الدخول لأول مرة",
+        selectGroupFirst: "الرجاء اختيار مجموعة أولاً"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -360,7 +361,8 @@ const translations = {
         absent: "Absent",
         late: "Late",
         accountNotRegistered: "Account not registered! Please contact admin.",
-        offlineFirstLogin: "Internet connection required for first login"
+        offlineFirstLogin: "Internet connection required for first login",
+        selectGroupFirst: "Please select a group first"
     }
 };
 
@@ -485,6 +487,9 @@ function setupListeners() {
     document.getElementById('setTeacherButton').addEventListener('click', loginTeacher);
     document.getElementById('logoutButton').addEventListener('click', logout);
 
+    // ✅✅ FIX: Disable student inputs by default on load
+    toggleStudentInputs(false);
+
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const tab = e.currentTarget.dataset.tab;
@@ -499,10 +504,9 @@ function setupListeners() {
     document.getElementById('saveProfileButton').addEventListener('click', saveProfile);
     document.getElementById('createNewGroupBtn').addEventListener('click', createGroup);
     
-    // ✅✅ التعديل المطلوب: التبديل للحصة اليومية عند اختيار المجموعة
     document.getElementById('groupSelect').addEventListener('change', async (e) => {
         SELECTED_GROUP_ID = e.target.value;
-        switchTab('daily'); // <--- السطر السحري
+        switchTab('daily'); 
         await loadGroupData();
     });
 
@@ -543,6 +547,19 @@ function setupListeners() {
     });
     document.getElementById('confirmSendMsgBtn').addEventListener('click', sendCustomMessageAction);
     document.getElementById('shareIdBtn').addEventListener('click', shareCardAction);
+}
+
+// ✅✅ NEW HELPER: Enable/Disable Student Inputs
+function toggleStudentInputs(enable) {
+    const inputs = [
+        'newStudentName',
+        'newParentPhoneNumber',
+        'addNewStudentButton'
+    ];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.disabled = !enable;
+    });
 }
 
 // ==========================================
@@ -850,7 +867,14 @@ async function createGroup() {
 // ✅✅ NEW LOAD GROUP DATA WITH SAFE SYNC & FAIL-SAFE LOGIC ✅✅
 // ------------------------------------------------------------------
 async function loadGroupData() {
-    if(!SELECTED_GROUP_ID) return;
+    if(!SELECTED_GROUP_ID) {
+        toggleStudentInputs(false); // ✅ ضمان الإغلاق لو مفيش مجموعة
+        return;
+    }
+    
+    // ✅ تفعيل خانات الإضافة بمجرد اختيار مجموعة
+    toggleStudentInputs(true);
+    
     document.querySelectorAll('.tab-button').forEach(b => b.disabled = false);
 
     // 1. محاولة جلب البيانات محلياً (داخل try-catch)
@@ -1029,18 +1053,33 @@ async function saveDailyData() {
     const date = document.getElementById('dailyDateInput').value;
     const attRecords = [];
     const hwScores = {};
+    
     document.querySelectorAll('#dailyStudentsList > div').forEach(row => {
         const sid = row.dataset.sid;
+        // حفظ الحضور
         attRecords.push({ studentId: sid, status: row.querySelector('.att-select').value });
-        if(hasHomeworkToday) hwScores[sid] = { submitted: row.querySelector('.hw-check').checked, score: row.querySelector('.hw-check').checked ? 10 : 0 };
+        
+        // حفظ الواجب (بدون درجات، فقط تسليم)
+        if(hasHomeworkToday) {
+            const isChecked = row.querySelector('.hw-check').checked;
+            hwScores[sid] = { 
+                submitted: isChecked, 
+                score: null // ✅ تعديل هام: لا توجد درجة للواجب اليومي
+            };
+        }
     });
+
+    // حفظ الحضور
     await putToDB('attendance', { id: `${SELECTED_GROUP_ID}_${date}`, date, records: attRecords });
     await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`, data: { date, records: attRecords } });
+
+    // حفظ الواجب
     if(hasHomeworkToday) {
-        const hwData = { id: `${SELECTED_GROUP_ID}_HW_${date}`, groupId: SELECTED_GROUP_ID, name: `Homework ${date}`, date, scores: hwScores, type: 'daily' };
+        const hwData = { id: `${SELECTED_GROUP_ID}_HW_${date}`, groupId: SELECTED_GROUP_ID, name: `واجب ${date}`, date, scores: hwScores, type: 'daily' };
         await putToDB('assignments', hwData);
         await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwData.id}`, data: hwData });
     }
+
     showToast(translations[currentLang].saved);
     renderDailyList();
 }
@@ -1328,6 +1367,12 @@ function showStudentQR(student) {
 }
 
 async function addNewStudent() {
+    // ✅ زيادة أمان: التأكد من وجود مجموعة
+    if(!SELECTED_GROUP_ID) {
+        showToast(translations[currentLang].selectGroupFirst || "الرجاء اختيار مجموعة أولاً", "error");
+        return;
+    }
+
     const nameInput = document.getElementById('newStudentName');
     const phoneInput = document.getElementById('newParentPhoneNumber');
     const name = nameInput.value;

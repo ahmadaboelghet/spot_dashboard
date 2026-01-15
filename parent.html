@@ -59,7 +59,6 @@
     <style>
         body { font-family: 'Readex Pro', sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        /* Grid Background (16px) */
         .bg-grid-pattern {
             background-color: #F9FAFB;
             background-image: 
@@ -74,7 +73,6 @@
                 linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
         }
 
-        /* Card Colors Fix */
         .spot-card {
             border-radius: 20px;
             transition: all 0.2s ease-in-out;
@@ -96,7 +94,6 @@
             color: #9CA3AF !important;
         }
 
-        /* Header */
         .glass-header {
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(12px);
@@ -109,7 +106,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* Tabs */
         .tab-container { background-color: #F3F4F6; border-radius: 16px; padding: 4px; }
         .dark-mode .tab-container { background-color: rgba(255, 255, 255, 0.05); }
         .tab-btn { transition: all 0.3s; color: #6B7280; font-weight: 500; }
@@ -121,7 +117,6 @@
             box-shadow: 0 4px 12px rgba(242, 206, 90, 0.3);
         }
 
-        /* Inputs */
         .input-field { background: #FFFFFF; border: 1px solid #E5E7EB; color: #111827; }
         .dark-mode .input-field { background: #1E1E1E; border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; }
         .input-field:focus { border-color: #F2CE5A; box-shadow: 0 0 0 2px rgba(242, 206, 90, 0.2); }
@@ -239,6 +234,7 @@
 
                     <div class="tab-container flex mt-8">
                         <button onclick="switchTab('home')" class="tab-btn active flex-1 py-3 text-xs rounded-xl" id="btn-home">ملخص</button>
+                        <button onclick="switchTab('homework')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-homework">الواجب</button>
                         <button onclick="switchTab('grades')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-grades">الدرجات</button>
                         <button onclick="switchTab('payments')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-payments">المصاريف</button>
                     </div>
@@ -247,20 +243,32 @@
                 <div class="flex-1 overflow-y-auto p-6 bg-transparent custom-scroll">
                     
                     <div id="view-home" class="tab-content space-y-6 animate-fade-up">
+                        <div id="todayScheduleContainer" class="hidden spot-card p-4 flex items-center justify-between border-r-4 border-primary bg-primary/5">
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 dark:text-gray-400"><i class="ri-calendar-event-fill text-primary"></i> موعد اليوم</p>
+                                <h3 id="todayClassTime" class="text-xl font-black text-gray-900 dark:text-white mt-1">--:--</h3>
+                            </div>
+                            <span class="bg-primary text-black text-[10px] font-bold px-3 py-1 rounded-lg">درس اليوم</span>
+                        </div>
+
                         <div class="grid grid-cols-2 gap-4">
                             <div class="spot-card p-5 text-center">
                                 <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2">نسبة الحضور</p>
                                 <h3 id="modalAttPerc" class="text-3xl font-black text-gray-900 dark:text-white">--%</h3>
                             </div>
                             <div class="spot-card p-5 text-center">
-                                <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2">آخر تقييم</p>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2">آخر امتحان</p>
                                 <h3 id="modalLastGrade" class="text-3xl font-black text-primary">--</h3>
                             </div>
                         </div>
                         <div>
-                            <h3 class="text-xs font-bold text-gray-400 mb-4 flex items-center gap-2"><i class="ri-history-line text-primary"></i> النشاط الأخير</h3>
+                            <h3 class="text-xs font-bold text-gray-400 mb-4 flex items-center gap-2"><i class="ri-history-line text-primary"></i> السجل اليومي</h3>
                             <div id="modalAttendanceList" class="space-y-0 relative border-r-2 border-gray-200 dark:border-white/5 mr-2 pr-5 pb-2"></div>
                         </div>
+                    </div>
+
+                    <div id="view-homework" class="tab-content hidden space-y-4 animate-fade-up">
+                        <div id="modalHomeworkList" class="space-y-3"></div>
                     </div>
 
                     <div id="view-grades" class="tab-content hidden space-y-4 animate-fade-up">
@@ -302,9 +310,8 @@
         } catch (e) { console.error(e); }
 
         let currentParentPhone = "";
-        let unsubscribeStudents = null; // ✅ تم إضافة هذا المتغير للتحكم في Real-time listener
+        let unsubscribeStudents = null;
 
-        // Dark Mode Logic
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage))) {
             document.documentElement.classList.add('dark-mode');
             document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
@@ -313,7 +320,6 @@
             document.getElementById('themeIcon').className = 'ri-moon-line text-lg';
         }
 
-        // ✅ SETUP LISTENERS (Fixed Close Button)
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('closeDetailsBtn').addEventListener('click', closeDetails);
             document.getElementById('modalBackdrop').addEventListener('click', closeDetails);
@@ -322,10 +328,9 @@
         const urlParams = new URLSearchParams(window.location.search);
         const urlP = urlParams.get('p'); 
 
-        // Main Logic
         if (urlP) {
             currentParentPhone = urlP;
-            loadAppRealtime(); // ✅ تم التعديل لاستدعاء الدالة الجديدة
+            loadApp();
         } else {
             document.getElementById('loginSection').classList.remove('hidden');
         }
@@ -335,11 +340,11 @@
             if (phone.length < 10) return alert("رقم غير صحيح");
             currentParentPhone = phone;
             document.getElementById('loginSection').classList.add('hidden');
-            loadAppRealtime(); // ✅ تم التعديل
+            loadApp(); 
         }
 
         function logout() { 
-            if(unsubscribeStudents) unsubscribeStudents(); // ✅ إيقاف الاستماع عند الخروج
+            if(unsubscribeStudents) unsubscribeStudents();
             window.location.href = window.location.pathname; 
         }
 
@@ -363,11 +368,9 @@
             document.getElementById(`btn-${tab}`).classList.add('active');
         }
 
-        // ✅ دالة جديدة تماماً للعمل بنظام Real-time
-        function loadAppRealtime() {
+        function loadApp() {
             document.getElementById('loadingScreen').classList.remove('hidden');
-
-            // ✅ استخدام onSnapshot بدلاً من get
+            
             unsubscribeStudents = db.collectionGroup('students')
                 .where('parentPhoneNumber', '==', currentParentPhone)
                 .onSnapshot(async (snapshot) => {
@@ -380,11 +383,9 @@
 
                     document.getElementById('dashboardSection').classList.remove('hidden');
                     const coursesContainer = document.getElementById('coursesList');
-                    coursesContainer.innerHTML = ''; // تنظيف القائمة قبل إعادة الرسم
-                    
+                    coursesContainer.innerHTML = '';
                     let studentNames = new Set();
-                    
-                    // استخدام Promise.all لضمان تحميل كل البيانات قبل العرض
+
                     const promises = snapshot.docs.map(async (doc) => {
                         const sData = doc.data();
                         studentNames.add(sData.name.split(' ')[0]);
@@ -395,64 +396,75 @@
                             gId: path[3],
                             name: sData.name
                         };
-                        return await createStudentCardHTML(studentObj);
+                        return await createStudentCard(studentObj);
                     });
 
                     const cardsHTML = await Promise.all(promises);
                     coursesContainer.innerHTML = cardsHTML.join('');
-
+                    
                     if(studentNames.size > 0) document.getElementById('headerGuardianText').innerHTML = `ولي أمر الطالب <span class="text-primary">${Array.from(studentNames).join('، ')}</span>`;
                     
                     if(Notification.permission !== 'granted') document.getElementById('notifyBanner').classList.remove('hidden');
-                    else document.getElementById('notifyBanner').classList.add('hidden');
-
                     document.getElementById('loadingScreen').classList.add('hidden');
 
                 }, (error) => {
-                    console.error("Error fetching data:", error);
+                    console.error("Error:", error);
                     document.getElementById('loadingScreen').classList.add('hidden');
                 });
         }
 
-        // ✅ دالة مساعدة لإنشاء HTML الكارت بنفس التصميم المطلوب
-        async function createStudentCardHTML(student) {
+        async function createStudentCard(student) {
+            const date = new Date();
+            const currentMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            
+            // Query for payment using WHERE clause
+            const payQueryPromise = db.collection(`teachers/${student.tId}/groups/${student.gId}/payments`)
+                                      .where('month', '==', currentMonth)
+                                      .limit(1)
+                                      .get();
+
+            const [tDoc, attSnap, assSnap, payQuerySnap] = await Promise.all([
+                db.collection('teachers').doc(student.tId).get(),
+                db.collection(`teachers/${student.tId}/groups/${student.gId}/dailyAttendance`).limit(30).get(),
+                db.collection(`teachers/${student.tId}/groups/${student.gId}/assignments`).orderBy('date', 'desc').limit(20).get(),
+                payQueryPromise
+            ]);
+
             let tName = "مدرس", subName = "مادة";
-            try {
-                const tDoc = await db.collection('teachers').doc(student.tId).get();
-                if(tDoc.exists) { tName = tDoc.data().name; subName = tDoc.data().subject || "عام"; }
-            } catch(e) {}
+            if(tDoc.exists) { tName = tDoc.data().name; subName = tDoc.data().subject || "عام"; }
 
-            let attPerc = 0;
-            try {
-                const attSnap = await db.collection(`teachers/${student.tId}/groups/${student.gId}/dailyAttendance`).limit(20).get();
-                let totalDays=0, presentDays=0;
-                attSnap.forEach(d => {
-                    const r = d.data().records?.find(x => x.studentId === student.sId);
-                    if(r) { totalDays++; if(r.status==='present') presentDays++; }
-                });
-                attPerc = totalDays > 0 ? Math.round((presentDays/totalDays)*100) : 0;
-            } catch(e){}
+            let totalDays=0, presentDays=0;
+            attSnap.forEach(d => {
+                const r = d.data().records?.find(x => x.studentId === student.sId);
+                if(r) { totalDays++; if(r.status==='present') presentDays++; }
+            });
+            const attPerc = totalDays > 0 ? Math.round((presentDays/totalDays)*100) : 0;
 
+            // ✅ منطق آخر امتحان (ليس واجب - يعتمد على الاسم)
             let lastGrade = '--';
-            try {
-                const assSnap = await db.collection(`teachers/${student.tId}/groups/${student.gId}/assignments`).orderBy('date', 'desc').limit(1).get();
-                if(!assSnap.empty) {
-                    const score = assSnap.docs[0].data().scores?.[student.sId];
-                    if(score) lastGrade = score.score || (score.submitted ? '✅' : '❌');
+            if(!assSnap.empty) {
+                for (const doc of assSnap.docs) {
+                    const d = doc.data();
+                    const name = d.name || "";
+                    // شرط: ليس واجب (Homework/واجب) وله درجة
+                    if (!name.match(/^Homework/i) && !name.match(/^واجب/i)) {
+                        const sc = d.scores?.[student.sId];
+                        if (sc && sc.score !== null && sc.score !== undefined && sc.score !== "") {
+                            lastGrade = sc.score;
+                            break; 
+                        }
+                    }
                 }
-            } catch(e){}
+            }
 
+            // ✅ حالة الدفع من الـ Query
             let isPaid = false;
-            try {
-                const currentMonth = new Date().toISOString().slice(0, 7);
-                const payDoc = await db.collection(`teachers/${student.tId}/groups/${student.gId}/payments`).doc(`${student.gId}_PAY_${currentMonth}`).get();
-                if(payDoc.exists) {
-                    const r = payDoc.data().records?.find(x => x.studentId === student.sId);
-                    if(r && r.paid) isPaid = true;
-                }
-            } catch(e){}
+            if(!payQuerySnap.empty) {
+                const payDoc = payQuerySnap.docs[0];
+                const r = payDoc.data().records?.find(x => x.studentId === student.sId);
+                if(r && r.paid) isPaid = true;
+            }
 
-            // نفس كود الـ HTML الخاص بالتصميم الجديد
             return `
             <div class="spot-card p-5 cursor-pointer group relative overflow-hidden" onclick="openDetails('${student.tId}', '${student.gId}', '${student.sId}', '${tName}', '${subName}')">
                 <div class="absolute -right-5 -top-5 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition"></div>
@@ -473,7 +485,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3 mt-2 border-t border-gray-100 dark:border-white/5 pt-3">
                     <div><p class="text-[10px] text-gray-400 font-bold">نسبة الحضور</p><p class="text-lg font-black ${attPerc>85?'text-green-500':'text-primary'}">${attPerc}%</p></div>
-                    <div><p class="text-[10px] text-gray-400 font-bold">آخر تقييم</p><p class="text-lg font-black text-gray-900 dark:text-white">${lastGrade}</p></div>
+                    <div><p class="text-[10px] text-gray-400 font-bold">آخر امتحان</p><p class="text-lg font-black text-gray-900 dark:text-white">${lastGrade}</p></div>
                 </div>
             </div>`;
         }
@@ -486,74 +498,111 @@
             modal.classList.remove('opacity-0', 'pointer-events-none');
             cont.classList.remove('translate-y-full');
 
-            const attList = document.getElementById('modalAttendanceList');
-            const grList = document.getElementById('modalGradesList');
-            const payList = document.getElementById('modalPaymentsList');
+            document.getElementById('modalAttendanceList').innerHTML = '<div class="loader w-8 h-8 border-4 border-gray-700 border-t-primary rounded-full mx-auto my-4"></div>';
+            document.getElementById('modalGradesList').innerHTML = '';
+            document.getElementById('modalHomeworkList').innerHTML = '';
+            document.getElementById('modalPaymentsList').innerHTML = '';
+            document.getElementById('todayScheduleContainer').classList.add('hidden');
             
-            if(attList) attList.innerHTML = '<div class="loader w-8 h-8 border-4 border-gray-700 border-t-primary rounded-full mx-auto my-4"></div>';
-            if(grList) grList.innerHTML = '';
-            if(payList) payList.innerHTML = '';
             switchTab('home');
 
-            try {
-                const attSnap = await db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(20).get();
-                let attHtml = '', total=0, present=0;
-                attSnap.forEach(d => {
-                    const r = d.data().records?.find(x => x.studentId === sId);
-                    if(r) {
-                        total++; if(r.status==='present') present++;
-                        let col = r.status==='present'?'bg-green-500':(r.status==='absent'?'bg-red-500':'bg-yellow-500');
-                        let txt = r.status==='present'?'حاضر':(r.status==='absent'?'غائب':'تأخير');
-                        let txtCol = r.status==='present'?'text-green-500':(r.status==='absent'?'text-red-500':'text-yellow-500');
-                        attHtml += `<div class="relative pl-6 pb-8 last:pb-0 border-l-2 border-gray-200 dark:border-white/10 last:border-0"><div class="absolute -right-[7px] top-0 w-3.5 h-3.5 rounded-full ${col} ring-4 ring-white dark:ring-darkBg z-10"></div><div class="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5"><span class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.data().date}</span><span class="text-xs font-bold px-2 py-0.5 rounded bg-black/5 dark:bg-white/10 ${txtCol}">${txt}</span></div></div>`;
-                    }
-                });
-                if(attList) attList.innerHTML = attHtml || '<p class="text-center text-gray-500">لا يوجد سجل</p>';
-                document.getElementById('modalAttPerc').innerText = total>0 ? Math.round((present/total)*100)+'%' : '0%';
+            const [attSnap, assSnap, paySnap, schedSnap] = await Promise.all([
+                db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(20).get(),
+                db.collection(`teachers/${tId}/groups/${gId}/assignments`).orderBy('date', 'desc').limit(30).get(),
+                db.collection(`teachers/${tId}/groups/${gId}/payments`).limit(12).get(),
+                db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get()
+            ]);
 
-                const grSnap = await db.collection(`teachers/${tId}/groups/${gId}/assignments`).limit(20).orderBy('date', 'desc').get();
-                let grHtml = '', lastG='--';
-                if(!grSnap.empty) {
-                    grSnap.forEach((doc, idx) => {
-                        const d = doc.data();
-                        const s = d.scores?.[sId];
-                        let scoreDisp='--', stCol='border-gray-500', stTxt='لم يسلم', stBg='bg-gray-500/10 text-gray-500';
-                        if(s) {
-                            if(s.score) { scoreDisp=s.score; stCol='border-primary'; stTxt='تم الرصد'; stBg='bg-primary/10 text-primary'; if(idx===0) lastG=s.score; }
-                            else if(s.submitted) { scoreDisp='<i class="ri-check-line"></i>'; stCol='border-green-500'; stTxt='تم التسليم'; stBg='bg-green-500/10 text-green-500'; }
-                            else { stCol='border-red-500'; stTxt='غائب'; stBg='bg-red-500/10 text-red-500'; }
-                        } else { stCol='border-red-500'; stTxt='لم يسلم'; stBg='bg-red-500/10 text-red-500'; }
-                        grHtml += `<div class="spot-card p-4 flex justify-between items-center border-l-4 ${stCol}"><div><h4 class="font-bold text-sm text-gray-900 dark:text-white mb-1">${d.name}</h4><span class="text-[10px] ${stBg} px-2 py-0.5 rounded font-bold">${stTxt}</span></div><div class="text-center min-w-[50px]"><span class="block text-xl font-black text-gray-900 dark:text-white">${scoreDisp}</span><span class="text-[9px] text-gray-400">الدرجة</span></div></div>`;
-                    });
+            // 1. الجدول
+            const todayIndex = new Date().getDay();
+            let todayClass = null;
+            schedSnap.forEach(doc => {
+                const s = doc.data();
+                if(s.days && s.days.includes(todayIndex)) todayClass = s.time;
+            });
+            if(todayClass) {
+                document.getElementById('todayScheduleContainer').classList.remove('hidden');
+                const [h, m] = todayClass.split(':');
+                const hour = parseInt(h);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const h12 = hour % 12 || 12;
+                document.getElementById('todayClassTime').innerText = `${h12}:${m} ${ampm}`;
+            }
+
+            // 2. الحضور
+            let attHtml = '', total=0, present=0;
+            attSnap.forEach(d => {
+                const r = d.data().records?.find(x => x.studentId === sId);
+                if(r) {
+                    total++; if(r.status==='present') present++;
+                    let col = r.status==='present'?'bg-green-500':(r.status==='absent'?'bg-red-500':'bg-yellow-500');
+                    let txt = r.status==='present'?'حاضر':(r.status==='absent'?'غائب':'تأخير');
+                    let txtCol = r.status==='present'?'text-green-500':(r.status==='absent'?'text-red-500':'text-yellow-500');
+                    attHtml += `<div class="relative pl-6 pb-8 last:pb-0 border-l-2 border-gray-200 dark:border-white/10 last:border-0"><div class="absolute -right-[7px] top-0 w-3.5 h-3.5 rounded-full ${col} ring-4 ring-white dark:ring-darkBg z-10"></div><div class="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5"><span class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.data().date}</span><span class="text-xs font-bold px-2 py-0.5 rounded bg-black/5 dark:bg-white/10 ${txtCol}">${txt}</span></div></div>`;
                 }
-                if(grList) grList.innerHTML = grHtml || '<p class="text-center text-gray-500">لا توجد درجات</p>';
-                document.getElementById('modalLastGrade').innerText = lastG;
+            });
+            document.getElementById('modalAttendanceList').innerHTML = attHtml || '<p class="text-center text-gray-500">لا يوجد سجل</p>';
+            document.getElementById('modalAttPerc').innerText = total>0 ? Math.round((present/total)*100)+'%' : '0%';
 
-                const paySnap = await db.collection(`teachers/${tId}/groups/${gId}/payments`).limit(12).get();
-                let payHtml = '';
-                const currM = new Date().toISOString().slice(0, 7);
-                let currStatus = 'غير مدفوع', currClass = 'bg-red-500 border-red-500 text-white';
-                paySnap.forEach(d => {
-                    const m = d.data().month;
-                    const r = d.data().records?.find(x => x.studentId === sId);
-                    const p = r && r.paid;
-                    if(m===currM) { 
-                        if(p) { currStatus='تم الدفع ✅'; currClass='bg-green-500 border-green-500 text-white'; }
-                        else { currStatus='مطلوب سداد ⚠️'; currClass='bg-red-500 border-red-500 text-white'; }
+            // 3. المنطق الجديد: فصل الواجبات عن الامتحانات بالاسم
+            let grHtml = '', hwHtml = '', lastG = '--';
+            
+            assSnap.forEach(doc => {
+                const d = doc.data();
+                const s = d.scores?.[sId];
+                const name = d.name || "";
+                
+                if(s) {
+                    // هل الاسم يبدأ بـ Homework أو واجب؟
+                    if (name.match(/^Homework/i) || name.match(/^واجب/i)) {
+                        const isSub = s.submitted;
+                        hwHtml += `
+                        <div class="spot-card p-4 flex justify-between items-center border-r-4 ${isSub?'border-green-500':'border-red-500'}">
+                            <div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${name}</h4><span class="text-[10px] text-gray-400">${d.date}</span></div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold ${isSub?'text-green-500':'text-red-500'}">${isSub?'تم التسليم':'لم يتم'}</span>
+                                <div class="w-8 h-8 rounded-full ${isSub?'bg-green-100 text-green-600':'bg-red-100 text-red-600'} flex items-center justify-center"><i class="${isSub?'ri-check-line':'ri-close-line'}"></i></div>
+                            </div>
+                        </div>`;
+                    } 
+                    // غير ذلك -> امتحان
+                    else {
+                        if(lastG === '--') lastG = s.score || (s.submitted ? s.score : 'غائب');
+                        grHtml += `
+                        <div class="spot-card p-4 flex justify-between items-center border-l-4 border-primary">
+                            <div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${name}</h4><span class="text-[10px] text-gray-400">${d.date}</span></div>
+                            <div class="text-center"><span class="block text-xl font-black text-gray-900 dark:text-white">${s.score||(s.submitted?'<i class="ri-check-line"></i>':'--')}</span><span class="text-[9px] text-gray-400">الدرجة</span></div>
+                        </div>`;
                     }
-                    payHtml += `<div class="flex justify-between items-center p-4 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${p?'bg-green-500/20 text-green-500':'bg-red-500/20 text-red-500'} flex items-center justify-center"><i class="${p?'ri-checkbox-circle-fill':'ri-close-circle-fill'} text-lg"></i></div><span class="font-bold text-sm text-gray-800 dark:text-gray-200">${m}</span></div><span class="text-xs font-bold ${p?'text-green-500':'text-red-500'}">${p?(r.amount+' ج.م'):'غير مدفوع'}</span></div>`;
-                });
-                if(payList) payList.innerHTML = payHtml;
-                document.getElementById('currentMonthName').innerText = currM;
-                const statusBadge = document.getElementById('currentMonthStatus');
-                statusBadge.innerText = currStatus;
-                statusBadge.className = `px-3 py-1.5 rounded-lg text-xs font-bold border ${currClass}`;
-                document.getElementById('paymentStatusBanner').className = `spot-card p-6 flex items-center justify-between border-r-4 ${currStatus.includes('الدفع')?'border-green-500':'border-red-500'}`;
+                }
+            });
+            document.getElementById('modalGradesList').innerHTML = grHtml || '<p class="text-center text-gray-500 py-4">لا توجد امتحانات</p>';
+            document.getElementById('modalHomeworkList').innerHTML = hwHtml || '<p class="text-center text-gray-500 py-4">لا توجد واجبات</p>';
+            document.getElementById('modalLastGrade').innerHTML = lastG;
 
-            } catch(e) { console.error(e); }
+            // 4. المدفوعات
+            let payHtml = '';
+            const currM = new Date().toISOString().slice(0, 7);
+            let currStatus = 'غير مدفوع', currClass = 'bg-red-500 border-red-500 text-white';
+            
+            paySnap.forEach(d => {
+                const m = d.data().month;
+                const r = d.data().records?.find(x => x.studentId === sId);
+                const p = r && r.paid;
+                if(m===currM) { 
+                    if(p) { currStatus='تم الدفع ✅'; currClass='bg-green-500 border-green-500 text-white'; }
+                    else { currStatus='مطلوب سداد ⚠️'; currClass='bg-red-500 border-red-500 text-white'; }
+                }
+                payHtml += `<div class="flex justify-between items-center p-4 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${p?'bg-green-500/20 text-green-500':'bg-red-500/20 text-red-500'} flex items-center justify-center"><i class="${p?'ri-checkbox-circle-fill':'ri-close-circle-fill'} text-lg"></i></div><span class="font-bold text-sm text-gray-800 dark:text-gray-200">${m}</span></div><span class="text-xs font-bold ${p?'text-green-500':'text-red-500'}">${p?(r.amount+' ج.م'):'غير مدفوع'}</span></div>`;
+            });
+            document.getElementById('modalPaymentsList').innerHTML = payHtml;
+            document.getElementById('currentMonthName').innerText = currM;
+            const statusBadge = document.getElementById('currentMonthStatus');
+            statusBadge.innerText = currStatus;
+            statusBadge.className = `px-3 py-1.5 rounded-lg text-xs font-bold border ${currClass}`;
+            document.getElementById('paymentStatusBanner').className = `spot-card p-6 flex items-center justify-between border-r-4 ${currStatus.includes('الدفع')?'border-green-500':'border-red-500'}`;
         }
 
-        // ✅ IMPORTANT: Correct Close Function
         function closeDetails() {
             document.getElementById('modalContainer').classList.add('translate-y-full');
             setTimeout(() => {
@@ -561,7 +610,6 @@
             }, 300);
         }
 
-        // ✅ إصلاح دالة تفعيل الإشعارات وتحديث توكن الطلاب
         async function requestPermission() {
             if(!messaging) return alert("غير مدعوم");
             try {
@@ -569,17 +617,11 @@
                     const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
                     const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", serviceWorkerRegistration: reg });
                     if(currentParentPhone) {
-                        // حفظ في collection الآباء
                         await db.collection('parents').doc(currentParentPhone).set({ fcmToken: token }, { merge: true });
-                        
-                        // ✅ تحديث التوكن في جميع مستندات الطلاب المرتبطة بهذا الرقم
                         const snapshot = await db.collectionGroup('students').where('parentPhoneNumber', '==', currentParentPhone).get();
                         const batch = db.batch();
-                        snapshot.docs.forEach(doc => {
-                            batch.update(doc.ref, { parentFcmToken: token });
-                        });
+                        snapshot.docs.forEach(doc => { batch.update(doc.ref, { parentFcmToken: token }); });
                         await batch.commit();
-
                         document.getElementById('notifyBanner').classList.add('hidden');
                         alert("تم التفعيل بنجاح ✅");
                     }
