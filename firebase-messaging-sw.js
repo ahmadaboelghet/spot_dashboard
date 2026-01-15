@@ -13,15 +13,19 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// التعامل مع الإشعارات في الخلفية
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/assets/images/learnaria_logo.png' // تأكد من المسار
-  };
+/**
+ * ⚠️ تم تعديل هذا الجزء لحل مشكلة تكرار الإشعارات
+ * السبب: السيرفر يرسل payload يحتوي على "notification"، مما يجعل المتصفح يعرض الإشعار تلقائياً.
+ * الكود القديم هنا كان يقوم بإنشاء إشعار ثاني يدوياً.
+ */
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
+// تم إيقاف المعالجة اليدوية لمنع التكرار
+// messaging.onBackgroundMessage((payload) => {
+//   console.log('[firebase-messaging-sw.js] Received background message ', payload);
+//   // const notificationTitle = payload.notification.title;
+//   // const notificationOptions = {
+//   //   body: payload.notification.body,
+//   //   icon: '/assets/images/learnaria_logo.png'
+//   // };
+//   // self.registration.showNotification(notificationTitle, notificationOptions);
+// });
