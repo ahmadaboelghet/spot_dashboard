@@ -190,13 +190,17 @@
                     <h2 id="headerGuardianText" class="text-2xl font-black leading-tight text-gray-900 dark:text-white font-cairo">...</h2>
                 </div>
             </div>
-            <button type="button" onclick="requestPermission()" id="notifyBanner" class="hidden w-full text-right cursor-pointer relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-center gap-4 transition-transform active:scale-95 z-20">
-    <div class="w-10 h-10 bg-primary text-black rounded-full flex items-center justify-center shadow-glow animate-pulse shrink-0">
-        <i class="ri-notification-3-fill"></i>
+  <button type="button" onclick="requestPermission()" id="notifyBanner" class="hidden w-full text-right cursor-pointer relative overflow-hidden rounded-[2rem] border border-primary/30 bg-primary/5 p-6 flex items-center gap-5 transition-all duration-200 active:scale-95 hover:shadow-md z-20 group">
+    
+    <div class="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    
+    <div class="w-14 h-14 bg-primary text-black rounded-full flex items-center justify-center shadow-glow animate-pulse shrink-0 border-4 border-white dark:border-darkCard z-10">
+        <i class="ri-notification-3-fill text-2xl"></i>
     </div>
-    <div>
-        <h3 class="font-bold text-sm text-gray-900 dark:text-white">تفعيل التنبيهات</h3>
-        <p class="text-[10px] text-gray-500 dark:text-gray-400">اضغط هنا لاستلام إشعارات الغياب والدرجات</p>
+    
+    <div class="flex-1 z-10">
+        <h3 class="font-black text-xl text-gray-900 dark:text-white font-cairo mb-1">تفعيل التنبيهات</h3>
+        <p class="text-sm font-bold text-gray-500 dark:text-gray-400">اضغط هنا ليصلك إشعار الغياب والدرجات فوراً</p>
     </div>
 </button>
             <div>
