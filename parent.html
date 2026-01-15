@@ -95,20 +95,20 @@
         }
 
         .glass-header {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(0,0,0,0.05);
             box-shadow: 0 4px 20px rgba(0,0,0,0.03);
         }
         .dark-mode .glass-header {
-            background: rgba(30, 30, 30, 0.85);
+            background: rgba(30, 30, 30, 0.9);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .tab-container { background-color: #F3F4F6; border-radius: 16px; padding: 4px; }
         .dark-mode .tab-container { background-color: rgba(255, 255, 255, 0.05); }
-        .tab-btn { transition: all 0.3s; color: #6B7280; font-weight: 500; }
+        .tab-btn { transition: all 0.3s; color: #6B7280; font-weight: 500; font-size: 0.75rem; }
         .dark-mode .tab-btn { color: #9CA3AF; }
         .tab-btn.active {
             background-color: #F2CE5A !important;
@@ -232,11 +232,11 @@
                         </button>
                     </div>
 
-                    <div class="tab-container flex mt-8">
+                    <div class="tab-container flex mt-6 gap-1">
                         <button onclick="switchTab('home')" class="tab-btn active flex-1 py-3 text-xs rounded-xl" id="btn-home">ملخص</button>
                         <button onclick="switchTab('homework')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-homework">الواجب</button>
                         <button onclick="switchTab('grades')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-grades">الدرجات</button>
-                        <button onclick="switchTab('payments')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-payments">المصاريف</button>
+                        <button onclick="switchTab('payments')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-payments">مصاريف</button>
                     </div>
                 </div>
 
@@ -330,7 +330,7 @@
 
         if (urlP) {
             currentParentPhone = urlP;
-            loadApp();
+            loadAppRealtime();
         } else {
             document.getElementById('loginSection').classList.remove('hidden');
         }
@@ -340,7 +340,7 @@
             if (phone.length < 10) return alert("رقم غير صحيح");
             currentParentPhone = phone;
             document.getElementById('loginSection').classList.add('hidden');
-            loadApp(); 
+            loadAppRealtime(); 
         }
 
         function logout() { 
@@ -368,25 +368,30 @@
             document.getElementById(`btn-${tab}`).classList.add('active');
         }
 
-        function loadApp() {
+        function loadAppRealtime() {
             document.getElementById('loadingScreen').classList.remove('hidden');
             
+            // ✅ الاستخدام الصحيح: onSnapshot للتحديث اللحظي
             unsubscribeStudents = db.collectionGroup('students')
                 .where('parentPhoneNumber', '==', currentParentPhone)
                 .onSnapshot(async (snapshot) => {
                     if (snapshot.empty) { 
-                        alert("لم يتم العثور على بيانات"); 
                         document.getElementById('loadingScreen').classList.add('hidden');
-                        document.getElementById('loginSection').classList.remove('hidden');
+                        // لا نظهر رسالة خطأ إذا كان هناك محتوى سابقاً (تجنب الوميض)
+                        if(!document.getElementById('coursesList').hasChildNodes()) {
+                            alert("لم يتم العثور على بيانات"); 
+                            document.getElementById('loginSection').classList.remove('hidden');
+                        }
                         return; 
                     }
 
                     document.getElementById('dashboardSection').classList.remove('hidden');
                     const coursesContainer = document.getElementById('coursesList');
-                    coursesContainer.innerHTML = '';
+                    coursesContainer.innerHTML = ''; // تنظيف القائمة
+                    
                     let studentNames = new Set();
-
-                    const promises = snapshot.docs.map(async (doc) => {
+                    
+                    const renderPromises = snapshot.docs.map(async (doc) => {
                         const sData = doc.data();
                         studentNames.add(sData.name.split(' ')[0]);
                         const path = doc.ref.path.split('/');
@@ -396,28 +401,30 @@
                             gId: path[3],
                             name: sData.name
                         };
-                        return await createStudentCard(studentObj);
+                        return await createStudentCardHTML(studentObj);
                     });
 
-                    const cardsHTML = await Promise.all(promises);
+                    const cardsHTML = await Promise.all(renderPromises);
                     coursesContainer.innerHTML = cardsHTML.join('');
-                    
+
                     if(studentNames.size > 0) document.getElementById('headerGuardianText').innerHTML = `ولي أمر الطالب <span class="text-primary">${Array.from(studentNames).join('، ')}</span>`;
                     
                     if(Notification.permission !== 'granted') document.getElementById('notifyBanner').classList.remove('hidden');
+                    else document.getElementById('notifyBanner').classList.add('hidden');
+
                     document.getElementById('loadingScreen').classList.add('hidden');
 
                 }, (error) => {
-                    console.error("Error:", error);
+                    console.error("Error fetching data:", error);
                     document.getElementById('loadingScreen').classList.add('hidden');
                 });
         }
 
-        async function createStudentCard(student) {
+        async function createStudentCardHTML(student) {
+            // ✅ البحث الدقيق عن حالة دفع الشهر الحالي
             const date = new Date();
             const currentMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
             
-            // Query for payment using WHERE clause
             const payQueryPromise = db.collection(`teachers/${student.tId}/groups/${student.gId}/payments`)
                                       .where('month', '==', currentMonth)
                                       .limit(1)
@@ -426,7 +433,7 @@
             const [tDoc, attSnap, assSnap, payQuerySnap] = await Promise.all([
                 db.collection('teachers').doc(student.tId).get(),
                 db.collection(`teachers/${student.tId}/groups/${student.gId}/dailyAttendance`).limit(30).get(),
-                db.collection(`teachers/${student.tId}/groups/${student.gId}/assignments`).orderBy('date', 'desc').limit(20).get(),
+                db.collection(`teachers/${student.tId}/groups/${student.gId}/assignments`).orderBy('date', 'desc').limit(15).get(),
                 payQueryPromise
             ]);
 
@@ -440,19 +447,21 @@
             });
             const attPerc = totalDays > 0 ? Math.round((presentDays/totalDays)*100) : 0;
 
-            // ✅ منطق آخر امتحان (ليس واجب - يعتمد على الاسم)
+            // ✅ منطق آخر امتحان (ليس واجب)
             let lastGrade = '--';
             if(!assSnap.empty) {
                 for (const doc of assSnap.docs) {
                     const d = doc.data();
+                    const sc = d.scores?.[student.sId];
                     const name = d.name || "";
-                    // شرط: ليس واجب (Homework/واجب) وله درجة
-                    if (!name.match(/^Homework/i) && !name.match(/^واجب/i)) {
-                        const sc = d.scores?.[student.sId];
-                        if (sc && sc.score !== null && sc.score !== undefined && sc.score !== "") {
-                            lastGrade = sc.score;
-                            break; 
-                        }
+                    const type = d.type || "";
+                    
+                    // استبعاد الواجبات (بالاسم أو النوع)
+                    const isHomework = type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
+                    
+                    if (!isHomework && sc && sc.score !== null && sc.score !== undefined && sc.score !== "") {
+                        lastGrade = sc.score;
+                        break; 
                     }
                 }
             }
@@ -470,12 +479,12 @@
                 <div class="absolute -right-5 -top-5 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition"></div>
                 <div class="flex justify-between items-start mb-5 relative z-10">
                     <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/5 flex items-center justify-center shadow-inner">
-                            <span class="text-2xl font-black text-primary">${subName.charAt(0)}</span>
+                        <div class="w-12 h-12 rounded-xl bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/5 flex items-center justify-center shadow-inner">
+                            <span class="text-xl font-black text-primary">${subName.charAt(0)}</span>
                         </div>
                         <div>
-                            <h3 class="text-xl font-black text-gray-900 dark:text-white leading-tight mb-1" style="font-family: 'Cairo', sans-serif;">${subName}</h3>
-                            <div class="flex items-center gap-2"><i class="ri-user-line text-xs text-primary"></i><p class="text-xs text-gray-500 dark:text-gray-400 font-bold">${tName}</p></div>
+                            <h3 class="text-lg font-black font-cairo leading-tight text-gray-900 dark:text-white">${subName}</h3>
+                            <p class="text-[10px] text-gray-500 font-bold">${tName}</p>
                         </div>
                     </div>
                     <div class="flex flex-col items-end gap-1">
@@ -497,14 +506,21 @@
             const cont = document.getElementById('modalContainer');
             modal.classList.remove('opacity-0', 'pointer-events-none');
             cont.classList.remove('translate-y-full');
+            document.getElementById('modalBackdrop').classList.remove('hidden');
 
-            document.getElementById('modalAttendanceList').innerHTML = '<div class="loader w-8 h-8 border-4 border-gray-700 border-t-primary rounded-full mx-auto my-4"></div>';
-            document.getElementById('modalGradesList').innerHTML = '';
-            document.getElementById('modalHomeworkList').innerHTML = '';
-            document.getElementById('modalPaymentsList').innerHTML = '';
-            document.getElementById('todayScheduleContainer').classList.add('hidden');
-            
             switchTab('home');
+            loadDetailsData(tId, gId, sId);
+        }
+
+        async function loadDetailsData(tId, gId, sId) {
+            const attList = document.getElementById('modalAttendanceList');
+            const grList = document.getElementById('modalGradesList');
+            const hwList = document.getElementById('modalHomeworkList');
+            const payList = document.getElementById('modalPaymentsList');
+            
+            attList.innerHTML = '<div class="loader w-6 h-6 border-2 border-gray-500 border-t-primary rounded-full mx-auto my-2"></div>';
+            grList.innerHTML = ''; hwList.innerHTML = ''; payList.innerHTML = '';
+            document.getElementById('todayScheduleContainer').classList.add('hidden');
 
             const [attSnap, assSnap, paySnap, schedSnap] = await Promise.all([
                 db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(20).get(),
@@ -541,66 +557,73 @@
                     attHtml += `<div class="relative pl-6 pb-8 last:pb-0 border-l-2 border-gray-200 dark:border-white/10 last:border-0"><div class="absolute -right-[7px] top-0 w-3.5 h-3.5 rounded-full ${col} ring-4 ring-white dark:ring-darkBg z-10"></div><div class="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5"><span class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.data().date}</span><span class="text-xs font-bold px-2 py-0.5 rounded bg-black/5 dark:bg-white/10 ${txtCol}">${txt}</span></div></div>`;
                 }
             });
-            document.getElementById('modalAttendanceList').innerHTML = attHtml || '<p class="text-center text-gray-500">لا يوجد سجل</p>';
+            document.getElementById('modalAttendanceList').innerHTML = attHtml || '<p class="text-center text-gray-500 text-xs">لا يوجد سجل</p>';
             document.getElementById('modalAttPerc').innerText = total>0 ? Math.round((present/total)*100)+'%' : '0%';
 
-            // 3. المنطق الجديد: فصل الواجبات عن الامتحانات بالاسم
-            let grHtml = '', hwHtml = '', lastG = '--';
+            // 3. المنطق الجديد: فصل الواجبات عن الامتحانات بالاسم والنوع
+            let gradesHtml = '', homeworkHtml = '', lastG = '--';
             
             assSnap.forEach(doc => {
                 const d = doc.data();
                 const s = d.scores?.[sId];
                 const name = d.name || "";
+                const type = d.type || "";
                 
                 if(s) {
-                    // هل الاسم يبدأ بـ Homework أو واجب؟
-                    if (name.match(/^Homework/i) || name.match(/^واجب/i)) {
-                        const isSub = s.submitted;
-                        hwHtml += `
-                        <div class="spot-card p-4 flex justify-between items-center border-r-4 ${isSub?'border-green-500':'border-red-500'}">
+                    // هل هو واجب؟ (نوع daily أو اسمه يبدأ بـ Homework/واجب)
+                    const isHomework = type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
+
+                    if (isHomework) {
+                        const isSubmitted = s.submitted;
+                        homeworkHtml += `
+                        <div class="spot-card p-4 flex justify-between items-center border-r-4 ${isSubmitted ? 'border-green-500' : 'border-red-500'}">
                             <div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${name}</h4><span class="text-[10px] text-gray-400">${d.date}</span></div>
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold ${isSub?'text-green-500':'text-red-500'}">${isSub?'تم التسليم':'لم يتم'}</span>
-                                <div class="w-8 h-8 rounded-full ${isSub?'bg-green-100 text-green-600':'bg-red-100 text-red-600'} flex items-center justify-center"><i class="${isSub?'ri-check-line':'ri-close-line'}"></i></div>
+                                <span class="text-xs font-bold ${isSubmitted ? 'text-green-500' : 'text-red-500'}">${isSubmitted ? 'تم التسليم' : 'لم يتم'}</span>
+                                <div class="w-8 h-8 rounded-full ${isSubmitted ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} flex items-center justify-center"><i class="${isSubmitted ? 'ri-check-line' : 'ri-close-line'}"></i></div>
                             </div>
                         </div>`;
                     } 
-                    // غير ذلك -> امتحان
+                    // إذاً هو امتحان (حتى لو درجته مش موجودة هنعرضه)
                     else {
-                        if(lastG === '--') lastG = s.score || (s.submitted ? s.score : 'غائب');
-                        grHtml += `
+                        const displayScore = (s.score !== null && s.score !== undefined && s.score !== "") ? s.score : 'غائب';
+                        if(lastG === '--' && displayScore !== 'غائب') lastG = displayScore;
+                        
+                        gradesHtml += `
                         <div class="spot-card p-4 flex justify-between items-center border-l-4 border-primary">
                             <div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${name}</h4><span class="text-[10px] text-gray-400">${d.date}</span></div>
-                            <div class="text-center"><span class="block text-xl font-black text-gray-900 dark:text-white">${s.score||(s.submitted?'<i class="ri-check-line"></i>':'--')}</span><span class="text-[9px] text-gray-400">الدرجة</span></div>
+                            <div class="text-center"><span class="block text-xl font-black text-gray-900 dark:text-white">${displayScore}</span><span class="text-[9px] text-gray-400">الدرجة</span></div>
                         </div>`;
                     }
                 }
             });
-            document.getElementById('modalGradesList').innerHTML = grHtml || '<p class="text-center text-gray-500 py-4">لا توجد امتحانات</p>';
-            document.getElementById('modalHomeworkList').innerHTML = hwHtml || '<p class="text-center text-gray-500 py-4">لا توجد واجبات</p>';
-            document.getElementById('modalLastGrade').innerHTML = lastG;
+            document.getElementById('modalGradesList').innerHTML = gradesHtml || '<p class="text-center text-gray-500 text-xs py-4">لا توجد امتحانات</p>';
+            document.getElementById('modalHomeworkList').innerHTML = homeworkHtml || '<p class="text-center text-gray-500 text-xs py-4">لا توجد واجبات</p>';
+            document.getElementById('modalLastGrade').innerText = lastG;
 
             // 4. المدفوعات
             let payHtml = '';
             const currM = new Date().toISOString().slice(0, 7);
-            let currStatus = 'غير مدفوع', currClass = 'bg-red-500 border-red-500 text-white';
+            let currSt = 'غير مدفوع', currCls = 'bg-red-500 text-white';
             
             paySnap.forEach(d => {
                 const m = d.data().month;
                 const r = d.data().records?.find(x => x.studentId === sId);
                 const p = r && r.paid;
-                if(m===currM) { 
-                    if(p) { currStatus='تم الدفع ✅'; currClass='bg-green-500 border-green-500 text-white'; }
-                    else { currStatus='مطلوب سداد ⚠️'; currClass='bg-red-500 border-red-500 text-white'; }
+                
+                // التأكد من تحديث حالة الشهر الحالي
+                if(m === currM) {
+                    if(p) { currSt='تم الدفع'; currCls='bg-green-500 text-white'; }
+                    else { currSt='مطلوب سداد'; currCls='bg-red-500 text-white'; }
+                    document.getElementById('currentMonthStatus').innerText = currSt;
+                    document.getElementById('currentMonthStatus').className = `px-3 py-1 rounded-lg text-xs font-bold ${currCls}`;
                 }
-                payHtml += `<div class="flex justify-between items-center p-4 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${p?'bg-green-500/20 text-green-500':'bg-red-500/20 text-red-500'} flex items-center justify-center"><i class="${p?'ri-checkbox-circle-fill':'ri-close-circle-fill'} text-lg"></i></div><span class="font-bold text-sm text-gray-800 dark:text-gray-200">${m}</span></div><span class="text-xs font-bold ${p?'text-green-500':'text-red-500'}">${p?(r.amount+' ج.م'):'غير مدفوع'}</span></div>`;
+
+                payHtml += `<div class="flex justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/5 mb-2"><span class="font-bold text-sm text-gray-800 dark:text-gray-200">${m}</span><span class="text-xs font-bold ${p?'text-green-500':'text-red-500'}">${p?(r.amount+' ج.م'):'غير مدفوع'}</span></div>`;
             });
             document.getElementById('modalPaymentsList').innerHTML = payHtml;
             document.getElementById('currentMonthName').innerText = currM;
-            const statusBadge = document.getElementById('currentMonthStatus');
-            statusBadge.innerText = currStatus;
-            statusBadge.className = `px-3 py-1.5 rounded-lg text-xs font-bold border ${currClass}`;
-            document.getElementById('paymentStatusBanner').className = `spot-card p-6 flex items-center justify-between border-r-4 ${currStatus.includes('الدفع')?'border-green-500':'border-red-500'}`;
+            document.getElementById('paymentStatusBanner').className = `spot-card p-6 flex items-center justify-between border-r-4 ${currSt.includes('الدفع')?'border-green-500':'border-red-500'}`;
         }
 
         function closeDetails() {
@@ -611,22 +634,30 @@
         }
 
         async function requestPermission() {
-            if(!messaging) return alert("غير مدعوم");
+            if (!messaging) return alert("المتصفح لا يدعم التنبيهات");
+            const banner = document.getElementById('notifyBanner');
             try {
-                if((await Notification.requestPermission()) === 'granted') {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
                     const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-                    const token = await messaging.getToken({ vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", serviceWorkerRegistration: reg });
-                    if(currentParentPhone) {
+                    const token = await messaging.getToken({ 
+                        vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
+                        serviceWorkerRegistration: reg 
+                    });
+                    
+                    if (token) {
                         await db.collection('parents').doc(currentParentPhone).set({ fcmToken: token }, { merge: true });
                         const snapshot = await db.collectionGroup('students').where('parentPhoneNumber', '==', currentParentPhone).get();
                         const batch = db.batch();
-                        snapshot.docs.forEach(doc => { batch.update(doc.ref, { parentFcmToken: token }); });
+                        snapshot.docs.forEach(doc => {
+                            batch.update(doc.ref, { parentFcmToken: token });
+                        });
                         await batch.commit();
-                        document.getElementById('notifyBanner').classList.add('hidden');
-                        alert("تم التفعيل بنجاح ✅");
+                        alert("تم تفعيل التنبيهات بنجاح ✅");
+                        banner.classList.add('hidden');
                     }
                 }
-            } catch(e) { console.error(e); }
+            } catch (error) { console.error("Permission Error:", error); }
         }
     </script>
 </body>

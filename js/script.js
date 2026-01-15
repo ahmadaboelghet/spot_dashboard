@@ -1,7 +1,9 @@
 /**
  * SPOT TEACHER - FINAL INTEGRATED VERSION
  * Features: Smart Login + Parent Link + Unified Payments + Mirror Fix + Messages + Sync Fix + Fail-Safe Loading + Auto-Switch + UI Protection
- * FIX: Disable Add Student Inputs until Group is Selected
+ * FIXES: 
+ * 1. Exams now include a DATE field so they appear in Parent App.
+ * 2. Daily Homework saves score as NULL to be distinguished from Exams.
  */
 
 // ==========================================
@@ -1053,33 +1055,24 @@ async function saveDailyData() {
     const date = document.getElementById('dailyDateInput').value;
     const attRecords = [];
     const hwScores = {};
-    
     document.querySelectorAll('#dailyStudentsList > div').forEach(row => {
         const sid = row.dataset.sid;
-        // حفظ الحضور
         attRecords.push({ studentId: sid, status: row.querySelector('.att-select').value });
-        
-        // حفظ الواجب (بدون درجات، فقط تسليم)
+        // ✅ FIX: Score is null for daily homework, only submitted status
         if(hasHomeworkToday) {
-            const isChecked = row.querySelector('.hw-check').checked;
             hwScores[sid] = { 
-                submitted: isChecked, 
-                score: null // ✅ تعديل هام: لا توجد درجة للواجب اليومي
+                submitted: row.querySelector('.hw-check').checked, 
+                score: null 
             };
         }
     });
-
-    // حفظ الحضور
     await putToDB('attendance', { id: `${SELECTED_GROUP_ID}_${date}`, date, records: attRecords });
     await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`, data: { date, records: attRecords } });
-
-    // حفظ الواجب
     if(hasHomeworkToday) {
         const hwData = { id: `${SELECTED_GROUP_ID}_HW_${date}`, groupId: SELECTED_GROUP_ID, name: `واجب ${date}`, date, scores: hwScores, type: 'daily' };
         await putToDB('assignments', hwData);
         await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwData.id}`, data: hwData });
     }
-
     showToast(translations[currentLang].saved);
     renderDailyList();
 }
@@ -1488,7 +1481,15 @@ async function addNewExam() {
     const name = document.getElementById('newExamName').value;
     if(!name) return;
     const id = generateUniqueId();
-    const data = { id, groupId: SELECTED_GROUP_ID, name, type: 'exam', scores: {} };
+    // ✅ FIX: Saving DATE so it appears in parent app
+    const data = { 
+        id, 
+        groupId: SELECTED_GROUP_ID, 
+        name, 
+        type: 'exam', 
+        scores: {}, 
+        date: new Date().toISOString().slice(0, 10) 
+    }; 
     await putToDB('assignments', data);
     await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`, id, data });
     document.getElementById('newExamName').value = '';
