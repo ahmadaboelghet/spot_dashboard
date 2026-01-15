@@ -550,3 +550,24 @@ html[dir="rtl"] .record-item:hover {
     background-position: left 0.5rem center !important;
     padding-left: 2.5rem !important; /* وسعنا المسافة شوية عشان الكلام ميدخلش في السهم */
 }
+/* ========================================= */
+/* FIX PLACEHOLDER COLORS                    */
+/* ========================================= */
+
+/* لون الـ Placeholder في الوضع الفاتح (رمادي واضح) */
+.input-field::placeholder {
+    color: #6B7280 !important; /* لون رمادي متوسط */
+    opacity: 1; /* لضمان الظهور في فايرفوكس */
+}
+
+/* لون الـ Placeholder في الوضع المظلم (رمادي فاتح عشان يبان ع الخلفية السوداء) */
+.dark-mode .input-field::placeholder {
+    color: #9CA3AF !important; /* لون رمادي فاتح */
+    opacity: 1;
+}
+
+/* حل إضافي لو بتستخدم select */
+select.input-field:invalid,
+.dark-mode select.input-field:invalid {
+    color: #9CA3AF !important;
+}

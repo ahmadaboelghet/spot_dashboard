@@ -263,7 +263,11 @@ const translations = {
         late: "متأخر",
         accountNotRegistered: "هذا الحساب غير مسجل! يرجى التواصل مع الإدارة.",
         offlineFirstLogin: "يجب الاتصال بالإنترنت لتسجيل الدخول لأول مرة",
-        selectGroupFirst: "الرجاء اختيار مجموعة أولاً"
+        selectGroupFirst: "الرجاء اختيار مجموعة أولاً",
+        newStudentPlaceholder: "اسم الطالب",
+        parentPhonePlaceholder: "رقم ولي الأمر",
+        groupNamePlaceholder: "اسم المجموعة",
+        newAssignmentNameLabel: "اسم الامتحان",
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -364,7 +368,11 @@ const translations = {
         late: "Late",
         accountNotRegistered: "Account not registered! Please contact admin.",
         offlineFirstLogin: "Internet connection required for first login",
-        selectGroupFirst: "Please select a group first"
+        selectGroupFirst: "Please select a group first",
+        newStudentPlaceholder: "Student Name",
+        parentPhonePlaceholder: "Parent Phone",
+        groupNamePlaceholder: "Group Name",
+        newAssignmentNameLabel: "Exam Name",
     }
 };
 
@@ -625,6 +633,11 @@ function renderDayCheckboxes() {
 
 async function saveRecurringSchedule() {
     if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
+    const existing = await getAllFromDB('schedules', 'groupId', SELECTED_GROUP_ID);
+    if(existing && existing.length > 0) {
+        showToast("كل مجموعة لها موعد مكرر واحد فقط!", 'error');
+    return;
+    }
     const subject = document.getElementById('recurringSubject').value.trim();
     const location = document.getElementById('recurringLocation').value.trim();
     const time = getTimeFromPicker('recurringTimeContainer');
@@ -809,7 +822,7 @@ async function loginTeacher() {
         }
 
         await loadGroups();
-        switchTab('students');
+        switchTab('daily');
 
     } catch (error) {
         if(error.message !== "Offline first login") {

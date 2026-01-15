@@ -633,31 +633,72 @@
             }, 300);
         }
 
+        // ✅ دالة تفعيل الإشعارات المحسنة للأندرويد
         async function requestPermission() {
-            if (!messaging) return alert("المتصفح لا يدعم التنبيهات");
+            // 1. التحقق من دعم المتصفح
+            if (!('Notification' in window)) {
+                return alert("هذا المتصفح لا يدعم الإشعارات.");
+            }
+
+            if (!messaging) {
+                return alert("فشل في تحميل مكتبة الإشعارات (Firebase Messaging).");
+            }
+
             const banner = document.getElementById('notifyBanner');
+            const originalText = banner.innerHTML;
+            banner.innerHTML = '<div class="loader w-5 h-5 border-2 border-black border-t-transparent rounded-full mx-auto"></div>';
+
             try {
+                // 2. طلب الإذن
                 const permission = await Notification.requestPermission();
+                
                 if (permission === 'granted') {
-                    const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                    // 3. تسجيل الـ Service Worker يدوياً لضمان توافقه مع أندرويد
+                    // ملاحظة: تأكد أن ملف firebase-messaging-sw.js بجوار parent.html
+                    let reg;
+                    try {
+                        reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                    } catch (swError) {
+                        alert("خطأ في ملف Service Worker: " + swError.message);
+                        throw swError;
+                    }
+
+                    // 4. جلب التوكن
                     const token = await messaging.getToken({ 
                         vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
                         serviceWorkerRegistration: reg 
                     });
                     
                     if (token) {
+                        // 5. حفظ التوكن في الداتابيز
+                        // حفظ للأب
                         await db.collection('parents').doc(currentParentPhone).set({ fcmToken: token }, { merge: true });
+                        
+                        // حفظ للطلاب
                         const snapshot = await db.collectionGroup('students').where('parentPhoneNumber', '==', currentParentPhone).get();
-                        const batch = db.batch();
-                        snapshot.docs.forEach(doc => {
-                            batch.update(doc.ref, { parentFcmToken: token });
-                        });
-                        await batch.commit();
+                        if (!snapshot.empty) {
+                            const batch = db.batch();
+                            snapshot.docs.forEach(doc => {
+                                batch.update(doc.ref, { parentFcmToken: token });
+                            });
+                            await batch.commit();
+                        }
+
+                        document.getElementById('notifyBanner').classList.add('hidden');
                         alert("تم تفعيل التنبيهات بنجاح ✅");
-                        banner.classList.add('hidden');
+                    } else {
+                        alert("لم يتم استلام التوكن. حاول مرة أخرى.");
+                        banner.innerHTML = originalText;
                     }
+                } else {
+                    alert("تم رفض الإذن. يرجى الدخول لإعدادات الموقع في المتصفح وتفعيل الإشعارات يدوياً.");
+                    banner.innerHTML = originalText;
                 }
-            } catch (error) { console.error("Permission Error:", error); }
+            } catch (error) {
+                console.error("Permission Error:", error);
+                alert("حدث خطأ: " + error.message); // سيظهر لك سبب المشكلة في أندرويد
+                banner.innerHTML = originalText;
+            }
         }
     </script>
 </body>
