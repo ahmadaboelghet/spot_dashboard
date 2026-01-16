@@ -874,7 +874,7 @@ async function loginTeacher() {
         TEACHER_ID = fmt;
         localStorage.setItem('learnaria-tid', TEACHER_ID);
 
-        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('mainContent').classList.remove('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
 
@@ -1759,7 +1759,7 @@ async function loadPreferences() {
         } catch(e) { console.log("Auto-login fetch error:", e); }
 
         // إخفاء شاشة تسجيل الدخول وإظهار المحتوى
-        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('mainContent').classList.remove('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
 
