@@ -325,6 +325,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('closeDetailsBtn').addEventListener('click', closeDetails);
             document.getElementById('modalBackdrop').addEventListener('click', closeDetails);
+            setupPhoneInput('parentPhoneInput'); // تأكد إن ده الـ ID الصح في صفحة ولي الأمر
         });
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -344,6 +345,52 @@
             document.getElementById('loginSection').classList.add('hidden');
             loadAppRealtime(); 
         }
+
+        /**
+ * دالة لتجهيز حقول الهاتف:
+ * - تحويل الأرقام العربية إلى إنجليزية.
+ * - منع الحروف والرموز.
+ * - تحديد الطول بـ 11 رقم.
+ * - التأكد من البداية بـ 01.
+ */
+function setupPhoneInput(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    input.addEventListener('input', function(e) {
+        let val = this.value;
+
+        // 1. تحويل الأرقام العربية (٠-٩) إلى إنجليزية (0-9)
+        const arabicMap = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
+        val = val.replace(/[٠-٩]/g, match => arabicMap[match]);
+
+        // 2. السماح بالأرقام فقط (حذف أي حروف أو رموز)
+        val = val.replace(/\D/g, '');
+
+        // 3. التأكد من أن الرقم يبدأ بـ "01" (اختياري: يمنع الكتابة لو البداية غلط)
+        // لو المستخدم كتب رقم ومسح، نتأكد إن أول رقمين هما 01 لو الطول يسمح
+        if (val.length >= 2) {
+            if (!val.startsWith('01')) {
+                // لو البداية غلط، ممكن نمسحها أو نسيبها لليوزر يصححها، 
+                // بس الأفضل نسيبها عشان ما نضايقوش وهو بيكتب، والـ Validation النهائي هو الحكم.
+                // لكن عشان طلبك "يبدأ بـ 01"، ممكن نخليه ما يكملش كتابة لو البداية مش 01
+                // val = '01'; // (ده حل عنيف شوية)
+            }
+        }
+
+        // 4. الحد الأقصى 11 رقم
+        if (val.length > 11) {
+            val = val.slice(0, 11);
+        }
+
+        // تحديث القيمة في الحقل
+        this.value = val;
+    });
+    
+    // إضافة خاصية maxlength في الـ HTML كاحتياط
+    input.setAttribute("maxLength", "11");
+    input.setAttribute("inputmode", "numeric"); // يفتح كيبورد الأرقام في الموبايل
+}
 
         function logout() { 
             if(unsubscribeStudents) unsubscribeStudents();

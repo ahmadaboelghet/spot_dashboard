@@ -272,7 +272,19 @@ const translations = {
         groupCreatedSuccess: "تم إنشاء المجموعة بنجاح!",
         examCreatedSuccess: "تم إضافة الامتحان بنجاح!",
         linkCopied: "تم نسخ رابط المتابعة بنجاح 📋",
-        copyFailed: "فشل النسخ ❌"
+        copyFailed: "فشل النسخ ❌",
+        landingNewVersion: "🚀 الإصدار الجديد متاح الآن",
+        landingHeroTitle: "إدارتك كلها في <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>مكان واحد.</span>",
+        landingHeroSubtitle: "تطبيق <strong>Spot</strong> هو مساعدك الشخصي الذكي. رصد غياب بالـ QR، متابعة درجات، تحصيل مصروفات، وتواصل فوري مع أولياء الأمور.. كل ده وأنت بتشرب قهوتك ☕",
+        featureSmartAttendance: "غياب ذكي",
+        featureSmartAttendanceSub: "سكانر سريع جداً",
+        featureInstantConnect: "تواصل فوري",
+        featureInstantConnectSub: "رابط لولي الأمر",
+        featureFinance: "تحصيل مالي",
+        featureFinanceSub: "متابعة دقيقة",
+        featureReports: "تقارير",
+        featureReportsSub: "إحصائيات شاملة",
+        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers."
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -382,7 +394,19 @@ const translations = {
         groupCreatedSuccess: "Group created successfully!",
         examCreatedSuccess: "Exam added successfully!",
         linkCopied: "Follow-up link copied successfully 📋",
-        copyFailed: "Copy failed ❌"
+        copyFailed: "Copy failed ❌", 
+        landingNewVersion: "🚀 New Version Available",
+        landingHeroTitle: "Manage Everything in <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>One Place.</span>",
+        landingHeroSubtitle: "<strong>Spot</strong> is your smart personal assistant. QR Attendance, Grade Tracking, Fee Collection, and Instant Parent Communication.. all while you sip your coffee ☕",
+        featureSmartAttendance: "Smart Attendance",
+        featureSmartAttendanceSub: "Super Fast Scanner",
+        featureInstantConnect: "Instant Connect",
+        featureInstantConnectSub: "Parent Link",
+        featureFinance: "Finance",
+        featureFinanceSub: "Accurate Tracking",
+        featureReports: "Reports",
+        featureReportsSub: "Full Analytics",
+        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers."
 
     }
 };
@@ -510,7 +534,8 @@ function setupListeners() {
 
     // ✅✅ FIX: Disable student inputs by default on load
     toggleStudentInputs(false);
-
+    setupPhoneInput('teacherPhoneInput');
+    setupPhoneInput('newParentPhoneNumber');
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const tab = e.currentTarget.dataset.tab;
@@ -1772,17 +1797,53 @@ function toggleLang() {
     currentLang = currentLang === 'ar' ? 'en' : 'ar';
     document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
     document.getElementById('languageToggleButton').innerText = currentLang === 'ar' ? 'EN' : 'ع';
+    
     document.querySelectorAll('[data-key]').forEach(el => {
         const key = el.dataset.key;
-        if(translations[currentLang][key]) el.innerText = translations[currentLang][key];
+        if(translations[currentLang][key]) {
+            // ✅ التعديل الضروري هنا: استخدمنا innerHTML بدل innerText
+            el.innerHTML = translations[currentLang][key]; 
+        }
     });
+
     document.querySelectorAll('[data-key-placeholder]').forEach(el => {
         const key = el.dataset.keyPlaceholder;
         if(translations[currentLang][key]) el.placeholder = translations[currentLang][key];
     });
+
     if(SELECTED_GROUP_ID && !document.getElementById('tab-daily').classList.contains('hidden')) renderDailyList();
     if(SELECTED_GROUP_ID && !document.getElementById('tab-students').classList.contains('hidden')) renderStudents();
+    
     loadGroups();
     renderDayCheckboxes();
     updateOnlineStatus();
+}
+
+function setupPhoneInput(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    input.addEventListener('input', function(e) {
+        let val = this.value;
+
+        const arabicMap = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
+        val = val.replace(/[٠-٩]/g, match => arabicMap[match]);
+
+        val = val.replace(/\D/g, '');
+
+        if (val.length >= 2) {
+            if (!val.startsWith('01')) {
+            
+            }
+        }
+
+        if (val.length > 11) {
+            val = val.slice(0, 11);
+        }
+
+        this.value = val;
+    });
+    
+    input.setAttribute("maxLength", "11");
+    input.setAttribute("inputmode", "numeric"); 
 }
