@@ -268,7 +268,11 @@ const translations = {
         parentPhonePlaceholder: "رقم ولي الأمر",
         groupNamePlaceholder: "اسم المجموعة",
         newAssignmentNameLabel: "اسم الامتحان",
-        locationPlaceholder: "سنتر كوليدج"
+        locationPlaceholder: "سنتر كوليدج",
+        groupCreatedSuccess: "تم إنشاء المجموعة بنجاح!",
+        examCreatedSuccess: "تم إضافة الامتحان بنجاح!",
+        linkCopied: "تم نسخ رابط المتابعة بنجاح 📋",
+        copyFailed: "فشل النسخ ❌"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -374,7 +378,12 @@ const translations = {
         parentPhonePlaceholder: "Parent Phone",
         groupNamePlaceholder: "Group Name",
         newAssignmentNameLabel: "Exam Name",
-        locationPlaceholder: "Center College"
+        locationPlaceholder: "Center College",
+        groupCreatedSuccess: "Group created successfully!",
+        examCreatedSuccess: "Exam added successfully!",
+        linkCopied: "Follow-up link copied successfully 📋",
+        copyFailed: "Copy failed ❌"
+
     }
 };
 
@@ -522,7 +531,19 @@ function setupListeners() {
         await loadGroupData();
     });
 
-    document.getElementById('addNewGroupButton').addEventListener('click', () => switchTab('profile'));
+    document.getElementById('addNewGroupButton').addEventListener('click', () => {
+        // 1. الانتقال لتابة الملف الشخصي (Profile)
+        switchTab('profile');
+        
+        // 2. الانتظار لحظة صغيرة (عشان التابة تفتح) ثم التركيز على حقل الاسم
+        setTimeout(() => {
+            const inputField = document.getElementById('newGroupName');
+            if (inputField) {
+                inputField.focus(); // وضع المؤشر داخل الخانة
+                inputField.select(); // (اختياري) تظليل النص لو كان فيه نص قديم
+            }
+        }, 100); // 100 مللي ثانية كافية جداً
+    });
 
     document.getElementById('startSmartScanBtn').addEventListener('click', () => startScanner('daily'));
     document.getElementById('homeworkToggle').addEventListener('change', (e) => {
@@ -914,11 +935,27 @@ function renderGroupsDropdown(groupsList) {
 async function createGroup() {
     const name = document.getElementById('newGroupName').value;
     if(!name) return;
-    const id = generateUniqueId();
+    
+    // 1. إنشاء الـ ID وحفظه
+    const id = generateUniqueId(); 
+    
     await putToDB('groups', { id, teacherId: TEACHER_ID, name });
     await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups`, id, data: { name } });
+    
     document.getElementById('newGroupName').value = '';
-    loadGroups();
+    
+    // 2. إعادة تحميل القوائم والانتظار حتى تنتهي
+    await loadGroups(); 
+    
+    // 3. ✨ السحر هنا: تحديد المجموعة الجديدة تلقائياً ✨
+    SELECTED_GROUP_ID = id; // تحديث المتغير العام
+    document.getElementById('groupSelect').value = id; // تحديث شكل القائمة (Dropdown)
+    
+    // 4. الانتقال لتابة الحصة وتحميل بيانات المجموعة الفارغة
+    switchTab('daily'); 
+    await loadGroupData(); // تفعيل أزرار الإضافة (عشان لو عايز يضيف طلاب علطول)
+    
+showToast(translations[currentLang].groupCreatedSuccess);
 }
 
 // ------------------------------------------------------------------
@@ -1332,8 +1369,8 @@ function renderStudents(filter = "") {
             const link = `${baseUrl}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
 
             navigator.clipboard.writeText(link)
-                .then(() => showToast("تم نسخ رابط المتابعة الموحد"))
-                .catch(() => showToast("فشل النسخ", "error"));
+                .then(() => showToast(translations[currentLang].linkCopied)) 
+                .catch(() => showToast(translations[currentLang].copyFailed, "error")); 
         };
 
         // 2. Others
@@ -1569,8 +1606,10 @@ async function loadExams() {
 async function addNewExam() {
     const name = document.getElementById('newExamName').value;
     if(!name) return;
+    
+    // 1. إنشاء الـ ID وحفظه
     const id = generateUniqueId();
-    // ✅ FIX: Saving DATE so it appears in parent app
+    
     const data = { 
         id, 
         groupId: SELECTED_GROUP_ID, 
@@ -1579,10 +1618,23 @@ async function addNewExam() {
         scores: {}, 
         date: new Date().toISOString().slice(0, 10) 
     }; 
+    
     await putToDB('assignments', data);
     await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`, id, data });
+    
     document.getElementById('newExamName').value = '';
-    loadExams();
+    
+    // 2. إعادة تحميل قائمة الامتحانات
+    await loadExams();
+    
+    // 3. ✨ السحر هنا: تحديد الامتحان الجديد تلقائياً ✨
+    const examSelect = document.getElementById('examSelect');
+    examSelect.value = id; // اختيار الامتحان الجديد في القائمة
+    
+    // 4. عرض جدول الدرجات فوراً
+    renderExamGrades();
+    
+    showToast(translations[currentLang].examCreatedSuccess);
 }
 async function renderExamGrades() {
     const examId = document.getElementById('examSelect').value;
