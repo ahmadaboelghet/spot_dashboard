@@ -1,386 +1,573 @@
-/* css/style.css */
+/* css/style.css - Corrected Brand Color & Dark Mode Fixes */
 
-/* Base styles and font */
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #f8f8f8;
-    color: #212121;
-    opacity: 0;
-    animation: fadeIn 0.8s ease-out forwards;
-    line-height: 1.4;
-    transition: background-color 0.3s, color 0.3s;
+:root {
+    --primary: #F2CE5A; 
+    --primary-hover: #e6c045;
+    
+    --secondary: #121212;
+    --dark-bg: #121212;
+    --dark-surface: #1E1E1E;
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-bg: rgba(255, 255, 255, 0.8);
 }
 
-/* Keyframe animation for page load */
-@keyframes fadeIn {
+/* Animations */
+@keyframes fadeInUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Header (App Bar) styles */
-.app-bar {
-    background-color: white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    padding: 0.75rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    transition: background-color 0.3s, box-shadow 0.3s;
-}
-.header-logo {
-    height: 30px;
-    width: 30px;
-    border-radius: 50%;
+.fade-in-up {
+    animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Adjust margin based on text direction */
-html[dir="ltr"] .header-logo { margin-right: 10px; }
-html[dir="rtl"] .header-logo { margin-left: 10px; }
-html[dir="ltr"] #teacherDashboardTitle { margin-right: 1rem; }
-html[dir="rtl"] #teacherDashboardTitle { margin-left: 1rem; }
+.delay-100 { animation-delay: 0.1s; }
 
-/* Card container styles (for sections) */
-.card-container {
-    background-color: white;
-    border-radius: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, background-color 0.3s;
-}
-.card-container:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+.dark-mode .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--primary); }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Glass Panel Component */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Input field styles */
+.dark-mode .glass-panel {
+    background: #1E1E1E;
+    border-color: #333;
+    backdrop-filter: none;
+}
+
+.glass-panel:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* ابحث عن هذا الكلاس وعدله */
 .input-field {
     width: 100%;
-    padding: 0.5rem 0.8rem;
-    border-radius: 8px;
-    border: none;
-    background-color: #f5f5f5;
-    font-size: 0.95rem;
-    color: #212121;
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.3s, color 0.3s;
-}
-.input-field:focus {
-    outline: none;
-    border: 1.5px solid rgb(242, 206, 90);
-    box-shadow: 0 0 0 3px rgba(242, 206, 90, 0.2);
-    background-color: white;
-}
-
-/* Custom primary button styles */
-.btn-primary-custom {
-    background-color: #212121;
-    color: white;
-    padding: 0.6rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.2s ease-in-out;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-.btn-primary-custom:hover {
-    background-color: #374151;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-}
-.btn-primary-custom:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Text colors */
-.text-primary-red { color: rgb(242, 206, 90); }
-.text-success-green { color: rgb(76, 175, 80); }
-.text-grey-600 { color: #616161; }
-.text-grey-800 { color: #374151; }
-
-/* Record item styles */
-.record-item {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
     background-color: #f9fafb;
-    border-radius: 8px;
-    padding: 0.4rem 1rem;
+    
+    /* التعديل هنا: غيرنا transparent لـ لون رصاصي #e5e7eb */
+    border: 1px solid #e5e7eb; 
+    
+    color: #1f2937;
+    font-weight: 500;
+    transition: all 0.2s;
+    outline: none;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* تأكد إن الدارك مود لسه زي ما هو بيغير اللون */
+.dark-mode .input-field {
+    background-color: #1f1f1f !important;
+    border: 1px solid #374151 !important;
+    color: #ffffff !important;
+}
+
+.input-field:focus {
+    background-color: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(242, 206, 90, 0.2);
+}
+
+.dark-mode .input-field:focus {
+    background-color: #000;
+    border-color: var(--primary);
+}
+
+/* Label Custom */
+.label-custom {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #4b5563;
+    margin-bottom: 0.5rem;
+}
+.dark-mode .label-custom { color: #e5e7eb; }
+
+/* Buttons */
+.btn-primary-custom {
+    background: var(--primary);
+    color: #000000;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px rgba(242, 206, 90, 0.2);
+}
+
+.btn-primary-custom:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(242, 206, 90, 0.3);
+}
+
+.btn-primary-custom:active { transform: scale(0.98); }
+
+.btn-secondary-outline {
+    background: transparent;
+    border: 2px solid var(--secondary);
+    color: var(--secondary);
+    padding: 0.6rem 1.2rem;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dark-mode .btn-secondary-outline {
+    border-color: #e5e7eb;
+    color: #e5e7eb;
+}
+
+.btn-secondary-outline:hover {
+    background: var(--secondary);
+    color: white;
+}
+.dark-mode .btn-secondary-outline:hover {
+    background: #e5e7eb;
+    color: black;
+}
+
+.btn-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+/* Tabs */
+.tab-button {
+    padding: 0.6rem 1.2rem;
+    border-radius: 99px;
+    color: #6b7280;
+    font-weight: 600;
+    background: transparent;
+    border: 1px solid transparent;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.dark-mode .tab-button { color: #d1d5db; }
+
+.tab-button:hover:not(:disabled) {
+    background-color: #fff9c4;
+    color: #a16207;
+}
+.dark-mode .tab-button:hover:not(:disabled) {
+    background-color: #333;
+    color: var(--primary);
+}
+
+.tab-button.active {
+    background-color: var(--primary);
+    color: black;
+    box-shadow: 0 4px 12px rgba(242, 206, 90, 0.3);
+}
+
+.tab-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+
+/* Record Items */
+.record-item {
+    background: white;
+    border-radius: 16px;
+    padding: 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: none;
-    border: 1px solid #f0f0f0;
-    transition: background-color 0.3s, border-color 0.3s;
+    margin-bottom: 0.5rem;
+    border: 1px solid #f3f4f6;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
+
+.dark-mode .record-item {
+    background: #121212;
+    border-color: #333;
+    color: #fff;
+}
+.dark-mode .record-item p, 
+.dark-mode .record-item span {
+    color: #fff !important;
+}
+.dark-mode .record-item p.text-sm {
+    color: #9ca3af !important;
+}
+
 .record-item:hover {
-    background-color: #f0f2f5;
-    border-color: #e0e0e0;
+    transform: scale(1.01);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border-right: 4px solid var(--primary);
 }
-.record-item:nth-child(even) {
-    background-color: #ffffff;
-}
-
-/* Message box for alerts */
-.message-box {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: #212121;
-    color: white;
-    padding: 20px 35px;
-    border-radius: 12px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-    z-index: 1050;
-    font-family: 'Inter', sans-serif;
-    font-size: 1rem;
-    text-align: center;
-    opacity: 0;
-    transition: opacity 0.4s ease-in-out;
+html[dir="rtl"] .record-item:hover {
+    border-right: 4px solid var(--primary);
+    border-left: 1px solid #f3f4f6;
 }
 
-/* Student rows in attendance/grades */
+/* Student Rows */
 .student-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.25rem 0.5rem;
-    border-bottom: 1px solid #eee;
-    transition: background-color 0.3s, border-color 0.3s;
+    padding: 0.75rem;
+    border-radius: 12px;
+    margin-bottom: 4px;
+    background-color: #fff;
+    border: 1px solid #f3f4f6;
+    transition: background-color 0.3s;
 }
-.student-row:last-child {
-    border-bottom: none;
+
+.dark-mode .student-row {
+    background-color: #121212;
+    border-color: #333;
+    color: #fff;
 }
-.student-row .student-name {
-    flex-grow: 1;
-    font-weight: 500;
-    color: #212121;
-    font-size: 0.9rem;
-    transition: color 0.3s;
+.dark-mode .student-name {
+    color: #ffffff !important;
+    font-weight: 600;
 }
+
+.student-row:hover { background-color: #fff9c4; }
+.dark-mode .student-row:hover { background-color: #2c2c2c; }
+
 .student-row .attendance-status-select,
 .student-row .grade-input {
-    width: 110px;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    border: 1px solid #ddd;
+    padding: 0.4rem;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
     background-color: #f9fafb;
     font-size: 0.9rem;
-    transition: all 0.2s ease-in-out;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s;
 }
-html[dir="ltr"] .student-row .attendance-status-select,
-html[dir="ltr"] .student-row .grade-input { margin-left: 0.5rem; }
-html[dir="rtl"] .student-row .attendance-status-select,
-html[dir="rtl"] .student-row .grade-input { margin-right: 0.5rem; }
+
+.dark-mode .student-row .attendance-status-select,
+.dark-mode .student-row .grade-input {
+    background-color: #000;
+    color: #fff;
+    border-color: #444;
+}
+
 .student-row .attendance-status-select:focus,
 .student-row .grade-input:focus {
-    border-color: rgb(242, 206, 90);
-    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
-}
-.student-row .grade-input {
-    text-align: center;
-    width: 80px;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(242, 206, 90, 0.2);
 }
 
-/* Day checkboxes */
+/* Checkboxes */
 .day-checkbox-container {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    padding: 0.5rem 1rem;
+    border-radius: 99px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    user-select: none;
+}
+.dark-mode .day-checkbox-container {
+    background: #121212;
+    border-color: #333;
+    color: #d1d5db;
+}
+.day-checkbox-container:hover { border-color: var(--primary); }
+.day-checkbox-container:has(input:checked) {
+    background-color: var(--primary);
+    color: black;
+    border-color: var(--primary);
+    font-weight: bold;
+}
+.day-checkbox { display: none; } 
+
+/* Selects */
+#recurringTimeContainer select,
+#exceptionNewTimeContainer select {
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background-color: #fff;
+    width: 100%;
+    outline: none;
+}
+.dark-mode #recurringTimeContainer select,
+.dark-mode #exceptionNewTimeContainer select {
+    background-color: #121212;
+    border-color: #333;
+    color: white;
+}
+
+/* ========================================= */
+/* FIX STATUS INDICATOR (CLEAN STYLE)        */
+/* ========================================= */
+
+#statusIndicator {
+    transition: all 0.3s ease;
+    background-color: transparent !important; /* إلغاء المربع الخلفي تماماً */
+    border: 1px solid transparent !important; /* إلغاء البرواز */
+    padding: 0 5px; /* مسافة بسيطة */
+}
+
+/* --- في الوضع الليلي (Dark Mode) --- */
+
+/* حالة الاتصال (Online) */
+.dark-mode #statusIndicator.online {
+    color: #ffffff !important; /* النص أبيض زي ما طلبت */
+}
+
+/* حالة عدم الاتصال (Offline) */
+.dark-mode #statusIndicator.offline {
+    color: #ffffff !important; /* النص أبيض برضه */
+    opacity: 0.7; /* نخلي النص باهت سنة بسيطة عشان يبان إنه أوفلاين */
+}
+
+/* --- ألوان النقطة (Dot Colors) --- */
+
+/* النقطة الخضراء (أونلاين) */
+#statusIndicator.online .status-dot {
+    background-color: #22c55e !important; /* أخضر */
+    box-shadow: 0 0 8px #22c55e; /* لمعة خضراء */
+}
+
+/* النقطة الحمراء (أوفلاين) */
+#statusIndicator.offline .status-dot {
+    background-color: #ef4444 !important; /* أحمر */
+    box-shadow: none;
+}
+
+/* --- (اختياري) الوضع النهاري Light Mode --- */
+/* عشان يفضل شكله حلو في الفاتح */
+#statusIndicator.online { color: #166534; }
+#statusIndicator.offline { color: #991b1b; }
+
+/* Section Header */
+.section-header {
     display: flex;
     align-items: center;
-    background-color: #f9fafb;
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
 }
-.day-checkbox-container:hover {
-    background-color: #f0f2f5;
-    border-color: #ccc;
+.section-header i {
+    font-size: 1.5rem;
+    color: var(--primary);
 }
-.day-checkbox-container input {
-    width: 1rem;
-    height: 1rem;
-    accent-color: rgb(242, 206, 90);
+.section-header h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1f2937;
 }
-html[dir="ltr"] .day-checkbox-container input { margin-right: 0.75rem; }
-html[dir="rtl"] .day-checkbox-container input { margin-left: 0.75rem; }
+.dark-mode .section-header h3 { color: #f3f4f6; }
 
+/* Scanner Overlay */
+#scannerOverlay.success { border-color: #10b981; }
+#scannerOverlay.error { border-color: #ef4444; }
 
-/* --- DARK MODE STYLES --- */
-body.dark-mode {
-    background-color: #121212;
-    color: #e0e0e0;
+/* Message Box */
+.message-box {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #121212;
+    color: var(--primary);
+    padding: 12px 24px;
+    border-radius: 99px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    border: 1px solid rgba(242, 206, 90, 0.3);
+    z-index: 3000;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideUp 0.3s ease;
 }
-.dark-mode .app-bar,
-.dark-mode .card-container {
-    background-color: #1e1e1e;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    border: 1px solid #333;
-}
-.dark-mode h1, .dark-mode h2, .dark-mode h3, .dark-mode h4,
-.dark-mode .text-gray-900, .dark-mode .text-gray-800,
-.dark-mode label {
-    color: #f5f5f5 !important;
-}
-.dark-mode .text-grey-600 { color: #9e9e9e; }
-.dark-mode .input-field {
-    background-color: #2c2c2c;
-    color: #f5f5f5;
-    border: 1px solid #444;
-}
-.dark-mode .input-field:focus {
-    background-color: #1e1e1e;
-    border-color: rgb(242, 206, 90);
-    box-shadow: 0 0 0 3px rgba(242, 206, 90, 0.3);
-}
-.dark-mode .btn-primary-custom {
-    background-color: rgb(242, 206, 90);
-    color: #121212;
-    box-shadow: 0 4px 8px rgba(242, 206, 90, 0.2);
-}
-.dark-mode .btn-primary-custom:hover {
-    background-color: rgb(255, 220, 120);
-    box-shadow: 0 6px 12px rgba(242, 206, 90, 0.3);
-}
-.dark-mode .record-item,
-.dark-mode .record-item:nth-child(even) {
-    background-color: #2a2a2a;
-    border-color: #444;
-}
-.dark-mode .record-item:hover {
-    background-color: #383838;
-    border-color: #555;
-}
-.dark-mode .student-row {
-    background-color: #2a2a2a;
-    border-bottom-color: #333;
-}
-.dark-mode .student-row .attendance-status-select,
-.dark-mode .student-row .grade-input,
-.dark-mode .day-checkbox-container {
-    background-color: #2c2c2c;
-    color: #f5f5f5;
-    border-color: #444;
-}
-.dark-mode #darkModeToggleButton svg,
-.dark-mode #languageToggleButton {
-    color: #f5f5f5;
-    stroke: #f5f5f5;
-}
-.dark-mode .record-item p:first-child,
-.dark-mode #attendanceStudentsContainer .student-row .student-name,
-.dark-mode #gradesStudentsContainer .student-row .student-name {
-    color: #ffffff !important;
-    font-weight: 600 !important;
-}
+@keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
-/* --- QR Code Scanner Modal Styles --- */
-#scannerModal video { transform: scaleX(-1); }
-#closeScannerModal { line-height: 1; }
-
-/* --- Homework Checkbox Styles --- */
-.homework-checkbox-container { display: flex; align-items: center; cursor: pointer; font-size: 0.85rem; color: #616161; }
-html[dir="ltr"] .homework-checkbox-container { margin-right: 1rem; }
-html[dir="rtl"] .homework-checkbox-container { margin-left: 1rem; }
-.homework-checkbox-container input { width: 0.9rem; height: 0.9rem; accent-color: rgb(76, 175, 80); }
-html[dir="ltr"] .homework-checkbox-container input { margin-right: 0.4rem; }
-html[dir="rtl"] .homework-checkbox-container input { margin-left: 0.4rem; }
-.dark-mode .homework-checkbox-container { color: #bdbdbd; }
-
-/* --- Scanner Visual Feedback Styles --- */
-#scannerOverlay.success { border-color: rgb(76, 175, 80); }
-
-/* --- Print Styles for the ID Card --- */
 @media print {
     body * { visibility: hidden; }
     #printableIdCard, #printableIdCard * { visibility: visible; }
-    #printableIdCard { position: absolute; left: 0; top: 0; width: 100%; border: 2px solid #000 !important; -webkit-print-color-adjust: exact; color-adjust: exact; }
-    #qrCodeModal > div > div:last-child { display: none; }
+    #printableIdCard { 
+        position: fixed; 
+        left: 50%; 
+        top: 50%; 
+        transform: translate(-50%, -50%); 
+        width: 350px; 
+        border: 2px solid black !important;
+        -webkit-print-color-adjust: exact;
+    }
 }
 
-/* --- Status and Sync Indicators --- */
-#statusIndicator { transition: all 0.3s ease-in-out; padding: 0.2rem 0.6rem; border: 1px solid transparent; }
-#statusIndicator.online { color: #166534; background-color: #dcfce7; border-color: #4ade80; }
-#statusIndicator.offline { color: #52525b; background-color: #f4f4f5; border-color: #d4d4d8; }
-.dark-mode #statusIndicator.online { color: #bbf7d0; background-color: #14532d; border-color: #22c55e; }
-.dark-mode #statusIndicator.offline { color: #a1a1aa; background-color: #3f3f46; border-color: #52525b; }
-.status-dot { width: 10px; height: 10px; border-radius: 50%; transition: background-color 0.3s ease-in-out; }
-#statusIndicator.online .status-dot { background-color: #22c55e; }
-#statusIndicator.offline .status-dot { background-color: #a1a1aa; }
-#syncIndicator { font-weight: 500; }
-#syncIndicator .icon-spin { animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* ========================================= */
+/* CRITICAL DARK MODE & TRANSLATION FIXES   */
+/* ========================================= */
 
-/* --- Tab Navigation Styles --- */
-.tabs-nav-container { display: flex; gap: 0.5rem; border-bottom: 2px solid #e5e7eb; padding-left: 0.5rem; padding-right: 0.5rem; }
-.dark-mode .tabs-nav-container { border-bottom-color: #374151; }
-.tab-button {
-    padding: 0.5rem 1rem;
-    border: none;
-    background-color: transparent;
-    cursor: pointer;
-    font-weight: 600;
-    color: #6b7280;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s ease-in-out;
-}
-.dark-mode .tab-button { color: #9ca3af; }
-.tab-button:hover { background-color: #f3f4f6; color: #111827; }
-.dark-mode .tab-button:hover { background-color: #374151; color: #f9fafb; }
-.tab-button.active { color: #111827; border-bottom-color: rgb(242, 206, 90); }
-.dark-mode .tab-button.active { color: #ffffff; }
-.tab-button:disabled { color: #d1d5db; cursor: not-allowed; }
-.dark-mode .tab-button:disabled { color: #4b5563; }
+/* 1. Force Gray Text to be Visible in Dark Mode */
+.dark-mode .text-gray-500 { color: #9ca3af !important; } /* Equivalent to gray-400 */
+.dark-mode .text-gray-600 { color: #d1d5db !important; } /* Equivalent to gray-300 */
+.dark-mode .text-gray-700 { color: #e5e7eb !important; } /* Equivalent to gray-200 */
+.dark-mode .text-gray-800 { color: #f3f4f6 !important; } /* Equivalent to gray-100 */
+.dark-mode .text-gray-900 { color: #ffffff !important; } /* Pure White */
 
-/* Tab Content Animation */
-.tab-content { animation: tab-fade-in 0.5s ease; }
-@keyframes tab-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-/* --- Logout Button Dark Mode --- */
-.dark-mode #logoutButton {
-    color: #d1d5db; /* text-gray-300 */
-}
-.dark-mode #logoutButton:hover {
-    color: #ef4444; /* text-red-500 */
-    background-color: #374151; /* bg-gray-700 */
-}
-/* --- Fix ID Button Visibility in Dark Mode --- */
-.dark-mode .show-qr-btn {
-    background-color: #4b5563; /* A darker gray */
-    color: #e5e7eb;           /* A light gray for the text */
-    border: 1px solid #6b7280;
+/* 2. Input Fields & Placeholders */
+.dark-mode .input-field {
+    background-color: #1f1f1f !important;
+    border: 1px solid #374151 !important;
+    color: #ffffff !important;
 }
 
-.dark-mode .show-qr-btn:hover {
-    background-color: #374151; /* A slightly different gray on hover */
-    border-color: #9ca3af;
+.dark-mode .input-field::placeholder {
+    color: #9ca3af !important; /* Make placeholders clearly visible */
+    opacity: 1;
 }
 
-/* --- Scanner Visual Feedback for Error --- */
-#scannerOverlay.error {
-    border-color: rgb(239, 68, 68); /* Tailwind's red-500 */
-}
-/* Animation للنقاط المتحركة بجانب نص المزامنة */
-.syncing-text-animated::after {
-  display: inline-block;
-  animation: ellipsis 1.5s infinite;
-  content: "";
-  width: 20px; /* نعطيها عرضًا ثابتًا لمنع اهتزاز النص */
-  text-align: left;
+.dark-mode select:not(.appearance-none) {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left 0.5rem center; /* مكان السهم لليسار لأننا RTL */
+    background-size: 1.5em;
+    padding-left: 2rem !important; /* مساحة للسهم */
 }
 
-@keyframes ellipsis {
-  0% {
-    content: ".";
-  }
-  33% {
-    content: "..";
-  }
-  66% {
-    content: "...";
-  }
-  100% {
-    content: ".";
-  }
+/* 2. القائمة العلوية (Group Select) */
+/* هذه القائمة لديها class="appearance-none" ولديها أيقونة HTML خاصة */
+/* لذلك نمنع ظهور سهم الخلفية فيها حتى لا يتكرر */
+.dark-mode select.appearance-none {
+    background-image: none !important;
+}
+
+/* 3. Dropdowns inside tables */
+.dark-mode .att-select, 
+.dark-mode .grade-input {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+    border-color: #4b5563 !important;
+}
+
+/* 4. Modal Backgrounds & Text */
+.dark-mode .glass-panel,
+.dark-mode .bg-white {
+    background-color: #1E1E1E !important;
+    color: white !important;
+}
+
+.dark-mode .modal-content {
+    background-color: #1E1E1E;
+    border: 1px solid #333;
+}
+
+/* 5. Icons inside inputs */
+.dark-mode .ri-smartphone-line,
+.dark-mode .ri-lock-password-line,
+.dark-mode .ri-search-line {
+    color: #9ca3af !important;
+}
+
+/* 6. Tabs Background in Dark Mode */
+.dark-mode .tab-button:hover:not(.active) {
+    background-color: #333 !important;
+    color: var(--primary) !important;
+}
+/* ============================================================ */
+/* FORCE ID CARD TO STAY LIGHT IN DARK MODE (FIX FOR SCREENSHOT) */
+/* ============================================================ */
+
+/* 1. إجبار خلفية الكارت تكون بيضاء دائماً */
+.dark-mode #printableIdCard {
+    background-color: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* 2. إجبار النصوص الأساسية تكون سوداء */
+.dark-mode #printableIdCard h2, 
+.dark-mode #printableIdCard #idStudentName {
+    color: #111827 !important; /* أسود غامق */
+}
+
+/* 3. النصوص الفرعية تكون رصاصي (مش أبيض) */
+.dark-mode #printableIdCard h4,
+.dark-mode #printableIdCard p,
+.dark-mode #printableIdCard span {
+    color: #4b5563 !important; /* رصاصي متوسط */
+}
+
+/* 4. إصلاح خلفية مربع اللوجو ومربع اسم المعلم */
+.dark-mode #printableIdCard .bg-white {
+    background-color: #ffffff !important;
+    border-color: #f3f4f6 !important;
+}
+.dark-mode #printableIdCard .bg-gray-50 {
+    background-color: #f9fafb !important; /* خلفية فاتحة جداً */
+    color: #374151 !important;
+}
+
+/* 5. أيقونة واسم المعلم */
+.dark-mode #printableIdCard #idTeacherName {
+    color: #374151 !important;
+}
+
+/* 6. التأكد إن الـ QR Code خلفيته بيضاء */
+.dark-mode #idQrcode, 
+.dark-mode #idQrcode img {
+    background-color: #ffffff !important;
+}
+/* ========================================= */
+/* FIX DOUBLE ARROWS IN DARK MODE            */
+/* ========================================= */
+
+.dark-mode select:not(.appearance-none) {
+    /* إخفاء سهم المتصفح الافتراضي عشان السهم الأبيض بتاعنا يظهر لوحده */
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+
+    /* التأكد من إعدادات السهم المخصص */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: left 0.5rem center !important;
+    padding-left: 2.5rem !important; /* وسعنا المسافة شوية عشان الكلام ميدخلش في السهم */
+}
+/* ========================================= */
+/* FIX PLACEHOLDER COLORS                    */
+/* ========================================= */
+
+/* لون الـ Placeholder في الوضع الفاتح (رمادي واضح) */
+.input-field::placeholder {
+    color: #6B7280 !important; /* لون رمادي متوسط */
+    opacity: 1; /* لضمان الظهور في فايرفوكس */
+}
+
+/* لون الـ Placeholder في الوضع المظلم (رمادي فاتح عشان يبان ع الخلفية السوداء) */
+.dark-mode .input-field::placeholder {
+    color: #9CA3AF !important; /* لون رمادي فاتح */
+    opacity: 1;
+}
+
+/* حل إضافي لو بتستخدم select */
+select.input-field:invalid,
+.dark-mode select.input-field:invalid {
+    color: #9CA3AF !important;
 }

@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark-mode">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spot</title>
+    
+    <link rel="icon" href="assets/images/favicon.png" type="image/x-icon">
+    <link rel="apple-touch-icon" href="assets/images/learnaria_logo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#F2CE5A">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800&family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: ['class', '.dark-mode'], 
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#F2CE5A', 
+                        brand: '#F2CE5A',
+                        darkBg: '#121212',       
+                        darkCard: '#1E1E1E',     
+                        lightBg: '#F9FAFB',
+                    },
+                    fontFamily: { 
+                        cairo: ['Cairo', 'sans-serif'], 
+                        readex: ['Readex Pro', 'sans-serif'],
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'glow': '0 0 20px rgba(242, 206, 90, 0.15)',
+                    },
+                    animation: {
+                        'fade-up': 'fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'pulse-slow': 'pulse 3s infinite ease-in-out'
+                    },
+                    keyframes: {
+                        fadeUp: {
+                            '0%': { opacity: '0', transform: 'translateY(15px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Readex Pro', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        .bg-grid-pattern {
+            background-color: #F9FAFB;
+            background-image: 
+                linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        .dark-mode .bg-grid-pattern {
+            background-color: #121212;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+        }
+
+        .spot-card {
+            border-radius: 20px;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            overflow: hidden;
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+        }
+        .dark-mode .spot-card {
+            background-color: #1E1E1E !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .dark-mode .spot-card h3, .dark-mode .spot-card p.text-lg, .dark-mode .spot-card span.font-bold, .dark-mode .text-gray-900 {
+            color: #FFFFFF !important;
+        }
+        .dark-mode .spot-card p.text-gray-500, .dark-mode .spot-card .text-gray-400, .dark-mode .text-gray-500 {
+            color: #9CA3AF !important;
+        }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+        .dark-mode .glass-header {
+            background: rgba(30, 30, 30, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .tab-container { background-color: #F3F4F6; border-radius: 16px; padding: 4px; }
+        .dark-mode .tab-container { background-color: rgba(255, 255, 255, 0.05); }
+        .tab-btn { transition: all 0.3s; color: #6B7280; font-weight: 500; font-size: 0.75rem; }
+        .dark-mode .tab-btn { color: #9CA3AF; }
+        .tab-btn.active {
+            background-color: #F2CE5A !important;
+            color: #000000 !important;
+            font-weight: 800 !important;
+            box-shadow: 0 4px 12px rgba(242, 206, 90, 0.3);
+        }
+
+        .input-field { background: #FFFFFF; border: 1px solid #E5E7EB; color: #111827; }
+        .dark-mode .input-field { background: #1E1E1E; border: 1px solid rgba(255,255,255,0.15); color: #FFFFFF; }
+        .input-field:focus { border-color: #F2CE5A; box-shadow: 0 0 0 2px rgba(242, 206, 90, 0.2); }
+
+        .loader { border-top-color: #F2CE5A; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-grid-pattern text-gray-900 dark:text-white min-h-screen transition-colors duration-300 pb-10">
+
+    <div id="loadingScreen" class="fixed inset-0 z-[100] bg-lightBg dark:bg-darkBg flex flex-col items-center justify-center hidden">
+        <div class="relative">
+            <div class="w-20 h-20 border-4 border-gray-200 dark:border-gray-800 border-t-primary rounded-full loader"></div>
+            <div class="absolute inset-0 flex items-center justify-center animate-pulse">
+                <img src="assets/images/learnaria_logo.png" class="w-10 h-10 object-contain" onerror="this.src='assets/images/favicon.png'">
+            </div>
+        </div>
+    </div>
+
+    <header class="fixed top-4 left-4 right-4 z-50 glass-header rounded-2xl transition-all duration-300">
+        <div class="px-5 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="relative w-11 h-11 rounded-xl bg-white border-2 border-primary flex items-center justify-center shadow-sm">
+                    <img src="assets/images/learnaria_logo.png" class="w-7 h-7 object-contain" onerror="this.src='assets/images/favicon.png'">
+                    <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-white dark:border-[#1E1E1E]"></div>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-black text-gray-900 dark:text-white font-inter tracking-tighter leading-none mt-1">
+                        Spot<span class="text-primary text-4xl">.</span>
+                    </h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center transition text-gray-600 dark:text-gray-300 hover:text-primary">
+                    <i id="themeIcon" class="ri-moon-line text-lg"></i>
+                </button>
+                <button onclick="logout()" class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center transition hover:bg-red-100">
+                    <i class="ri-logout-box-r-line text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-5 pt-32 max-w-lg">
+
+        <div id="loginSection" class="hidden min-h-[60vh] flex flex-col items-center justify-center animate-fade-up">
+            <div class="w-24 h-24 bg-white dark:bg-darkCard rounded-[2rem] shadow-glow flex items-center justify-center mb-8 border-2 border-gray-100 dark:border-white/5 relative">
+                <div class="absolute -right-2 -bottom-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white dark:border-darkBg z-10"></div>
+                <img src="assets/images/learnaria_logo.png" class="w-14 h-14 object-contain" onerror="this.src='assets/images/favicon.png'">
+            </div>
+            <h2 class="text-3xl font-black mb-2 text-center text-gray-900 dark:text-white font-inter">بوابة ولي الأمر</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mb-10 text-center px-6 leading-relaxed font-medium">
+                أدخل رقم الهاتف لمتابعة التقارير الدراسية
+            </p>
+            <div class="w-full space-y-4">
+                <div class="relative group">
+                    <input type="tel" id="parentPhoneInput" placeholder="01xxxxxxxxx" class="w-full input-field rounded-2xl p-4 text-center text-xl font-bold outline-none transition-all font-mono">
+                    <i class="ri-smartphone-line absolute top-1/2 -translate-y-1/2 right-5 text-gray-400 text-xl group-focus-within:text-primary transition-colors"></i>
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-primary hover:bg-yellow-400 text-black font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-lg flex items-center justify-center gap-2">
+                    <span>دخول</span><i class="ri-arrow-left-line"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="dashboardSection" class="hidden space-y-8 animate-fade-up">
+            <div class="flex justify-between items-end px-1 mt-4">
+                <div>
+                    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wide">لوحة المتابعة</p>
+                    <h2 id="headerGuardianText" class="text-2xl font-black leading-tight text-gray-900 dark:text-white font-cairo">...</h2>
+                </div>
+            </div>
+  <button type="button" onclick="requestPermission()" id="notifyBanner" class="hidden w-full text-right cursor-pointer relative overflow-hidden rounded-[2rem] border border-primary/30 bg-primary/5 p-6 flex items-center gap-5 transition-all duration-200 active:scale-95 hover:shadow-md z-20 group">
+    
+    <div class="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    
+    <div class="w-14 h-14 bg-primary text-black rounded-full flex items-center justify-center shadow-glow animate-pulse shrink-0 border-4 border-white dark:border-darkCard z-10">
+        <i class="ri-notification-3-fill text-2xl"></i>
+    </div>
+    
+    <div class="flex-1 z-10">
+        <h3 class="font-black text-xl text-gray-900 dark:text-white font-cairo mb-1">تفعيل التنبيهات</h3>
+        <p class="text-sm font-bold text-gray-500 dark:text-gray-400">اضغط هنا ليصلك إشعار الغياب والدرجات فوراً</p>
+    </div>
+</button>
+            <div>
+                <h3 class="font-bold text-lg mb-5 flex items-center gap-2 px-1 text-gray-900 dark:text-white font-cairo">
+                    <i class="ri-dashboard-fill text-primary"></i> المواد الدراسية
+                </h3>
+                <div id="coursesList" class="space-y-5"></div>
+            </div>
+        </div>
+
+        <div id="detailsModal" class="fixed inset-0 z-[60] pointer-events-none opacity-0 transition-opacity duration-300 flex items-end sm:items-center justify-center">
+            
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" id="modalBackdrop"></div>
+            
+            <div id="modalContainer" class="relative w-full max-w-lg h-[85vh] bg-lightBg dark:bg-darkBg rounded-t-[2.5rem] transform translate-y-full transition-transform duration-300 pointer-events-auto flex flex-col shadow-2xl overflow-hidden border-t border-white/10">
+                
+                <div class="px-6 py-6 bg-white dark:bg-darkCard border-b border-gray-100 dark:border-white/5 z-10 sticky top-0">
+                    <div class="w-12 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mx-auto mb-6"></div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20">المادة</span>
+                            </div>
+                            <h2 id="modalSubject" class="text-2xl font-black text-gray-900 dark:text-white leading-none font-cairo">...</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 font-bold">معلم: <span id="modalTeacher" class="text-primary">...</span></p>
+                        </div>
+                        
+                        <button type="button" id="closeDetailsBtn" class="relative z-50 w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 dark:hover:bg-red-500/20 transition-colors cursor-pointer shadow-md">
+                            <i class="ri-close-line text-xl pointer-events-none"></i>
+                        </button>
+                    </div>
+
+                    <div class="tab-container flex mt-6 gap-1">
+                        <button onclick="switchTab('home')" class="tab-btn active flex-1 py-3 text-xs rounded-xl" id="btn-home">ملخص</button>
+                        <button onclick="switchTab('homework')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-homework">الواجب</button>
+                        <button onclick="switchTab('grades')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-grades">الدرجات</button>
+                        <button onclick="switchTab('payments')" class="tab-btn flex-1 py-3 text-xs rounded-xl" id="btn-payments">مصاريف</button>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-6 bg-transparent custom-scroll">
+                    
+                    <div id="view-home" class="tab-content space-y-6 animate-fade-up">
+                        <div id="todayScheduleContainer" class="hidden spot-card p-4 flex items-center justify-between border-r-4 border-primary bg-primary/5">
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 dark:text-gray-400"><i class="ri-calendar-event-fill text-primary"></i> موعد اليوم</p>
+                                <h3 id="todayClassTime" class="text-xl font-black text-gray-900 dark:text-white mt-1">--:--</h3>
+                            </div>
+                            <span class="bg-primary text-black text-[10px] font-bold px-3 py-1 rounded-lg">درس اليوم</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="spot-card p-5 text-center">
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2">نسبة الحضور</p>
+                                <h3 id="modalAttPerc" class="text-3xl font-black text-gray-900 dark:text-white">--%</h3>
+                            </div>
+                            <div class="spot-card p-5 text-center">
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2">آخر امتحان</p>
+                                <h3 id="modalLastGrade" class="text-3xl font-black text-primary">--</h3>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 mb-4 flex items-center gap-2"><i class="ri-history-line text-primary"></i> السجل اليومي</h3>
+                            <div id="modalAttendanceList" class="space-y-0 relative border-r-2 border-gray-200 dark:border-white/5 mr-2 pr-5 pb-2"></div>
+                        </div>
+                    </div>
+
+                    <div id="view-homework" class="tab-content hidden space-y-4 animate-fade-up">
+                        <div id="modalHomeworkList" class="space-y-3"></div>
+                    </div>
+
+                    <div id="view-grades" class="tab-content hidden space-y-4 animate-fade-up">
+                        <div id="modalGradesList" class="space-y-3"></div>
+                    </div>
+
+                    <div id="view-payments" class="tab-content hidden space-y-5 animate-fade-up">
+                        <div id="paymentStatusBanner" class="spot-card p-6 flex items-center justify-between border-r-4">
+                            <div>
+                                <p class="text-sm font-bold text-gray-900 dark:text-white">الشهر الحالي</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="currentMonthName">...</p>
+                            </div>
+                            <span id="currentMonthStatus" class="px-4 py-2 rounded-xl text-xs font-bold">--</span>
+                        </div>
+                        <h3 class="text-xs font-bold text-gray-400 mt-6 mb-3 flex items-center gap-2"><i class="ri-wallet-3-fill text-primary"></i> السجل المالي</h3>
+                        <div id="modalPaymentsList" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
+            authDomain: "learnaria-483e7.firebaseapp.com",
+            projectId: "learnaria-483e7",
+            storageBucket: "learnaria-483e7.firebasestorage.app",
+            messagingSenderId: "573038013067",
+            appId: "1:573038013067:web:db6a78e8370d33b07a828e"
+        };
+        
+        let db, messaging;
+        try {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            if (firebase.messaging.isSupported()) messaging = firebase.messaging();
+        } catch (e) { console.error(e); }
+
+        let currentParentPhone = "";
+        let unsubscribeStudents = null;
+
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage))) {
+            document.documentElement.classList.add('dark-mode');
+            document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
+        } else {
+            document.documentElement.classList.remove('dark-mode');
+            document.getElementById('themeIcon').className = 'ri-moon-line text-lg';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('closeDetailsBtn').addEventListener('click', closeDetails);
+            document.getElementById('modalBackdrop').addEventListener('click', closeDetails);
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlP = urlParams.get('p'); 
+
+        if (urlP) {
+            currentParentPhone = urlP;
+            loadAppRealtime();
+        } else {
+            document.getElementById('loginSection').classList.remove('hidden');
+        }
+
+        function handleLogin() {
+            const phone = document.getElementById('parentPhoneInput').value.trim();
+            if (phone.length < 10) return alert("رقم غير صحيح");
+            currentParentPhone = phone;
+            document.getElementById('loginSection').classList.add('hidden');
+            loadAppRealtime(); 
+        }
+
+        function logout() { 
+            if(unsubscribeStudents) unsubscribeStudents();
+            window.location.href = window.location.pathname; 
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark-mode')) {
+                html.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+                document.getElementById('themeIcon').className = 'ri-moon-line text-lg';
+            } else {
+                html.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+                document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${tab}`).classList.add('active');
+        }
+
+        function loadAppRealtime() {
+            document.getElementById('loadingScreen').classList.remove('hidden');
+            
+            // ✅ الاستخدام الصحيح: onSnapshot للتحديث اللحظي
+            unsubscribeStudents = db.collectionGroup('students')
+                .where('parentPhoneNumber', '==', currentParentPhone)
+                .onSnapshot(async (snapshot) => {
+                    if (snapshot.empty) { 
+                        document.getElementById('loadingScreen').classList.add('hidden');
+                        // لا نظهر رسالة خطأ إذا كان هناك محتوى سابقاً (تجنب الوميض)
+                        if(!document.getElementById('coursesList').hasChildNodes()) {
+                            alert("لم يتم العثور على بيانات"); 
+                            document.getElementById('loginSection').classList.remove('hidden');
+                        }
+                        return; 
+                    }
+
+                    document.getElementById('dashboardSection').classList.remove('hidden');
+                    const coursesContainer = document.getElementById('coursesList');
+                    coursesContainer.innerHTML = ''; // تنظيف القائمة
+                    
+                    let studentNames = new Set();
+                    
+                    const renderPromises = snapshot.docs.map(async (doc) => {
+                        const sData = doc.data();
+                        studentNames.add(sData.name.split(' ')[0]);
+                        const path = doc.ref.path.split('/');
+                        const studentObj = {
+                            sId: doc.id,
+                            tId: path[1],
+                            gId: path[3],
+                            name: sData.name
+                        };
+                        return await createStudentCardHTML(studentObj);
+                    });
+
+                    const cardsHTML = await Promise.all(renderPromises);
+                    coursesContainer.innerHTML = cardsHTML.join('');
+
+                    if(studentNames.size > 0) document.getElementById('headerGuardianText').innerHTML = `ولي أمر الطالب <span class="text-primary">${Array.from(studentNames).join('، ')}</span>`;
+                    
+                    if(Notification.permission !== 'granted') document.getElementById('notifyBanner').classList.remove('hidden');
+                    else document.getElementById('notifyBanner').classList.add('hidden');
+
+                    document.getElementById('loadingScreen').classList.add('hidden');
+
+                }, (error) => {
+                    console.error("Error fetching data:", error);
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                });
+        }
+
+        async function createStudentCardHTML(student) {
+            // ✅ البحث الدقيق عن حالة دفع الشهر الحالي
+            const date = new Date();
+            const currentMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            
+            const payQueryPromise = db.collection(`teachers/${student.tId}/groups/${student.gId}/payments`)
+                                      .where('month', '==', currentMonth)
+                                      .limit(1)
+                                      .get();
+
+            const [tDoc, attSnap, assSnap, payQuerySnap] = await Promise.all([
+                db.collection('teachers').doc(student.tId).get(),
+                db.collection(`teachers/${student.tId}/groups/${student.gId}/dailyAttendance`).limit(30).get(),
+                db.collection(`teachers/${student.tId}/groups/${student.gId}/assignments`).orderBy('date', 'desc').limit(15).get(),
+                payQueryPromise
+            ]);
+
+            let tName = "مدرس", subName = "مادة";
+            if(tDoc.exists) { tName = tDoc.data().name; subName = tDoc.data().subject || "عام"; }
+
+            let totalDays=0, presentDays=0;
+            attSnap.forEach(d => {
+                const r = d.data().records?.find(x => x.studentId === student.sId);
+                if(r) { totalDays++; if(r.status==='present') presentDays++; }
+            });
+            const attPerc = totalDays > 0 ? Math.round((presentDays/totalDays)*100) : 0;
+
+            // ✅ منطق آخر امتحان (ليس واجب)
+            let lastGrade = '--';
+            if(!assSnap.empty) {
+                for (const doc of assSnap.docs) {
+                    const d = doc.data();
+                    const sc = d.scores?.[student.sId];
+                    const name = d.name || "";
+                    const type = d.type || "";
+                    
+                    // استبعاد الواجبات (بالاسم أو النوع)
+                    const isHomework = type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
+                    
+                    if (!isHomework && sc && sc.score !== null && sc.score !== undefined && sc.score !== "") {
+                        lastGrade = sc.score;
+                        break; 
+                    }
+                }
+            }
+
+            // ✅ حالة الدفع من الـ Query
+            let isPaid = false;
+            if(!payQuerySnap.empty) {
+                const payDoc = payQuerySnap.docs[0];
+                const r = payDoc.data().records?.find(x => x.studentId === student.sId);
+                if(r && r.paid) isPaid = true;
+            }
+
+            return `
+            <div class="spot-card p-5 cursor-pointer group relative overflow-hidden" onclick="openDetails('${student.tId}', '${student.gId}', '${student.sId}', '${tName}', '${subName}')">
+                <div class="absolute -right-5 -top-5 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition"></div>
+                <div class="flex justify-between items-start mb-5 relative z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-gray-50 dark:bg-black border border-gray-200 dark:border-white/5 flex items-center justify-center shadow-inner">
+                            <span class="text-xl font-black text-primary">${subName.charAt(0)}</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black font-cairo leading-tight text-gray-900 dark:text-white">${subName}</h3>
+                            <p class="text-[10px] text-gray-500 font-bold">${tName}</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="text-[10px] bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-300 px-2 py-0.5 rounded-md font-bold">${student.name.split(' ')[0]}</span>
+                        ${isPaid ? '<span class="text-[10px] text-green-500 bg-green-500/10 px-2 py-0.5 rounded-md font-bold border border-green-500/20">مدفوع</span>' : '<span class="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md font-bold border border-red-500/20">غير مدفوع</span>'}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mt-2 border-t border-gray-100 dark:border-white/5 pt-3">
+                    <div><p class="text-[10px] text-gray-400 font-bold">نسبة الحضور</p><p class="text-lg font-black ${attPerc>85?'text-green-500':'text-primary'}">${attPerc}%</p></div>
+                    <div><p class="text-[10px] text-gray-400 font-bold">آخر امتحان</p><p class="text-lg font-black text-gray-900 dark:text-white">${lastGrade}</p></div>
+                </div>
+            </div>`;
+        }
+
+        async function openDetails(tId, gId, sId, tName, subject) {
+            document.getElementById('modalSubject').innerText = subject;
+            document.getElementById('modalTeacher').innerText = tName;
+            const modal = document.getElementById('detailsModal');
+            const cont = document.getElementById('modalContainer');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            cont.classList.remove('translate-y-full');
+            document.getElementById('modalBackdrop').classList.remove('hidden');
+
+            switchTab('home');
+            loadDetailsData(tId, gId, sId);
+        }
+
+        async function loadDetailsData(tId, gId, sId) {
+            const attList = document.getElementById('modalAttendanceList');
+            const grList = document.getElementById('modalGradesList');
+            const hwList = document.getElementById('modalHomeworkList');
+            const payList = document.getElementById('modalPaymentsList');
+            
+            attList.innerHTML = '<div class="loader w-6 h-6 border-2 border-gray-500 border-t-primary rounded-full mx-auto my-2"></div>';
+            grList.innerHTML = ''; hwList.innerHTML = ''; payList.innerHTML = '';
+            document.getElementById('todayScheduleContainer').classList.add('hidden');
+
+            const [attSnap, assSnap, paySnap, schedSnap] = await Promise.all([
+                db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(20).get(),
+                db.collection(`teachers/${tId}/groups/${gId}/assignments`).orderBy('date', 'desc').limit(30).get(),
+                db.collection(`teachers/${tId}/groups/${gId}/payments`).limit(12).get(),
+                db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get()
+            ]);
+
+            // 1. الجدول
+            const todayIndex = new Date().getDay();
+            let todayClass = null;
+            schedSnap.forEach(doc => {
+                const s = doc.data();
+                if(s.days && s.days.includes(todayIndex)) todayClass = s.time;
+            });
+            if(todayClass) {
+                document.getElementById('todayScheduleContainer').classList.remove('hidden');
+                const [h, m] = todayClass.split(':');
+                const hour = parseInt(h);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const h12 = hour % 12 || 12;
+                document.getElementById('todayClassTime').innerText = `${h12}:${m} ${ampm}`;
+            }
+
+            // 2. الحضور
+            let attHtml = '', total=0, present=0;
+            attSnap.forEach(d => {
+                const r = d.data().records?.find(x => x.studentId === sId);
+                if(r) {
+                    total++; if(r.status==='present') present++;
+                    let col = r.status==='present'?'bg-green-500':(r.status==='absent'?'bg-red-500':'bg-yellow-500');
+                    let txt = r.status==='present'?'حاضر':(r.status==='absent'?'غائب':'تأخير');
+                    let txtCol = r.status==='present'?'text-green-500':(r.status==='absent'?'text-red-500':'text-yellow-500');
+                    attHtml += `<div class="relative pl-6 pb-8 last:pb-0 border-l-2 border-gray-200 dark:border-white/10 last:border-0"><div class="absolute -right-[7px] top-0 w-3.5 h-3.5 rounded-full ${col} ring-4 ring-white dark:ring-darkBg z-10"></div><div class="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5"><span class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.data().date}</span><span class="text-xs font-bold px-2 py-0.5 rounded bg-black/5 dark:bg-white/10 ${txtCol}">${txt}</span></div></div>`;
+                }
+            });
+            document.getElementById('modalAttendanceList').innerHTML = attHtml || '<p class="text-center text-gray-500 text-xs">لا يوجد سجل</p>';
+            document.getElementById('modalAttPerc').innerText = total>0 ? Math.round((present/total)*100)+'%' : '0%';
+
+            // 3. المنطق الجديد: فصل الواجبات عن الامتحانات بالاسم والنوع
+            let gradesHtml = '', homeworkHtml = '', lastG = '--';
+            
+            assSnap.forEach(doc => {
+                const d = doc.data();
+                const s = d.scores?.[sId];
+                const name = d.name || "";
+                const type = d.type || "";
+                
+                if(s) {
+                    // هل هو واجب؟ (نوع daily أو اسمه يبدأ بـ Homework/واجب)
+                    const isHomework = type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
+
+                    if (isHomework) {
+                        const isSubmitted = s.submitted;
+                        homeworkHtml += `
+                        <div class="spot-card p-4 flex justify-between items-center border-r-4 ${isSubmitted ? 'border-green-500' : 'border-red-500'}">
+                            <div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${name}</h4><span class="text-[10px] text-gray-400">${d.date}</span></div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold ${isSubmitted ? 'text-green-500' : 'text-red-500'}">${isSubmitted ? 'تم التسليم' : 'لم يتم'}</span>
+                                <div class="w-8 h-8 rounded-full ${isSubmitted ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} flex items-center justify-center"><i class="${isSubmitted ? 'ri-check-line' : 'ri-close-line'}"></i></div>
+                            </div>
+                        </div>`;
+                    } 
+                    // إذاً هو امتحان (حتى لو درجته مش موجودة هنعرضه)
+                    else {
+                        const displayScore = (s.score !== null && s.score !== undefined && s.score !== "") ? s.score : 'غائب';
+                        if(lastG === '--' && displayScore !== 'غائب') lastG = displayScore;
+                        
+                        gradesHtml += `
+                        <div class="spot-card p-4 flex justify-between items-center border-l-4 border-primary">
+                            <div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${name}</h4><span class="text-[10px] text-gray-400">${d.date}</span></div>
+                            <div class="text-center"><span class="block text-xl font-black text-gray-900 dark:text-white">${displayScore}</span><span class="text-[9px] text-gray-400">الدرجة</span></div>
+                        </div>`;
+                    }
+                }
+            });
+            document.getElementById('modalGradesList').innerHTML = gradesHtml || '<p class="text-center text-gray-500 text-xs py-4">لا توجد امتحانات</p>';
+            document.getElementById('modalHomeworkList').innerHTML = homeworkHtml || '<p class="text-center text-gray-500 text-xs py-4">لا توجد واجبات</p>';
+            document.getElementById('modalLastGrade').innerText = lastG;
+
+            // 4. المدفوعات
+            let payHtml = '';
+            const currM = new Date().toISOString().slice(0, 7);
+            let currSt = 'غير مدفوع', currCls = 'bg-red-500 text-white';
+            
+            paySnap.forEach(d => {
+                const m = d.data().month;
+                const r = d.data().records?.find(x => x.studentId === sId);
+                const p = r && r.paid;
+                
+                // التأكد من تحديث حالة الشهر الحالي
+                if(m === currM) {
+                    if(p) { currSt='تم الدفع'; currCls='bg-green-500 text-white'; }
+                    else { currSt='مطلوب سداد'; currCls='bg-red-500 text-white'; }
+                    document.getElementById('currentMonthStatus').innerText = currSt;
+                    document.getElementById('currentMonthStatus').className = `px-3 py-1 rounded-lg text-xs font-bold ${currCls}`;
+                }
+
+                payHtml += `<div class="flex justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/5 mb-2"><span class="font-bold text-sm text-gray-800 dark:text-gray-200">${m}</span><span class="text-xs font-bold ${p?'text-green-500':'text-red-500'}">${p?(r.amount+' ج.م'):'غير مدفوع'}</span></div>`;
+            });
+            document.getElementById('modalPaymentsList').innerHTML = payHtml;
+            document.getElementById('currentMonthName').innerText = currM;
+            document.getElementById('paymentStatusBanner').className = `spot-card p-6 flex items-center justify-between border-r-4 ${currSt.includes('الدفع')?'border-green-500':'border-red-500'}`;
+        }
+
+        function closeDetails() {
+            document.getElementById('modalContainer').classList.add('translate-y-full');
+            setTimeout(() => {
+                document.getElementById('detailsModal').classList.add('opacity-0', 'pointer-events-none');
+            }, 300);
+        }
+
+        // ✅ دالة تفعيل الإشعارات المحسنة للأندرويد
+        async function requestPermission() {
+            // 1. التحقق من دعم المتصفح
+            if (!('Notification' in window)) {
+                return alert("هذا المتصفح لا يدعم الإشعارات.");
+            }
+
+            if (!messaging) {
+                return alert("فشل في تحميل مكتبة الإشعارات (Firebase Messaging).");
+            }
+
+            const banner = document.getElementById('notifyBanner');
+            const originalText = banner.innerHTML;
+            banner.innerHTML = '<div class="loader w-5 h-5 border-2 border-black border-t-transparent rounded-full mx-auto"></div>';
+
+            try {
+                // 2. طلب الإذن
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    // 3. تسجيل الـ Service Worker يدوياً لضمان توافقه مع أندرويد
+                    // ملاحظة: تأكد أن ملف firebase-messaging-sw.js بجوار parent.html
+                    let reg;
+                    try {
+                        reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                    } catch (swError) {
+                        alert("خطأ في ملف Service Worker: " + swError.message);
+                        throw swError;
+                    }
+
+                    // 4. جلب التوكن
+                    const token = await messaging.getToken({ 
+                        vapidKey: "BN3l770-6tQOnDww8FXClGklZcfNUHzSWFUBMR-NN8Qupvfz_rdiZ0duLit7LMZjwjbhJu1SzJyI21pACl1WOVE", 
+                        serviceWorkerRegistration: reg 
+                    });
+                    
+                    if (token) {
+                        // 5. حفظ التوكن في الداتابيز
+                        // حفظ للأب
+                        await db.collection('parents').doc(currentParentPhone).set({ fcmToken: token }, { merge: true });
+                        
+                        // حفظ للطلاب
+                        const snapshot = await db.collectionGroup('students').where('parentPhoneNumber', '==', currentParentPhone).get();
+                        if (!snapshot.empty) {
+                            const batch = db.batch();
+                            snapshot.docs.forEach(doc => {
+                                batch.update(doc.ref, { parentFcmToken: token });
+                            });
+                            await batch.commit();
+                        }
+
+                        document.getElementById('notifyBanner').classList.add('hidden');
+                        alert("تم تفعيل التنبيهات بنجاح ✅");
+                    } else {
+                        alert("لم يتم استلام التوكن. حاول مرة أخرى.");
+                        banner.innerHTML = originalText;
+                    }
+                } else {
+                    alert("تم رفض الإذن. يرجى الدخول لإعدادات الموقع في المتصفح وتفعيل الإشعارات يدوياً.");
+                    banner.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error("Permission Error:", error);
+                alert("حدث خطأ: " + error.message); // سيظهر لك سبب المشكلة في أندرويد
+                banner.innerHTML = originalText;
+            }
+        }
+    </script>
+</body>
+</html>

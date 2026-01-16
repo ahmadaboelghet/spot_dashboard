@@ -1,441 +1,608 @@
+/**
+ * SPOT TEACHER - FINAL INTEGRATED VERSION
+ * Features: Smart Login + Parent Link + Unified Payments + Mirror Fix + Messages + Sync Fix + Fail-Safe Loading + Auto-Switch + UI Protection
+ * FIXES: 
+ * 1. Exams now include a DATE field so they appear in Parent App.
+ * 2. Daily Homework saves score as NULL to be distinguished from Exams.
+ */
+
+// ==========================================
+// 1. FIREBASE CONFIG
+// ==========================================
 const firebaseConfig = {
-  apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
-  authDomain: "learnaria-483e7.firebaseapp.com",
-  projectId: "learnaria-483e7",
-  storageBucket: "learnaria-483e7.firebasestorage.app",
-  messagingSenderId: "573038013067",
-  appId: "1:573038013067:web:db6a78e8370d33b07a828e",
-  measurementId: "G-T68CEZS4YC"
+    apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
+    authDomain: "learnaria-483e7.firebaseapp.com",
+    projectId: "learnaria-483e7",
+    storageBucket: "learnaria-483e7.firebasestorage.app",
+    messagingSenderId: "573038013067",
+    appId: "1:573038013067:web:db6a78e8370d33b07a828e",
+    measurementId: "G-T68CEZS4YC"
 };
 
-const app = firebase.initializeApp(firebaseConfig);
-const firestoreDB = firebase.firestore();
+let app, firestoreDB;
+try {
+    if (typeof firebase !== 'undefined') {
+        app = firebase.initializeApp(firebaseConfig);
+        firestoreDB = firebase.firestore();
+        firestoreDB.enablePersistence().catch(err => console.log("Persistence:", err.code));
+    }
+} catch (e) { console.error("Firebase Error:", e); }
 
+// ==========================================
+// 2. LOCAL DATABASE (IndexedDB) - FIXED
+// ==========================================
 const DB_NAME = 'LearnariaDB';
-const DB_VERSION = 6; 
-let localDB;
+const DB_VERSION = 6;
+let localDB = null;
 
 function openDB() {
-    if (localDB) {
-        return Promise.resolve(localDB);
-    }
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = event => {
-            const db = event.target.result;
-            try {
-                if (!db.objectStoreNames.contains('teachers')) {
-                    db.createObjectStore('teachers', { keyPath: 'id' });
+        if (localDB) {
+            resolve(localDB);
+            return;
+        }
+
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions', 'syncQueue'].forEach(store => {
+                if (!db.objectStoreNames.contains(store)) {
+                    const params = store === 'syncQueue' ? { autoIncrement: true } : { keyPath: 'id' };
+                    const s = db.createObjectStore(store, params);
+                    if(['groups', 'students', 'assignments', 'schedules'].includes(store)) s.createIndex(store === 'groups' ? 'teacherId' : 'groupId', store === 'groups' ? 'teacherId' : 'groupId', {unique:false});
                 }
-                if (!db.objectStoreNames.contains('groups')) {
-                    const store = db.createObjectStore('groups', { keyPath: 'id' });
-                    store.createIndex('teacherId', 'teacherId', { unique: false });
-                }
-                if (!db.objectStoreNames.contains('students')) {
-                    const store = db.createObjectStore('students', { keyPath: 'id' });
-                    store.createIndex('groupId', 'groupId', { unique: false });
-                }
-                if (!db.objectStoreNames.contains('assignments')) {
-                    const store = db.createObjectStore('assignments', { keyPath: 'id' });
-                    store.createIndex('groupId', 'groupId', { unique: false });
-                }
-                if (!db.objectStoreNames.contains('attendance')) {
-                     db.createObjectStore('attendance', { keyPath: 'id' });
-                }
-                if (!db.objectStoreNames.contains('payments')) {
-                     db.createObjectStore('payments', { keyPath: 'id' });
-                }
-                if (!db.objectStoreNames.contains('schedules')) {
-                     const store = db.createObjectStore('schedules', { keyPath: 'id' });
-                     store.createIndex('groupId', 'groupId', { unique: false });
-                }
-                if (!db.objectStoreNames.contains('scheduleExceptions')) {
-                     db.createObjectStore('scheduleExceptions', { keyPath: 'id' });
-                }
-                if (!db.objectStoreNames.contains('syncQueue')) {
-                    db.createObjectStore('syncQueue', { autoIncrement: true });
-                }
-            } catch (e) {
-                console.error("Error during DB upgrade:", e);
-                reject(e);
-            }
+            });
         };
-        request.onsuccess = event => {
-            localDB = event.target.result;
-            console.log("Database opened successfully.");
+
+        req.onsuccess = e => {
+            localDB = e.target.result;
+            localDB.onclose = () => { localDB = null; };
+            localDB.onversionchange = () => { localDB.close(); localDB = null; };
             resolve(localDB);
         };
-        request.onerror = event => {
-            const error = event.target.error;
-            console.error(`IndexedDB error: ${error.name} - ${error.message}`);
-            alert("Could not open the local database. This can happen in private browsing mode or if storage permissions are denied. The app may not work correctly offline.");
-            reject(error);
-        };
+
+        req.onerror = e => reject(e.target.error);
     });
 }
 
-async function getFromDB(storeName, key) {
-    if (!localDB) await openDB();
-    const tx = localDB.transaction(storeName, 'readonly');
-    const store = tx.objectStore(storeName);
-    return new Promise((resolve, reject) => {
-        const req = store.get(key);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = (event) => reject(event.target.error);
-    });
+// --- DB HELPERS (With Retry Logic) ---
+async function getFromDB(store, key) {
+    try {
+        await openDB();
+        return new Promise((res, rej) => {
+            const tx = localDB.transaction(store, 'readonly').objectStore(store).get(key);
+            tx.onsuccess = () => res(tx.result);
+            tx.onerror = () => rej(tx.error);
+        });
+    } catch (e) {
+        if (e.name === 'InvalidStateError' || !localDB) {
+            localDB = null;
+            await openDB();
+            return new Promise((res, rej) => {
+                const tx = localDB.transaction(store, 'readonly').objectStore(store).get(key);
+                tx.onsuccess = () => res(tx.result); tx.onerror = () => rej(tx.error);
+            });
+        }
+        throw e;
+    }
 }
 
-async function getAllFromDB(storeName, indexName, key) {
-    if (!localDB) await openDB();
-    const tx = localDB.transaction(storeName, 'readonly');
-    const store = tx.objectStore(storeName);
-    const index = store.index(indexName);
-    return new Promise((resolve, reject) => {
-        const req = index.getAll(key);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = (event) => reject(event.target.error);
-    });
+async function putToDB(store, data) {
+    try {
+        await openDB();
+        const tx = localDB.transaction(store, 'readwrite');
+        tx.objectStore(store).put(data);
+        return new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        if (e.name === 'InvalidStateError' || !localDB) {
+            localDB = null;
+            await openDB();
+            const tx = localDB.transaction(store, 'readwrite');
+            tx.objectStore(store).put(data);
+            return new Promise((resolve, reject) => {
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+        throw e;
+    }
 }
 
-async function putToDB(storeName, data) {
-    if (!localDB) await openDB();
-    const tx = localDB.transaction(storeName, 'readwrite');
-    const store = tx.objectStore(storeName);
-    store.put(data);
-    return tx.complete;
+async function getAllFromDB(store, idx, key) {
+    try {
+        await openDB();
+        return new Promise((res, rej) => {
+            const s = localDB.transaction(store, 'readonly').objectStore(store);
+            const req = idx ? s.index(idx).getAll(key) : s.getAll();
+            req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+        });
+    } catch (e) {
+        if (e.name === 'InvalidStateError' || !localDB) {
+            localDB = null;
+            await openDB();
+            return new Promise((res, rej) => {
+                const s = localDB.transaction(store, 'readonly').objectStore(store);
+                const req = idx ? s.index(idx).getAll(key) : s.getAll();
+                req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+            });
+        }
+        throw e;
+    }
 }
 
-async function deleteFromDB(storeName, key) {
-    if (!localDB) await openDB();
-    const tx = localDB.transaction(storeName, 'readwrite');
-    const store = tx.objectStore(storeName);
-    store.delete(key);
-    return tx.complete;
+async function deleteFromDB(store, key) {
+    try {
+        await openDB();
+        const tx = localDB.transaction(store, 'readwrite');
+        tx.objectStore(store).delete(key);
+        return new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        localDB = null;
+        await openDB();
+        const tx = localDB.transaction(store, 'readwrite');
+        tx.objectStore(store).delete(key);
+        return new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
 }
 
-let TEACHER_ID = null;
-let SELECTED_GROUP_ID = null;
-let allStudents = [];
-let currentLang = 'ar';
+// ==========================================
+// 3. STATE & TRANSLATIONS
+// ==========================================
+let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = 'ar';
 let isSyncing = false;
-
-let statusIndicator, syncIndicator;
-let qrCodeModal, scannerModal, videoElement;
-let currentScannerMode = null; 
-let animationFrameId = null;
-let isScannerPaused = false;
-let areEventListenersSetup = false;
-let isAddingStudent = false;
+let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
+let hasHomeworkToday = false, currentPendingStudentId = null, currentMessageStudentId = null;
 
 const translations = {
     ar: {
-        pageTitle: "Spot - لوحة تحكم المعلم",
-        teacherDashboardTitle: "لوحة تحكم المعلم",
-        teacherLoginTitle: "1. تسجيل دخول المعلم",
-        teacherLoginPrompt: "الرجاء إدخال رقم هاتفك لتحميل بياناتك.",
-        loadDashboardButton: "تحميل لوحة التحكم",
-        myProfileTitle: "ملفي الشخصي",
-        myNameLabel: "اسمي:",
-        mySubjectLabel: "المادة التي أدرسها:",
-        saveProfileButton: "حفظ ملفي الشخصي",
-        manageGroupsTitle: "2. إدارة المجموعات",
-        newGroupNameLabel: "اسم المجموعة الجديدة:",
-        addNewGroupButton: "إضافة مجموعة جديدة",
-        selectGroupLabel: "اختر مجموعة لإدارتها:",
-        manageStudentsTitle: "إدارة الطلاب",
-        studentNameLabel: "اسم الطالب:",
-        parentPhoneLabel: "رقم هاتف ولي الأمر:",
-        addNewStudentButton: "إضافة طالب جديد",
-        searchStudentLabel: "البحث عن طالب:",
-        allStudentsLabel: "كل الطلاب في هذه المجموعة:",
-        attendanceTitle: "الحضور اليومي",
-        selectDateLabel: "اختر التاريخ:",
-        markAttendanceLabel: "تسجيل الحضور:",
-        saveAttendanceButton: "حفظ الحضور اليومي",
-        gradesTitle: "إدارة الدرجات",
-        selectAssignmentLabel: "اختر الواجب:",
-        newAssignmentNameLabel: "أو أضف اسم واجب جديد:",
-        newAssignmentDateLabel: "تاريخ الواجب الجديد:",
-        addNewAssignmentButton: "إضافة واجب جديد",
-        enterGradesLabel: "أدخل الدرجات:",
-        saveGradesButton: "حفظ درجات الواجب",
-        tabPayments: "التحصيل",
-        paymentsTitle: "متابعة تحصيل المصروفات",
-        selectMonthLabel: "اختر الشهر:",
-        markPaymentsLabel: "تسجيل الدفع:",
-        savePaymentsButton: "حفظ بيانات التحصيل",
-        paymentMonthMissing: "الرجاء اختيار الشهر.",
-        paymentsSavedSuccess: "تم حفظ بيانات الدفع بنجاح!",
-        paymentsSavedError: "فشل حفظ البيانات.",
-        paidLabel: "تم الدفع",
-        notPaidLabel: "لم يدفع",
-        scanPaymentsQR: "مسح دفع المصروفات بـ QR",
-        scheduleTitle: "إدارة جدول الحصص",
-        addRecurringScheduleTitle: "إضافة جدول متكرر جديد",
-        subjectLabel: "المادة:",
-        timeLabel: "الوقت:",
-        locationLabel: "المكان:",
-        selectDaysLabel: "اختر أيام الأسبوع:",
-        saveRecurringScheduleButton: "حفظ الجدول المتكرر",
-        mySchedulesLabel: "جداولي المتكررة:",
-        modifySingleClassTitle: "تعديل حصة واحدة",
-        modifyClassPrompt: "هل تحتاج إلى تغيير أو إلغاء حصة واحدة؟ اختر التاريخ وقم بالتغيير.",
-        classDateLabel: "تاريخ الحصة:",
-        newTimeLabel: "الوقت الجديد (اختياري):",
-        updateClassButton: "تحديث الحصة",
-        cancelClassButton: "إلغاء هذه الحصة",
-        phonePlaceholder: "مثال: 01001234567",
-        fullNamePlaceholder: "أدخل اسمك الكامل",
-        subjectPlaceholder: "مثال: فيزياء، رياضيات",
-        locationPlaceholder: "مثال: أونلاين، سنتر الياسمين",
-        groupNamePlaceholder: "مثال: الصف الأول - صباحي",
-        newStudentPlaceholder: "أدخل اسم الطالب الجديد",
-        parentPhonePlaceholder: "مثال: 01001234567",
-        searchPlaceholder: "اكتب اسمًا للبحث...",
-        assignmentNamePlaceholder: "مثال: اختبار قصير 1",
-        selectGroupOption: "-- اختر مجموعة --",
-        welcomeMessage: "مرحباً،",
-        completeProfileMessage: "الرجاء إكمال معلومات ملفك الشخصي.",
-        profileSavedSuccess: "تم حفظ الملف الشخصي بنجاح!",
-        profileSavedError: "فشل حفظ الملف الشخصي.",
-        nameAndSubjectMissing: "الرجاء إدخال اسمك والمادة التي تدرسها.",
-        groupAddedSuccess: "تمت إضافة المجموعة بنجاح!",
-        groupAddedError: "فشل إضافة المجموعة.",
-        groupNameMissing: "الرجاء إدخال اسم المجموعة.",
-        studentAddedSuccess: "تمت إضافة طالب جديد للمجموعة!",
-        studentAddedError: "فشل إضافة الطالب.",
-        studentAndParentMissing: "الرجاء إدخال اسم الطالب ورقم هاتف ولي الأمر.",
-        studentDeletedSuccess: "تم حذف الطالب بنجاح!",
-        studentDeletedError: "فشل حذف الطالب.",
-        deleteConfirmation: "هل أنت متأكد من حذف",
-        attendanceDateMissing: "الرجاء اختيار تاريخ.",
-        attendanceSavedSuccess: "تم حفظ الحضور بنجاح!",
-        attendanceSavedError: "فشل حفظ الحضور.",
-        selectAssignmentOption: "اختر واجبًا",
-        assignmentAddedSuccess: "تمت إضافة واجب جديد!",
-        assignmentNameDateMissing: "الرجاء إدخال اسم الواجب وتاريخه.",
-        selectAssignmentFirst: "الرجاء اختيار واجب أولاً.",
-        gradesSavedSuccess: "تم حفظ الدرجات بنجاح!",
-        gradesSavedError: "فشل حفظ الدرجات.",
-        scheduleSavedSuccess: "تم حفظ الجدول المتكرر بنجاح!",
-        scheduleSavedError: "فشل حفظ الجدول.",
-        fillScheduleForm: "الرجاء تعبئة المادة والوقت واختيار يوم واحد على الأقل.",
-        scheduleDeletedSuccess: "تم حذف الجدول بنجاح!",
-        scheduleDeletedError: "فشل حذف الجدول.",
-        confirmScheduleDelete: "هل أنت متأكد من حذف هذا الجدول المتكرر بالكامل؟",
-        classUpdatedSuccess: "تم تغيير موعد حصة {date} إلى {time}.",
-        classUpdatedError: "فشل تحديث الحصة.",
-        classDateAndTimeMissing: "الرجاء تحديد تاريخ الحصة والوقت الجديد.",
-        classCancelledSuccess: "تم إلغاء حصة يوم {date}.",
-        classCancelledError: "فشل إلغاء الحصة.",
-        classDateMissing: "الرجاء اختيار تاريخ الحصة التي تريد إلغاءها.",
-        confirmCancelClass: "هل أنت متأكد من إلغاء حصة يوم {date}؟",
-        noStudentsInGroup: "لا يوجد طلاب في هذه المجموعة بعد.",
-        parentLabel: "ولي الأمر:",
-        notAvailable: "غير متوفر",
-        deleteButton: "حذف",
-        absent: "غائب",
-        present: "حاضر",
-        late: "متأخر",
-        scorePlaceholder: "الدرجة",
-        noDateSelected: "الرجاء اختيار تاريخ.",
-        noStudentsAvailable: "لا يوجد طلاب في هذه المجموعة.",
-        noAssignmentSelected: "الرجاء اختيار واجب.",
-        loadingSchedules: "جاري تحميل الجداول...",
-        noSchedulesYet: "لا توجد جداول متكررة لهذه المجموعة بعد.",
-        repeatsOn: "تتكرر في:",
-        days: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
-        tabProfile: "الملف الشخصي",
+        pageTitle: "Spot - المعلم الذكي",
+        teacherLoginTitle: "تسجيل دخول المعلم",
+        teacherLoginPrompt: "أدخل رقمك للبدء",
+        loginButton: "دخول",
+        loginVerifying: "جاري التحقق...",
+        passwordLabel: "كلمة المرور",
+        phonePlaceholder: "01xxxxxxxxx",
+        passwordPlaceholder: "كلمة المرور",
+        welcomeTitle: "لوحة تحكم المعلم الذكي",
+        currentGroupLabel: "المجموعة الحالية",
+        selectGroupPlaceholder: "اختر مجموعة...",
+        addGroupTitle: "مجموعة جديدة",
+        groupNamePlaceholder: "اسم المجموعة",
+        addBtn: "إضافة",
+        tabProfile: "الملف",
+        tabDaily: "الحصة اليومية",
         tabStudents: "الطلاب",
-        tabAttendance: "الحضور",
-        tabGrades: "الدرجات",
+        tabGrades: "الامتحانات",
+        tabPayments: "التحصيل",
         tabSchedule: "الجدول",
-        onlineStatus: "متصل",
-        offlineStatus: "غير متصل",
-        syncStatusSynced: "تمت المزامنة",
-        syncStatusSyncing: "جاري المزامنة...",
-        syncStatusPending: "{count} تغييرات بانتظار المزامنة",
-        scanAttendanceQR: "مسح الحضور بـ QR",
-        scanHomeworkQR: "مسح تسليم الواجب بـ QR",
-        phoneMissing: "الرجاء إدخال رقم الهاتف.",
-        invalidPhoneFormat: "الرجاء إدخال رقم هاتف مصري صحيح (11 رقم يبدأ بـ 01).",
-        logoutButton: "تسجيل الخروج"
+        dailyClassTitle: "إدارة الحصة",
+        selectDateLabel: "تاريخ اليوم",
+        homeworkToggleLabel: "يوجد واجب؟",
+        homeworkToggleSub: "تفعيل المطالبة بالتسليم",
+        startSmartScan: "بدء الرصد الذكي",
+        liveLogTitle: "سجل الحصة المباشر",
+        saveAllButton: "حفظ الكل",
+        tableHeaderStudent: "الطالب",
+        tableHeaderAttendance: "الحضور",
+        tableHeaderHomework: "الواجب",
+        myProfileTitle: "بياناتي",
+        fullNamePlaceholder: "الاسم",
+        subjectPlaceholder: "المادة",
+        changePasswordPlaceholder: "تغيير كلمة المرور",
+        saveProfileButton: "حفظ التغييرات",
+        manageStudentsTitle: "الطلاب",
+        newStudentPlaceholder: "اسم الطالب الجديد",
+        parentPhonePlaceholder: "رقم ولي الأمر",
+        addNewStudentButton: "إضافة للقائمة",
+        searchPlaceholder: "بحث عن طالب...",
+        msgModalTitle: "رسالة لولي الأمر",
+        msgPlaceholder: "اكتب ملاحظاتك هنا (مثلاً: الطالب تحسن مستواه...)",
+        sendMsgBtn: "إرسال",
+        sendingMsg: "جاري الإرسال...",
+        cancelBtn: "إلغاء",
+        examsTitle: "الامتحانات والدرجات",
+        newAssignmentNameLabel: "اسم الامتحان / الواجب",
+        addNewAssignmentButton: "إنشاء",
+        selectExamPlaceholder: "-- اختر الامتحان --",
+        saveGradesButton: "حفظ الدرجات",
+        gradePlaceholder: "الدرجة",
+        selectMonthLabel: "شهر التحصيل",
+        amountLabel: "قيمة المصاريف",
+        defaultAmountPlaceholder: "مثلاً 150",
+        savePaymentsButton: "حفظ التحصيل",
+        addRecurringScheduleTitle: "إضافة موعد ثابت",
+        subjectLabel: "المادة",
+        timeLabel: "الوقت",
+        locationLabel: "المكان",
+        selectDaysLabel: "الأيام",
+        saveRecurringScheduleButton: "إضافة للجدول",
+        mySchedulesLabel: "مواعيدي",
+        modifySingleClassTitle: "تعديل طارئ",
+        modifyClassPrompt: "تغيير أو إلغاء حصة محددة.",
+        classDateLabel: "تاريخ الحصة",
+        newTimeLabel: "الموعد الجديد",
+        updateClassButton: "تحديث",
+        days: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+        repeatsOn: "كل:",
+        scanOverlayText: "وجه الكود داخل الإطار",
+        closeCamera: "إغلاق الكاميرا",
+        homeworkQuestion: "هل سلم الواجب؟",
+        yes: "نعم",
+        no: "لا",
+        printBtn: "طباعة",
+        closeBtn: "إغلاق",
+        saved: "تم الحفظ بنجاح!",
+        error: "حدث خطأ!",
+        studentAdded: "تمت الإضافة",
+        confirmDelete: "تأكيد الحذف؟",
+        online: "متصل",
+        offline: "غير متصل",
+        noStudentsInGroup: "لا يوجد طلاب في هذه المجموعة.",
+        fillScheduleForm: "أدخل المادة والوقت واختر يوماً واحداً على الأقل.",
+        scheduleSavedSuccess: "تم حفظ الجدول!",
+        confirmScheduleDelete: "حذف هذا الموعد؟",
+        classUpdatedSuccess: "تم تحديث الحصة ليوم {date}.",
+        classCancelledSuccess: "تم إلغاء حصة يوم {date}.",
+        paymentMonthMissing: "اختر الشهر أولاً",
+        writeMsgFirst: "الرجاء كتابة رسالة",
+        msgSentSuccess: "تم إرسال الرسالة بنجاح",
+        msgSendFail: "فشل الإرسال. تأكد من الإنترنت",
+        wrongPassword: "كلمة المرور خاطئة! حاول مرة أخرى.",
+        present: "حاضر",
+        absent: "غائب",
+        late: "متأخر",
+        accountNotRegistered: "هذا الحساب غير مسجل! يرجى التواصل مع الإدارة.",
+        offlineFirstLogin: "يجب الاتصال بالإنترنت لتسجيل الدخول لأول مرة",
+        selectGroupFirst: "الرجاء اختيار مجموعة أولاً",
+        newStudentPlaceholder: "اسم الطالب",
+        parentPhonePlaceholder: "رقم ولي الأمر",
+        groupNamePlaceholder: "اسم المجموعة",
+        newAssignmentNameLabel: "اسم الامتحان",
+        locationPlaceholder: "سنتر كوليدج"
     },
     en: {
-        pageTitle: "Spot - Teacher Dashboard",
-        teacherDashboardTitle: "Teacher Dashboard",
-        teacherLoginTitle: "1. Teacher Login",
-        teacherLoginPrompt: "Please enter your phone number to load your data.",
-        loadDashboardButton: "Load My Dashboard",
-        myProfileTitle: "My Profile",
-        myNameLabel: "My Name:",
-        mySubjectLabel: "Subject I Teach:",
-        saveProfileButton: "Save My Profile",
-        manageGroupsTitle: "2. Manage Groups",
-        newGroupNameLabel: "New Group Name:",
-        addNewGroupButton: "Add New Group",
-        selectGroupLabel: "Select a Group to Manage:",
-        manageStudentsTitle: "Manage Students",
-        studentNameLabel: "Student Name:",
-        parentPhoneLabel: "Parent Phone Number:",
-        addNewStudentButton: "Add New Student",
-        searchStudentLabel: "Search for a Student:",
-        allStudentsLabel: "All Students in this Group:",
-        attendanceTitle: "Daily Attendance",
-        selectDateLabel: "Select Date:",
-        markAttendanceLabel: "Mark Attendance:",
-        saveAttendanceButton: "Save Daily Attendance",
-        gradesTitle: "Grades Management",
-        selectAssignmentLabel: "Select Assignment:",
-        newAssignmentNameLabel: "Or Add New Assignment Name:",
-        newAssignmentDateLabel: "New Assignment Date:",
-        addNewAssignmentButton: "Add New Assignment",
-        enterGradesLabel: "Enter Grades:",
-        saveGradesButton: "Save Assignment Grades",
-        tabPayments: "Payments",
-        paymentsTitle: "Fees Collection",
-        selectMonthLabel: "Select Month:",
-        markPaymentsLabel: "Mark Payments:",
-        savePaymentsButton: "Save Payments",
-        paymentMonthMissing: "Please select a month.",
-        paymentsSavedSuccess: "Payments saved successfully!",
-        paymentsSavedError: "Failed to save payments.",
-        paidLabel: "Paid",
-        notPaidLabel: "Not Paid",
-        scanPaymentsQR: "Scan Fees Payment with QR",
-        scheduleTitle: "Class Schedule Management",
-        addRecurringScheduleTitle: "Add New Recurring Schedule",
-        subjectLabel: "Subject:",
-        timeLabel: "Time:",
-        locationLabel: "Location:",
-        selectDaysLabel: "Select Days of the Week:",
-        saveRecurringScheduleButton: "Save Recurring Schedule",
-        mySchedulesLabel: "My Recurring Schedules:",
-        modifySingleClassTitle: "Modify a Single Class",
-        modifyClassPrompt: "Need to change or cancel a single class? Select the date and make your change.",
-        classDateLabel: "Date of Class:",
-        newTimeLabel: "New Time (Optional):",
-        updateClassButton: "Update Class",
-        cancelClassButton: "Cancel This Class",
-        phonePlaceholder: "e.g., 01001234567",
-        fullNamePlaceholder: "Enter your full name",
-        subjectPlaceholder: "e.g., Physics, Math",
-        locationPlaceholder: "e.g., Online, Jasmine Center",
-        groupNamePlaceholder: "e.g., Grade 10 - Morning",
-        newStudentPlaceholder: "Enter new student name",
-        parentPhonePlaceholder: "e.g., 01001234567",
-        searchPlaceholder: "Type a name to search...",
-        assignmentNamePlaceholder: "e.g., Quiz 1",
-        selectGroupOption: "-- Select a Group --",
-        welcomeMessage: "Welcome,",
-        completeProfileMessage: "Please complete your profile information.",
-        profileSavedSuccess: "Profile saved successfully!",
-        profileSavedError: "Failed to save profile.",
-        nameAndSubjectMissing: "Please enter your name and the subject you teach.",
-        groupAddedSuccess: "Group added successfully!",
-        groupAddedError: "Failed to add group.",
-        groupNameMissing: "Please enter a group name.",
-        studentAddedSuccess: "New student added to group!",
-        studentAddedError: "Failed to add student.",
-        studentAndParentMissing: "Please enter both student name and parent phone number.",
-        studentDeletedSuccess: "Student deleted successfully!",
-        studentDeletedError: "Failed to delete student.",
-        deleteConfirmation: "Are you sure you want to delete",
-        attendanceDateMissing: "Please select a date.",
-        attendanceSavedSuccess: "Attendance saved successfully!",
-        attendanceSavedError: "Failed to save attendance.",
-        selectAssignmentOption: "Select an Assignment",
-        assignmentAddedSuccess: "New assignment added!",
-        assignmentNameDateMissing: "Please enter assignment name and date.",
-        selectAssignmentFirst: "Please select an assignment first.",
-        gradesSavedSuccess: "Grades saved successfully!",
-        gradesSavedError: "Failed to save grades.",
-        scheduleSavedSuccess: "Recurring schedule saved successfully!",
-        scheduleSavedError: "Failed to save the schedule.",
-        fillScheduleForm: "Please fill in subject, time, and select at least one day.",
-        scheduleDeletedSuccess: "Schedule deleted successfully!",
-        scheduleDeletedError: "Failed to delete schedule.",
-        confirmScheduleDelete: "Are you sure you want to delete this entire recurring schedule?",
-        classUpdatedSuccess: "Class on {date} has been rescheduled to {time}.",
-        classUpdatedError: "Failed to update class.",
-        classDateAndTimeMissing: "Please select the date of the class and the new time.",
-        classCancelledSuccess: "Class on {date} has been cancelled.",
-        classCancelledError: "Failed to cancel class.",
-        classDateMissing: "Please select the date of the class you want to cancel.",
-        confirmCancelClass: "Are you sure you want to cancel the class on {date}?",
-        noStudentsInGroup: "No students in this group yet.",
-        parentLabel: "Parent:",
-        notAvailable: "N/A",
-        deleteButton: "Delete",
-        absent: "Absent",
-        present: "Present",
-        late: "Late",
-        scorePlaceholder: "Score",
-        noDateSelected: "Please select a date.",
-        noStudentsAvailable: "No students available in this group.",
-        noAssignmentSelected: "Please select an assignment.",
-        loadingSchedules: "Loading schedules...",
-        noSchedulesYet: "No recurring schedules set for this group yet.",
-        repeatsOn: "Repeats on:",
-        days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        pageTitle: "Spot - Smart Teacher",
+        teacherLoginTitle: "Teacher Login",
+        teacherLoginPrompt: "Enter phone to start",
+        loginButton: "Login",
+        loginVerifying: "Verifying...",
+        passwordLabel: "Password",
+        phonePlaceholder: "01xxxxxxxxx",
+        passwordPlaceholder: "Password",
+        welcomeTitle: "Smart Teacher Dashboard",
+        currentGroupLabel: "Current Group",
+        selectGroupPlaceholder: "Select Group...",
+        addGroupTitle: "New Group",
+        groupNamePlaceholder: "Group Name",
+        addBtn: "Add",
         tabProfile: "Profile",
+        tabDaily: "Daily Class",
         tabStudents: "Students",
-        tabAttendance: "Attendance",
-        tabGrades: "Grades",
+        tabGrades: "Exams",
+        tabPayments: "Payments",
         tabSchedule: "Schedule",
-        onlineStatus: "Online",
-        offlineStatus: "Offline",
-        syncStatusSynced: "Synced",
-        syncStatusSyncing: "Syncing...",
-        syncStatusPending: "{count} changes pending",
-        scanAttendanceQR: "Scan Attendance with QR",
-        scanHomeworkQR: "Scan Homework with QR",
-        phoneMissing: "Please enter your phone number.",
-        invalidPhoneFormat: "Please enter a valid Egyptian phone number (11 digits, starting with 01).",
-        logoutButton: "Logout"
+        dailyClassTitle: "Class Manager",
+        selectDateLabel: "Today's Date",
+        homeworkToggleLabel: "Homework?",
+        homeworkToggleSub: "Enable submission tracking",
+        startSmartScan: "Smart Scan",
+        liveLogTitle: "Live Log",
+        saveAllButton: "Save All",
+        tableHeaderStudent: "Student",
+        tableHeaderAttendance: "Status",
+        tableHeaderHomework: "Homework",
+        myProfileTitle: "My Profile",
+        fullNamePlaceholder: "Full Name",
+        subjectPlaceholder: "Subject",
+        changePasswordPlaceholder: "Change Password",
+        saveProfileButton: "Save Changes",
+        manageStudentsTitle: "Students",
+        newStudentPlaceholder: "New Student Name",
+        parentPhonePlaceholder: "Parent Phone",
+        addNewStudentButton: "Add to List",
+        searchPlaceholder: "Search student...",
+        msgModalTitle: "Message to Parent",
+        msgPlaceholder: "Write your notes here...",
+        sendMsgBtn: "Send",
+        sendingMsg: "Sending...",
+        cancelBtn: "Cancel",
+        examsTitle: "Exams & Grades",
+        newAssignmentNameLabel: "Exam / Assignment Name",
+        addNewAssignmentButton: "Create",
+        selectExamPlaceholder: "-- Select Exam --",
+        saveGradesButton: "Save Grades",
+        gradePlaceholder: "Score",
+        selectMonthLabel: "Collection Month",
+        amountLabel: "Amount",
+        defaultAmountPlaceholder: "e.g. 150",
+        savePaymentsButton: "Save Payments",
+        addRecurringScheduleTitle: "Add Recurring Class",
+        subjectLabel: "Subject",
+        timeLabel: "Time",
+        locationLabel: "Location",
+        selectDaysLabel: "Days",
+        saveRecurringScheduleButton: "Add to Schedule",
+        mySchedulesLabel: "My Schedules",
+        modifySingleClassTitle: "Emergency Edit",
+        modifyClassPrompt: "Change or cancel specific class.",
+        classDateLabel: "Class Date",
+        newTimeLabel: "New Time",
+        updateClassButton: "Update",
+        days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        repeatsOn: "Every:",
+        scanOverlayText: "Align code in frame",
+        closeCamera: "Close Camera",
+        homeworkQuestion: "Submitted Homework?",
+        yes: "Yes",
+        no: "No",
+        printBtn: "Print",
+        closeBtn: "Close",
+        saved: "Saved Successfully!",
+        error: "Error Occurred!",
+        studentAdded: "Student Added",
+        confirmDelete: "Confirm Delete?",
+        online: "Online",
+        offline: "Offline",
+        noStudentsInGroup: "No students in this group.",
+        fillScheduleForm: "Fill subject, time and select a day.",
+        scheduleSavedSuccess: "Schedule Saved!",
+        confirmScheduleDelete: "Delete this schedule?",
+        classUpdatedSuccess: "Class updated for {date}.",
+        classCancelledSuccess: "Class cancelled for {date}.",
+        paymentMonthMissing: "Select Month First",
+        writeMsgFirst: "Please write a message",
+        msgSentSuccess: "Message sent successfully",
+        msgSendFail: "Sending failed. Check internet.",
+        wrongPassword: "Wrong Password! Try again.",
+        present: "Present",
+        absent: "Absent",
+        late: "Late",
+        accountNotRegistered: "Account not registered! Please contact admin.",
+        offlineFirstLogin: "Internet connection required for first login",
+        selectGroupFirst: "Please select a group first",
+        newStudentPlaceholder: "Student Name",
+        parentPhonePlaceholder: "Parent Phone",
+        groupNamePlaceholder: "Group Name",
+        newAssignmentNameLabel: "Exam Name",
+        locationPlaceholder: "Center College"
     }
 };
 
-// ======================= START: UTILITY FUNCTIONS =======================
-function isValidEgyptianPhoneNumber(phone) {
-    if (!phone) return false;
-    const regex = /^01[0125]\d{8}$/;
-    return regex.test(phone.trim());
+// ==========================================
+// 4. UTILS
+// ==========================================
+function generateUniqueId() { return `off_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; }
+function isValidEgyptianPhoneNumber(p) { return /^01[0125]\d{8}$/.test(p?.trim()); }
+function formatPhoneNumber(p) { return isValidEgyptianPhoneNumber(p) ? `+20${p.trim().substring(1)}` : null; }
+
+function playBeep() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 800; gain.gain.value = 0.1;
+        osc.start(); osc.stop(ctx.currentTime + 0.1);
+        if(navigator.vibrate) navigator.vibrate(50);
+    } catch(e){}
 }
 
-function formatPhoneNumber(phone) {
-    const trimmedPhone = phone.trim();
-    if (isValidEgyptianPhoneNumber(trimmedPhone)) {
-        return `+20${trimmedPhone.substring(1)}`;
+function showToast(msg, type='success') {
+    const div = document.createElement('div');
+    div.className = `message-box ${type === 'error' ? 'border-red-500 text-red-500' : ''}`;
+    div.innerHTML = type === 'error' ? `<i class="ri-error-warning-line"></i> ${msg}` : `<i class="ri-checkbox-circle-line"></i> ${msg}`;
+    document.body.appendChild(div);
+    setTimeout(()=> div.remove(), 3000);
+}
+
+// --- SYNC ---
+async function addToSyncQueue(action) {
+    await putToDB('syncQueue', action);
+    updateOnlineStatus();
+}
+
+function updateOnlineStatus() {
+    const indicator = document.getElementById('statusIndicator');
+    if (!indicator) return;
+
+    const dot = indicator.querySelector('.status-dot');
+    const text = indicator.querySelector('.status-text');
+
+    if (navigator.onLine) {
+        indicator.classList.remove('offline');
+        indicator.classList.add('online');
+        text.innerText = translations[currentLang].online;
+        dot.className = 'status-dot w-2.5 h-2.5 rounded-full';
+        processSyncQueue();
+    } else {
+        indicator.classList.remove('online');
+        indicator.classList.add('offline');
+        text.innerText = translations[currentLang].offline;
+        dot.className = 'status-dot w-2.5 h-2.5 rounded-full';
     }
-    return null;
+    updateSyncUI();
 }
 
-function toEnglishNumerals(str) {
-    const persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    let result = String(str);
-    for (let i = 0; i < 10; i++) {
-        result = result.replace(new RegExp(persian[i], 'g'), i).replace(new RegExp(arabic[i], 'g'), i);
+async function updateSyncUI() {
+    if(!localDB) await openDB();
+    const count = await new Promise(r => {
+        const req = localDB.transaction('syncQueue').objectStore('syncQueue').count();
+        req.onsuccess = () => r(req.result);
+    });
+    const el = document.getElementById('syncIndicator');
+    if(el) {
+        if(count > 0) el.innerHTML = `<i class="ri-refresh-line animate-spin text-yellow-500"></i> ${count}`;
+        else el.innerHTML = `<i class="ri-check-double-line text-green-500"></i>`;
     }
-    return result;
 }
 
-function setupPhoneNumberInput(inputId) {
-    const phoneInput = document.getElementById(inputId);
-    if (phoneInput) {
-        phoneInput.setAttribute('maxlength', '11');
+async function processSyncQueue() {
+    if (!navigator.onLine || isSyncing) return;
+    isSyncing = true;
+    try {
+        if (!localDB) await openDB();
+        const tx = localDB.transaction('syncQueue', 'readwrite');
+        const store = tx.objectStore('syncQueue');
+        const req = store.getAll();
 
-        phoneInput.addEventListener('input', (e) => {
-            let value = e.target.value;
-            value = toEnglishNumerals(value);
-            value = value.replace(/\D/g, '');
-            if (value.length > 11) {
-                value = value.substring(0, 11);
+        req.onsuccess = async () => {
+            const items = req.result;
+            const keys = await new Promise(r => { const k = store.getAllKeys(); k.onsuccess = () => r(k.result); });
+
+            for (let i = 0; i < items.length; i++) {
+                const { type, path, data, id, options } = items[i];
+                try {
+                    if (type === 'set') await firestoreDB.doc(path).set(data, options || { merge: true });
+                    else if (type === 'add') await firestoreDB.collection(path).doc(id).set(data, { merge: true });
+                    else if (type === 'delete') await firestoreDB.doc(path).delete();
+                    await deleteFromDB('syncQueue', keys[i]);
+                } catch(e) { console.error(e); }
             }
-            e.target.value = value;
+            isSyncing = false;
+            updateSyncUI();
+        };
+    } catch(e) { isSyncing = false; }
+}
+
+// ==========================================
+// 5. INITIALIZATION
+// ==========================================
+document.addEventListener('DOMContentLoaded', async () => {
+    videoElement = document.getElementById('scannerVideo');
+    await openDB();
+    setupListeners();
+    await loadPreferences();
+    updateOnlineStatus();
+
+    const dailyInput = document.getElementById('dailyDateInput');
+    if(dailyInput) dailyInput.valueAsDate = new Date();
+
+    createTimePicker('recurringTimeContainer');
+    createTimePicker('exceptionNewTimeContainer');
+    renderDayCheckboxes();
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+});
+
+function setupListeners() {
+    document.getElementById('setTeacherButton').addEventListener('click', loginTeacher);
+    document.getElementById('logoutButton').addEventListener('click', logout);
+
+    // ✅✅ FIX: Disable student inputs by default on load
+    toggleStudentInputs(false);
+
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const tab = e.currentTarget.dataset.tab;
+            if(!SELECTED_GROUP_ID && tab !== 'profile') {
+                showToast(translations[currentLang].selectGroupPlaceholder, 'error');
+                return;
+            }
+            switchTab(tab);
         });
-    }
+    });
+
+    document.getElementById('saveProfileButton').addEventListener('click', saveProfile);
+    document.getElementById('createNewGroupBtn').addEventListener('click', createGroup);
+    
+    document.getElementById('groupSelect').addEventListener('change', async (e) => {
+        SELECTED_GROUP_ID = e.target.value;
+        switchTab('daily'); 
+        await loadGroupData();
+    });
+
+    document.getElementById('addNewGroupButton').addEventListener('click', () => switchTab('profile'));
+
+    document.getElementById('startSmartScanBtn').addEventListener('click', () => startScanner('daily'));
+    document.getElementById('homeworkToggle').addEventListener('change', (e) => {
+        hasHomeworkToday = e.target.checked;
+        renderDailyList();
+    });
+    document.getElementById('dailyDateInput').addEventListener('change', renderDailyList);
+    document.getElementById('saveDailyBtn').addEventListener('click', saveDailyData);
+    document.getElementById('hwYesBtn').addEventListener('click', () => resolveHomework(true));
+    document.getElementById('hwNoBtn').addEventListener('click', () => resolveHomework(false));
+
+    document.getElementById('addNewStudentButton').addEventListener('click', addNewStudent);
+    document.getElementById('studentSearchInput').addEventListener('input', (e) => renderStudents(e.target.value));
+
+    document.getElementById('addRecurringScheduleButton').addEventListener('click', saveRecurringSchedule);
+    document.getElementById('updateSingleClassButton').addEventListener('click', updateSingleClass);
+    document.getElementById('cancelSingleClassButton').addEventListener('click', cancelSingleClass);
+
+    document.getElementById('scanPaymentsBtn').addEventListener('click', () => startScanner('payments'));
+    document.getElementById('paymentMonthInput').addEventListener('change', renderPaymentsList);
+    document.getElementById('savePaymentsBtn').addEventListener('click', savePayments);
+    document.getElementById('addNewExamBtn').addEventListener('click', addNewExam);
+    document.getElementById('examSelect').addEventListener('change', renderExamGrades);
+    document.getElementById('saveExamGradesBtn').addEventListener('click', saveExamGrades);
+
+    document.getElementById('closeScannerModal').addEventListener('click', stopScanner);
+    document.getElementById('closeQrModal').addEventListener('click', () => document.getElementById('qrCodeModal').classList.add('hidden'));
+    document.getElementById('printIdButton').addEventListener('click', () => window.print());
+    document.getElementById('darkModeToggleButton').addEventListener('click', toggleDarkMode);
+    document.getElementById('languageToggleButton').addEventListener('click', toggleLang);
+
+    document.getElementById('closeMsgModal').addEventListener('click', () => {
+        document.getElementById('messageModal').classList.add('hidden');
+    });
+    document.getElementById('confirmSendMsgBtn').addEventListener('click', sendCustomMessageAction);
+    document.getElementById('shareIdBtn').addEventListener('click', shareCardAction);
+}
+
+// ✅✅ NEW HELPER: Enable/Disable Student Inputs
+function toggleStudentInputs(enable) {
+    const inputs = [
+        'newStudentName',
+        'newParentPhoneNumber',
+        'addNewStudentButton'
+    ];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.disabled = !enable;
+    });
+}
+
+// ==========================================
+// 6. SCHEDULE LOGIC
+// ==========================================
+function createTimePicker(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = `
+        <select id="${containerId}-hour" class="input-field text-center">
+            ${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${String(i + 1).padStart(2, '0')}</option>`).join('')}
+        </select>
+        <select id="${containerId}-minute" class="input-field text-center">
+            ${Array.from({ length: 60 }, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
+        </select>
+        <select id="${containerId}-period" class="input-field text-center">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+        </select>
+    `;
+}
+
+function getTimeFromPicker(containerId) {
+    const h = document.getElementById(`${containerId}-hour`);
+    const m = document.getElementById(`${containerId}-minute`);
+    const p = document.getElementById(`${containerId}-period`);
+    if (!h || !m || !p) return '';
+    let hour = parseInt(h.value, 10);
+    if (p.value === 'PM' && hour < 12) hour += 12;
+    if (p.value === 'AM' && hour === 12) hour = 0;
+    return `${String(hour).padStart(2, '0')}:${m.value}`;
 }
 
 function formatTime12Hour(timeString) {
@@ -447,1083 +614,145 @@ function formatTime12Hour(timeString) {
     return `${String(convertedHour).padStart(2, '0')}:${minute} ${period}`;
 }
 
-function createTimePicker(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = `
-        <select id="${containerId}-hour" class="input-field">
-            ${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${String(i + 1).padStart(2, '0')}</option>`).join('')}
-        </select>
-        <select id="${containerId}-minute" class="input-field">
-            ${Array.from({ length: 60 }, (_, i) => `<option value="${i}">${String(i).padStart(2, '0')}</option>`).join('')}
-        </select>
-        <select id="${containerId}-period" class="input-field">
-            <option value="AM">AM</option>
-            <option value="PM">PM</option>
-        </select>
-    `;
-}
-
-function getTimeFromPicker(containerId) {
-    const hourSelect = document.getElementById(`${containerId}-hour`);
-    const minuteSelect = document.getElementById(`${containerId}-minute`);
-    const periodSelect = document.getElementById(`${containerId}-period`);
-
-    if (!hourSelect || !minuteSelect || !periodSelect) return '';
-
-    let hour = parseInt(hourSelect.value, 10);
-    const minute = minuteSelect.value;
-    const period = periodSelect.value;
-
-    if (period === 'PM' && hour < 12) {
-        hour += 12;
-    }
-    if (period === 'AM' && hour === 12) {
-        hour = 0;
-    }
-
-    return `${String(hour).padStart(2, '0')}:${minute}`;
-}
-// =======================  END: UTILITY FUNCTIONS  =======================
-
-
-function showMessageBox(messageKey, ...args) {
-    let message = translations[currentLang][messageKey] || messageKey;
-    if (args.length > 0) {
-        message = message.replace(/{(\w+)}/g, (match, key) => {
-            const argIndex = Object.keys(args[0]).indexOf(key);
-            return argIndex !== -1 ? args[0][key] : match;
-        });
-    }
-
-    const existingBox = document.querySelector('.message-box');
-    if (existingBox) {
-        existingBox.remove();
-    }
-    const messageBox = document.createElement('div');
-    messageBox.className = 'message-box';
-    messageBox.innerText = message;
-    document.body.appendChild(messageBox);
-    setTimeout(() => { messageBox.style.opacity = 1; }, 50);
-    setTimeout(() => {
-        messageBox.style.opacity = 0;
-        messageBox.addEventListener('transitionend', () => messageBox.remove());
-    }, 3000);
-}
-
-
-function generateUniqueId() {
-    return `offline_${new Date().getTime()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-function updateOnlineStatus() {
-    const onlineText = translations[currentLang].onlineStatus || 'Online';
-    const offlineText = translations[currentLang].offlineStatus || 'Offline';
-    if (navigator.onLine) {
-        statusIndicator.classList.add('online');
-        statusIndicator.classList.remove('offline');
-        statusIndicator.querySelector('.status-text').textContent = onlineText;
-    } else {
-        statusIndicator.classList.remove('online');
-        statusIndicator.classList.add('offline');
-        statusIndicator.querySelector('.status-text').textContent = offlineText;
-    }
-    updateSyncIndicator();
-}
-
-async function updateSyncIndicator() {
-    const syncingText = translations[currentLang].syncStatusSyncing;
-    const syncedText = translations[currentLang].syncStatusSynced;
-    const pendingTextTemplate = translations[currentLang].syncStatusPending;
-    if (isSyncing) {
-        syncIndicator.innerHTML = `
-            <svg class="icon-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 4l5 5M20 20l-5-5"></path></svg>
-            <span>${syncingText}</span>
-        `;
-        return;
-    }
-    try {
-        if (!localDB) await openDB();
-        const tx = localDB.transaction('syncQueue', 'readonly');
-        const store = tx.objectStore('syncQueue');
-        const countReq = store.count();
-        countReq.onsuccess = () => {
-            const count = countReq.result;
-            if (count > 0) {
-                const pendingText = pendingTextTemplate.replace('{count}', count);
-                syncIndicator.innerHTML = `
-                    <svg class="h-5 w-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
-                    <span>${pendingText}</span>
-                `;
-            } else {
-                syncIndicator.innerHTML = `
-                    <svg class="h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    <span>${syncedText}</span>
-                `;
-            }
-        };
-    } catch (error) {
-        console.error("Could not update sync indicator:", error);
-    }
-}
-
-async function addToSyncQueue(action) {
-    await putToDB('syncQueue', action);
-    if (!navigator.onLine) {
-        showMessageBox("تم الحفظ محليًا وسيتم المزامنة عند توفر الإنترنت.");
-    }
-    updateSyncIndicator();
-}
-
-async function processSyncQueue() {
-    if (!navigator.onLine || isSyncing) return;
-    isSyncing = true;
-    await updateSyncIndicator();
-    let syncedActions = false;
-    try {
-        if (!localDB) await openDB();
-        
-        const tx = localDB.transaction('syncQueue', 'readwrite');
-        const store = tx.objectStore('syncQueue');
-
-        const getAllKeysPromise = new Promise((resolve, reject) => {
-            const request = store.getAllKeys();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-
-        const getAllValuesPromise = new Promise((resolve, reject) => {
-            const request = store.getAll();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-
-        const [keys, values] = await Promise.all([getAllKeysPromise, getAllValuesPromise]);
-        const actions = values.map((val, i) => ({ ...val, key: keys[i] }));
-
-        if (actions.length > 0) {
-            for (const action of actions) {
-                const { type, path, data, id, key, options } = action;
-                
-                if (type === 'set') {
-                    await firestoreDB.doc(path).set(data, options || { merge: true });
-                } else if (type === 'add') {
-                    await firestoreDB.collection(path).doc(id).set(data, { merge: true });
-                } else if (type === 'delete') {
-                    console.log(`%c Firestore Deleting Path: ${path}`, 'color: red; font-weight: bold;');
-                    await firestoreDB.doc(path).delete();
-                }
-                
-                await deleteFromDB('syncQueue', key);
-            }
-            syncedActions = true;
-        }
-    } catch (error) {
-        console.error("Error processing sync queue:", error);
-        
-    } finally {
-        isSyncing = false;
-        await updateSyncIndicator();
-        if (syncedActions) {
-            console.log("Sync complete. Refreshing UI data...");
-            await fetchGroups();
-            if (SELECTED_GROUP_ID) {
-                await fetchStudents();
-                await fetchAssignments();
-                await fetchRecurringSchedules();
-            }
-        }
-    }
-}
-
-function setLanguage(lang) {
-    currentLang = lang;
-    document.documentElement.lang = lang;
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    document.querySelectorAll('[data-key]').forEach(elem => {
-        const key = elem.getAttribute('data-key');
-        if (translations[lang][key]) elem.innerText = translations[lang][key];
-    });
-    document.querySelectorAll('[data-key-placeholder]').forEach(elem => {
-        const key = elem.getAttribute('data-key-placeholder');
-        if (translations[lang][key]) elem.placeholder = translations[lang][key];
-    });
-    document.getElementById('languageToggleButton').innerText = lang === 'ar' ? 'EN' : 'ع';
-    updateOnlineStatus();
-    renderDayCheckboxes();
-    if (TEACHER_ID) {
-        fetchGroups();
-    }
-    if (SELECTED_GROUP_ID) {
-        (async () => {
-            await fetchStudents();
-            fetchAssignments();
-            fetchRecurringSchedules();
-            renderAttendanceInputs();
-            renderGradesInputs();
-            renderPaymentInputs(); 
-        })();
-    }
-}
-
-function toggleLanguage() {
-    const newLang = currentLang === 'ar' ? 'en' : 'ar';
-    setLanguage(newLang);
-    localStorage.setItem('learnaria-lang', newLang);
-}
-
-function loadInitialPreferences() {
-    const savedLang = localStorage.getItem('learnaria-lang') || 'ar';
-    setLanguage(savedLang);
-    const isDarkMode = localStorage.getItem('learnaria-darkMode') === 'true';
-    if (isDarkMode) {
-        document.body.classList.add('dark-mode');
-    }
-    updateDarkModeIcons(isDarkMode);
-    const lastTeacherId = localStorage.getItem('learnaria-teacherId');
-    if(lastTeacherId) {
-        let displayPhone = lastTeacherId;
-        if (displayPhone.startsWith('+20')) {
-            displayPhone = '0' + displayPhone.substring(3);
-        }
-        document.getElementById('teacherPhoneInput').value = displayPhone;
-        setTeacher();
-    }
-}
-
-function toggleDarkMode() {
-    document.body.classList.toggle('dark-mode');
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    localStorage.setItem('learnaria-darkMode', isDarkMode);
-    updateDarkModeIcons(isDarkMode);
-}
-
-function updateDarkModeIcons(isDarkMode) {
-    const darkIcon = document.getElementById('darkModeIcon');
-    const lightIcon = document.getElementById('lightModeIcon');
-    if (isDarkMode) {
-        darkIcon.classList.add('hidden');
-        lightIcon.classList.remove('hidden');
-    } else {
-        darkIcon.classList.remove('hidden');
-        lightIcon.classList.add('hidden');
-    }
-}
-
-function initializeTabs() {
-    const tabsNav = document.getElementById('tabs-nav');
-    const tabButtons = tabsNav.querySelectorAll('.tab-button');
-    const tabContents = document.getElementById('tabs-content').querySelectorAll('.tab-content');
-    tabsNav.addEventListener('click', (e) => {
-        const targetButton = e.target.closest('.tab-button');
-        if (!targetButton || targetButton.disabled) return;
-        const tabName = targetButton.dataset.tab;
-        tabButtons.forEach(button => button.classList.remove('active'));
-        targetButton.classList.add('active');
-        tabContents.forEach(content => {
-            if (content.id === `tab-${tabName}`) {
-                content.classList.remove('hidden');
-            } else {
-                content.classList.add('hidden');
-            }
-        });
-    });
-}
-
-function logout() {
-    localStorage.removeItem('learnaria-teacherId');
-    location.reload();
-}
-
-function setupAllEventListeners() {
-    if (areEventListenersSetup) {
-        return;
-    }
-
-    document.getElementById('setTeacherButton').addEventListener('click', setTeacher);
-    document.getElementById('saveProfileButton').addEventListener('click', saveTeacherProfile);
-    document.getElementById('addNewGroupButton').addEventListener('click', addNewGroup);
-    document.getElementById('groupSelect').addEventListener('change', handleGroupSelection);
-    document.getElementById('addNewStudentButton').addEventListener('click', addNewStudent);
-    document.getElementById('studentSearchInput').addEventListener('input', handleStudentSearch);
-    document.getElementById('attendanceDateInput').addEventListener('change', renderAttendanceInputs);
-    document.getElementById('saveDailyAttendanceButton').addEventListener('click', saveDailyAttendance);
-    document.getElementById('assignmentSelect').addEventListener('change', renderGradesInputs);
-    document.getElementById('addNewAssignmentButton').addEventListener('click', addNewAssignment);
-    document.getElementById('saveAssignmentGradesButton').addEventListener('click', saveAssignmentGrades);
-    document.getElementById('addRecurringScheduleButton').addEventListener('click', saveRecurringSchedule);
-    document.getElementById('updateSingleClassButton').addEventListener('click', updateSingleClass);
-    document.getElementById('cancelSingleClassButton').addEventListener('click', cancelSingleClass);
-    document.getElementById('darkModeToggleButton').addEventListener('click', toggleDarkMode);
-    document.getElementById('languageToggleButton').addEventListener('click', toggleLanguage);
-    document.getElementById('logoutButton').addEventListener('click', logout);
-    document.getElementById('closeQrModal').addEventListener('click', () => qrCodeModal.classList.add('hidden'));
-    document.getElementById('closeScannerModal').addEventListener('click', stopScanner);
-    document.getElementById('scanAttendanceButton').addEventListener('click', () => startScanner('attendance'));
-    document.getElementById('scanHomeworkButton').addEventListener('click', () => startScanner('homework'));
-    document.getElementById('printIdButton').addEventListener('click', () => window.print());
-    
-    // Payments Listeners
-    document.getElementById('paymentMonthInput').addEventListener('change', renderPaymentInputs);
-    document.getElementById('savePaymentsButton').addEventListener('click', saveMonthlyPayments);
-    document.getElementById('scanPaymentsButton').addEventListener('click', () => startScanner('payments'));
-
-     const studentsListContainer = document.getElementById('studentsListDisplay');
-    if (studentsListContainer) {
-        studentsListContainer.addEventListener('click', function(event) {
-            const target = event.target;
-            const studentElement = target.closest('.record-item');
-            if (!studentElement) return;
-
-            const studentId = studentElement.dataset.studentId;
-
-            if (target.classList.contains('delete-student-btn')) {
-                if (studentId) {
-                    deleteStudent(studentId);
-                }
-            }
-
-            if (target.classList.contains('show-qr-btn')) {
-                const student = allStudents.find(s => s.id === studentId);
-                if (student) {
-                    showStudentQRCode(student);
-                }
-            }
-        });
-    }
-
-    setupPhoneNumberInput('teacherPhoneInput');
-    setupPhoneNumberInput('newParentPhoneNumber');
-
-    addEnterKeyListeners();
-
-    areEventListenersSetup = true;
-    console.log("All event listeners have been set up successfully, and will not be set up again.");
-}
-
-document.addEventListener('DOMContentLoaded', async function() {
-    statusIndicator = document.getElementById('statusIndicator');
-    syncIndicator = document.getElementById('syncIndicator');
-    qrCodeModal = document.getElementById('qrCodeModal');
-    scannerModal = document.getElementById('scannerModal');
-    videoElement = document.getElementById('scannerVideo');
-    
-    try {
-        await openDB();
-    } catch (error) {
-        console.error("Initial database open failed. App might be unstable.");
-    }
-    
-    setupAllEventListeners();
-
-    createTimePicker('recurringTimeContainer');
-    createTimePicker('exceptionNewTimeContainer');
-
-    initializeTabs();
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-    updateOnlineStatus();
-    
-    window.addEventListener('online', processSyncQueue);
-    loadInitialPreferences();
-    processSyncQueue();
-});
-
 function renderDayCheckboxes() {
     const container = document.getElementById('daysOfWeekContainer');
-    const days = translations[currentLang].days;
+    if(!container) return;
     container.innerHTML = '';
-    days.forEach((day, index) => {
+    translations[currentLang].days.forEach((day, index) => {
         const label = document.createElement('label');
-        label.className = 'day-checkbox-container';
+        label.className = 'day-checkbox-container cursor-pointer flex items-center gap-2 bg-white dark:bg-black border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl hover:border-brand transition-all';
         label.innerHTML = `
-            <input type="checkbox" class="day-checkbox" value="${index}">
-            <span>${day}</span>
+            <input type="checkbox" class="day-checkbox w-4 h-4 accent-brand rounded" value="${index}">
+            <span class="text-sm font-bold text-gray-700 dark:text-gray-300 select-none">${day}</span>
         `;
+        label.querySelector('input').addEventListener('change', function() {
+            if(this.checked) label.classList.add('bg-brand/10', 'border-brand');
+            else label.classList.remove('bg-brand/10', 'border-brand');
+        });
         container.appendChild(label);
     });
 }
 
-function addEnterKeyListeners() {
-    const listenForEnter = (elementId, actionFunction) => {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.addEventListener('keydown', function(event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    actionFunction();
-                }
-            });
-        }
-    };
-    listenForEnter('teacherPhoneInput', setTeacher);
-    listenForEnter('newGroupName', addNewGroup);
-    listenForEnter('newParentPhoneNumber', addNewStudent);
-    listenForEnter('newAssignmentDate', addNewAssignment);
-}
-
-async function setTeacher() {
-    try {
-        const phoneInput = document.getElementById('teacherPhoneInput').value;
-        
-        if (!isValidEgyptianPhoneNumber(phoneInput)) {
-            showMessageBox('invalidPhoneFormat');
-            return;
-        }
-        const formattedPhone = formatPhoneNumber(phoneInput);
-        if (!formattedPhone) {
-             showMessageBox('invalidPhoneFormat');
-             return;
-        }
-        TEACHER_ID = formattedPhone;
-
-        localStorage.setItem('learnaria-teacherId', TEACHER_ID);
-        document.getElementById('teacherPhoneInput').disabled = true;
-        document.getElementById('setTeacherButton').disabled = true;
-        document.getElementById('logoutButton').classList.remove('hidden');
-        let teacherData = await getFromDB('teachers', TEACHER_ID);
-        if (navigator.onLine) {
-            const teacherDoc = await firestoreDB.collection('teachers').doc(TEACHER_ID).get();
-            if (teacherDoc.exists) {
-                const remoteData = { id: teacherDoc.id, ...teacherDoc.data() };
-                teacherData = remoteData;
-                await putToDB('teachers', remoteData);
-            }
-        }
-        const welcomeMsg = translations[currentLang].welcomeMessage;
-        if (teacherData) {
-            document.getElementById('dashboardTitle').innerText = `${welcomeMsg} ${teacherData.name || TEACHER_ID}`;
-            document.getElementById('teacherNameInput').value = teacherData.name || '';
-            document.getElementById('teacherSubjectInput').value = teacherData.subject || '';
-        } else {
-            document.getElementById('dashboardTitle').innerText = `${welcomeMsg} ${TEACHER_ID}`;
-            showMessageBox('completeProfileMessage');
-        }
-        document.getElementById('mainContent').classList.remove('hidden');
-        fetchGroups();
-    } catch (error) {
-        console.error("Error setting teacher:", error);
-        showMessageBox("فشل تحميل بيانات المدرس.");
-    }
-}
-
-async function saveTeacherProfile() {
-    try {
-        if (!TEACHER_ID) return;
-        const teacherName = document.getElementById('teacherNameInput').value.trim();
-        const teacherSubject = document.getElementById('teacherSubjectInput').value.trim();
-        if (!teacherName || !teacherSubject) {
-            showMessageBox('nameAndSubjectMissing');
-            return;
-        }
-        const profileData = { id: TEACHER_ID, name: teacherName, subject: teacherSubject };
-        await putToDB('teachers', profileData);
-        showMessageBox('profileSavedSuccess');
-        document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeMessage} ${teacherName}`;
-        await addToSyncQueue({
-            type: 'set',
-            path: `teachers/${TEACHER_ID}`,
-            data: { name: teacherName, subject: teacherSubject }
-        });
-        processSyncQueue();
-    } catch (error) {
-        console.error("Error saving profile:", error);
-        showMessageBox('profileSavedError');
-    }
-}
-
-async function fetchGroups() {
-    try {
-        if (!TEACHER_ID) return;
-        let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
-        renderGroupSelect(groups);
-        if (navigator.onLine) {
-            const snapshot = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups`).get();
-            const remoteGroups = snapshot.docs.map(doc => ({ id: doc.id, teacherId: TEACHER_ID, ...doc.data() }));
-            await Promise.all(remoteGroups.map(group => putToDB('groups', group)));
-            renderGroupSelect(remoteGroups);
-        }
-    } catch (error) {
-        console.error('Error fetching groups:', error);
-    }
-}
-
-function renderGroupSelect(groups) {
-    const groupSelect = document.getElementById('groupSelect');
-    const currentGroup = groupSelect.value;
-    groupSelect.innerHTML = `<option value="">${translations[currentLang].selectGroupOption}</option>`;
-    groups.forEach(group => {
-        const option = document.createElement('option');
-        option.value = group.id;
-        option.innerText = group.name;
-        groupSelect.appendChild(option);
-    });
-    if (currentGroup && groups.some(g => g.id === currentGroup)) {
-        groupSelect.value = currentGroup;
-    }
-}
-
-async function addNewGroup() {
-    try {
-        if (!TEACHER_ID) return;
-        const groupName = document.getElementById('newGroupName').value.trim();
-        if (!groupName) {
-            showMessageBox('groupNameMissing');
-            return;
-        }
-        const newGroupId = generateUniqueId();
-        const newGroupData = { id: newGroupId, teacherId: TEACHER_ID, name: groupName };
-        await putToDB('groups', newGroupData);
-        showMessageBox('groupAddedSuccess');
-        document.getElementById('newGroupName').value = '';
-        await fetchGroups();
-        await addToSyncQueue({
-            type: 'add',
-            path: `teachers/${TEACHER_ID}/groups`,
-            id: newGroupId,
-            data: { name: groupName }
-        });
-        processSyncQueue();
-    } catch (error) {
-        console.error("Error adding new group:", error);
-        showMessageBox('groupAddedError');
-    }
-}
-
-async function handleGroupSelection() {
-    SELECTED_GROUP_ID = document.getElementById('groupSelect').value;
-    const tabs = document.querySelectorAll('#tabs-nav .tab-button');
-
-    const subjectInput = document.getElementById('recurringSubject');
-    const teacherSubject = document.getElementById('teacherSubjectInput').value;
-    if (subjectInput) {
-        subjectInput.value = teacherSubject;
-        subjectInput.disabled = true; 
-    }
-
-    if (SELECTED_GROUP_ID) {
-        tabs.forEach(tab => {
-            if (tab.dataset.tab !== 'profile') {
-                tab.disabled = false;
-            }
-        });
-        await fetchStudents();
-        fetchAssignments();
-        fetchRecurringSchedules();
-        document.getElementById('attendanceDateInput').value = new Date().toISOString().split('T')[0];
-        
-        // Initialize Payment Month
-        document.getElementById('paymentMonthInput').value = new Date().toISOString().slice(0, 7);
-        
-        renderAttendanceInputs();
-        renderGradesInputs();
-        renderPaymentInputs();
-        
-        document.querySelector('.tab-button[data-tab="students"]').click();
-    } else {
-        tabs.forEach(tab => {
-            if (tab.dataset.tab !== 'profile') {
-                tab.disabled = true;
-            }
-        });
-        document.querySelector('.tab-button[data-tab="profile"]').click();
-    }
-}
-
-async function fetchStudents() {
-    try {
-        if (!SELECTED_GROUP_ID) {
-            allStudents = [];
-            renderStudentsList(document.getElementById('studentsListDisplay'), allStudents);
-            return;
-        }
-        allStudents = await getAllFromDB('students', 'groupId', SELECTED_GROUP_ID);
-        renderStudentsList(document.getElementById('studentsListDisplay'), allStudents);
-        if (navigator.onLine) {
-            const snapshot = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get();
-            const remoteStudents = snapshot.docs.map(doc => ({ id: doc.id, groupId: SELECTED_GROUP_ID, ...doc.data() }));
-            await Promise.all(remoteStudents.map(student => putToDB('students', student)));
-            allStudents = remoteStudents;
-            renderStudentsList(document.getElementById('studentsListDisplay'), allStudents);
-        }
-    } catch (error) {
-        console.error('Error fetching students:', error);
-    }
-}
-
-function renderStudentsList(containerElement, students) {
-    containerElement.innerHTML = '';
-    if (students.length === 0) {
-        containerElement.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].noStudentsInGroup}</p>`;
-        return;
-    }
-    const parentLabel = translations[currentLang].parentLabel;
-    const notAvailable = translations[currentLang].notAvailable;
-    const deleteBtnText = translations[currentLang].deleteButton;
-
-    students.forEach(student => {
-        const studentElement = document.createElement('div');
-        studentElement.className = 'record-item';
-        
-        studentElement.dataset.studentId = student.id;
-        
-        studentElement.innerHTML = `
-            <div class="flex items-center">
-                <button class="show-qr-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold p-2 rounded-md mx-2">ID</button>
-                <div>
-                    <p class="font-semibold text-grey-800">${student.name}</p>
-                    <p class="text-sm text-grey-600">${parentLabel} ${student.parentPhoneNumber || notAvailable}</p>
-                </div>
-            </div>
-            <button class="delete-student-btn bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm">${deleteBtnText}</button>
-        `;
-        containerElement.appendChild(studentElement);
-    });
-}
-
-function handleStudentSearch(event) {
-    const searchTerm = event.target.value.toLowerCase();
-    if (!searchTerm) {
-        renderStudentsList(document.getElementById('studentsListDisplay'), allStudents);
-        return;
-    }
-    const filteredStudents = allStudents.filter(student => student.name.toLowerCase().includes(searchTerm));
-    renderStudentsList(document.getElementById('studentsListDisplay'), filteredStudents);
-}
-
-async function addNewStudent() {
-    try {
-        if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
-        const studentName = document.getElementById('newStudentName').value.trim();
-        const parentPhoneInput = document.getElementById('newParentPhoneNumber').value;
-
-        if (!studentName) {
-            showMessageBox('studentAndParentMissing');
-            return;
-        }
-
-        if (!isValidEgyptianPhoneNumber(parentPhoneInput)) {
-            showMessageBox('invalidPhoneFormat');
-            return;
-        }
-        const formattedParentPhone = formatPhoneNumber(parentPhoneInput);
-        if (!formattedParentPhone) {
-            showMessageBox('invalidPhoneFormat');
-            return;
-        }
-
-        const newStudentId = generateUniqueId();
-        const newStudentData = {
-            id: newStudentId,
-            groupId: SELECTED_GROUP_ID,
-            name: studentName,
-            parentPhoneNumber: formattedParentPhone
-        };
-
-        await putToDB('students', newStudentData);
-        
-        await addToSyncQueue({
-            type: 'add',
-            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`,
-            id: newStudentId,
-            data: { name: studentName, parentPhoneNumber: formattedParentPhone }
-        });
-        
-        processSyncQueue();
-        
-        showMessageBox('studentAddedSuccess');
-        
-        document.getElementById('newStudentName').value = '';
-        document.getElementById('newParentPhoneNumber').value = '';
-        
-        await fetchStudents();
-        renderAttendanceInputs();
-        renderGradesInputs();
-        renderPaymentInputs();
-
-    } catch (error) {
-        console.error("Error adding student:", error);
-        showMessageBox('studentAddedError');
-    }
-}
-async function deleteStudent(studentId) {
-    const studentToDelete = allStudents.find(s => s.id === studentId);
-    if (!studentToDelete) return;
-    const confirmMsg = `${translations[currentLang].deleteConfirmation} ${studentToDelete.name}?`;
-    if (!confirm(confirmMsg)) {
-        return;
-    }
-
-    try {
-        if (!TEACHER_ID || !SELECTED_GROUP_ID || !studentId) return;
-
-        await deleteFromDB('students', studentId);
-        await addToSyncQueue({
-            type: 'delete',
-            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${studentId}`
-        });
-        processSyncQueue();
-        showMessageBox('studentDeletedSuccess');
-        
-        await fetchStudents();
-        renderAttendanceInputs();
-        renderGradesInputs();
-        renderPaymentInputs();
-
-    } catch (error) {
-        console.error("Error deleting student:", error);
-        showMessageBox('studentDeletedError');
-    }
-}
-
-async function renderAttendanceInputs() {
-    try {
-        const attendanceDate = document.getElementById('attendanceDateInput').value;
-        const container = document.getElementById('attendanceStudentsContainer');
-        container.innerHTML = ''; 
-        if (!attendanceDate) {
-            container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].noDateSelected}</p>`;
-            return;
-        }
-        if (!allStudents || allStudents.length === 0) {
-            container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].noStudentsAvailable}</p>`;
-            return;
-        }
-        const attendanceId = `${SELECTED_GROUP_ID}_${attendanceDate}`;
-        const doc = await getFromDB('attendance', attendanceId);
-        let existingAttendance = {};
-        if (doc && doc.records) {
-            doc.records.forEach(record => {
-                existingAttendance[record.studentId] = record.status;
-            });
-        }
-        const absent = translations[currentLang].absent;
-        const present = translations[currentLang].present;
-        const late = translations[currentLang].late;
-        allStudents.forEach(student => {
-            const row = document.createElement('div');
-            row.className = 'student-row';
-            row.innerHTML = `
-                <span class="student-name">${student.name}</span>
-                <select class="attendance-status-select" data-student-id="${student.id}">
-                    <option value="absent">${absent}</option>
-                    <option value="present">${present}</option>
-                    <option value="late">${late}</option>
-                </select>
-            `;
-            container.appendChild(row);
-            const select = row.querySelector('.attendance-status-select');
-            select.value = existingAttendance[student.id] || 'absent';
-        });
-    } catch (error) {
-        console.error("Error rendering attendance:", error);
-    }
-}
-
-async function saveDailyAttendance() {
-    try {
-        if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
-        const attendanceDate = document.getElementById('attendanceDateInput').value;
-        if (!attendanceDate) {
-            showMessageBox('attendanceDateMissing');
-            return;
-        }
-        const records = [];
-        document.querySelectorAll('#attendanceStudentsContainer .attendance-status-select').forEach(select => {
-            records.push({ studentId: select.dataset.studentId, status: select.value });
-        });
-        const attendanceId = `${SELECTED_GROUP_ID}_${attendanceDate}`;
-        const attendanceData = {
-            id: attendanceId,
-            date: attendanceDate,
-            records: records
-        };
-        await putToDB('attendance', attendanceData);
-        showMessageBox('attendanceSavedSuccess');
-        await addToSyncQueue({
-            type: 'set',
-            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${attendanceDate}`,
-            data: { date: attendanceDate, records: records }
-        });
-        processSyncQueue();
-    } catch (error) {
-        console.error("Error saving attendance:", error);
-        showMessageBox('attendanceSavedError');
-    }
-}
-
-async function fetchAssignments() {
-    try {
-        if (!SELECTED_GROUP_ID) return;
-        const localAssignments = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
-        renderAssignmentSelect(localAssignments);
-        if (navigator.onLine) {
-            const snapshot = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`).get();
-            const remoteAssignments = snapshot.docs.map(doc => ({ id: doc.id, groupId: SELECTED_GROUP_ID, ...doc.data() }));
-            await Promise.all(remoteAssignments.map(asm => putToDB('assignments', asm)));
-            renderAssignmentSelect(remoteAssignments);
-        }
-    } catch (error) {
-        console.error('Error fetching assignments:', error);
-    }
-}
-
-function renderAssignmentSelect(assignments) {
-    const select = document.getElementById('assignmentSelect');
-    const currentAssignment = select.value;
-    select.innerHTML = `<option value="">${translations[currentLang].selectAssignmentOption}</option>`;
-    assignments.sort((a, b) => b.date.localeCompare(a.date));
-    assignments.forEach(doc => {
-        const option = document.createElement('option');
-        option.value = doc.id;
-        option.innerText = `${doc.name} (${doc.date})`;
-        select.appendChild(option);
-    });
-    if (currentAssignment && assignments.some(a => a.id === currentAssignment)) {
-       select.value = currentAssignment;
-    }
-}
-
-async function renderGradesInputs() {
-    try {
-        const assignmentId = document.getElementById('assignmentSelect').value;
-        const container = document.getElementById('gradesStudentsContainer');
-        container.innerHTML = '';
-        if (!assignmentId) {
-            container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].noAssignmentSelected}</p>`;
-            return;
-        }
-        if (!allStudents || allStudents.length === 0) {
-            container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].noStudentsAvailable}</p>`;
-            return;
-        }
-        let existingScores = {};
-        const assignmentDoc = await getFromDB('assignments', assignmentId);
-        if (assignmentDoc && assignmentDoc.scores) {
-            existingScores = assignmentDoc.scores;
-        }
-        allStudents.forEach(student => {
-            const studentData = existingScores[student.id] || { score: '', submitted: false };
-            const row = document.createElement('div');
-            row.className = 'student-row';
-            row.innerHTML = `
-                <span class="student-name">${student.name}</span>
-                <div class="flex items-center">
-                    <label class="homework-checkbox-container">
-                        <input type="checkbox" class="homework-checkbox" data-student-id="${student.id}" ${studentData.submitted ? 'checked' : ''}>
-                        <span>سلّم الواجب</span>
-                    </label>
-                    <input type="number" class="grade-input" data-student-id="${student.id}" min="0" max="100" placeholder="${translations[currentLang].scorePlaceholder}" value="${studentData.score || ''}">
-                </div>
-            `;
-            container.appendChild(row);
-        });
-    } catch (error) {
-        console.error("Error rendering grades inputs:", error);
-    }
-}
-
-async function addNewAssignment() {
-    try {
-        if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
-        const name = document.getElementById('newAssignmentName').value.trim();
-        const date = document.getElementById('newAssignmentDate').value;
-        if (!name || !date) {
-            showMessageBox('assignmentNameDateMissing');
-            return;
-        }
-        const newAssignmentId = generateUniqueId();
-        const newAssignmentData = {
-            id: newAssignmentId,
-            groupId: SELECTED_GROUP_ID,
-            name: name,
-            date: date,
-            scores: {}
-        };
-        await putToDB('assignments', newAssignmentData);
-        showMessageBox('assignmentAddedSuccess');
-        await fetchAssignments();
-        document.getElementById('assignmentSelect').value = newAssignmentId;
-        renderGradesInputs();
-        document.getElementById('newAssignmentName').value = '';
-        document.getElementById('newAssignmentDate').value = '';
-        await addToSyncQueue({
-            type: 'add',
-            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`,
-            id: newAssignmentId,
-            data: { name, date, scores: {} }
-        });
-        processSyncQueue();
-    } catch (error) {
-        console.error("Error adding assignment:", error);
-        showMessageBox("assignmentAddedError");
-    }
-}
-
-async function saveAssignmentGrades() {
-    try {
-        const assignmentId = document.getElementById('assignmentSelect').value;
-        if (!TEACHER_ID || !SELECTED_GROUP_ID || !assignmentId) {
-            showMessageBox('selectAssignmentFirst');
-            return;
-        }
-
-        const assignment = await getFromDB('assignments', assignmentId);
-        if (!assignment) {
-            showMessageBox('gradesSavedError');
-            console.error("Could not find assignment to save grades for:", assignmentId);
-            return;
-        }
-
-        const updatedScores = assignment.scores ? { ...assignment.scores } : {};
-
-        document.querySelectorAll('#gradesStudentsContainer .student-row').forEach(row => {
-            const gradeInput = row.querySelector('.grade-input');
-            const checkbox = row.querySelector('.homework-checkbox');
-            if (gradeInput && checkbox) {
-                const studentId = gradeInput.dataset.studentId;
-                updatedScores[studentId] = {
-                    score: gradeInput.value !== '' ? parseInt(gradeInput.value, 10) : '',
-                    submitted: checkbox.checked
-                };
-            }
-        });
-
-        assignment.scores = updatedScores;
-        await putToDB('assignments', assignment);
-        showMessageBox('gradesSavedSuccess');
-
-        await addToSyncQueue({
-            type: 'set',
-            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${assignmentId}`,
-            data: { scores: updatedScores },
-            options: { merge: true }
-        });
-        processSyncQueue();
-
-    } catch (error) {
-        console.error("Error saving grades:", error);
-        showMessageBox("gradesSavedError");
-    }
-}
 async function saveRecurringSchedule() {
     if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
-    
+    const existing = await getAllFromDB('schedules', 'groupId', SELECTED_GROUP_ID);
+    if(existing && existing.length > 0) {
+        showToast("كل مجموعة لها موعد مكرر واحد فقط!", 'error');
+    return;
+    }
     const subject = document.getElementById('recurringSubject').value.trim();
-    const time = getTimeFromPicker('recurringTimeContainer');
     const location = document.getElementById('recurringLocation').value.trim();
+    const time = getTimeFromPicker('recurringTimeContainer');
     const selectedDays = Array.from(document.querySelectorAll('#daysOfWeekContainer input:checked')).map(cb => parseInt(cb.value));
 
     if (!subject || !time || selectedDays.length === 0) {
-        showMessageBox('fillScheduleForm');
+        showToast(translations[currentLang].fillScheduleForm, 'error');
         return;
     }
 
-    const newScheduleId = generateUniqueId();
-    const scheduleData = {
-        id: newScheduleId,
-        groupId: SELECTED_GROUP_ID,
-        subject,
-        time,
-        location,
-        days: selectedDays
-    };
+    const id = generateUniqueId();
+    const data = { id, groupId: SELECTED_GROUP_ID, subject, time, location, days: selectedDays };
 
-    try {
-        await putToDB('schedules', scheduleData);
-        await addToSyncQueue({
-            type: 'add',
-            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules`,
-            id: newScheduleId,
-            data: { subject, time, location, days: selectedDays }
-        });
-        processSyncQueue();
-        showMessageBox('scheduleSavedSuccess');
-        
-        createTimePicker('recurringTimeContainer'); // Reset the time picker
-        document.getElementById('recurringLocation').value = '';
-        document.querySelectorAll('#daysOfWeekContainer input:checked').forEach(cb => cb.checked = false);
-        
-        fetchRecurringSchedules();
+    await putToDB('schedules', data);
+    await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules`, id, data });
 
-    } catch (error) {
-        console.error('Error saving recurring schedule:', error);
-        showMessageBox('scheduleSavedError');
-    }
+    showToast(translations[currentLang].scheduleSavedSuccess);
+    document.getElementById('recurringSubject').value = '';
+    document.querySelectorAll('#daysOfWeekContainer input').forEach(cb => { cb.checked = false; cb.parentElement.classList.remove('bg-brand/10', 'border-brand'); });
+
+    fetchRecurringSchedules();
 }
 
 async function fetchRecurringSchedules() {
     if (!SELECTED_GROUP_ID) return;
-    const container = document.getElementById('recurringSchedulesDisplay');
-    container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].loadingSchedules}</p>`;
     
-    try {
-        let schedules = await getAllFromDB('schedules', 'groupId', SELECTED_GROUP_ID);
-        renderSchedules(schedules);
-
-        if (navigator.onLine) {
-            const snapshot = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules`).get();
-            const remoteSchedules = snapshot.docs.map(doc => ({ id: doc.id, groupId: SELECTED_GROUP_ID, ...doc.data() }));
-            
-            await Promise.all(remoteSchedules.map(schedule => putToDB('schedules', schedule)));
-            
-            renderSchedules(remoteSchedules);
-        }
-    } catch (error) {
-        console.error('Error fetching recurring schedules:', error);
-        container.innerHTML = '<p class="text-primary-red text-center">Failed to load schedules.</p>';
-    }
-}
-
-function renderSchedules(schedules) {
     const container = document.getElementById('recurringSchedulesDisplay');
-    container.innerHTML = '';
+    if(!container) return;
+    
+    container.innerHTML = `<p class="text-center text-gray-500 py-4"><i class="ri-loader-4-line animate-spin"></i> Loading...</p>`;
 
-    if (!schedules || schedules.length === 0) {
-        container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].noSchedulesYet}</p>`;
-        return;
-    }
-
-    schedules.forEach(schedule => {
-        const dayNames = schedule.days.map(dayIndex => translations[currentLang].days[dayIndex] || '').join(', ');
-        const locationText = schedule.location ? ` - ${schedule.location}` : '';
-
-        const timeText = formatTime12Hour(schedule.time); 
-
-        const element = document.createElement('div');
-        element.className = 'record-item';
-        element.innerHTML = `
-            <div>
-                <p class="font-semibold text-grey-800">${schedule.subject} at ${timeText}${locationText}</p>
-                <p class="text-sm text-grey-600">${translations[currentLang].repeatsOn} ${dayNames}</p>
-            </div>
-            <button class="delete-schedule-btn bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm" data-schedule-id="${schedule.id}">${translations[currentLang].deleteButton}</button>
-        `;
-        container.appendChild(element);
-
-        element.querySelector('.delete-schedule-btn').addEventListener('click', function() {
-            if (confirm(translations[currentLang].confirmScheduleDelete)) {
-                deleteRecurringSchedule(this.dataset.scheduleId);
-            }
-        });
-    });
-}
-async function deleteRecurringSchedule(scheduleId) {
-    if (!TEACHER_ID || !SELECTED_GROUP_ID || !scheduleId) return;
     try {
-        await deleteFromDB('schedules', scheduleId);
-        await addToSyncQueue({
-            type: 'delete',
-            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules/${scheduleId}`
+        // 1. جلب البيانات (كما هو في السابق)
+        let scheds = await getAllFromDB('schedules', 'groupId', SELECTED_GROUP_ID);
+        
+        // Sync check (لو مفيش داتا محلياً، نجرب السيرفر)
+        if(scheds.length === 0 && navigator.onLine) {
+            try {
+                const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules`).get();
+                scheds = snap.docs.map(doc => ({ id: doc.id, groupId: SELECTED_GROUP_ID, ...doc.data() }));
+                for(const s of scheds) await putToDB('schedules', s);
+            } catch(e){}
+        }
+
+        // ============================================================
+        // 2. ⭐ التعديل الجديد: قفل/فتح الخانات والزرار بناءً على العدد ⭐
+        // ============================================================
+        const btn = document.getElementById('addRecurringScheduleButton');
+        // تجميع كل الخانات (نصوص، قوائم وقت، مربعات اختيار)
+        const allInputs = [
+            document.getElementById('recurringSubject'),
+            document.getElementById('recurringLocation'),
+            ...document.querySelectorAll('#recurringTimeContainer select'),
+            ...document.querySelectorAll('#daysOfWeekContainer input')
+        ];
+
+        if (scheds.length > 0) {
+            // 🔒 حالة القفل: يوجد موعد بالفعل
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-400'); // شكل باهت
+            btn.innerHTML = '<i class="ri-lock-2-fill"></i> مسجل بالفعل'; // تغيير النص
+            
+            // تعطيل كل الخانات
+            allInputs.forEach(el => { if(el) el.disabled = true; });
+            
+        } else {
+            // 🔓 حالة الفتح: لا يوجد مواعيد
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
+            btn.innerHTML = translations[currentLang].saveRecurringScheduleButton || "إضافة للجدول";
+            
+            // تفعيل كل الخانات
+            allInputs.forEach(el => { if(el) el.disabled = false; });
+        }
+        // ============================================================
+
+        // 3. عرض البيانات (Render) - نفس الكود القديم
+        container.innerHTML = '';
+        if (scheds.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-400 py-4">${translations[currentLang].noSchedulesYet || "No schedules"}</p>`;
+            return;
+        }
+
+        scheds.forEach(s => {
+            const dayNames = s.days.map(d => translations[currentLang].days[d]).join('، ');
+            const timeText = formatTime12Hour(s.time);
+            const div = document.createElement('div');
+            div.className = 'record-item flex justify-between items-start bg-white dark:bg-darkSurface p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mb-2';
+            div.innerHTML = `
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-black text-gray-800 dark:text-white text-lg">${s.subject}</span>
+                        <span class="bg-brand/20 text-yellow-800 dark:text-brand text-xs px-2 py-0.5 rounded-full font-bold">${timeText}</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                        <i class="ri-repeat-line"></i> <span>${translations[currentLang].repeatsOn} ${dayNames}</span>
+                    </div>
+                </div>
+                <button class="btn-icon w-8 h-8 bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 rounded-lg" data-id="${s.id}"><i class="ri-delete-bin-line"></i></button>
+            `;
+            
+            // عند الحذف، نعيد تحميل الدالة فيتفك القفل تلقائياً
+            div.querySelector('button').addEventListener('click', async () => {
+                 if(confirm(translations[currentLang].confirmScheduleDelete)) {
+                     await deleteFromDB('schedules', s.id);
+                     await addToSyncQueue({ type: 'delete', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules/${s.id}` });
+                     // إعادة التحميل عشان الزرار يفتح تاني
+                     fetchRecurringSchedules(); 
+                 }
+            });
+            container.appendChild(div);
         });
-        processSyncQueue();
-        showMessageBox('scheduleDeletedSuccess');
-        fetchRecurringSchedules();
-    } catch (error) {
-        console.error('Error deleting schedule:', error);
-        showMessageBox('scheduleDeletedError');
-    }
+    } catch (e) { console.error(e); }
 }
 
 async function updateSingleClass() {
@@ -1531,278 +760,928 @@ async function updateSingleClass() {
     const date = document.getElementById('exceptionDate').value;
     const newTime = getTimeFromPicker('exceptionNewTimeContainer');
 
-    if (!date || !newTime) {
-        showMessageBox('classDateAndTimeMissing');
+    if (!date || !newTime) return showToast("Check inputs", 'error');
+
+    const id = `${SELECTED_GROUP_ID}_${date}`;
+    const data = { id, groupId: SELECTED_GROUP_ID, date, newTime, type: 'modified' };
+
+    await putToDB('scheduleExceptions', data);
+    await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/exceptions/${id}`, data });
+    showToast(translations[currentLang].classUpdatedSuccess.replace('{date}', date));
+}
+
+async function cancelSingleClass() {
+    if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
+    const date = document.getElementById('exceptionDate').value;
+    if (!date) return showToast("Check date", 'error');
+
+    const id = `${SELECTED_GROUP_ID}_${date}`;
+    const data = { id, groupId: SELECTED_GROUP_ID, date, type: 'cancelled' };
+
+    await putToDB('scheduleExceptions', data);
+    await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/exceptions/${id}`, data });
+    showToast(translations[currentLang].classCancelledSuccess.replace('{date}', date));
+}
+
+// ==========================================
+// 7. CORE LOGIC (Auth, Load, Switch)
+// ==========================================
+
+async function loginTeacher() {
+    const phoneInput = document.getElementById('teacherPhoneInput');
+    const passInput = document.getElementById('teacherPasswordInput');
+    const phone = phoneInput.value;
+    const password = passInput.value.trim();
+
+    // تنسيق الرقم المصري
+    const fmt = formatPhoneNumber(phone);
+    if (!fmt) return showToast(translations[currentLang].phonePlaceholder, 'error');
+
+    const btn = document.getElementById('setTeacherButton');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> ${translations[currentLang].loginVerifying}`;
+    btn.disabled = true;
+
+    try {
+        // 1. البحث في الداتابيز المحلية أولاً
+        let data = await getFromDB('teachers', fmt);
+
+        // 2. لو مش موجود محلياً، نسأل السيرفر (أونلاين)
+        if (!data) {
+            if (!navigator.onLine) {
+                showToast(translations[currentLang].offlineFirstLogin || "Internet required for first login", "error");
+                throw new Error("Offline first login");
+            }
+
+            const doc = await firestoreDB.collection('teachers').doc(fmt).get();
+
+            if (!doc.exists) {
+                showToast(translations[currentLang].accountNotRegistered, "error");
+                passInput.value = '';
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            // لو موجود -> نحفظه عندنا محلياً
+            data = { id: doc.id, ...doc.data() };
+            await putToDB('teachers', data);
+        }
+
+        // 3. التحقق من الباسورد
+        if (data) {
+            const storedPass = data.password ? data.password.toString().trim() : "";
+
+            if (storedPass !== "" && storedPass !== password) {
+                showToast(translations[currentLang].wrongPassword, "error");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            // السماح بتعيين كلمة مرور لأول مرة
+            if (storedPass === "" && password !== "") {
+                data.password = password;
+                await putToDB('teachers', data);
+                if(navigator.onLine) {
+                    firestoreDB.collection('teachers').doc(fmt).set({ password: password }, { merge: true });
+                }
+            }
+        }
+
+        // 4. تسجيل الدخول ناجح
+        TEACHER_ID = fmt;
+        localStorage.setItem('learnaria-tid', TEACHER_ID);
+
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        document.getElementById('logoutButton').classList.remove('hidden');
+
+        if(data) {
+            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${data.name || ''}`;
+            document.getElementById('teacherNameInput').value = data.name || '';
+            document.getElementById('teacherSubjectInput').value = data.subject || '';
+            document.getElementById('profilePasswordInput').value = data.password || '';
+        }
+
+        await loadGroups();
+        switchTab('daily');
+
+    } catch (error) {
+        if(error.message !== "Offline first login") {
+            console.error("Login Error:", error);
+            showToast(translations[currentLang].error, "error");
+        }
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+function logout() { localStorage.removeItem('learnaria-tid'); location.reload(); }
+
+async function loadGroups() {
+    let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
+    renderGroupsDropdown(groups);
+
+    if (navigator.onLine) {
+        try {
+            const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups`).get();
+            const remoteGroups = snap.docs.map(doc => ({id: doc.id, teacherId: TEACHER_ID, ...doc.data()}));
+            for(const g of remoteGroups) {
+                await putToDB('groups', g);
+            }
+            renderGroupsDropdown(remoteGroups);
+        } catch(e) {
+            console.error("Failed to sync groups:", e);
+        }
+    }
+}
+
+function renderGroupsDropdown(groupsList) {
+    const sel = document.getElementById('groupSelect');
+    const currentVal = sel.value;
+    sel.innerHTML = `<option value="" disabled ${!currentVal ? 'selected' : ''}>${translations[currentLang].selectGroupPlaceholder}</option>`;
+
+    groupsList.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.id;
+        opt.innerText = g.name;
+        if(currentVal === g.id) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+async function createGroup() {
+    const name = document.getElementById('newGroupName').value;
+    if(!name) return;
+    const id = generateUniqueId();
+    await putToDB('groups', { id, teacherId: TEACHER_ID, name });
+    await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups`, id, data: { name } });
+    document.getElementById('newGroupName').value = '';
+    loadGroups();
+}
+
+// ------------------------------------------------------------------
+// ✅✅ NEW LOAD GROUP DATA WITH SAFE SYNC & FAIL-SAFE LOGIC ✅✅
+// ------------------------------------------------------------------
+async function loadGroupData() {
+    if(!SELECTED_GROUP_ID) {
+        toggleStudentInputs(false); // ✅ ضمان الإغلاق لو مفيش مجموعة
         return;
     }
     
-    // Logic to update the class...
-    console.log(`Updating class on ${date} to ${newTime}`);
-    showMessageBox('classUpdatedSuccess', { date: date, time: formatTime12Hour(newTime) });
-}
-async function cancelSingleClass() { }
+    // ✅ تفعيل خانات الإضافة بمجرد اختيار مجموعة
+    toggleStudentInputs(true);
+    
+    document.querySelectorAll('.tab-button').forEach(b => b.disabled = false);
 
-function playBeepSound() {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    if (!audioContext) return;
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.15);
+    // 1. محاولة جلب البيانات محلياً (داخل try-catch)
+    try {
+        const localData = await getAllFromDB('students', 'groupId', SELECTED_GROUP_ID);
+        if (localData && Array.isArray(localData) && localData.length > 0) {
+            allStudents = localData;
+            refreshCurrentTab(); // تحديث سريع
+        }
+    } catch (error) {
+        console.warn("Local load skipped:", error);
+    }
+
+    // 2. جلب البيانات من السيرفر (Sync)
+    if (navigator.onLine) {
+        try {
+            const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get();
+            const remoteStudents = snap.docs.map(d => ({
+                id: d.id,
+                groupId: SELECTED_GROUP_ID,
+                ...d.data()
+            }));
+
+            allStudents = remoteStudents;
+            refreshCurrentTab();
+            saveStudentsToLocalDB(remoteStudents);
+
+        } catch(e) {
+            console.error("Sync error:", e);
+        }
+    }
+
+    // تحديث مبدئي إذا لم يكن هناك تبويب نشط
+    if(!document.querySelector('.tab-button.active')) switchTab('daily');
 }
 
-function playErrorSound() {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    if (!audioContext) return;
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    oscillator.type = 'square';
-    oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.2);
+// ✅ دالة حفظ الطلاب للـ Cache في الخلفية
+async function saveStudentsToLocalDB(students) {
+    try {
+        for(const s of students) await putToDB('students', s);
+    } catch(e) { console.error("Cache update failed", e); }
 }
 
-function showStudentQRCode(student) {
-    const data = { teacherId: TEACHER_ID, groupId: SELECTED_GROUP_ID, studentId: student.id };
-    document.getElementById('idQrcode').innerHTML = '';
-    new QRCode(document.getElementById('idQrcode'), {
-        text: JSON.stringify(data),
-        width: 180,
-        height: 180,
-        correctLevel : QRCode.CorrectLevel.H
+// ✅ دالة تحديث الشاشة حسب التبويب المفتوح (تم تصحيح الشرط)
+function refreshCurrentTab() {
+    try {
+        // التحقق من أن التبويب "غير مخفي" بدلاً من البحث عن كلاس "active" في المحتوى
+        if (!document.getElementById('tab-students').classList.contains('hidden')) {
+            if (typeof renderStudents === 'function') renderStudents();
+        }
+        else if (!document.getElementById('tab-daily').classList.contains('hidden')) {
+            if (typeof renderDailyList === 'function') renderDailyList();
+        }
+    } catch (e) { console.error("Render error:", e); }
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+    document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
+
+    if(tabId === 'daily') renderDailyList();
+    if(tabId === 'students') renderStudents();
+    if(tabId === 'payments') {
+        const pm = document.getElementById('paymentMonthInput');
+        if(!pm.value) pm.value = new Date().toISOString().slice(0, 7);
+        renderPaymentsList();
+    }
+    if(tabId === 'exams') loadExams();
+
+    if(tabId === 'schedule') {
+        fetchRecurringSchedules();
+        createTimePicker('recurringTimeContainer');
+        createTimePicker('exceptionNewTimeContainer');
+        renderDayCheckboxes();
+        const profileSubject = document.getElementById('teacherSubjectInput').value;
+        if(profileSubject) {
+            document.getElementById('recurringSubject').value = profileSubject;
+        }
+    }
+}
+
+// ==========================================
+// 8. DAILY & SCANNER
+// ==========================================
+async function renderDailyList() {
+    const date = document.getElementById('dailyDateInput').value;
+    const list = document.getElementById('dailyStudentsList');
+    list.innerHTML = '';
+
+    document.getElementById('headerStudent').innerText = translations[currentLang].tableHeaderStudent;
+    document.getElementById('headerAttendance').innerText = translations[currentLang].tableHeaderAttendance;
+    document.getElementById('headerHomework').innerText = translations[currentLang].tableHeaderHomework;
+
+    const hStudent = document.getElementById('headerStudent');
+    const hAtt = document.getElementById('headerAttendance');
+    const hHw = document.getElementById('headerHomework');
+
+    if (hasHomeworkToday) {
+        hStudent.className = "col-span-6 transition-all duration-300";
+        hAtt.className = "col-span-3 text-center transition-all duration-300";
+        hHw.classList.remove('hidden');
+    } else {
+        hStudent.className = "col-span-8 transition-all duration-300";
+        hAtt.className = "col-span-4 text-center transition-all duration-300";
+        hHw.classList.add('hidden');
+    }
+
+    if(!date || !allStudents.length) {
+        list.innerHTML = `<p class="text-center text-gray-500 py-4">${translations[currentLang].noStudentsInGroup}</p>`;
+        return;
+    }
+
+    const attId = `${SELECTED_GROUP_ID}_${date}`;
+    const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
+    const [attDoc, hwDoc] = await Promise.all([getFromDB('attendance', attId), getFromDB('assignments', hwId)]);
+
+    const attMap = {};
+    if(attDoc?.records) attDoc.records.forEach(r => attMap[r.studentId] = r.status);
+
+    const hwMap = {};
+    if(hwDoc?.scores) {
+        Object.entries(hwDoc.scores).forEach(([sid, val]) => hwMap[sid] = val.submitted);
+        hasHomeworkToday = true;
+        document.getElementById('homeworkToggle').checked = true;
+        hStudent.className = "col-span-6 transition-all duration-300";
+        hAtt.className = "col-span-3 text-center transition-all duration-300";
+        hHw.classList.remove('hidden');
+    }
+
+    let presentCount = 0;
+    allStudents.forEach(s => {
+        const status = attMap[s.id] || 'absent';
+        if(status !== 'absent') presentCount++;
+        const hwStatus = hwMap[s.id];
+
+        const studentColSpan = hasHomeworkToday ? 'col-span-6' : 'col-span-8';
+        const attColSpan = hasHomeworkToday ? 'col-span-3' : 'col-span-4';
+
+        const row = document.createElement('div');
+        row.dataset.sid = s.id;
+        row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors ${status === 'present' ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'}`;
+
+        let html = `
+            <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300">${s.name}</div>
+            <div class="${attColSpan} flex justify-center transition-all duration-300">
+                <select class="att-select bg-gray-50 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded text-xs py-1 px-1 outline-none">
+                    <option value="present" ${status==='present'?'selected':''}>${translations[currentLang].present}</option>
+                    <option value="absent" ${status==='absent'?'selected':''}>${translations[currentLang].absent}</option>
+                    <option value="late" ${status==='late'?'selected':''}>${translations[currentLang].late}</option>
+                </select>
+            </div>
+        `;
+
+        if(hasHomeworkToday) {
+            html += `
+            <div class="col-span-3 flex justify-center fade-in-up">
+                <input type="checkbox" class="hw-check w-5 h-5 accent-brand rounded cursor-pointer" ${hwStatus ? 'checked' : ''}>
+            </div>`;
+        }
+
+        row.innerHTML = html;
+
+        row.querySelector('.att-select').addEventListener('change', (e) => {
+            if(e.target.value === 'present') row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+            else { row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20'); row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent'); }
+        });
+        list.appendChild(row);
     });
-    const teacherName = document.getElementById('teacherNameInput').value || 'Teacher';
-    document.getElementById('idTeacherName').innerText = `Teacher: ${teacherName}`;
-    document.getElementById('idStudentName').innerText = student.name;
-    qrCodeModal.classList.remove('hidden');
+    document.getElementById('attendanceCountBadge').innerText = `${presentCount}/${allStudents.length}`;
+}
+
+async function saveDailyData() {
+    if(!TEACHER_ID || !SELECTED_GROUP_ID) return;
+    
+    // إظهار اللودر فوراً
+    const saveBtn = document.getElementById('saveDailyBtn');
+    const oldText = saveBtn.innerText;
+    saveBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
+    saveBtn.disabled = true;
+
+    try {
+        const date = document.getElementById('dailyDateInput').value;
+        const attRecords = [];
+        const hwScores = {};
+        
+        document.querySelectorAll('#dailyStudentsList > div').forEach(row => {
+            const sid = row.dataset.sid;
+            // 1. نجيب حالة الحضور الأول
+            const status = row.querySelector('.att-select').value; 
+            
+            // حفظ سجل الحضور (ده شغال للكل عادي)
+            attRecords.push({ studentId: sid, status: status });
+            
+            // 2. اللوجيك الجديد: حفظ الواجب فقط لو الطالب "مش غائب"
+            if(hasHomeworkToday && status !== 'absent') {
+                hwScores[sid] = { 
+                    submitted: row.querySelector('.hw-check').checked, 
+                    score: null 
+                };
+            }
+        });
+
+        // ✅ التعديل هنا: تجميع كل العمليات في مصفوفة واحدة
+        const promises = [];
+
+        // 1. حفظ الحضور محلياً وسحابياً
+        promises.push(putToDB('attendance', { id: `${SELECTED_GROUP_ID}_${date}`, date, records: attRecords }));
+        promises.push(addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`, data: { date, records: attRecords } }));
+
+        // 2. حفظ الواجب محلياً وسحابياً (لو موجود)
+        if(hasHomeworkToday) {
+            const hwData = { id: `${SELECTED_GROUP_ID}_HW_${date}`, groupId: SELECTED_GROUP_ID, name: `واجب ${date}`, date, scores: hwScores, type: 'daily' };
+            promises.push(putToDB('assignments', hwData));
+            promises.push(addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwData.id}`, data: hwData }));
+        }
+
+        // ✅ تنفيذ الكل في نفس اللحظة (أسرع بكتير)
+        await Promise.all(promises);
+
+        showToast(translations[currentLang].saved);
+        renderDailyList();
+
+    } catch (error) {
+        console.error(error);
+        showToast("حدث خطأ أثناء الحفظ", "error");
+    } finally {
+        saveBtn.innerText = oldText;
+        saveBtn.disabled = false;
+    }
 }
 
 async function startScanner(mode) {
-    isScannerPaused = false;
     currentScannerMode = mode;
-    scannerModal.classList.remove('hidden');
+    isScannerPaused = false;
+    document.getElementById('scannerModal').classList.remove('hidden');
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         videoElement.srcObject = stream;
+        const videoTrack = stream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
+        if (settings.facingMode === 'user') videoElement.style.transform = "scaleX(-1)";
+        else videoElement.style.transform = "";
+
         await videoElement.play();
-        animationFrameId = requestAnimationFrame(tick);
-    } catch (err) {
-        console.error("Camera Error:", err);
-        showMessageBox("لا يمكن الوصول للكاميرا. الرجاء التأكد من السماح للمتصفح باستخدامها.");
-        stopScanner();
-    }
+        requestAnimationFrame(tickScanner);
+    } catch (e) { alert("Camera Error"); stopScanner(); }
 }
 
 function stopScanner() {
-    isScannerPaused = false;
-    if (videoElement.srcObject) {
-        videoElement.srcObject.getTracks().forEach(track => track.stop());
-        videoElement.srcObject = null;
+    isScannerPaused = true;
+    if(videoElement && videoElement.srcObject) videoElement.srcObject.getTracks().forEach(t => t.stop());
+    document.getElementById('scannerModal').classList.add('hidden');
+    if(videoElement) videoElement.style.transform = "";
+    if(animationFrameId) cancelAnimationFrame(animationFrameId);
+}
+
+function tickScanner() {
+    if(isScannerPaused || document.getElementById('scannerModal').classList.contains('hidden')) return;
+    if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+        const canvas = document.createElement('canvas');
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+        if (code) handleScan(code.data);
     }
-    scannerModal.classList.add('hidden');
-    if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
+    animationFrameId = requestAnimationFrame(tickScanner);
+}
+
+function handleScan(dataStr) {
+    try {
+        const data = JSON.parse(dataStr);
+        if(data.groupId !== SELECTED_GROUP_ID) return;
+        const student = allStudents.find(s => s.id === data.studentId);
+        if(!student) return;
+
+        playBeep();
+        isScannerPaused = true;
+
+        const overlay = document.getElementById('scannerOverlay');
+        const feedback = document.getElementById('scannedStudentName');
+        document.getElementById('feedbackNameText').innerText = student.name;
+
+        feedback.classList.remove('opacity-0', 'translate-y-10', 'scale-90');
+        overlay.classList.add('success');
+
+        setTimeout(() => {
+            feedback.classList.add('opacity-0', 'translate-y-10', 'scale-90');
+            overlay.classList.remove('success');
+        }, 1500);
+
+        if(currentScannerMode === 'daily') processDailyScan(student);
+        else if (currentScannerMode === 'payments') {
+            processPaymentScan(student);
+            setTimeout(() => { isScannerPaused = false; requestAnimationFrame(tickScanner); }, 1500);
+        }
+    } catch(e) { isScannerPaused = false; requestAnimationFrame(tickScanner); }
+}
+
+function processDailyScan(student) {
+    const row = document.querySelector(`#dailyStudentsList > div[data-sid="${student.id}"]`);
+    if(row) {
+        const sel = row.querySelector('.att-select');
+        sel.value = 'present';
+        sel.dispatchEvent(new Event('change'));
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if(hasHomeworkToday) {
+        currentPendingStudentId = student.id;
+        document.getElementById('hwStudentName').innerText = student.name;
+        document.getElementById('hwConfirmModal').classList.remove('hidden');
+    } else {
+        setTimeout(() => { isScannerPaused = false; requestAnimationFrame(tickScanner); }, 1200);
     }
 }
 
-function tick() {
-    if (isScannerPaused) {
-        animationFrameId = requestAnimationFrame(tick);
+function resolveHomework(isSubmitted) {
+    if(currentPendingStudentId) {
+        const row = document.querySelector(`#dailyStudentsList > div[data-sid="${currentPendingStudentId}"]`);
+        if(row) {
+            const chk = row.querySelector('.hw-check');
+            chk.checked = isSubmitted;
+        }
+    }
+    document.getElementById('hwConfirmModal').classList.add('hidden');
+    currentPendingStudentId = null;
+    isScannerPaused = false;
+    requestAnimationFrame(tickScanner);
+}
+
+function processPaymentScan(student) {
+    const row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
+    const defaultAmountInput = document.getElementById('defaultAmountInput');
+
+    if(row) {
+        const checkbox = row.querySelector('.payment-check');
+        const input = row.querySelector('.payment-input');
+
+        if(!checkbox.checked) {
+            checkbox.checked = true;
+            input.value = defaultAmountInput.value || 0;
+            checkbox.dispatchEvent(new Event('change'));
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.classList.add('ring-4', 'ring-green-300');
+            setTimeout(() => row.classList.remove('ring-4', 'ring-green-300'), 1000);
+        }
+    }
+}
+
+// ==========================================
+// 9. STUDENTS (With Link & Messages)
+// ==========================================
+function renderStudents(filter = "") {
+    const container = document.getElementById('studentsListDisplay');
+    container.innerHTML = '';
+    const filtered = allStudents.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
+
+    if(filtered.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500">${translations[currentLang].noStudentsInGroup}</p>`;
         return;
     }
-    if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-        const canvasElement = document.createElement('canvas');
-        const canvas = canvasElement.getContext('2d');
-        canvasElement.height = videoElement.videoHeight;
-        canvasElement.width = videoElement.videoWidth;
-        canvas.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-        if (code) {
-            isScannerPaused = true;
-            processScannedData(code.data);
-            setTimeout(() => {
-                isScannerPaused = false;
-            }, 2000);
-        }
-    }
-    animationFrameId = requestAnimationFrame(tick);
-}
 
-function processScannedData(dataString) {
-    const overlay = document.getElementById('scannerOverlay');
-    try {
-        const data = JSON.parse(dataString);
-        if (data.teacherId === TEACHER_ID && data.groupId === SELECTED_GROUP_ID && data.studentId) {
-            const student = allStudents.find(s => s.id === data.studentId);
-            if (student) {
-                playBeepSound();
-                const nameDisplay = document.getElementById('scannedStudentName');
-                nameDisplay.innerText = student.name;
-                nameDisplay.style.opacity = '1';
-                overlay.classList.add('success');
-                setTimeout(() => {
-                    overlay.classList.remove('success');
-                    nameDisplay.style.opacity = '0';
-                }, 1500);
-                if (currentScannerMode === 'attendance') {
-                    const selectElement = document.querySelector(`#attendanceStudentsContainer .attendance-status-select[data-student-id="${data.studentId}"]`);
-                    if (selectElement) {
-                        selectElement.value = 'present';
-                        selectElement.closest('.student-row').style.backgroundColor = '#d1fecb';
-                    }
-                } else if (currentScannerMode === 'homework') {
-                    const checkboxElement = document.querySelector(`#gradesStudentsContainer .homework-checkbox[data-student-id="${data.studentId}"]`);
-                    if (checkboxElement) {
-                        checkboxElement.checked = true;
-                        checkboxElement.closest('.student-row').style.backgroundColor = '#d1fecb';
-                    }
-                } else if (currentScannerMode === 'payments') {
-                     const checkboxElement = document.querySelector(`#paymentsStudentsContainer .payment-checkbox[data-student-id="${data.studentId}"]`);
-                     if (checkboxElement) {
-                         checkboxElement.checked = true;
-                         // Manually trigger the visual update
-                         const row = checkboxElement.closest('.student-row');
-                         const statusText = row.querySelector('.payment-status-text');
-                         if(statusText) {
-                             statusText.innerText = translations[currentLang].paidLabel;
-                             statusText.className = "mx-2 text-sm font-semibold text-green-600 payment-status-text";
-                         }
-                         row.style.backgroundColor = '#d1fecb';
-                     }
-                }
-            } else {
-                throw new Error("Student not found in this group.");
-            }
-        } else {
-            throw new Error("Invalid QR Code for this group/teacher.");
-        }
-    } catch (error) {
-        console.error("QR Scan Error:", error.message);
-        playErrorSound();
-        overlay.classList.add('error');
-        setTimeout(() => {
-            overlay.classList.remove('error');
-        }, 1500);
-    }
-}
+    filtered.forEach(s => {
+        const div = document.createElement('div');
+        div.className = "record-item";
+        div.innerHTML = `
+            <div>
+                <p class="font-bold text-gray-800 dark:text-white">${s.name}</p>
+                <p class="text-xs text-gray-500">${s.parentPhoneNumber || ''}</p>
+            </div>
+            <div class="flex gap-2">
+                <button class="btn-icon w-10 h-10 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 link-btn" title="نسخ رابط ولي الأمر">
+                    <i class="ri-link-m"></i>
+                </button>
 
-// ======================= NEW PAYMENT FUNCTIONS =======================
+                <button class="btn-icon w-10 h-10 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 msg-btn" title="إرسال رسالة">
+                    <i class="ri-chat-1-line"></i>
+                </button>
+                <button class="btn-icon w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 qr-btn">
+                    <i class="ri-qr-code-line"></i>
+                </button>
+                <button class="btn-icon w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/20 del-btn">
+                    <i class="ri-delete-bin-line"></i>
+                </button>
+            </div>
+        `;
 
-async function renderPaymentInputs() {
-    try {
-        const month = document.getElementById('paymentMonthInput').value;
-        const container = document.getElementById('paymentsStudentsContainer');
-        container.innerHTML = ''; 
+        // --- Actions ---
+        // 1. Copy Link Logic
+        div.querySelector('.link-btn').onclick = () => {
+            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+            const pNum = s.parentPhoneNumber ? s.parentPhoneNumber.trim() : "";
+            const link = `${baseUrl}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
 
-        if (!month) {
-            container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].paymentMonthMissing}</p>`;
-            return;
-        }
-        if (!allStudents || allStudents.length === 0) {
-            container.innerHTML = `<p class="text-grey-600 text-center p-4">${translations[currentLang].noStudentsAvailable}</p>`;
-            return;
-        }
-
-        const paymentId = `${SELECTED_GROUP_ID}_${month}`;
-        
-        const doc = await getFromDB('payments', paymentId);
-        let existingPayments = {};
-        if (doc && doc.records) {
-            doc.records.forEach(record => {
-                existingPayments[record.studentId] = record.paid;
-            });
-        }
-
-        const paidLabel = translations[currentLang].paidLabel;
-
-        allStudents.forEach(student => {
-            const isPaid = existingPayments[student.id] === true;
-            
-            const row = document.createElement('div');
-            row.className = 'student-row';
-            
-            if(isPaid) row.style.backgroundColor = '#d1fecb';
-
-            row.innerHTML = `
-                <span class="student-name">${student.name}</span>
-                <label class="flex items-center cursor-pointer">
-                    <span class="mx-2 text-sm font-semibold ${isPaid ? 'text-green-600' : 'text-gray-500'} payment-status-text">
-                        ${isPaid ? paidLabel : ''}
-                    </span>
-                    <input type="checkbox" class="payment-checkbox w-5 h-5 accent-green-600" 
-                           data-student-id="${student.id}" 
-                           ${isPaid ? 'checked' : ''}>
-                </label>
-            `;
-            
-            const checkbox = row.querySelector('.payment-checkbox');
-            checkbox.addEventListener('change', (e) => {
-                const statusText = row.querySelector('.payment-status-text');
-                if(e.target.checked) {
-                    statusText.innerText = translations[currentLang].paidLabel;
-                    statusText.className = "mx-2 text-sm font-semibold text-green-600 payment-status-text";
-                    row.style.backgroundColor = '#d1fecb';
-                } else {
-                    statusText.innerText = "";
-                    row.style.backgroundColor = 'transparent';
-                }
-            });
-
-            container.appendChild(row);
-        });
-    } catch (error) {
-        console.error("Error rendering payments:", error);
-    }
-}
-
-async function saveMonthlyPayments() {
-    try {
-        if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
-        
-        const month = document.getElementById('paymentMonthInput').value;
-        if (!month) {
-            showMessageBox('paymentMonthMissing');
-            return;
-        }
-
-        const records = [];
-        document.querySelectorAll('#paymentsStudentsContainer .payment-checkbox').forEach(checkbox => {
-            records.push({ 
-                studentId: checkbox.dataset.studentId, 
-                paid: checkbox.checked 
-            });
-        });
-
-        const paymentId = `${SELECTED_GROUP_ID}_${month}`;
-        const paymentData = {
-            id: paymentId,
-            month: month,
-            records: records
+            navigator.clipboard.writeText(link)
+                .then(() => showToast("تم نسخ رابط المتابعة الموحد"))
+                .catch(() => showToast("فشل النسخ", "error"));
         };
 
-        await putToDB('payments', paymentData);
-        
-        showMessageBox('paymentsSavedSuccess');
+        // 2. Others
+        div.querySelector('.msg-btn').onclick = () => openMessageModal(s);
+        div.querySelector('.qr-btn').onclick = () => showStudentQR(s);
+        div.querySelector('.del-btn').onclick = () => deleteStudent(s.id);
 
-        await addToSyncQueue({
-            type: 'set',
-            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`,
-            data: { month: month, records: records }
+        container.appendChild(div);
+    });
+}
+
+function openMessageModal(student) {
+    currentMessageStudentId = student.id;
+    document.getElementById('msgStudentName').innerText = `${student.name}`;
+    document.getElementById('customMessageInput').value = '';
+    document.getElementById('messageModal').classList.remove('hidden');
+}
+
+async function sendCustomMessageAction() {
+    const msg = document.getElementById('customMessageInput').value.trim();
+    if(!msg) return showToast(translations[currentLang].writeMsgFirst, "error");
+
+    const btn = document.getElementById('confirmSendMsgBtn');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> ${translations[currentLang].sendingMsg}`;
+    btn.disabled = true;
+
+    try {
+        const sendFunction = firebase.functions().httpsCallable('sendCustomMessage');
+        await sendFunction({
+            teacherId: TEACHER_ID,
+            groupId: SELECTED_GROUP_ID,
+            studentId: currentMessageStudentId,
+            messageBody: msg
         });
-        
-        processSyncQueue();
+        showToast(translations[currentLang].msgSentSuccess);
+        document.getElementById('messageModal').classList.add('hidden');
+    } catch (error) {
+        console.error(error);
+        showToast(translations[currentLang].msgSendFail, "error");
+    } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }
+}
+
+async function shareCardAction() {
+    const card = document.getElementById('printableIdCard');
+    const btn = document.getElementById('shareIdBtn');
+    const originalText = btn.innerHTML;
+
+    btn.innerHTML = `<i class="ri-loader-4-line animate-spin text-xl"></i> جاري التجهيز...`;
+    btn.disabled = true;
+
+    try {
+        const canvas = await html2canvas(card, {
+            scale: 3,
+            backgroundColor: "#ffffff",
+            useCORS: true
+        });
+
+        canvas.toBlob(async (blob) => {
+            const file = new File([blob], "student_id_card.png", { type: "image/png" });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Spot Student ID',
+                        text: 'بطاقة الطالب الرقمية - Spot System'
+                    });
+                } catch (err) {
+                    if (err.name !== 'AbortError') console.error(err);
+                }
+            } else {
+                const link = document.createElement('a');
+                link.download = `Spot_ID_${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                showToast("تم تحميل الصورة بنجاح");
+            }
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
 
     } catch (error) {
-        console.error("Error saving payments:", error);
-        showMessageBox('paymentsSavedError');
+        console.error("Share Error:", error);
+        showToast("فشل إنشاء الصورة", "error");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
+}
+
+function showStudentQR(student) {
+    document.getElementById('idStudentName').innerText = student.name;
+    const teacherName = document.getElementById('teacherNameInput').value || "المعلم";
+    document.getElementById('idTeacherName').innerText = teacherName;
+    const subjectName = document.getElementById('teacherSubjectInput').value || "";
+    document.getElementById('idSubjectName').innerText = subjectName;
+
+    document.getElementById('idQrcode').innerHTML = '';
+    new QRCode(document.getElementById('idQrcode'), {
+        text: JSON.stringify({ teacherId: TEACHER_ID, groupId: SELECTED_GROUP_ID, studentId: student.id }),
+        width: 200,
+        height: 200,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+
+    document.getElementById('qrCodeModal').classList.remove('hidden');
+}
+
+async function addNewStudent() {
+    // ✅ زيادة أمان: التأكد من وجود مجموعة
+    if(!SELECTED_GROUP_ID) {
+        showToast(translations[currentLang].selectGroupFirst || "الرجاء اختيار مجموعة أولاً", "error");
+        return;
+    }
+
+    const nameInput = document.getElementById('newStudentName');
+    const phoneInput = document.getElementById('newParentPhoneNumber');
+    const name = nameInput.value;
+    const phone = phoneInput.value;
+    if(!name) return;
+    const id = generateUniqueId();
+    const data = { id, groupId: SELECTED_GROUP_ID, name, parentPhoneNumber: phone };
+    await putToDB('students', data);
+    await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`, id, data });
+    nameInput.value = ''; phoneInput.value = '';
+    allStudents.push(data);
+    renderStudents();
+    showToast(translations[currentLang].studentAdded);
+}
+
+async function deleteStudent(id) {
+    if(!confirm(translations[currentLang].confirmDelete)) return;
+    await deleteFromDB('students', id);
+    await addToSyncQueue({ type: 'delete', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${id}` });
+    allStudents = allStudents.filter(s => s.id !== id);
+    renderStudents();
+}
+
+// --- Payments ---
+async function renderPaymentsList() {
+    const month = document.getElementById('paymentMonthInput').value;
+    const defaultAmountInput = document.getElementById('defaultAmountInput');
+    const container = document.getElementById('paymentsList');
+    container.innerHTML = '';
+
+    if(!month || !allStudents.length) return;
+
+    const payId = `${SELECTED_GROUP_ID}_PAY_${month}`;
+    const doc = await getFromDB('payments', payId);
+    const map = {};
+    if(doc?.records) {
+        doc.records.forEach(r => map[r.studentId] = r.amount);
+    }
+
+    allStudents.forEach(s => {
+        let amount = map[s.id];
+        const isPaid = amount && amount > 0;
+
+        const div = document.createElement('div');
+        div.className = `record-item flex justify-between items-center p-3 border rounded-xl transition-colors ${isPaid ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-white dark:bg-darkSurface border-gray-100 dark:border-gray-700'}`;
+        div.dataset.sid = s.id;
+
+        div.innerHTML = `
+            <span class="font-bold text-gray-700 dark:text-gray-200 w-1/3 truncate">${s.name}</span>
+            <div class="flex items-center gap-3 justify-end w-2/3">
+                <input type="number"
+                       class="payment-input input-field h-9 w-24 text-center text-sm ${isPaid ? 'text-green-600 font-bold' : 'text-gray-400'}"
+                       placeholder="0" value="${amount || ''}" min="0">
+                <input type="checkbox" class="payment-check w-6 h-6 accent-green-600 cursor-pointer" ${isPaid ? 'checked' : ''}>
+            </div>
+        `;
+
+        const checkbox = div.querySelector('.payment-check');
+        const input = div.querySelector('.payment-input');
+
+        checkbox.addEventListener('change', (e) => {
+            const defaultVal = defaultAmountInput.value || 0;
+            if(e.target.checked) {
+                if(!input.value || input.value == 0) input.value = defaultVal;
+                div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                input.classList.add('text-green-600', 'font-bold');
+            } else {
+                input.value = '';
+                div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                input.classList.remove('text-green-600', 'font-bold');
+            }
+        });
+
+        input.addEventListener('input', (e) => {
+            if(e.target.value > 0) {
+                checkbox.checked = true;
+                div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+            } else {
+                checkbox.checked = false;
+                div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+            }
+        });
+        container.appendChild(div);
+    });
+}
+
+async function savePayments() {
+    const month = document.getElementById('paymentMonthInput').value;
+    if(!month) return showToast(translations[currentLang].paymentMonthMissing, 'error');
+    const records = [];
+    document.querySelectorAll('#paymentsList > div').forEach(div => {
+        const val = div.querySelector('.payment-input').value;
+        const amount = val ? parseFloat(val) : 0;
+        records.push({ studentId: div.dataset.sid, amount: amount, paid: amount > 0 });
+    });
+    await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${month}`, month, records });
+    await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, data: { month, records } });
+    showToast(translations[currentLang].saved);
+}
+
+// --- Exams, Schedules & Settings ---
+async function loadExams() {
+    const exams = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
+    const sel = document.getElementById('examSelect');
+    sel.innerHTML = `<option value="">${translations[currentLang].selectExamPlaceholder}</option>`;
+    exams.filter(e => e.type === 'exam').forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.id; opt.innerText = e.name;
+        sel.appendChild(opt);
+    });
+}
+async function addNewExam() {
+    const name = document.getElementById('newExamName').value;
+    if(!name) return;
+    const id = generateUniqueId();
+    // ✅ FIX: Saving DATE so it appears in parent app
+    const data = { 
+        id, 
+        groupId: SELECTED_GROUP_ID, 
+        name, 
+        type: 'exam', 
+        scores: {}, 
+        date: new Date().toISOString().slice(0, 10) 
+    }; 
+    await putToDB('assignments', data);
+    await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`, id, data });
+    document.getElementById('newExamName').value = '';
+    loadExams();
+}
+async function renderExamGrades() {
+    const examId = document.getElementById('examSelect').value;
+    const container = document.getElementById('examGradesList');
+    container.innerHTML = '';
+    if(!examId) return;
+    const exam = await getFromDB('assignments', examId);
+    const scores = exam.scores || {};
+    allStudents.forEach(s => {
+        const val = scores[s.id]?.score || '';
+        const div = document.createElement('div');
+        div.className = "flex items-center gap-2 p-2 bg-white dark:bg-darkSurface border dark:border-gray-700 rounded-lg";
+        div.innerHTML = `<label class="text-sm font-bold w-1/2 truncate dark:text-white">${s.name}</label><input type="number" class="exam-score-input input-field w-1/2 h-10" data-sid="${s.id}" value="${val}" placeholder="${translations[currentLang].gradePlaceholder}">`;
+        container.appendChild(div);
+    });
+}
+async function saveExamGrades() {
+    const examId = document.getElementById('examSelect').value;
+    if(!examId) return;
+    const scores = {};
+    document.querySelectorAll('.exam-score-input').forEach(inp => { if(inp.value !== '') scores[inp.dataset.sid] = { score: inp.value }; });
+    const existing = await getFromDB('assignments', examId);
+    existing.scores = scores;
+    await putToDB('assignments', existing);
+    await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${examId}`, data: { scores } });
+    showToast(translations[currentLang].saved);
+}
+
+function saveProfile() {
+    const name = document.getElementById('teacherNameInput').value;
+    const subject = document.getElementById('teacherSubjectInput').value;
+    const password = document.getElementById('profilePasswordInput').value.trim();
+    if(!name) return;
+    putToDB('teachers', { id: TEACHER_ID, name, subject, password });
+    addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}`, data: { name, subject, password } });
+    document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${name}`;
+    showToast(translations[currentLang].saved);
+}
+
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('learnaria-dark', document.body.classList.contains('dark-mode'));
+    updateThemeIcon();
+}
+function updateThemeIcon() {
+    const isDark = document.body.classList.contains('dark-mode');
+    document.getElementById('darkModeIcon').classList.toggle('hidden', isDark);
+    document.getElementById('lightModeIcon').classList.toggle('hidden', !isDark);
+}
+// ✅ دالة استرجاع الإعدادات وتسجيل الدخول التلقائي
+async function loadPreferences() {
+    // 1. استرجاع الوضع الليلي
+    if(localStorage.getItem('learnaria-dark') === 'true') {
+        document.body.classList.add('dark-mode');
+        updateThemeIcon();
+    }
+
+    // 2. استرجاع بيانات المعلم (تسجيل الدخول التلقائي)
+    const storedID = localStorage.getItem('learnaria-tid');
+    
+    if(storedID) {
+        // لو لقينا ID، نرجعه للمتغير ونخفي شاشة الدخول
+        TEACHER_ID = storedID;
+        
+        // محاولة جلب بيانات المعلم من الداتابيز المحلية لتعبئة البروفايل
+        try {
+            const teacherData = await getFromDB('teachers', TEACHER_ID);
+            if(teacherData) {
+                document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${teacherData.name || ''}`;
+                document.getElementById('teacherNameInput').value = teacherData.name || '';
+                document.getElementById('teacherSubjectInput').value = teacherData.subject || '';
+                document.getElementById('profilePasswordInput').value = teacherData.password || '';
+            }
+        } catch(e) { console.log("Auto-login fetch error:", e); }
+
+        // إخفاء شاشة تسجيل الدخول وإظهار المحتوى
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        document.getElementById('logoutButton').classList.remove('hidden');
+
+        // تحميل المجموعات والذهاب للحصة اليومية
+        await loadGroups();
+        switchTab('daily');
+    }
+}
+function toggleLang() {
+    currentLang = currentLang === 'ar' ? 'en' : 'ar';
+    document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+    document.getElementById('languageToggleButton').innerText = currentLang === 'ar' ? 'EN' : 'ع';
+    document.querySelectorAll('[data-key]').forEach(el => {
+        const key = el.dataset.key;
+        if(translations[currentLang][key]) el.innerText = translations[currentLang][key];
+    });
+    document.querySelectorAll('[data-key-placeholder]').forEach(el => {
+        const key = el.dataset.keyPlaceholder;
+        if(translations[currentLang][key]) el.placeholder = translations[currentLang][key];
+    });
+    if(SELECTED_GROUP_ID && !document.getElementById('tab-daily').classList.contains('hidden')) renderDailyList();
+    if(SELECTED_GROUP_ID && !document.getElementById('tab-students').classList.contains('hidden')) renderStudents();
+    loadGroups();
+    renderDayCheckboxes();
 }

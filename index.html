@@ -1,292 +1,611 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-key="pageTitle">ليرناريا - لوحة تحكم المعلم</title>
-    <link rel="icon" href="assets/images/favicon.png" type="image/x-icon">
-    <link rel="shortcut icon" href="assets/images/favicon.png" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title data-key="pageTitle">Spot - المعلم الذكي</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="assets/images/favicon.png" type="image/x-icon">
+
+    <link rel="apple-touch-icon" href="assets/images/learnaria_logo.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="assets/images/learnaria_logo.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/learnaria_logo.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="assets/images/learnaria_logo.png">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Spot">
+    
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
     <link rel="stylesheet" href="css/style.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: ['class', '.dark-mode'],
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#F2CE5A',
+                        brandHover: '#e6c045',
+                        darkBg: '#121212',
+                        darkSurface: '#1E1E1E',
+                    },
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="font-inter">
-    <header class="app-bar">
-        <div class="flex items-center">
-            <img src="assets/images/learnaria_logo.png" alt="Learnaria Logo" class="header-logo rounded-full"> 
-            <h1 class="text-2xl font-extrabold text-gray-900">Spot</h1>
-        </div>
-        <div class="flex items-center">
-            <div class="flex items-center gap-4 mx-4">
-                <div id="statusIndicator" class="flex items-center gap-2 p-1 rounded-full text-sm">
-                    <div class="status-dot"></div>
-                    <span class="status-text"></span>
+
+<body class="font-cairo bg-gray-100 text-gray-800 transition-colors duration-300 dark:bg-darkBg dark:text-gray-100">
+
+    <div
+        class="fixed inset-0 -z-10 h-full w-full bg-gray-50 dark:bg-darkBg bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]">
+    </div>
+
+    <nav
+        class="app-bar fixed top-4 left-4 right-4 md:left-10 md:right-10 rounded-2xl bg-white/90 dark:bg-darkSurface/90 backdrop-blur-md shadow-lg z-50 px-6 py-3 flex justify-between items-center border border-gray-200 dark:border-gray-800 transition-all duration-300">
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <img src="assets/images/learnaria_logo.png" alt="Logo"
+                    class="h-10 w-10 rounded-xl shadow-sm border border-brand">
+                <div
+                    class="absolute -bottom-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white dark:border-darkSurface">
                 </div>
-                <div id="syncIndicator" class="flex items-center gap-2 text-sm"></div>
             </div>
-            <button id="languageToggleButton" class="p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400 font-bold text-lg mx-2">EN</button>
-            <button id="darkModeToggleButton" class="p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400">
-                <svg id="darkModeIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-                <svg id="lightModeIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-            </button>
-            <button id="logoutButton" class="hidden flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-red-500 p-2 rounded-lg transition-colors duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span data-key="logoutButton">تسجيل الخروج</span>
-            </button>
+            <h1 class="text-2xl font-black text-gray-900 dark:text-white font-inter tracking-tight">Spot<span
+                    class="text-brand">.</span></h1>
         </div>
-    </header>
 
-    <main class="container mx-auto px-4 py-6">
-        <h2 id="dashboardTitle" class="text-3xl font-extrabold mb-6 text-center text-gray-900"></h2>
+        <div class="flex items-center gap-3 md:gap-5">
+            <div
+                class="hidden md:flex items-center gap-3 bg-gray-100 dark:bg-black px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-800">
+                <div id="statusIndicator" class="flex items-center gap-2 text-xs font-bold transition-colors">
+                    <span class="status-dot w-2.5 h-2.5 rounded-full bg-gray-400"></span>
+                    <span class="status-text" data-key="offline">...</span>
+                </div>
+                <div class="h-4 w-[1px] bg-gray-300 dark:bg-gray-700"></div>
+                <div id="syncIndicator"
+                    class="flex items-center gap-1 text-xs font-medium text-gray-600 dark:text-gray-400"></div>
+            </div>
 
-        <section class="card-container">
-            <h3 class="text-xl font-bold mb-4 text-gray-800" data-key="teacherLoginTitle">1. تسجيل دخول المعلم</h3>
-            <p class="text-grey-600 mb-4 text-sm" data-key="teacherLoginPrompt">الرجاء إدخال رقم هاتفك لتحميل بياناتك.</p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="text" id="teacherPhoneInput" class="input-field" data-key-placeholder="phonePlaceholder">
-                <button id="setTeacherButton" class="btn-primary-custom" data-key="loadDashboardButton">تحميل لوحة التحكم</button>
+            <div class="flex items-center gap-2">
+                <button id="languageToggleButton"
+                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-brand hover:text-black transition-all font-bold text-sm shadow-sm dark:text-gray-200 dark:hover:text-black">EN</button>
+                <button id="darkModeToggleButton"
+                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-brand hover:text-black transition-all shadow-sm flex items-center justify-center dark:text-gray-200 dark:hover:text-black">
+                    <i id="darkModeIcon" class="ri-moon-line text-lg"></i>
+                    <i id="lightModeIcon" class="ri-sun-line text-lg hidden"></i>
+                </button>
+                <button id="logoutButton"
+                    class="hidden w-10 h-10 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm flex items-center justify-center dark:bg-red-900/20">
+                    <i class="ri-logout-box-r-line text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 pt-28 pb-10 max-w-5xl">
+
+        <div class="text-center mb-10 fade-in-up">
+            <h2 id="dashboardTitle" class="text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-2"></h2>
+            <p class="text-gray-500 dark:text-gray-400" data-key="welcomeTitle">لوحة تحكم المعلم الذكي</p>
+        </div>
+
+        <section class="card-container glass-panel p-8 mb-8 fade-in-up border-t-4 border-t-brand" id="loginSection">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="p-3 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400">
+                    <i class="ri-shield-user-line text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white" data-key="teacherLoginTitle">تسجيل دخول
+                        المعلم</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400" data-key="teacherLoginPrompt">أدخل رقمك للبدء
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="relative w-full">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <i class="ri-smartphone-line"></i>
+                    </div>
+                    <input type="tel" id="teacherPhoneInput" class="input-field pl-10 text-lg font-inter" placeholder="01xxxxxxxxx" data-key-placeholder="phonePlaceholder">
+                </div>
+
+                <div class="relative w-full">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <i class="ri-lock-password-line"></i>
+                    </div>
+                    <input type="password" id="teacherPasswordInput" class="input-field pl-10 text-lg" placeholder="كلمة المرور" data-key-placeholder="passwordPlaceholder">
+                </div>
+
+                <button id="setTeacherButton" class="btn-primary-custom w-full group relative overflow-hidden">
+                    <span class="relative z-10 flex items-center justify-center gap-2 text-lg">
+                        <span data-key="loginButton">دخول</span> <i class="ri-arrow-left-line transition-transform group-hover:-translate-x-1"></i>
+                    </span>
+                </button>
             </div>
         </section>
 
-        <div id="mainContent" class="hidden">
-            <div id="tabs-nav" class="tabs-nav-container mb-4">
-                <button class="tab-button active" data-tab="profile" data-key="tabProfile">الملف الشخصي</button>
-                <button class="tab-button" data-tab="students" data-key="tabStudents" disabled>الطلاب</button>
-                <button class="tab-button" data-tab="attendance" data-key="tabAttendance" disabled>الحضور</button>
-                <button class="tab-button" data-tab="grades" data-key="tabGrades" disabled>الدرجات</button>
-                <button class="tab-button" data-tab="payments" data-key="tabPayments" disabled>التحصيل</button>
-                <button class="tab-button" data-tab="schedule" data-key="tabSchedule" disabled>الجدول</button>
+        <div id="mainContent" class="hidden fade-in-up delay-100">
+
+            <div id="globalGroupSelector"
+                class="card-container glass-panel p-4 mb-6 flex flex-col md:flex-row items-center gap-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-700">
+                <div class="w-full md:w-auto flex-grow">
+                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block"
+                        data-key="currentGroupLabel">المجموعة الحالية</label>
+                    <div class="relative">
+                        <select id="groupSelect"
+                            class="input-field appearance-none cursor-pointer bg-white dark:bg-black"></select>
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                            <i class="ri-arrow-down-s-line"></i></div>
+                    </div>
+                </div>
+                <button id="addNewGroupButton"
+                    class="btn-icon bg-white dark:bg-black border border-yellow-300 text-brand hover:bg-yellow-50"
+                    title="Add Group"><i class="ri-add-line text-xl"></i></button>
             </div>
 
-            <div id="tabs-content">
-                <div id="tab-profile" class="tab-content">
-                    <section class="card-container">
-                        <h3 class="text-xl font-bold mb-4 text-gray-800" data-key="myProfileTitle">ملفي الشخصي</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label for="teacherNameInput" class="block text-sm font-semibold text-grey-800 mb-1" data-key="myNameLabel">اسمي:</label>
-                                <input type="text" id="teacherNameInput" class="input-field" data-key-placeholder="fullNamePlaceholder">
+            <div class="overflow-x-auto pb-4 mb-2 scrollbar-hide">
+                <div id="tabs-nav" class="flex md:justify-center gap-3 min-w-max px-1">
+                    <button class="tab-button" data-tab="profile"><i class="ri-user-settings-line"></i> <span
+                            data-key="tabProfile">الملف</span></button>
+                    <button class="tab-button active" data-tab="daily" disabled><i class="ri-qr-scan-2-line"></i> <span
+                            data-key="tabDaily">الحصة اليومية</span></button>
+                    <button class="tab-button" data-tab="students" disabled><i class="ri-group-line"></i> <span
+                            data-key="tabStudents">الطلاب</span></button>
+                    <button class="tab-button" data-tab="exams" disabled><i class="ri-file-list-3-line"></i> <span
+                            data-key="tabGrades">الامتحانات</span></button>
+                    <button class="tab-button" data-tab="payments" disabled><i class="ri-money-dollar-circle-line"></i>
+                        <span data-key="tabPayments">التحصيل</span></button>
+                    <button class="tab-button" data-tab="schedule" disabled><i class="ri-time-line"></i> <span
+                            data-key="tabSchedule">الجدول</span></button>
+                </div>
+            </div>
+
+            <div id="tabs-content" class="relative">
+
+                <div id="tab-daily" class="tab-content">
+                    <div class="grid lg:grid-cols-3 gap-6">
+                        <section class="card-container glass-panel p-6 h-fit lg:col-span-1">
+                            <div class="section-header">
+                                <i class="ri-dashboard-line text-brand"></i>
+                                <h3 data-key="dailyClassTitle">إدارة الحصة</h3>
                             </div>
-                            <div>
-                                <label for="teacherSubjectInput" class="block text-sm font-semibold text-grey-800 mb-1" data-key="mySubjectLabel">المادة التي أدرسها:</label>
-                                <input type="text" id="teacherSubjectInput" class="input-field" data-key-placeholder="subjectPlaceholder">
+
+                            <div class="space-y-5">
+                                <div>
+                                    <label class="label-custom" data-key="selectDateLabel">تاريخ اليوم</label>
+                                    <input type="date" id="dailyDateInput" class="input-field">
+                                </div>
+
+                                <div
+                                    class="bg-gray-50 dark:bg-black/40 p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="p-2 bg-blue-100 text-blue-600 rounded-lg dark:bg-blue-900/30 dark:text-blue-400">
+                                            <i class="ri-book-open-line"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-sm text-gray-900 dark:text-white" data-key="homeworkToggleLabel">يوجد واجب؟</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400" data-key="homeworkToggleSub">تفعيل المطالبة بالتسليم</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="homeworkToggle" class="sr-only peer">
+                                        <div
+                                            class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand">
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <button id="startSmartScanBtn"
+                                    class="w-full bg-brand text-black font-black text-lg py-4 rounded-2xl shadow-[0_4px_14px_rgba(242,206,90,0.5)] hover:shadow-[0_6px_20px_rgba(242,206,90,0.6)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 animate-pulse-slow">
+                                    <i class="ri-qr-scan-2-line text-2xl"></i>
+                                    <span data-key="startSmartScan">بدء الرصد الذكي</span>
+                                </button>
                             </div>
-                        </div>
-                        <button id="saveProfileButton" class="btn-primary-custom" data-key="saveProfileButton">حفظ ملفي الشخصي</button>
-                    </section>
-                    <section class="card-container">
-                        <h3 class="text-xl font-bold mb-4 text-gray-800" data-key="manageGroupsTitle">2. إدارة المجموعات</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="newGroupName" class="block text-sm font-semibold text-grey-800 mb-1" data-key="newGroupNameLabel">اسم المجموعة الجديدة:</label>
-                                <input type="text" id="newGroupName" class="input-field" data-key-placeholder="groupNamePlaceholder">
-                                <button id="addNewGroupButton" class="btn-primary-custom mt-2 w-full" data-key="addNewGroupButton">إضافة مجموعة جديدة</button>
+                        </section>
+
+                        <section class="card-container glass-panel p-6 lg:col-span-2">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-lg flex items-center gap-2">
+                                    <span data-key="liveLogTitle">سجل الحصة المباشر</span>
+                                    <span id="attendanceCountBadge"
+                                        class="bg-gray-100 dark:bg-gray-800 text-xs px-2 py-1 rounded-full">0/0</span>
+                                </h3>
+                                <button id="saveDailyBtn" class="btn-primary-custom text-xs px-4 py-2"
+                                    data-key="saveAllButton">حفظ الكل</button>
                             </div>
-                            <div>
-                                <label for="groupSelect" class="block text-sm font-semibold text-grey-800 mb-1" data-key="selectGroupLabel">اختر مجموعة لإدارتها:</label>
-                                <select id="groupSelect" class="input-field"></select>
+
+                            <div class="grid grid-cols-12 gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 px-2">
+                                <div id="headerStudent" class="col-span-6 transition-all duration-300" data-key="tableHeaderStudent">الطالب</div>
+                                <div id="headerAttendance" class="col-span-3 text-center transition-all duration-300" data-key="tableHeaderAttendance">الحضور</div>
+                                <div id="headerHomework" class="col-span-3 text-center transition-all duration-300" data-key="tableHeaderHomework">الواجب</div>
                             </div>
-                        </div>
-                    </section>
+
+                            <div id="dailyStudentsList"
+                                class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar p-1"></div>
+                        </section>
+                    </div>
+                </div>
+
+                <div id="tab-profile" class="tab-content hidden">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <section class="card-container glass-panel p-6">
+                            <div class="section-header">
+                                <i class="ri-id-card-line text-brand"></i>
+                                <h3 data-key="myProfileTitle">بياناتي</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <input type="text" id="teacherNameInput" class="input-field"
+                                    data-key-placeholder="fullNamePlaceholder">
+                                <input type="text" id="teacherSubjectInput" class="input-field"
+                                    data-key-placeholder="subjectPlaceholder">
+                                <div>
+                                    <label class="label-custom" data-key="passwordLabel">كلمة المرور</label>
+                                    <input type="password" id="profilePasswordInput" class="input-field" 
+                                    data-key-placeholder="changePasswordPlaceholder" placeholder="تغيير كلمة المرور">
+                                </div>
+                                <button id="saveProfileButton" class="btn-primary-custom w-full mt-2"
+                                    data-key="saveProfileButton">حفظ التغييرات</button>
+                            </div>
+                        </section>
+
+                        <section
+                            class="card-container glass-panel p-6 border-t-4 border-t-gray-800 dark:border-t-gray-600">
+                            <div class="section-header"><i class="ri-team-line"></i>
+                                <h3 data-key="addGroupTitle">مجموعة جديدة</h3>
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" id="newGroupName" class="input-field"
+                                    data-key-placeholder="groupNamePlaceholder"
+                                    placeholder="اسم المجموعة الجديدة">
+                                <button id="createNewGroupBtn" class="btn-primary-custom" data-key="addBtn">إضافة</button>
+                            </div>
+                        </section>
+                    </div>
                 </div>
 
                 <div id="tab-students" class="tab-content hidden">
-                    <section class="card-container">
-                        <h3 class="text-xl font-bold mb-4 text-gray-800" data-key="manageStudentsTitle">إدارة الطلاب</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label for="newStudentName" class="block text-sm font-semibold text-grey-800 mb-1" data-key="studentNameLabel">اسم الطالب:</label>
-                                <input type="text" id="newStudentName" class="input-field" data-key-placeholder="newStudentPlaceholder">
-                            </div>
-                            <div>
-                                <label for="newParentPhoneNumber" class="block text-sm font-semibold text-grey-800 mb-1" data-key="parentPhoneLabel">رقم هاتف ولي الأمر:</label>
-                                <input type="text" id="newParentPhoneNumber" class="input-field" data-key-placeholder="parentPhonePlaceholder">
+                    <section class="card-container glass-panel p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="section-header mb-0"><i class="ri-user-add-line text-brand"></i>
+                                <h3 data-key="manageStudentsTitle">الطلاب</h3>
                             </div>
                         </div>
-                        <button id="addNewStudentButton" class="btn-primary-custom" data-key="addNewStudentButton">إضافة طالب جديد</button>
-                        <div class="mt-6">
-                            <label for="studentSearchInput" class="block text-sm font-semibold text-grey-800 mb-1" data-key="searchStudentLabel">البحث عن طالب:</label>
-                            <input type="search" id="studentSearchInput" class="input-field" data-key-placeholder="searchPlaceholder">
+                        <div
+                            class="bg-gray-50 dark:bg-black/40 p-5 rounded-2xl mb-6 border border-gray-100 dark:border-gray-700">
+                            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                                <input type="text" id="newStudentName" class="input-field"
+                                    data-key-placeholder="newStudentPlaceholder"
+                                    placeholder="اسم الطالب">
+                                <input type="text" id="newParentPhoneNumber" class="input-field"
+                                    data-key-placeholder="parentPhonePlaceholder"
+                                    placeholder="رقم ولي الأمر">
+                            </div>
+                            <button id="addNewStudentButton" class="btn-secondary-outline w-full"
+                                data-key="addNewStudentButton"><i class="ri-user-follow-line mr-2"></i> إضافة
+                                للقائمة</button>
                         </div>
-                        <h4 class="text-lg font-bold mt-4 mb-2 text-gray-800" data-key="allStudentsLabel">كل الطلاب في هذه المجموعة:</h4>
-                        <div id="studentsListDisplay" class="border rounded-lg overflow-hidden divide-y divide-gray-200"></div>
+                        <div class="relative mb-4">
+                            <i class="ri-search-line absolute top-3 right-3 text-gray-400"></i>
+                            <input type="search" id="studentSearchInput" class="input-field pr-10"
+                                data-key-placeholder="searchPlaceholder">
+                        </div>
+                        <div id="studentsListDisplay"
+                            class="space-y-2 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar"></div>
                     </section>
                 </div>
 
-                <div id="tab-attendance" class="tab-content hidden">
-                    <section class="card-container">
-                        <h3 class="text-xl font-bold mb-4 text-gray-800" data-key="attendanceTitle">الحضور اليومي</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label for="attendanceDateInput" class="block text-sm font-semibold text-grey-800 mb-1" data-key="selectDateLabel">اختر التاريخ:</label>
-                                <input type="date" id="attendanceDateInput" class="input-field">
-                            </div>
-                            <div class="flex items-end">
-                                <button id="scanAttendanceButton" class="btn-primary-custom w-full" data-key="scanAttendanceQR">مسح الحضور بـ QR</button>
+                <div id="tab-exams" class="tab-content hidden">
+                    <section class="card-container glass-panel p-6">
+                        <div class="section-header"><i class="ri-award-line text-brand"></i>
+                            <h3 data-key="examsTitle">الامتحانات والدرجات</h3>
+                        </div>
+                        <div class="bg-yellow-50 dark:bg-yellow-900/10 p-5 rounded-2xl mb-6 border border-yellow-100">
+                            <div class="grid md:grid-cols-3 gap-3 mb-3">
+                                <div class="md:col-span-2"><input type="text" id="newExamName" class="input-field"
+                                        data-key-placeholder="newAssignmentNameLabel" placeholder="اسم الامتحان "></div>
+                                <div><button id="addNewExamBtn" class="btn-primary-custom w-full"
+                                        data-key="addNewAssignmentButton">إنشاء</button></div>
                             </div>
                         </div>
-                        <h4 class="text-lg font-bold mt-6 mb-2 text-gray-800" data-key="markAttendanceLabel">تسجيل الحضور:</h4>
-                        <div id="attendanceStudentsContainer" class="p-1 bg-gray-50 rounded-lg border divide-y divide-gray-200"></div>
-                        <button id="saveDailyAttendanceButton" class="btn-primary-custom mt-4" data-key="saveAttendanceButton">حفظ الحضور اليومي</button>
-                    </section>
-                </div>
-
-                <div id="tab-grades" class="tab-content hidden">
-                    <section class="card-container">
-                        <h3 class="text-xl font-bold mb-4 text-gray-800" data-key="gradesTitle">إدارة الدرجات</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label for="assignmentSelect" class="block text-sm font-semibold text-grey-800 mb-1" data-key="selectAssignmentLabel">اختر الواجب:</label>
-                                <select id="assignmentSelect" class="input-field"></select>
-                            </div>
-                            <div>
-                                <label for="newAssignmentName" class="block text-sm font-semibold text-grey-800 mb-1" data-key="newAssignmentNameLabel">أو أضف اسم واجب جديد:</label>
-                                <input type="text" id="newAssignmentName" class="input-field" data-key-placeholder="assignmentNamePlaceholder">
-                            </div>
-                            <div>
-                                <label for="newAssignmentDate" class="block text-sm font-semibold text-grey-800 mb-1" data-key="newAssignmentDateLabel">تاريخ الواجب الجديد:</label>
-                                <input type="date" id="newAssignmentDate" class="input-field">
-                            </div>
-                            <div class="col-span-full md:col-span-1 lg:col-span-1">
-                                <button id="addNewAssignmentButton" class="btn-primary-custom w-full mt-2" data-key="addNewAssignmentButton">إضافة واجب جديد</button>
-                            </div>
-                             <div class="col-span-full md:col-span-1 lg:col-span-1 flex items-end">
-                                <button id="scanHomeworkButton" class="btn-primary-custom w-full mt-2" data-key="scanHomeworkQR">مسح تسليم الواجب بـ QR</button>
-                            </div>
+                        <div class="mb-4">
+                            <select id="examSelect" class="input-field"></select>
                         </div>
-                        <h4 class="text-lg font-bold mt-6 mb-2 text-gray-800" data-key="enterGradesLabel">أدخل الدرجات:</h4>
-                         <div id="gradesStudentsContainer" class="p-1 bg-gray-50 rounded-lg border divide-y divide-gray-200"></div>
-                        <button id="saveAssignmentGradesButton" class="btn-primary-custom mt-4" data-key="saveGradesButton">حفظ درجات الواجب</button>
+                        <div id="examGradesList"
+                            class="grid md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto custom-scrollbar"></div>
+                        <button id="saveExamGradesBtn" class="btn-primary-custom w-full mt-6"
+                            data-key="saveGradesButton">حفظ الدرجات</button>
                     </section>
                 </div>
 
                 <div id="tab-payments" class="tab-content hidden">
-                    <section class="card-container">
-                        <h3 class="text-xl font-bold mb-4 text-gray-800" data-key="paymentsTitle">متابعة تحصيل المصروفات</h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label for="paymentMonthInput" class="block text-sm font-semibold text-grey-800 mb-1" data-key="selectMonthLabel">اختر الشهر:</label>
-                                <input type="month" id="paymentMonthInput" class="input-field">
-                            </div>
-                            <div class="flex items-end">
-                                <button id="scanPaymentsButton" class="btn-primary-custom w-full" data-key="scanPaymentsQR">مسح دفع المصروفات بـ QR</button>
-                            </div>
-                        </div>
+                    <section class="card-container glass-panel p-6">
+                        <div
+                            class="bg-white dark:bg-darkSurface p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 mb-4 sticky top-20 z-10">
+                            <div class="flex flex-col md:flex-row gap-4 items-end">
+                                <div class="flex-1 w-full">
+                                    <label class="label-custom" data-key="selectMonthLabel">شهر التحصيل</label>
+                                    <input type="month" id="paymentMonthInput" class="input-field w-full">
+                                </div>
 
-                        <h4 class="text-lg font-bold mt-6 mb-2 text-gray-800" data-key="markPaymentsLabel">تسجيل الدفع:</h4>
-                        <div id="paymentsStudentsContainer" class="p-1 bg-gray-50 rounded-lg border divide-y divide-gray-200"></div>
-                        <button id="savePaymentsButton" class="btn-primary-custom mt-4" data-key="savePaymentsButton">حفظ بيانات التحصيل</button>
+                                <div class="w-full md:w-32">
+                                    <label class="label-custom" data-key="amountLabel">قيمة المصاريف</label>
+                                    <input type="number" id="defaultAmountInput"
+                                        class="input-field text-center font-bold text-green-600 dark:text-green-400" 
+                                        data-key-placeholder="defaultAmountPlaceholder"
+                                        placeholder="مثلاً 150"
+                                        value="150">
+                                </div>
+
+                                <button id="scanPaymentsBtn"
+                                    class="bg-gray-900 dark:bg-white text-white dark:text-black font-bold p-3 rounded-xl shadow-lg">
+                                    <i class="ri-qr-scan-2-line text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="paymentsList" class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar"></div>
+                        <button id="savePaymentsBtn"
+                            class="btn-primary-custom bg-green-600 hover:bg-green-700 text-white w-full mt-6"
+                            data-key="savePaymentsButton">حفظ التحصيل</button>
                     </section>
                 </div>
-                
+
                 <div id="tab-schedule" class="tab-content hidden">
-                     <section class="card-container">
-                        <h3 class="text-xl font-bold mb-4 text-gray-800" data-key="scheduleTitle">إدارة جدول الحصص</h3>
-                        <div class="p-4 border rounded-lg bg-gray-50 mb-6">
-                            <h4 class="text-lg font-bold mb-3 text-gray-800" data-key="addRecurringScheduleTitle">إضافة جدول متكرر جديد</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="grid lg:grid-cols-2 gap-6">
+                        <section class="card-container glass-panel p-6 h-fit">
+                            <div class="section-header">
+                                <i class="ri-calendar-event-line text-brand"></i>
+                                <h3 data-key="addRecurringScheduleTitle">إضافة موعد ثابت</h3>
+                            </div>
+                            <div class="space-y-4">
                                 <div>
-                                    <label for="recurringSubject" class="block text-sm font-semibold text-grey-800 mb-1" data-key="subjectLabel">المادة:</label>
-                                    <input type="text" id="recurringSubject" class="input-field" data-key-placeholder="subjectPlaceholder">
+                                    <label class="label-custom" data-key="subjectLabel">المادة</label>
+                                    <input type="text" id="recurringSubject" class="input-field"
+                                        data-key-placeholder="subjectPlaceholder">
                                 </div>
                                 <div>
-                                    <label for="recurringTime" class="block text-sm font-semibold text-grey-800 mb-1" data-key="timeLabel">الوقت:</label>
-<div id="recurringTimeContainer" class="grid grid-cols-3 gap-2"></div>                                </div>
-                                <div>
-                                    <label for="recurringLocation" class="block text-sm font-semibold text-grey-800 mb-1" data-key="locationLabel">المكان:</label>
-                                    <input type="text" id="recurringLocation" class="input-field" data-key-placeholder="locationPlaceholder">
+                                    <label class="label-custom" data-key="timeLabel">الوقت</label>
+                                    <div id="recurringTimeContainer" class="grid grid-cols-3 gap-2" dir="ltr"></div>
                                 </div>
+                                <div>
+                                    <label class="label-custom" data-key="locationLabel">المكان</label>
+                                    <input type="text" id="recurringLocation" class="input-field"
+                                        data-key-placeholder="locationPlaceholder"
+                                        placeholder="سنتر كوليدج">
+                                </div>
+                                <div>
+                                    <label class="label-custom" data-key="selectDaysLabel">الأيام</label>
+                                    <div id="daysOfWeekContainer" class="flex flex-wrap gap-2 mt-2"></div>
+                                </div>
+                                <button id="addRecurringScheduleButton" class="btn-primary-custom w-full"
+                                    data-key="saveRecurringScheduleButton">إضافة للجدول</button>
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-sm font-semibold text-grey-800 mb-2" data-key="selectDaysLabel">اختر أيام الأسبوع:</label>
-                                <div id="daysOfWeekContainer" class="flex flex-wrap gap-3"></div>
-                            </div>
-                            <button id="addRecurringScheduleButton" class="btn-primary-custom" data-key="saveRecurringScheduleButton">حفظ الجدول المتكرر</button>
+                        </section>
+
+                        <div class="space-y-6">
+                            <section class="card-container glass-panel p-6">
+                                <div class="section-header">
+                                    <i class="ri-list-check text-brand"></i>
+                                    <h3 data-key="mySchedulesLabel">مواعيدي</h3>
+                                </div>
+                                <div id="recurringSchedulesDisplay"
+                                    class="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar"></div>
+                            </section>
+
+                            <section class="card-container glass-panel p-6 border-t-4 border-orange-500">
+                                <div class="section-header">
+                                    <i class="ri-edit-circle-line text-orange-500"></i>
+                                    <h3 data-key="modifySingleClassTitle">تعديل طارئ</h3>
+                                </div>
+                                <p class="text-xs text-gray-500 mb-4" data-key="modifyClassPrompt">تغيير أو إلغاء حصة
+                                    محددة.</p>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="label-custom" data-key="classDateLabel">تاريخ الحصة</label>
+                                        <input type="date" id="exceptionDate" class="input-field">
+                                    </div>
+                                    <div>
+                                        <label class="label-custom" data-key="newTimeLabel">الموعد الجديد</label>
+                                        <div id="exceptionNewTimeContainer" class="grid grid-cols-3 gap-2" dir="ltr">
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2 mt-2">
+                                        <button id="updateSingleClassButton"
+                                            class="btn-primary-custom flex-1 text-sm bg-orange-500 hover:bg-orange-600 text-white"
+                                            data-key="updateClassButton">تحديث</button>
+                                        <button id="cancelSingleClassButton"
+                                            class="btn-icon bg-red-100 text-red-500 hover:bg-red-500 hover:text-white dark:bg-red-900/20 dark:hover:bg-red-900"
+                                            title="إلغاء">
+                                            <i class="ri-close-circle-line text-xl"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
                         </div>
-                        <h4 class="text-lg font-bold mt-6 mb-2 text-gray-800" data-key="mySchedulesLabel">جداولي المتكررة:</h4>
-                        <div id="recurringSchedulesDisplay" class="border rounded-lg overflow-hidden divide-y divide-gray-200 mb-6"></div>
-                        <div class="p-4 border rounded-lg bg-gray-50">
-                            <h4 class="text-lg font-bold mb-3 text-gray-800" data-key="modifySingleClassTitle">تعديل حصة واحدة</h4>
-                            <p class="text-grey-600 mb-3 text-sm" data-key="modifyClassPrompt">هل تحتاج إلى تغيير أو إلغاء حصة واحدة؟ اختر التاريخ وقم بالتغيير.</p>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label for="exceptionDate" class="block text-sm font-semibold text-grey-800 mb-1" data-key="classDateLabel">تاريخ الحصة:</label>
-                                    <input type="date" id="exceptionDate" class="input-field">
-                                </div>
-                                <div>
-                                    <label for="exceptionNewTime" class="block text-sm font-semibold text-grey-800 mb-1" data-key="newTimeLabel">الوقت الجديد (اختياري):</label>
-<div id="exceptionNewTimeContainer" class="grid grid-cols-3 gap-2"></div>                                </div>
-                                 <div class="flex items-end">
-                                    <button id="updateSingleClassButton" class="btn-primary-custom w-full" data-key="updateClassButton">تحديث الحصة</button>
-                                </div>
-                            </div>
-                             <div class="mt-3">
-                                <button id="cancelSingleClassButton" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-full md:w-auto text-sm" data-key="cancelClassButton">إلغاء هذه الحصة</button>
-                            </div>
-                        </div>
-                    </section>
+                    </div>
                 </div>
+
             </div>
         </div>
     </main>
 
-    <div id="qrCodeModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[2000]">
-        <div class="bg-white p-6 rounded-lg text-center max-w-sm w-full">
-            <div id="printableIdCard" class="p-4 border-2 border-gray-300 rounded-lg bg-white text-black">
-                <div class="flex items-center pb-3 border-b-2 border-gray-200 mb-3">
-                    <img src="assets/images/learnaria_logo.png" alt="Logo" class="h-12 w-12 rounded-full mr-3">
-                    <div>
-                        <h3 class="text-xl font-bold text-left text-gray-800">Spot Student ID</h3>
-                        <p id="idTeacherName" class="text-sm text-gray-600 text-left">Teacher: Mohamed Ali</p>
-                    </div>
+    <div id="scannerModal" class="hidden fixed inset-0 z-[2000] bg-black flex flex-col">
+        <div class="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
+            <video id="scannerVideo" class="absolute inset-0 w-full h-full object-cover opacity-60" playsinline></video>
+
+            <div
+                class="relative z-20 w-72 h-72 border-2 border-brand/50 rounded-3xl flex flex-col items-center justify-center box-content p-1">
+                <div
+                    class="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-brand rounded-tl-2xl -mt-1 -ml-1">
                 </div>
-                <div class="flex flex-col items-center text-center mt-4">
-                    <div id="idQrcode" class="flex justify-center p-1 border rounded-md mb-4"></div>
-                    <div>
-                        <p class="text-gray-500 text-sm">Student Name:</p>
-                        <h4 id="idStudentName" class="text-2xl font-bold text-gray-900">Student's Full Name</h4>
-                    </div>
+                <div
+                    class="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-brand rounded-tr-2xl -mt-1 -mr-1">
+                </div>
+                <div
+                    class="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-brand rounded-bl-2xl -mb-1 -ml-1">
+                </div>
+                <div
+                    class="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-brand rounded-br-2xl -mb-1 -mr-1">
+                </div>
+                <div class="w-full h-0.5 bg-red-500 shadow-[0_0_20px_rgba(242,206,90,1)] animate-scan"></div>
+                <p class="absolute -bottom-10 text-white/80 font-bold text-sm tracking-wider"
+                    data-key="scanOverlayText">وجه الكود داخل الإطار</p>
+            </div>
+
+            <div id="scannerOverlay" class="absolute inset-0 transition-colors duration-300 pointer-events-none z-30">
+            </div>
+
+            <div class="absolute bottom-24 left-0 right-0 text-center z-40">
+                <div id="scannedStudentName"
+                    class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-white/90 backdrop-blur text-black font-black text-xl transform transition-all opacity-0 translate-y-10 scale-90 shadow-2xl">
+                    <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white"><i
+                            class="ri-check-line"></i></div>
+                    <span id="feedbackNameText">اسم الطالب</span>
                 </div>
             </div>
-            <div class="mt-4 flex gap-4">
-                 <button id="printIdButton" class="btn-primary-custom flex-1">طباعة ID</button>
-                 <button id="closeQrModal" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg flex-1">إغلاق</button>
+        </div>
+
+        <div class="p-6 bg-black flex justify-center">
+            <button id="closeScannerModal"
+                class="bg-white/10 text-white border border-white/20 rounded-full px-8 py-3 font-bold hover:bg-white/20 transition-all backdrop-blur-md" data-key="closeCamera">إغلاق
+                الكاميرا</button>
+        </div>
+    </div>
+
+    <div id="hwConfirmModal"
+        class="hidden fixed inset-0 z-[2100] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity">
+        <div
+            class="bg-white dark:bg-darkSurface w-full md:w-96 rounded-t-3xl md:rounded-3xl p-8 shadow-2xl transform transition-transform animate-fadeInUp">
+            <div class="text-center mb-8">
+                <div
+                    class="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border border-blue-100 dark:border-blue-800">
+                    <i class="ri-book-open-line text-4xl"></i>
+                </div>
+                <h3 class="text-2xl font-black text-gray-900 dark:text-white mb-1" id="hwStudentName">اسم الطالب</h3>
+                <p class="text-gray-500 font-medium" data-key="homeworkQuestion">هل سلم الواجب؟</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <button id="hwNoBtn"
+                    class="py-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors text-lg"
+                    data-key="no">لا</button>
+                <button id="hwYesBtn"
+                    class="py-4 rounded-xl font-bold text-black bg-brand hover:bg-brandHover shadow-lg shadow-yellow-500/20 transition-colors text-lg"
+                    data-key="yes">نعم</button>
             </div>
         </div>
     </div>
 
-    <div id="scannerModal" class="hidden fixed inset-0 bg-black flex flex-col items-center justify-between p-4 z-[2000]">
-        <p class="text-white text-lg flex-shrink-0">وجّه الكاميرا نحو الـ QR Code</p>
-        <div class="relative w-full flex-grow flex items-center justify-center my-2">
-            <video id="scannerVideo" playsinline></video>
-            <div id="scannerOverlay" class="absolute inset-0 border-8 border-transparent transition-all duration-200 pointer-events-none"></div>
-            <p id="scannedStudentName" class="absolute bottom-5 bg-black bg-opacity-70 text-white text-2xl p-3 rounded-lg transition-opacity duration-300 opacity-0"></p>
+    <div id="qrCodeModal" class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm transition-opacity duration-300">
+        <div class="w-full max-w-sm transform transition-all scale-100">
+            
+            <div id="printableIdCard" class="relative bg-white rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.1)] mb-6 mx-auto">
+                <div class="absolute top-0 w-full h-32 bg-brand rounded-b-[50%] scale-150 -translate-y-16 opacity-20"></div>
+                <div class="absolute bottom-0 w-full h-32 bg-gray-100 rounded-t-[50%] scale-150 translate-y-16 opacity-50"></div>
+
+                <div class="relative z-10 p-8 flex flex-col items-center text-center">
+                    <div class="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-4 border border-gray-100">
+                        <img src="assets/images/learnaria_logo.png" class="w-12 h-12 object-contain">
+                    </div>
+
+                    <h4 class="text-gray-400 text-xs font-bold tracking-[0.2em] uppercase mb-1">Student ID Card</h4>
+                    <h2 id="idStudentName" class="text-2xl font-black text-gray-900 mb-6 leading-tight">اسم الطالب</h2>
+
+                    <div class="p-4 bg-white rounded-2xl shadow-inner border border-gray-100 mb-6">
+                        <div id="idQrcode" class="opacity-90"></div>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-gray-500 text-sm font-medium bg-gray-50 px-4 py-2 rounded-full">
+                        <i class="ri-user-star-line text-brand"></i>
+                        <span id="idTeacherName">اسم المعلم</span>
+                    </div>
+                    <span id="idSubjectName" class="text-xs text-gray-400 font-bold tracking-wide">المادة الدراسية</span>
+                </div>
+                
+                <div class="h-2 w-full bg-gradient-to-r from-yellow-200 via-brand to-yellow-500"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button id="shareIdBtn" class="col-span-2 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                    <span class="text-lg">مشاركة واتساب / صورة</span> 
+                    <i class="ri-whatsapp-line text-2xl"></i>
+                </button>
+                
+                <button id="printIdButton" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                    <span>طباعة</span> <i class="ri-printer-line"></i>
+                </button>
+                
+                <button id="closeQrModal" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-bold py-3 rounded-xl">
+                    إغلاق
+                </button>
+            </div>
+            
+            <p class="text-center text-gray-500 text-xs mt-4">يمكن للطالب حفظ الصورة واستخدامها للدخول</p>
         </div>
-        <div class="flex-shrink-0">
-            <button id="closeScannerModal" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg text-lg">
-                إنهاء المسح والعودة
-            </button>
+    </div>
+
+    <div id="messageModal"
+        class="hidden fixed inset-0 z-[2200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div
+            class="bg-white dark:bg-darkSurface w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-100">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div
+                        class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center">
+                        <i class="ri-chat-1-line text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white" data-key="msgModalTitle">رسالة لولي الأمر</h3>
+                        <p id="msgStudentName" class="text-xs text-gray-500">الطالب: ...</p>
+                    </div>
+                </div>
+
+                <textarea id="customMessageInput" rows="4"
+                    class="w-full input-field resize-none"
+                    data-key-placeholder="msgPlaceholder"
+                    placeholder="اكتب ملاحظاتك هنا (مثلاً: الطالب تحسن مستواه، يرجى متابعة الواجب...)"></textarea>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-black/20 p-4 flex gap-3 border-t border-gray-100 dark:border-gray-800">
+                <button id="confirmSendMsgBtn" class="flex-1 btn-primary-custom flex items-center justify-center gap-2">
+                    <span data-key="sendMsgBtn">إرسال</span> <i class="ri-send-plane-fill"></i>
+                </button>
+                <button id="closeMsgModal"
+                    class="px-6 py-2 rounded-xl font-bold text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 transition" data-key="cancelBtn">إلغاء</button>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="js/script.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => console.log('ServiceWorker registration successful with scope: ', registration.scope))
-                    .catch(err => console.log('ServiceWorker registration failed: ', err));
-            });
+    <style>
+        .animate-scan {
+            animation: scan 2s infinite linear;
         }
-    </script>
+    </style>
 </body>
+
 </html>
