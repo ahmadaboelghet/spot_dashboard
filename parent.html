@@ -578,54 +578,105 @@
         }
 
         // دالة تكتشف هل الجهاز آيفون وهل التطبيق مش متسطب
-        function detectIOS() {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches; // هل هو فاتح من الايقونة ولا المتصفح؟
+        // ==========================================
+        // 🍏 iOS Smart Install Prompt (Professional)
+        // ==========================================
 
-            if (isIOS && !isStandalone) {
-                showIOSInstallPrompt();
+        function detectAndPromptIOS() {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            // التأكد أنه جهاز يعمل بنظام iOS (آيفون أو آيباد)
+            const isIOS = /iphone|ipad|ipod/.test(userAgent);
+            // التأكد أن الموقع مفتوح في المتصفح وليس كتطبيق مثبت بالفعل
+            const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+
+            // لو هو آيفون ومش متسطب، أظهر الرسالة
+            if (isIOS && !isInStandaloneMode) {
+                // تأخير بسيط عشان الصفحة تحمل الأول
+                setTimeout(showIOSPrompt, 2000);
             }
         }
 
-        function showIOSInstallPrompt() {
-            // بنعمل تصميم بسيط يظهر تحت يقوله دوس هنا
+        function showIOSPrompt() {
+            // 1. Inject CSS Styles (عشان الشكل الاحترافي)
+            const style = document.createElement('style');
+            style.innerHTML = `
+        .ios-prompt-overlay {
+            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 400px;
+            background: rgba(255, 255, 255, 0.85); /* لون أبيض شفاف */
+            backdrop-filter: blur(20px) saturate(180%); /* تأثير الزجاج بتاع أبل */
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-radius: 22px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            border: 0.5px solid rgba(200,200,200,0.3);
+            z-index: 99999; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden; animation: slideUpIOS 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            color: #1d1d1f;
+        }
+        .ios-prompt-header {
+             padding: 18px 15px 5px; text-align: center;
+        }
+        .ios-prompt-title { font-weight: 700; font-size: 17px; margin-bottom: 5px; }
+        .ios-prompt-body { font-size: 13px; color: #6e6e73; line-height: 1.4; padding: 0 20px 15px; text-align: center;}
+        .ios-steps { background: rgba(0,0,0,0.03); padding: 15px; border-top: 0.5px solid rgba(0,0,0,0.1); }
+        .ios-step { display: flex; align-items: center; margin-bottom: 12px; font-size: 14px; font-weight: 500;}
+        .ios-step:last-child { margin-bottom: 0; }
+        .ios-icon-box { 
+            width: 30px; height: 30px; background: white; border-radius: 8px; 
+            display: flex; align-items: center; justify-content: center; 
+            margin-left: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .ios-prompt-close {
+            width: 100%; padding: 15px; text-align: center; font-size: 15px; font-weight: 600;
+            color: #007aff; background: transparent; border: none; border-top: 0.5px solid rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+        .ios-prompt-close:active { background: rgba(0,0,0,0.05); }
+        /* سهم بيشاور تحت على الشريط */
+        .ios-pointer-arrow {
+            position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; 
+            border-left: 10px solid transparent; border-right: 10px solid transparent;
+            border-top: 10px solid rgba(255, 255, 255, 0.85);
+        }
+        @keyframes slideUpIOS { from { bottom: -150px; opacity: 0; } to { bottom: 25px; opacity: 1; } }
+    `;
+            document.head.appendChild(style);
+
+            // 2. Create HTML Structure
             const promptDiv = document.createElement('div');
-            promptDiv.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    background: white;
-    padding: 15px;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    z-index: 9999;
-    text-align: center;
-    font-family: sans-serif;
-    border: 1px solid #eee;
-  `;
+            promptDiv.className = 'ios-prompt-overlay';
+
+            // SVG أيقونات أبل الحقيقية
+            const shareIconSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
+            const addIconSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" ry="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
 
             promptDiv.innerHTML = `
-    <div style="font-weight:bold; margin-bottom:5px;">تنزيل التطبيق</div>
-    <div style="font-size:14px; color:#555; margin-bottom:10px;">
-      عشان يوصلك إشعارات الغياب والدرجات، لازم تضيف الموقع للشاشة الرئيسية.
-    </div>
-    <div style="display:flex; align-items:center; justify-content:center; gap:10px; font-size:13px;">
-      <span>1️⃣ اضغط على زرار </span>
-      <img src="https://img.icons8.com/ios/50/000000/share.png" style="width:20px; height:20px;">
-    </div>
-    <div style="margin-top:5px; font-size:13px;">
-      <span>2️⃣ اختر <b>"Add to Home Screen"</b></span>
-    </div>
-    <button onclick="this.parentElement.remove()" style="margin-top:10px; background:#eee; border:none; padding:5px 15px; border-radius:20px;">تمام</button>
-  `;
+        <div class="ios-prompt-header">
+            <div class="ios-prompt-title">تفعيل الإشعارات 🔔</div>
+            <div class="ios-prompt-body">
+                لتصلك تنبيهات لحظية بحضور ودرجات الطالب، قم بإضافة هذا الموقع لشاشتك الرئيسية.
+            </div>
+        </div>
+        <div class="ios-steps">
+            <div class="ios-step">
+                1️⃣ اضغط على زر المشاركة بالأسفل
+                <div class="ios-icon-box">${shareIconSVG}</div>
+            </div>
+            <div class="ios-step">
+                2️⃣ اختر "إضافة إلى الشاشة الرئيسية"
+                <div class="ios-icon-box">${addIconSVG}</div>
+                <br><span style="font-size:11px; color:#888; margin-right:5px;">(Add to Home Screen)</span>
+            </div>
+        </div>
+        <button class="ios-prompt-close" onclick="this.closest('.ios-prompt-overlay').remove()">فهمت، شكراً 👍</button>
+        <div class="ios-pointer-arrow"></div> `;
 
             document.body.appendChild(promptDiv);
         }
 
-        // شغل الدالة أول ما الموقع يفتح
-        window.onload = detectIOS;
+        // تشغيل الدالة عند تحميل الصفحة
+        window.addEventListener('load', detectAndPromptIOS);
 
         async function createStudentCardHTML(student) {
             // ✅ البحث الدقيق عن حالة دفع الشهر الحالي
