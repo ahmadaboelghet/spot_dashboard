@@ -578,7 +578,7 @@
         }
 
         // ==========================================
-        // 🍏 iOS Smart Install Prompt (Chrome/3-Dots Full Version)
+        // 🍏 iOS Smart Install Prompt (Black Edition)
         // ==========================================
 
         function detectAndPromptIOS() {
@@ -616,10 +616,13 @@
         }
         .ios-title { font-weight: 700; font-size: 16px; color: #000; }
         .ios-close { font-size: 20px; color: #888; background: none; border: none; cursor: pointer;}
+        .ios-close:hover { color: #000; }
         .ios-body { padding: 15px 20px; }
         .ios-step { display: flex; align-items: center; margin-bottom: 12px; font-size: 13px; color: #333; font-weight: 500;}
         .ios-step:last-child { margin-bottom: 0; }
-        .step-num { font-weight: bold; color: #007aff; margin-left: 8px; min-width: 15px;}
+        
+        /* تم تغيير لون الأرقام للأسود */
+        .step-num { font-weight: bold; color: #000000; margin-left: 8px; min-width: 15px;}
         .step-icon { width: 22px; height: 22px; margin-right: auto; display: block;}
         
         .ios-arrow-down {
@@ -636,10 +639,10 @@
     `;
             document.head.appendChild(style);
 
-            // الأيقونات
-            const dotsIcon = `<svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`;
-            const shareIcon = `<svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
-            const plusIcon = `<svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" ry="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
+            // تم تغيير لون الـ stroke في الأيقونات من #007aff إلى #000000
+            const dotsIcon = `<svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`;
+            const shareIcon = `<svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
+            const plusIcon = `<svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" ry="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
 
             const promptDiv = document.createElement('div');
             promptDiv.className = 'ios-prompt-overlay';
