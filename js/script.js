@@ -1684,4 +1684,5 @@ function toggleLang() {
     if(SELECTED_GROUP_ID && !document.getElementById('tab-students').classList.contains('hidden')) renderStudents();
     loadGroups();
     renderDayCheckboxes();
+    updateOnlineStatus();
 }
