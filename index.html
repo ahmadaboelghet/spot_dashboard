@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title data-key="pageTitle">Spot - المعلم الذكي</title>
-    
+
     <link rel="icon" href="assets/images/favicon.png" type="image/x-icon">
 
     <link rel="apple-touch-icon" href="assets/images/learnaria_logo.png">
@@ -16,12 +16,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Spot">
-    
+
     <link rel="manifest" href="manifest.json">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;600;800&display=swap"
+        rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -90,12 +92,20 @@
 
             <div class="flex items-center gap-2">
                 <button id="languageToggleButton"
-                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-brand hover:text-black transition-all font-bold text-sm shadow-sm dark:text-gray-200 dark:hover:text-black">EN</button>
+                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-brand dark:hover:bg-brand hover:text-black transition-all font-bold text-sm shadow-sm dark:text-gray-200 dark:hover:text-black">EN</button>
+
                 <button id="darkModeToggleButton"
-                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-brand hover:text-black transition-all shadow-sm flex items-center justify-center dark:text-gray-200 dark:hover:text-black">
+                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-brand dark:hover:bg-brand hover:text-black transition-all shadow-sm flex items-center justify-center dark:text-gray-200 dark:hover:text-black">
                     <i id="darkModeIcon" class="ri-moon-line text-lg"></i>
                     <i id="lightModeIcon" class="ri-sun-line text-lg hidden"></i>
                 </button>
+
+                <a href="https://wa.me/+201001133246" target="_blank"
+                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-green-500 dark:hover:bg-green-500 hover:text-white dark:hover:text-white transition-all shadow-sm flex items-center justify-center dark:text-gray-200"
+                    title="تواصل معنا">
+                    <i class="ri-customer-service-2-line text-lg"></i>
+                </a>
+
                 <button id="logoutButton"
                     class="hidden w-10 h-10 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm flex items-center justify-center dark:bg-red-900/20">
                     <i class="ri-logout-box-r-line text-lg"></i>
@@ -105,50 +115,71 @@
     </nav>
 
     <div id="landingSection" class="min-h-screen flex flex-col pt-24 pb-10">
-        
-        <div class="container mx-auto px-6 flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-20 flex-grow">
-            
+
+        <div
+            class="container mx-auto px-6 flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-20 flex-grow">
+
             <div class="text-center lg:text-right lg:w-1/2 space-y-6 fade-in-up">
                 <div class="inline-block bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-4 py-2 rounded-full text-sm font-bold mb-2 border border-yellow-200 dark:border-yellow-700"
-                     data-key="landingNewVersion">
+                    data-key="landingNewVersion">
                     🚀 الإصدار الجديد متاح الآن
                 </div>
-                
-                <h1 class="text-5xl lg:text-7xl font-black text-gray-900 dark:text-white leading-tight" 
+
+                <h1 class="text-5xl lg:text-7xl font-black text-gray-900 dark:text-white leading-tight"
                     data-key="landingHeroTitle">
                     إدارتك كلها في <br>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600">مكان واحد.</span>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600">مكان
+                        واحد.</span>
                 </h1>
-                
+
                 <p class="text-xl text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto lg:mx-0"
-                   data-key="landingHeroSubtitle">
-                    تطبيق <strong>Spot</strong> هو مساعدك الشخصي الذكي. رصد غياب بالـ QR، متابعة درجات، تحصيل مصروفات، وتواصل فوري مع أولياء الأمور.. كل ده وأنت بتشرب قهوتك ☕
+                    data-key="landingHeroSubtitle">
+                    تطبيق <strong>Spot</strong> هو مساعدك الشخصي الذكي. رصد غياب بالـ QR، متابعة درجات، تحصيل مصروفات،
+                    وتواصل فوري مع أولياء الأمور.. كل ده وأنت بتشرب قهوتك ☕
                 </p>
 
                 <div class="grid grid-cols-2 gap-4 mt-8">
-                    <div class="p-4 bg-white dark:bg-darkSurface rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl"><i class="ri-qr-scan-2-line"></i></div>
+                    <div
+                        class="p-4 bg-white dark:bg-darkSurface rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                            <i class="ri-qr-scan-2-line"></i>
+                        </div>
                         <div class="text-right">
-                            <h4 class="font-bold text-sm dark:text-white" data-key="featureSmartAttendance">غياب ذكي</h4>
+                            <h4 class="font-bold text-sm dark:text-white" data-key="featureSmartAttendance">غياب ذكي
+                            </h4>
                             <p class="text-xs text-gray-500" data-key="featureSmartAttendanceSub">سكانر سريع جداً</p>
                         </div>
                     </div>
-                    <div class="p-4 bg-white dark:bg-darkSurface rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-xl"><i class="ri-whatsapp-line"></i></div>
+                    <div
+                        class="p-4 bg-white dark:bg-darkSurface rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-xl">
+                            <i class="ri-whatsapp-line"></i>
+                        </div>
                         <div class="text-right">
-                            <h4 class="font-bold text-sm dark:text-white" data-key="featureInstantConnect">تواصل فوري</h4>
+                            <h4 class="font-bold text-sm dark:text-white" data-key="featureInstantConnect">تواصل فوري
+                            </h4>
                             <p class="text-xs text-gray-500" data-key="featureInstantConnectSub">رابط لولي الأمر</p>
                         </div>
                     </div>
-                    <div class="p-4 bg-white dark:bg-darkSurface rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-xl"><i class="ri-money-dollar-circle-line"></i></div>
+                    <div
+                        class="p-4 bg-white dark:bg-darkSurface rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+                            <i class="ri-money-dollar-circle-line"></i>
+                        </div>
                         <div class="text-right">
                             <h4 class="font-bold text-sm dark:text-white" data-key="featureFinance">تحصيل مالي</h4>
                             <p class="text-xs text-gray-500" data-key="featureFinanceSub">متابعة دقيقة</p>
                         </div>
                     </div>
-                    <div class="p-4 bg-white dark:bg-darkSurface rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-xl"><i class="ri-bar-chart-grouped-line"></i></div>
+                    <div
+                        class="p-4 bg-white dark:bg-darkSurface rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-xl">
+                            <i class="ri-bar-chart-grouped-line"></i>
+                        </div>
                         <div class="text-right">
                             <h4 class="font-bold text-sm dark:text-white" data-key="featureReports">تقارير</h4>
                             <p class="text-xs text-gray-500" data-key="featureReportsSub">إحصائيات شاملة</p>
@@ -163,45 +194,54 @@
 
                 <div class="card-container glass-panel p-8 relative z-10 border-t-4 border-t-brand shadow-2xl">
                     <div class="text-center mb-8">
-                        <div class="w-16 h-16 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-lg">
+                        <div
+                            class="w-16 h-16 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-lg">
                             <i class="ri-user-smile-line"></i>
                         </div>
-                        <h3 class="text-2xl font-black text-gray-900 dark:text-white" data-key="teacherLoginTitle">مرحباً بك، يا معلم!</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2" data-key="teacherLoginPrompt">سجل دخولك لمتابعة طلابك بذكاء</p>
+                        <h3 class="text-2xl font-black text-gray-900 dark:text-white" data-key="teacherLoginTitle">
+                            مرحباً بك، يا معلم!</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2" data-key="teacherLoginPrompt">سجل دخولك
+                            لمتابعة طلابك بذكاء</p>
                     </div>
 
                     <div class="space-y-5">
                         <div class="relative group">
-                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
+                            <div
+                                class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
                                 <i class="ri-smartphone-line text-xl"></i>
                             </div>
-                            <input type="tel" id="teacherPhoneInput" 
-                                class="w-full py-4 pr-12 pl-4 bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal" 
+                            <input type="tel" id="teacherPhoneInput"
+                                class="w-full py-4 pr-12 pl-4 bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal"
                                 placeholder="01xxxxxxxxx" data-key-placeholder="phonePlaceholder">
                         </div>
 
                         <div class="relative group">
-                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
+                            <div
+                                class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
                                 <i class="ri-lock-2-line text-xl"></i>
                             </div>
-                            <input type="password" id="teacherPasswordInput" 
-                                class="w-full py-4 pr-12 pl-4 bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal" 
+                            <input type="password" id="teacherPasswordInput"
+                                class="w-full py-4 pr-12 pl-4 bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal"
                                 placeholder="كلمة المرور" data-key-placeholder="passwordPlaceholder">
                         </div>
 
-                        <button id="setTeacherButton" class="w-full bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-200 text-white dark:text-black font-black text-lg py-4 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 group">
+                        <button id="setTeacherButton"
+                            class="w-full bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-200 text-white dark:text-black font-black text-lg py-4 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 group">
                             <span data-key="loginButton">تسجيل الدخول</span>
-                            <i class="ri-arrow-left-line group-hover:-translate-x-1 transition-transform login-arrow"></i>
+                            <i
+                                class="ri-arrow-left-line group-hover:-translate-x-1 transition-transform login-arrow"></i>
                         </button>
                     </div>
-                    
+
                     <div class="mt-6 text-center">
-                        <p class="text-xs text-gray-400">تواجه مشكلة؟ <a href="#" class="text-brand hover:underline font-bold">تواصل مع الدعم الفني</a></p>
+                        <p class="text-xs text-gray-400">تواجه مشكلة؟ <a href="https://wa.me/+201001133246"
+                                target="_blank" class="text-brand hover:underline font-bold">تواصل مع الدعم الفني</a>
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="text-center text-gray-400 text-sm mt-8" data-key="footerText">
             © 2026 Spot System. Made with <i class="ri-heart-fill text-red-500"></i> for Teachers.
         </div>
@@ -223,7 +263,8 @@
                     <select id="groupSelect"
                         class="input-field appearance-none cursor-pointer bg-white dark:bg-black"></select>
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                        <i class="ri-arrow-down-s-line"></i></div>
+                        <i class="ri-arrow-down-s-line"></i>
+                    </div>
                 </div>
             </div>
             <button id="addNewGroupButton"
@@ -272,8 +313,10 @@
                                         <i class="ri-book-open-line"></i>
                                     </div>
                                     <div>
-                                        <p class="font-bold text-sm text-gray-900 dark:text-white" data-key="homeworkToggleLabel">يوجد واجب؟</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400" data-key="homeworkToggleSub">تفعيل المطالبة بالتسليم</p>
+                                        <p class="font-bold text-sm text-gray-900 dark:text-white"
+                                            data-key="homeworkToggleLabel">يوجد واجب؟</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400"
+                                            data-key="homeworkToggleSub">تفعيل المطالبة بالتسليم</p>
                                     </div>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
@@ -303,10 +346,14 @@
                                 data-key="saveAllButton">حفظ الكل</button>
                         </div>
 
-                        <div class="grid grid-cols-12 gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 px-2">
-                            <div id="headerStudent" class="col-span-6 transition-all duration-300" data-key="tableHeaderStudent">الطالب</div>
-                            <div id="headerAttendance" class="col-span-3 text-center transition-all duration-300" data-key="tableHeaderAttendance">الحضور</div>
-                            <div id="headerHomework" class="col-span-3 text-center transition-all duration-300" data-key="tableHeaderHomework">الواجب</div>
+                        <div
+                            class="grid grid-cols-12 gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 px-2">
+                            <div id="headerStudent" class="col-span-6 transition-all duration-300"
+                                data-key="tableHeaderStudent">الطالب</div>
+                            <div id="headerAttendance" class="col-span-3 text-center transition-all duration-300"
+                                data-key="tableHeaderAttendance">الحضور</div>
+                            <div id="headerHomework" class="col-span-3 text-center transition-all duration-300"
+                                data-key="tableHeaderHomework">الواجب</div>
                         </div>
 
                         <div id="dailyStudentsList"
@@ -329,23 +376,21 @@
                                 data-key-placeholder="subjectPlaceholder">
                             <div>
                                 <label class="label-custom" data-key="passwordLabel">كلمة المرور</label>
-                                <input type="password" id="profilePasswordInput" class="input-field" 
-                                data-key-placeholder="changePasswordPlaceholder" placeholder="تغيير كلمة المرور">
+                                <input type="password" id="profilePasswordInput" class="input-field"
+                                    data-key-placeholder="changePasswordPlaceholder" placeholder="تغيير كلمة المرور">
                             </div>
                             <button id="saveProfileButton" class="btn-primary-custom w-full mt-2"
                                 data-key="saveProfileButton">حفظ التغييرات</button>
                         </div>
                     </section>
 
-                    <section
-                        class="card-container glass-panel p-6 border-t-4 border-t-gray-800 dark:border-t-gray-600">
+                    <section class="card-container glass-panel p-6 border-t-4 border-t-gray-800 dark:border-t-gray-600">
                         <div class="section-header"><i class="ri-team-line"></i>
                             <h3 data-key="addGroupTitle">مجموعة جديدة</h3>
                         </div>
                         <div class="flex gap-2">
                             <input type="text" id="newGroupName" class="input-field"
-                                data-key-placeholder="groupNamePlaceholder"
-                                placeholder="اسم المجموعة الجديدة">
+                                data-key-placeholder="groupNamePlaceholder" placeholder="اسم المجموعة الجديدة">
                             <button id="createNewGroupBtn" class="btn-primary-custom" data-key="addBtn">إضافة</button>
                         </div>
                     </section>
@@ -363,11 +408,9 @@
                         class="bg-gray-50 dark:bg-black/40 p-5 rounded-2xl mb-6 border border-gray-100 dark:border-gray-700">
                         <div class="grid md:grid-cols-2 gap-4 mb-4">
                             <input type="text" id="newStudentName" class="input-field"
-                                data-key-placeholder="newStudentPlaceholder"
-                                placeholder="اسم الطالب">
+                                data-key-placeholder="newStudentPlaceholder" placeholder="اسم الطالب">
                             <input type="text" id="newParentPhoneNumber" class="input-field"
-                                data-key-placeholder="parentPhonePlaceholder"
-                                placeholder="رقم ولي الأمر">
+                                data-key-placeholder="parentPhonePlaceholder" placeholder="رقم ولي الأمر">
                         </div>
                         <button id="addNewStudentButton" class="btn-secondary-outline w-full"
                             data-key="addNewStudentButton"><i class="ri-user-follow-line mr-2"></i> إضافة
@@ -378,8 +421,8 @@
                         <input type="search" id="studentSearchInput" class="input-field pr-10"
                             data-key-placeholder="searchPlaceholder">
                     </div>
-                    <div id="studentsListDisplay"
-                        class="space-y-2 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar"></div>
+                    <div id="studentsListDisplay" class="space-y-2 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                    </div>
                 </section>
             </div>
 
@@ -419,10 +462,8 @@
                             <div class="w-full md:w-32">
                                 <label class="label-custom" data-key="amountLabel">قيمة المصاريف</label>
                                 <input type="number" id="defaultAmountInput"
-                                    class="input-field text-center font-bold text-green-600 dark:text-green-400" 
-                                    data-key-placeholder="defaultAmountPlaceholder"
-                                    placeholder="مثلاً 150"
-                                    value="150">
+                                    class="input-field text-center font-bold text-green-600 dark:text-green-400"
+                                    data-key-placeholder="defaultAmountPlaceholder" placeholder="مثلاً 150" value="150">
                             </div>
 
                             <button id="scanPaymentsBtn"
@@ -458,8 +499,7 @@
                             <div>
                                 <label class="label-custom" data-key="locationLabel">المكان</label>
                                 <input type="text" id="recurringLocation" class="input-field"
-                                    data-key-placeholder="locationPlaceholder"
-                                    placeholder="سنتر كوليدج">
+                                    data-key-placeholder="locationPlaceholder" placeholder="سنتر كوليدج">
                             </div>
                             <div>
                                 <label class="label-custom" data-key="selectDaysLabel">الأيام</label>
@@ -554,7 +594,8 @@
 
         <div class="p-6 bg-black flex justify-center">
             <button id="closeScannerModal"
-                class="bg-white/10 text-white border border-white/20 rounded-full px-8 py-3 font-bold hover:bg-white/20 transition-all backdrop-blur-md" data-key="closeCamera">إغلاق
+                class="bg-white/10 text-white border border-white/20 rounded-full px-8 py-3 font-bold hover:bg-white/20 transition-all backdrop-blur-md"
+                data-key="closeCamera">إغلاق
                 الكاميرا</button>
         </div>
     </div>
@@ -582,19 +623,23 @@
         </div>
     </div>
 
-    <div id="qrCodeModal" class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm transition-opacity duration-300">
+    <div id="qrCodeModal"
+        class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm transition-opacity duration-300">
         <div class="w-full max-w-sm transform transition-all scale-100">
-            
-            <div id="printableIdCard" class="relative bg-white rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.1)] mb-6 mx-auto">
+
+            <div id="printableIdCard"
+                class="relative bg-white rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.1)] mb-6 mx-auto">
                 <div class="absolute top-0 w-full h-24 bg-brand/10"></div>
-                
+
                 <div class="relative z-10 p-8 flex flex-col items-center text-center">
-                    <div class="w-20 h-20 bg-white rounded-full shadow-lg flex items-center justify-center mb-4 border-4 border-white relative -mt-4">
-                        <img src="assets/images/learnaria_logo.png" class="w-12 h-12 object-contain" crossorigin="anonymous">
+                    <div
+                        class="w-20 h-20 bg-white rounded-full shadow-lg flex items-center justify-center mb-4 border-4 border-white relative -mt-4">
+                        <img src="assets/images/learnaria_logo.png" class="w-12 h-12 object-contain"
+                            crossorigin="anonymous">
                     </div>
 
                     <h4 class="text-brandHover text-xs font-black tracking-[0.2em] uppercase mb-2">Spot Student ID</h4>
-                    
+
                     <h2 id="idStudentName" class="text-3xl font-black text-gray-900 mb-6 leading-tight">اسم الطالب</h2>
 
                     <div class="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 mb-4">
@@ -603,25 +648,28 @@
 
                     <p id="idStudentPhone" class="text-gray-400 font-mono text-sm tracking-wider font-bold"></p>
                 </div>
-                
+
                 <div class="h-3 w-full bg-gradient-to-r from-brand to-yellow-600"></div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <button id="shareIdBtn" class="col-span-2 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
-                    <span class="text-lg">مشاركة واتساب / صورة</span> 
+                <button id="shareIdBtn"
+                    class="col-span-2 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                    <span class="text-lg">مشاركة واتساب / صورة</span>
                     <i class="ri-whatsapp-line text-2xl"></i>
                 </button>
-                
-                <button id="printIdButton" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+
+                <button id="printIdButton"
+                    class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
                     <span>طباعة</span> <i class="ri-printer-line"></i>
                 </button>
-                
-                <button id="closeQrModal" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-bold py-3 rounded-xl">
+
+                <button id="closeQrModal"
+                    class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-bold py-3 rounded-xl">
                     إغلاق
                 </button>
             </div>
-            
+
             <p class="text-center text-gray-500 text-xs mt-4">يمكن للطالب حفظ الصورة واستخدامها للدخول</p>
         </div>
     </div>
@@ -637,13 +685,13 @@
                         <i class="ri-chat-1-line text-xl"></i>
                     </div>
                     <div>
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white" data-key="msgModalTitle">رسالة لولي الأمر</h3>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white" data-key="msgModalTitle">رسالة لولي
+                            الأمر</h3>
                         <p id="msgStudentName" class="text-xs text-gray-500">الطالب: ...</p>
                     </div>
                 </div>
 
-                <textarea id="customMessageInput" rows="4"
-                    class="w-full input-field resize-none"
+                <textarea id="customMessageInput" rows="4" class="w-full input-field resize-none"
                     data-key-placeholder="msgPlaceholder"
                     placeholder="اكتب ملاحظاتك هنا (مثلاً: الطالب تحسن مستواه، يرجى متابعة الواجب...)"></textarea>
             </div>
@@ -653,7 +701,8 @@
                     <span data-key="sendMsgBtn">إرسال</span> <i class="ri-send-plane-fill"></i>
                 </button>
                 <button id="closeMsgModal"
-                    class="px-6 py-2 rounded-xl font-bold text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 transition" data-key="cancelBtn">إلغاء</button>
+                    class="px-6 py-2 rounded-xl font-bold text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 transition"
+                    data-key="cancelBtn">إلغاء</button>
             </div>
         </div>
     </div>
