@@ -586,29 +586,25 @@
         <div class="w-full max-w-sm transform transition-all scale-100">
             
             <div id="printableIdCard" class="relative bg-white rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.1)] mb-6 mx-auto">
-                <div class="absolute top-0 w-full h-32 bg-brand rounded-b-[50%] scale-150 -translate-y-16 opacity-20"></div>
-                <div class="absolute bottom-0 w-full h-32 bg-gray-100 rounded-t-[50%] scale-150 translate-y-16 opacity-50"></div>
-
+                <div class="absolute top-0 w-full h-24 bg-brand/10"></div>
+                
                 <div class="relative z-10 p-8 flex flex-col items-center text-center">
-                    <div class="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-4 border border-gray-100">
-                        <img src="assets/images/learnaria_logo.png" class="w-12 h-12 object-contain">
+                    <div class="w-20 h-20 bg-white rounded-full shadow-lg flex items-center justify-center mb-4 border-4 border-white relative -mt-4">
+                        <img src="assets/images/learnaria_logo.png" class="w-12 h-12 object-contain" crossorigin="anonymous">
                     </div>
 
-                    <h4 class="text-gray-400 text-xs font-bold tracking-[0.2em] uppercase mb-1">Student ID Card</h4>
-                    <h2 id="idStudentName" class="text-2xl font-black text-gray-900 mb-6 leading-tight">اسم الطالب</h2>
+                    <h4 class="text-brandHover text-xs font-black tracking-[0.2em] uppercase mb-2">Spot Student ID</h4>
+                    
+                    <h2 id="idStudentName" class="text-3xl font-black text-gray-900 mb-6 leading-tight">اسم الطالب</h2>
 
-                    <div class="p-4 bg-white rounded-2xl shadow-inner border border-gray-100 mb-6">
+                    <div class="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 mb-4">
                         <div id="idQrcode" class="opacity-90"></div>
                     </div>
 
-                    <div class="flex items-center gap-2 text-gray-500 text-sm font-medium bg-gray-50 px-4 py-2 rounded-full">
-                        <i class="ri-user-star-line text-brand"></i>
-                        <span id="idTeacherName">اسم المعلم</span>
-                    </div>
-                    <span id="idSubjectName" class="text-xs text-gray-400 font-bold tracking-wide">المادة الدراسية</span>
+                    <p id="idStudentPhone" class="text-gray-400 font-mono text-sm tracking-wider font-bold"></p>
                 </div>
                 
-                <div class="h-2 w-full bg-gradient-to-r from-yellow-200 via-brand to-yellow-500"></div>
+                <div class="h-3 w-full bg-gradient-to-r from-brand to-yellow-600"></div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">

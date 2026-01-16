@@ -1316,34 +1316,70 @@ function tickScanner() {
     animationFrameId = requestAnimationFrame(tickScanner);
 }
 
-function handleScan(dataStr) {
-    try {
-        const data = JSON.parse(dataStr);
-        if(data.groupId !== SELECTED_GROUP_ID) return;
-        const student = allStudents.find(s => s.id === data.studentId);
-        if(!student) return;
+function handleScan(scannedText) {
+    // 1. تنظيف النص المقروء (مسح علامات التنصيص لو موجودة ومسح المسافات)
+    const qrCode = scannedText.replace(/"/g, '').trim(); 
 
-        playBeep();
-        isScannerPaused = true;
+    // 2. البحث في طلاب المجموعة الحالية (allStudents)
+    // بندور على أي طالب رقم ولي أمره بيطابق الكود اللي الكاميرا شافته
+    const matchedStudents = allStudents.filter(s => 
+        (s.parentPhoneNumber && s.parentPhoneNumber.trim() === qrCode) || 
+        s.id === qrCode
+    );
 
-        const overlay = document.getElementById('scannerOverlay');
-        const feedback = document.getElementById('scannedStudentName');
-        document.getElementById('feedbackNameText').innerText = student.name;
+    if (matchedStudents.length === 0) {
+        // لو ملقناش حد بالرقم ده في المجموعة دي
+        // (ممكن يكون طالب كوده صح بس مش متضاف في المجموعة دي)
+        // بنعمل return عشان الكاميرا تفضل شغالة وتدور تاني
+        return; 
+    }
 
-        feedback.classList.remove('opacity-0', 'translate-y-10', 'scale-90');
-        overlay.classList.add('success');
+    // 3. لقينا طالب! نشغل الصوت ونوقف الكاميرا لحظة
+    playBeep();
+    isScannerPaused = true;
 
-        setTimeout(() => {
-            feedback.classList.add('opacity-0', 'translate-y-10', 'scale-90');
-            overlay.classList.remove('success');
-        }, 1500);
-
+    // حالة 1: طالب واحد فقط (ده الطبيعي بنسبة 99%)
+    if (matchedStudents.length === 1) {
+        const student = matchedStudents[0];
+        showScanSuccessUI(student); // المؤثرات البصرية
+        
+        // تنفيذ الأكشن حسب الوضع (غياب أو فلوس)
         if(currentScannerMode === 'daily') processDailyScan(student);
-        else if (currentScannerMode === 'payments') {
-            processPaymentScan(student);
-            setTimeout(() => { isScannerPaused = false; requestAnimationFrame(tickScanner); }, 1500);
-        }
-    } catch(e) { isScannerPaused = false; requestAnimationFrame(tickScanner); }
+        else if (currentScannerMode === 'payments') processPaymentScan(student);
+        
+    } 
+    // حالة 2: أكتر من طالب بنفس الرقم (إخوات توأم مثلاً)
+    else {
+        // نختار أول واحد فيهم
+        const student = matchedStudents[0]; 
+        
+        // رسالة توضيحية للمدرس
+        showToast(`تم العثور على ${matchedStudents.length} طلاب (إخوة)، تم اختيار ${student.name}`);
+        
+        showScanSuccessUI(student);
+        
+        if(currentScannerMode === 'daily') processDailyScan(student);
+        else if (currentScannerMode === 'payments') processPaymentScan(student);
+    }
+}
+
+// --- دالة مساعدة للمؤثرات البصرية (عشان الكود يبقى نظيف) ---
+function showScanSuccessUI(student) {
+    const overlay = document.getElementById('scannerOverlay');
+    const feedback = document.getElementById('scannedStudentName');
+    
+    // تحديث الاسم اللي بيظهر في نص الشاشة
+    document.getElementById('feedbackNameText').innerText = student.name;
+
+    // إظهار الرسالة الخضراء
+    feedback.classList.remove('opacity-0', 'translate-y-10', 'scale-90');
+    overlay.classList.add('success');
+
+    // إخفائها بعد ثانية ونص
+    setTimeout(() => {
+        feedback.classList.add('opacity-0', 'translate-y-10', 'scale-90');
+        overlay.classList.remove('success');
+    }, 1500);
 }
 
 function processDailyScan(student) {
@@ -1539,22 +1575,27 @@ async function shareCardAction() {
 }
 
 function showStudentQR(student) {
+    // 1. عرض اسم الطالب
     document.getElementById('idStudentName').innerText = student.name;
-    const teacherName = document.getElementById('teacherNameInput').value || "المعلم";
-    document.getElementById('idTeacherName').innerText = teacherName;
-    const subjectName = document.getElementById('teacherSubjectInput').value || "";
-    document.getElementById('idSubjectName').innerText = subjectName;
+    
+    // 2. تجهيز البيانات (رقم التليفون)
+    const qrContent = student.parentPhoneNumber ? student.parentPhoneNumber.trim() : student.id;
+    
+    // 3. عرض الرقم تحت الـ QR (عشان لو الكاميرا معلجة المدرس يكتبه)
+    document.getElementById('idStudentPhone').innerText = qrContent;
 
+    // 4. توليد الـ QR Code
     document.getElementById('idQrcode').innerHTML = '';
     new QRCode(document.getElementById('idQrcode'), {
-        text: JSON.stringify({ teacherId: TEACHER_ID, groupId: SELECTED_GROUP_ID, studentId: student.id }),
-        width: 200,
-        height: 200,
+        text: qrContent, 
+        width: 180, // صغرته سنة عشان يبان أشيك
+        height: 180,
         colorDark : "#000000",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.H
     });
 
+    // 5. فتح المودال
     document.getElementById('qrCodeModal').classList.remove('hidden');
 }
 
