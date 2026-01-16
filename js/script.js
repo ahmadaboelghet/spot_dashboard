@@ -1444,8 +1444,11 @@ function renderStudents(filter = "") {
         container.innerHTML = `<p class="text-center text-gray-500">${translations[currentLang].noStudentsInGroup}</p>`;
         return;
     }
-
+    const DOMAIN_URL = "https://ahmadaboelghet.github.io/spot_dashboard/"; 
     filtered.forEach(s => {
+        const pNum = s.parentPhoneNumber ? s.parentPhoneNumber.trim() : "";
+        const fullDirectLink = `${DOMAIN_URL}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
+
         const div = document.createElement('div');
         div.className = "record-item";
         div.innerHTML = `
@@ -1454,10 +1457,12 @@ function renderStudents(filter = "") {
                 <p class="text-xs text-gray-500">${s.parentPhoneNumber || ''}</p>
             </div>
             <div class="flex gap-2">
+                <button class="btn-icon w-10 h-10 bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 invite-btn" title="إرسال رابط المتابعة واتساب">
+                    <i class="ri-whatsapp-line"></i>
+                </button>
                 <button class="btn-icon w-10 h-10 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 link-btn" title="نسخ رابط ولي الأمر">
                     <i class="ri-link-m"></i>
                 </button>
-
                 <button class="btn-icon w-10 h-10 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 msg-btn" title="إرسال رسالة">
                     <i class="ri-chat-1-line"></i>
                 </button>
@@ -1469,20 +1474,24 @@ function renderStudents(filter = "") {
                 </button>
             </div>
         `;
+        div.querySelector('.invite-btn').onclick = () => {
+            if (!pNum) {
+                showToast("لا يوجد رقم هاتف لولي الأمر", "error");
+                return;
+            }
+            const msg = `مرحباً ولي أمر الطالب  *${s.name}*\n\nلمتابعة مستوى الطالب (الغياب، الدرجات، والمصاريف) لحظياً، يرجى الدخول على الرابط الخاص به:\n${fullDirectLink}\n\nدمتم بخير`;
+            let waPhone = pNum.replace(/\s+/g, '');
+            if (!waPhone.startsWith('+')) waPhone = '+2' + waPhone; 
 
-        // --- Actions ---
-        // 1. Copy Link Logic
+            window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+
         div.querySelector('.link-btn').onclick = () => {
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const pNum = s.parentPhoneNumber ? s.parentPhoneNumber.trim() : "";
-            const link = `${baseUrl}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
-
-            navigator.clipboard.writeText(link)
+            navigator.clipboard.writeText(fullDirectLink)
                 .then(() => showToast(translations[currentLang].linkCopied)) 
                 .catch(() => showToast(translations[currentLang].copyFailed, "error")); 
         };
 
-        // 2. Others
         div.querySelector('.msg-btn').onclick = () => openMessageModal(s);
         div.querySelector('.qr-btn').onclick = () => showStudentQR(s);
         div.querySelector('.del-btn').onclick = () => deleteStudent(s.id);
