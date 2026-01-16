@@ -268,6 +268,7 @@ const translations = {
         parentPhonePlaceholder: "رقم ولي الأمر",
         groupNamePlaceholder: "اسم المجموعة",
         newAssignmentNameLabel: "اسم الامتحان",
+        locationPlaceholder: "سنتر كوليدج"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -373,6 +374,7 @@ const translations = {
         parentPhonePlaceholder: "Parent Phone",
         groupNamePlaceholder: "Group Name",
         newAssignmentNameLabel: "Exam Name",
+        locationPlaceholder: "Center College"
     }
 };
 
@@ -479,7 +481,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     videoElement = document.getElementById('scannerVideo');
     await openDB();
     setupListeners();
-    loadPreferences();
+    await loadPreferences();
     updateOnlineStatus();
 
     const dailyInput = document.getElementById('dailyDateInput');
@@ -663,27 +665,65 @@ async function saveRecurringSchedule() {
 
 async function fetchRecurringSchedules() {
     if (!SELECTED_GROUP_ID) return;
+    
     const container = document.getElementById('recurringSchedulesDisplay');
     if(!container) return;
+    
     container.innerHTML = `<p class="text-center text-gray-500 py-4"><i class="ri-loader-4-line animate-spin"></i> Loading...</p>`;
 
     try {
-        let schedules = await getAllFromDB('schedules', 'groupId', SELECTED_GROUP_ID);
-        if(schedules.length === 0 && navigator.onLine) {
+        // 1. جلب البيانات (كما هو في السابق)
+        let scheds = await getAllFromDB('schedules', 'groupId', SELECTED_GROUP_ID);
+        
+        // Sync check (لو مفيش داتا محلياً، نجرب السيرفر)
+        if(scheds.length === 0 && navigator.onLine) {
             try {
                 const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules`).get();
-                schedules = snap.docs.map(doc => ({ id: doc.id, groupId: SELECTED_GROUP_ID, ...doc.data() }));
-                for(const s of schedules) await putToDB('schedules', s);
+                scheds = snap.docs.map(doc => ({ id: doc.id, groupId: SELECTED_GROUP_ID, ...doc.data() }));
+                for(const s of scheds) await putToDB('schedules', s);
             } catch(e){}
         }
 
+        // ============================================================
+        // 2. ⭐ التعديل الجديد: قفل/فتح الخانات والزرار بناءً على العدد ⭐
+        // ============================================================
+        const btn = document.getElementById('addRecurringScheduleButton');
+        // تجميع كل الخانات (نصوص، قوائم وقت، مربعات اختيار)
+        const allInputs = [
+            document.getElementById('recurringSubject'),
+            document.getElementById('recurringLocation'),
+            ...document.querySelectorAll('#recurringTimeContainer select'),
+            ...document.querySelectorAll('#daysOfWeekContainer input')
+        ];
+
+        if (scheds.length > 0) {
+            // 🔒 حالة القفل: يوجد موعد بالفعل
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-400'); // شكل باهت
+            btn.innerHTML = '<i class="ri-lock-2-fill"></i> مسجل بالفعل'; // تغيير النص
+            
+            // تعطيل كل الخانات
+            allInputs.forEach(el => { if(el) el.disabled = true; });
+            
+        } else {
+            // 🔓 حالة الفتح: لا يوجد مواعيد
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
+            btn.innerHTML = translations[currentLang].saveRecurringScheduleButton || "إضافة للجدول";
+            
+            // تفعيل كل الخانات
+            allInputs.forEach(el => { if(el) el.disabled = false; });
+        }
+        // ============================================================
+
+        // 3. عرض البيانات (Render) - نفس الكود القديم
         container.innerHTML = '';
-        if (schedules.length === 0) {
+        if (scheds.length === 0) {
             container.innerHTML = `<p class="text-center text-gray-400 py-4">${translations[currentLang].noSchedulesYet || "No schedules"}</p>`;
             return;
         }
 
-        schedules.forEach(s => {
+        scheds.forEach(s => {
             const dayNames = s.days.map(d => translations[currentLang].days[d]).join('، ');
             const timeText = formatTime12Hour(s.time);
             const div = document.createElement('div');
@@ -700,11 +740,14 @@ async function fetchRecurringSchedules() {
                 </div>
                 <button class="btn-icon w-8 h-8 bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 rounded-lg" data-id="${s.id}"><i class="ri-delete-bin-line"></i></button>
             `;
+            
+            // عند الحذف، نعيد تحميل الدالة فيتفك القفل تلقائياً
             div.querySelector('button').addEventListener('click', async () => {
                  if(confirm(translations[currentLang].confirmScheduleDelete)) {
                      await deleteFromDB('schedules', s.id);
                      await addToSyncQueue({ type: 'delete', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules/${s.id}` });
-                     fetchRecurringSchedules();
+                     // إعادة التحميل عشان الزرار يفتح تاني
+                     fetchRecurringSchedules(); 
                  }
             });
             container.appendChild(div);
@@ -1065,29 +1108,62 @@ async function renderDailyList() {
 
 async function saveDailyData() {
     if(!TEACHER_ID || !SELECTED_GROUP_ID) return;
-    const date = document.getElementById('dailyDateInput').value;
-    const attRecords = [];
-    const hwScores = {};
-    document.querySelectorAll('#dailyStudentsList > div').forEach(row => {
-        const sid = row.dataset.sid;
-        attRecords.push({ studentId: sid, status: row.querySelector('.att-select').value });
-        // ✅ FIX: Score is null for daily homework, only submitted status
+    
+    // إظهار اللودر فوراً
+    const saveBtn = document.getElementById('saveDailyBtn');
+    const oldText = saveBtn.innerText;
+    saveBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
+    saveBtn.disabled = true;
+
+    try {
+        const date = document.getElementById('dailyDateInput').value;
+        const attRecords = [];
+        const hwScores = {};
+        
+        document.querySelectorAll('#dailyStudentsList > div').forEach(row => {
+            const sid = row.dataset.sid;
+            // 1. نجيب حالة الحضور الأول
+            const status = row.querySelector('.att-select').value; 
+            
+            // حفظ سجل الحضور (ده شغال للكل عادي)
+            attRecords.push({ studentId: sid, status: status });
+            
+            // 2. اللوجيك الجديد: حفظ الواجب فقط لو الطالب "مش غائب"
+            if(hasHomeworkToday && status !== 'absent') {
+                hwScores[sid] = { 
+                    submitted: row.querySelector('.hw-check').checked, 
+                    score: null 
+                };
+            }
+        });
+
+        // ✅ التعديل هنا: تجميع كل العمليات في مصفوفة واحدة
+        const promises = [];
+
+        // 1. حفظ الحضور محلياً وسحابياً
+        promises.push(putToDB('attendance', { id: `${SELECTED_GROUP_ID}_${date}`, date, records: attRecords }));
+        promises.push(addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`, data: { date, records: attRecords } }));
+
+        // 2. حفظ الواجب محلياً وسحابياً (لو موجود)
         if(hasHomeworkToday) {
-            hwScores[sid] = { 
-                submitted: row.querySelector('.hw-check').checked, 
-                score: null 
-            };
+            const hwData = { id: `${SELECTED_GROUP_ID}_HW_${date}`, groupId: SELECTED_GROUP_ID, name: `واجب ${date}`, date, scores: hwScores, type: 'daily' };
+            promises.push(putToDB('assignments', hwData));
+            promises.push(addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwData.id}`, data: hwData }));
         }
-    });
-    await putToDB('attendance', { id: `${SELECTED_GROUP_ID}_${date}`, date, records: attRecords });
-    await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`, data: { date, records: attRecords } });
-    if(hasHomeworkToday) {
-        const hwData = { id: `${SELECTED_GROUP_ID}_HW_${date}`, groupId: SELECTED_GROUP_ID, name: `واجب ${date}`, date, scores: hwScores, type: 'daily' };
-        await putToDB('assignments', hwData);
-        await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwData.id}`, data: hwData });
+
+        // ✅ تنفيذ الكل في نفس اللحظة (أسرع بكتير)
+        await Promise.all(promises);
+
+        showToast(translations[currentLang].saved);
+        renderDailyList();
+
+    } catch (error) {
+        console.error(error);
+        showToast("حدث خطأ أثناء الحفظ", "error");
+    } finally {
+        saveBtn.innerText = oldText;
+        saveBtn.disabled = false;
     }
-    showToast(translations[currentLang].saved);
-    renderDailyList();
 }
 
 async function startScanner(mode) {
@@ -1556,12 +1632,41 @@ function updateThemeIcon() {
     document.getElementById('darkModeIcon').classList.toggle('hidden', isDark);
     document.getElementById('lightModeIcon').classList.toggle('hidden', !isDark);
 }
-function loadPreferences() {
+// ✅ دالة استرجاع الإعدادات وتسجيل الدخول التلقائي
+async function loadPreferences() {
+    // 1. استرجاع الوضع الليلي
     if(localStorage.getItem('learnaria-dark') === 'true') {
         document.body.classList.add('dark-mode');
         updateThemeIcon();
     }
-    if(localStorage.getItem('learnaria-tid')) document.getElementById('teacherPhoneInput').value = localStorage.getItem('learnaria-tid').replace('+20','0');
+
+    // 2. استرجاع بيانات المعلم (تسجيل الدخول التلقائي)
+    const storedID = localStorage.getItem('learnaria-tid');
+    
+    if(storedID) {
+        // لو لقينا ID، نرجعه للمتغير ونخفي شاشة الدخول
+        TEACHER_ID = storedID;
+        
+        // محاولة جلب بيانات المعلم من الداتابيز المحلية لتعبئة البروفايل
+        try {
+            const teacherData = await getFromDB('teachers', TEACHER_ID);
+            if(teacherData) {
+                document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${teacherData.name || ''}`;
+                document.getElementById('teacherNameInput').value = teacherData.name || '';
+                document.getElementById('teacherSubjectInput').value = teacherData.subject || '';
+                document.getElementById('profilePasswordInput').value = teacherData.password || '';
+            }
+        } catch(e) { console.log("Auto-login fetch error:", e); }
+
+        // إخفاء شاشة تسجيل الدخول وإظهار المحتوى
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        document.getElementById('logoutButton').classList.remove('hidden');
+
+        // تحميل المجموعات والذهاب للحصة اليومية
+        await loadGroups();
+        switchTab('daily');
+    }
 }
 function toggleLang() {
     currentLang = currentLang === 'ar' ? 'en' : 'ar';
