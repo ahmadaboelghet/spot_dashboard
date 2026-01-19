@@ -572,7 +572,16 @@ select.input-field:invalid,
     color: #9CA3AF !important;
 }
 /* ✅ اعكس اتجاه الكاميرا عشان حركة اليد تكون طبيعية */
+/* الوضع الافتراضي (للموبايل والتابلت): الكاميرا طبيعية بدون عكس */
 #reader video, video {
-    transform: scaleX(-1) !important;
-    -webkit-transform: scaleX(-1) !important; /* عشان متصفحات أبل وسفاري */
+    transform: scaleX(1) !important;
+    -webkit-transform: scaleX(1) !important;
+}
+
+/* ميديا كويري: بتشتغل بس لو الشاشة عرضها أكبر من 1024 بيكسل (لابتوب و PC) */
+@media (min-width: 1024px) {
+    #reader video, video {
+        transform: scaleX(-1) !important;
+        -webkit-transform: scaleX(-1) !important;
+    }
 }
