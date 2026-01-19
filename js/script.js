@@ -418,6 +418,17 @@ function generateUniqueId() { return `off_${Date.now()}_${Math.random().toString
 function isValidEgyptianPhoneNumber(p) { return /^01[0125]\d{8}$/.test(p?.trim()); }
 function formatPhoneNumber(p) { return isValidEgyptianPhoneNumber(p) ? `+20${p.trim().substring(1)}` : null; }
 
+// ✅ كشف نوع الجهاز لضبط المراية
+document.addEventListener('DOMContentLoaded', function() {
+    // بنشوف هل الجهاز موبايل (أندرويد أو آيفون)
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // لو مش موبايل (يعني لابتوب)، ضيف الكلاس ده للـ Body
+    if (!isMobile) {
+        document.body.classList.add('desktop-device');
+    }
+});
+
 function playBeep() {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
