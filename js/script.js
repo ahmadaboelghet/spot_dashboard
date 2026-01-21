@@ -284,7 +284,18 @@ const translations = {
         featureFinanceSub: "متابعة دقيقة",
         featureReports: "تقارير",
         featureReportsSub: "إحصائيات شاملة",
-        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers."
+        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
+        goldenSettingsBtn: "إعدادات التذكرة الذهبية",
+        goldenSettingsTitle: "إعدادات التذكرة الذهبية",
+        goldenEnable: "تفعيل النظام",
+        goldenWinRate: "نسبة الحظ (Win Rate)",
+        goldenHint: "كلما زادت النسبة، زاد عدد الطلاب الفائزين.",
+        goldenPrizesLabel: "قائمة الجوائز (جائزة في كل سطر)",
+        goldenPrizesPlaceholder: "مثال: قلم هدية\nخصم 10 جنيه\nشوكولاتة",
+        goldenSave: "حفظ الإعدادات 💾",
+        goldenModalTitle: "🌟 مبروووووك! 🌟",
+        goldenFoundMsg: "لقد عثرت على تذكرة ذهبية!",
+        goldenClaim: "استلم الجائزة"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -406,7 +417,18 @@ const translations = {
         featureFinanceSub: "Accurate Tracking",
         featureReports: "Reports",
         featureReportsSub: "Full Analytics",
-        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers."
+        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
+        goldenSettingsBtn: "Golden Ticket Settings",
+        goldenSettingsTitle: "Golden Ticket Settings",
+        goldenEnable: "Enable System",
+        goldenWinRate: "Win Rate (%)",
+        goldenHint: "Higher rate means more winners.",
+        goldenPrizesLabel: "Prizes List (one per line)",
+        goldenPrizesPlaceholder: "e.g. Gift Pen\n10 LE Discount\nChocolate",
+        goldenSave: "Save Settings 💾",
+        goldenModalTitle: "🌟 Congratulations! 🌟",
+        goldenFoundMsg: "You found a Golden Ticket!",
+        goldenClaim: "Claim Prize"
 
     }
 };
@@ -998,13 +1020,20 @@ showToast(translations[currentLang].groupCreatedSuccess);
 // ✅✅ NEW LOAD GROUP DATA WITH SAFE SYNC & FAIL-SAFE LOGIC ✅✅
 // ------------------------------------------------------------------
 async function loadGroupData() {
+    const scanBtn = document.getElementById('startSmartScanBtn');
+    const goldBtn = document.getElementById('openGoldenSettingsBtn');
+
     if(!SELECTED_GROUP_ID) {
-        toggleStudentInputs(false); // ✅ ضمان الإغلاق لو مفيش مجموعة
+        toggleStudentInputs(false); 
+        if(scanBtn) scanBtn.disabled = true;
+        if(goldBtn) goldBtn.disabled = true;// ✅ ضمان الإغلاق لو مفيش مجموعة
         return;
     }
     
     // ✅ تفعيل خانات الإضافة بمجرد اختيار مجموعة
     toggleStudentInputs(true);
+    if(scanBtn) scanBtn.disabled = false;
+    if(goldBtn) goldBtn.disabled = false;
     
     document.querySelectorAll('.tab-button').forEach(b => b.disabled = false);
 
@@ -1328,20 +1357,16 @@ function tickScanner() {
 }
 
 function handleScan(scannedText) {
-    // 1. تنظيف النص المقروء (مسح علامات التنصيص لو موجودة ومسح المسافات)
+    // 1. تنظيف النص المقروء
     const qrCode = scannedText.replace(/"/g, '').trim(); 
 
-    // 2. البحث في طلاب المجموعة الحالية (allStudents)
-    // بندور على أي طالب رقم ولي أمره بيطابق الكود اللي الكاميرا شافته
+    // 2. البحث في طلاب المجموعة الحالية
     const matchedStudents = allStudents.filter(s => 
         (s.parentPhoneNumber && s.parentPhoneNumber.trim() === qrCode) || 
         s.id === qrCode
     );
 
     if (matchedStudents.length === 0) {
-        // لو ملقناش حد بالرقم ده في المجموعة دي
-        // (ممكن يكون طالب كوده صح بس مش متضاف في المجموعة دي)
-        // بنعمل return عشان الكاميرا تفضل شغالة وتدور تاني
         return; 
     }
 
@@ -1349,27 +1374,34 @@ function handleScan(scannedText) {
     playBeep();
     isScannerPaused = true;
 
-    // حالة 1: طالب واحد فقط (ده الطبيعي بنسبة 99%)
+    // حالة 1: طالب واحد فقط (ده الطبيعي)
     if (matchedStudents.length === 1) {
         const student = matchedStudents[0];
-        showScanSuccessUI(student); // المؤثرات البصرية
+        showScanSuccessUI(student); 
         
-        // تنفيذ الأكشن حسب الوضع (غياب أو فلوس)
-        if(currentScannerMode === 'daily') processDailyScan(student);
+        if(currentScannerMode === 'daily') {
+            // 👇👇 ضيف السطر ده هنا 👇👇
+            checkGoldenTicket(student.name); // 🎰 تفعيل التذكرة الذهبية
+            // 👆👆 ------------------ 👆👆
+            processDailyScan(student);
+        }
         else if (currentScannerMode === 'payments') processPaymentScan(student);
         
     } 
-    // حالة 2: أكتر من طالب بنفس الرقم (إخوات توأم مثلاً)
+    // حالة 2: أكتر من طالب بنفس الرقم (إخوات)
     else {
-        // نختار أول واحد فيهم
         const student = matchedStudents[0]; 
         
-        // رسالة توضيحية للمدرس
         showToast(`تم العثور على ${matchedStudents.length} طلاب (إخوة)، تم اختيار ${student.name}`);
         
         showScanSuccessUI(student);
         
-        if(currentScannerMode === 'daily') processDailyScan(student);
+        if(currentScannerMode === 'daily') {
+            // 👇👇 وهنا كمان عشان لو إخوات 👇👇
+            checkGoldenTicket(student.name); // 🎰 تفعيل التذكرة الذهبية
+            // 👆👆 --------------------- 👆👆
+            processDailyScan(student);
+        }
         else if (currentScannerMode === 'payments') processPaymentScan(student);
     }
 }
@@ -1908,3 +1940,176 @@ function setupPhoneInput(inputId) {
     input.setAttribute("maxLength", "11");
     input.setAttribute("inputmode", "numeric"); 
 }
+
+// ==========================================
+// 🎰 نظام التذكرة الذهبية (الإصدار الكامل والآمن)
+// ==========================================
+
+// المتغير اللي شايل الإعدادات
+let goldenConfig = {
+    isEnabled: false,
+    winRate: 5,
+    prizes: ["قلم هدية 🖊️", "شوكولاتة 🍫"]
+};
+
+// 1. دالة تحميل الإعدادات عند فتح التطبيق
+function loadGoldenSettings() {
+    const saved = localStorage.getItem('spot_golden_config');
+    if (saved) {
+        try {
+            goldenConfig = JSON.parse(saved);
+        } catch (e) {
+            console.error("Error parsing saved config", e);
+        }
+    }
+    // تحديث شكل الشريط فوراً
+    updateGoldenButtonUI();
+}
+
+// 2. دالة حفظ الإعدادات
+function saveGoldenSettingsUI() {
+    const isEnabled = document.getElementById('goldenToggle').checked;
+    const winRateVal = document.getElementById('winRateInput').value;
+    const winRate = winRateVal ? parseInt(winRateVal) : 0;
+
+    // تحويل النص لمصفوفة وفلترة السطور الفارغة
+    const prizesText = document.getElementById('prizesInput').value;
+    const prizes = prizesText.split('\n').map(p => p.trim()).filter(p => p !== '');
+
+    if (prizes.length === 0) {
+        showToast("يجب إضافة جائزة واحدة على الأقل!", "error");
+        return;
+    }
+
+    // تحديث المتغير العام
+    goldenConfig = { isEnabled, winRate, prizes };
+    
+    // حفظ في الذاكرة
+    localStorage.setItem('spot_golden_config', JSON.stringify(goldenConfig));
+    
+    // إخفاء المودال
+    document.getElementById('goldenSettingsModal').classList.add('hidden');
+    
+    // تحديث شكل الشريط
+    updateGoldenButtonUI();
+
+    showToast("تم تحديث إعدادات التذكرة الذهبية! 🎰");
+}
+
+// 3. دالة تحديث شكل شريط التذكرة الذهبية (الإضاءة والنسبة)
+function updateGoldenButtonUI() {
+    const dot = document.getElementById('goldenActiveIndicator');
+    const badge = document.getElementById('winRateBadge');
+    const btnBar = document.getElementById('openGoldenSettingsBtn');
+
+    // أمان: لو العناصر مش موجودة نخرج
+    if (!dot || !badge || !btnBar) return;
+
+    if (goldenConfig && goldenConfig.isEnabled) {
+        // ✅ حالة التشغيل
+        dot.classList.remove('hidden');
+        badge.innerText = goldenConfig.winRate + '%';
+        badge.classList.remove('hidden');
+        
+        // نور الشريط
+        btnBar.classList.add('bg-yellow-50/80', 'dark:bg-yellow-900/30', '!border-yellow-500');
+    } else {
+        // ⛔ حالة الإيقاف
+        dot.classList.add('hidden');
+        badge.classList.add('hidden');
+        
+        // طفي الشريط
+        btnBar.classList.remove('bg-yellow-50/80', 'dark:bg-yellow-900/30', '!border-yellow-500');
+    }
+}
+
+// 4. دالة فتح لوحة التحكم
+function openGoldenSettings() {
+    document.getElementById('goldenToggle').checked = goldenConfig.isEnabled;
+    document.getElementById('winRateInput').value = goldenConfig.winRate;
+    document.getElementById('winRateDisplay').innerText = goldenConfig.winRate + '%';
+    document.getElementById('prizesInput').value = goldenConfig.prizes.join('\n');
+    
+    document.getElementById('goldenSettingsModal').classList.remove('hidden');
+}
+
+// 5. دالة التحقق من الفوز (النسخة الآمنة - Safe Version)
+function checkGoldenTicket(studentName) {
+    // لو النظام مقفول أو مفيش جوائز، نخرج فوراً
+    if (!goldenConfig || !goldenConfig.isEnabled || !goldenConfig.prizes || !goldenConfig.prizes.length) return;
+
+    const luck = Math.floor(Math.random() * 100) + 1;
+
+    if (luck <= goldenConfig.winRate) {
+        const randomPrize = goldenConfig.prizes[Math.floor(Math.random() * goldenConfig.prizes.length)];
+        
+        // تشغيل الزينة (لو الدالة موجودة)
+        if (typeof launchConfetti === 'function') {
+            launchConfetti();
+        }
+
+        const prizeNameEl = document.getElementById('prizeName');
+        const modalEl = document.getElementById('goldenTicketModal');
+
+        // التأكد من وجود العناصر قبل الكتابة فيها
+        if (prizeNameEl && modalEl) {
+            prizeNameEl.innerText = randomPrize;
+            modalEl.style.display = 'flex';
+        }
+        
+        console.log(`🎰 Winner! Student: ${studentName}, Prize: ${randomPrize}`);
+    }
+}
+
+// 6. دالة تشغيل الزينة (Confetti Safe Launcher)
+function launchConfetti() {
+    // حماية: لو المكتبة مش موجودة نخرج بهدوء بدل ما نضرب Error
+    if (typeof confetti === 'undefined') return;
+
+    var duration = 3 * 1000;
+    var animationEnd = Date.now() + duration;
+    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
+
+    function random(min, max) { return Math.random() * (max - min) + min; }
+
+    var interval = setInterval(function() {
+        var timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) return clearInterval(interval);
+        var particleCount = 50 * (timeLeft / duration);
+        confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.1, 0.3), y: Math.random() - 0.2 } }));
+        confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.7, 0.9), y: Math.random() - 0.2 } }));
+    }, 250);
+}
+
+// 7. دالة إغلاق النافذة
+function closeGoldenTicket() {
+    const modal = document.getElementById('goldenTicketModal');
+    if(modal) modal.style.display = 'none';
+}
+
+// 8. تفعيل المستمعين (Listeners)
+document.addEventListener('DOMContentLoaded', () => {
+    loadGoldenSettings();
+
+    // زرار الإعدادات
+    const openBtn = document.getElementById('openGoldenSettingsBtn');
+    if(openBtn) openBtn.addEventListener('click', openGoldenSettings);
+
+    // زرار إغلاق الإعدادات
+    const closeBtn = document.getElementById('closeGoldenSettings');
+    if(closeBtn) closeBtn.addEventListener('click', () => {
+        document.getElementById('goldenSettingsModal').classList.add('hidden');
+    });
+
+    // زرار الحفظ
+    const saveBtn = document.getElementById('saveGoldenSettings');
+    if(saveBtn) saveBtn.addEventListener('click', saveGoldenSettingsUI);
+
+    // تحديث رقم النسبة
+    const rateInput = document.getElementById('winRateInput');
+    if(rateInput) {
+        rateInput.addEventListener('input', (e) => {
+            document.getElementById('winRateDisplay').innerText = e.target.value + '%';
+        });
+    }
+});

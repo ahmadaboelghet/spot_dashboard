@@ -30,6 +30,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 
     <link rel="stylesheet" href="css/style.css">
@@ -327,11 +328,39 @@
                                 </label>
                             </div>
 
-                            <button id="startSmartScanBtn"
-                                class="w-full bg-brand text-black font-black text-lg py-4 rounded-2xl shadow-[0_4px_14px_rgba(242,206,90,0.5)] hover:shadow-[0_6px_20px_rgba(242,206,90,0.6)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 animate-pulse-slow">
-                                <i class="ri-qr-scan-2-line text-2xl"></i>
-                                <span data-key="startSmartScan">بدء الرصد الذكي</span>
-                            </button>
+                            <div class="flex flex-col gap-3 mt-6">
+
+                                <button id="startSmartScanBtn" disabled
+                                    class="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-black text-lg py-4 rounded-2xl shadow-[0_4px_14px_rgba(242,206,90,0.5)] hover:shadow-[0_6px_20px_rgba(242,206,90,0.6)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 animate-pulse-slow disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none">
+                                    <i class="ri-qr-scan-2-line text-2xl"></i>
+                                    <span data-key="startSmartScan">بدء الرصد الذكي</span>
+                                </button>
+
+                                <button id="openGoldenSettingsBtn" disabled
+                                    class="group w-full flex items-center justify-between bg-white dark:bg-gray-800 border-2 border-yellow-400/30 hover:border-yellow-500 text-gray-700 dark:text-gray-300 py-2.5 px-4 rounded-xl transition-all duration-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 active:scale-98 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:hover:border-yellow-400/30 disabled:hover:bg-white">
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <i
+                                                class="ri-vip-crown-fill text-xl text-yellow-600 dark:text-yellow-400"></i>
+                                        </div>
+                                        <span class="font-bold text-sm" data-key="goldenSettingsBtn">إعدادات التذكرة
+                                            الذهبية</span>
+                                    </div>
+
+                                    <div class="flex items-center gap-2">
+                                        <span id="winRateBadge"
+                                            class="text-xs font-bold bg-yellow-500 text-white px-2 py-1 rounded-md hidden shadow-sm">5%</span>
+                                        <span id="goldenActiveIndicator" class="relative flex h-3 w-3 hidden">
+                                            <span
+                                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                            <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                        </span>
+                                        <i
+                                            class="ri-settings-3-line text-gray-400 group-hover:text-gray-600 transition-colors text-lg ml-1"></i>
+                                    </div>
+                                </button>
+                            </div>
                         </div>
                     </section>
 
@@ -706,6 +735,157 @@
             </div>
         </div>
     </div>
+
+    <div id="goldenTicketModal" class="golden-modal-overlay" style="display: none;">
+        <div class="golden-ticket-card">
+            <div class="ticket-header">
+                <span data-key="goldenModalTitle">🌟 مبروووووك! 🌟</span>
+            </div>
+            <div class="ticket-body">
+                <p data-key="goldenFoundMsg">لقد عثرت على تذكرة ذهبية!</p>
+                <div class="prize-box">
+                    <span id="prizeName">قلم هدية 🎁</span>
+                </div>
+            </div>
+            <button onclick="closeGoldenTicket()" class="claim-btn" data-key="goldenClaim">استلم الجائزة</button>
+        </div>
+    </div>
+    <div id="goldenSettingsModal"
+        class="fixed inset-0 bg-black/80 hidden z-[9999] flex items-center justify-center p-4">
+        <div
+            class="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 border-4 border-yellow-400 shadow-[0_0_30px_rgba(255,215,0,0.3)]">
+
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="ri-vip-crown-fill text-yellow-500"></i>
+                    <span data-key="goldenSettingsTitle">إعدادات التذكرة الذهبية</span>
+                </h3>
+                <button id="closeGoldenSettings" class="text-gray-400 hover:text-red-500"><i
+                        class="ri-close-circle-fill text-2xl"></i></button>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                    <span class="font-bold text-gray-700 dark:text-gray-300" data-key="goldenEnable">تفعيل النظام</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="goldenToggle" class="sr-only peer">
+                        <div
+                            class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500">
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <span class="text-sm font-bold text-gray-600 dark:text-gray-400" data-key="goldenWinRate">نسبة
+                            الحظ (Win Rate)</span>
+                        <span id="winRateDisplay"
+                            class="text-sm font-bold text-yellow-600 bg-yellow-100 px-2 rounded">5%</span>
+                    </div>
+                    <input type="range" id="winRateInput" min="0" max="100" value="5"
+                        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-yellow-500">
+                    <p class="text-xs text-gray-400 mt-1" data-key="goldenHint">كلما زادت النسبة، زاد عدد الطلاب
+                        الفائزين.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-600 dark:text-gray-400 mb-2"
+                        data-key="goldenPrizesLabel">قائمة الجوائز (جائزة في كل سطر)</label>
+                    <textarea id="prizesInput" rows="5"
+                        class="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-yellow-400 outline-none text-sm"
+                        data-key-placeholder="goldenPrizesPlaceholder"
+                        placeholder="قلم هدية&#10;شوكولاتة&#10;خصم 10 جنيه"></textarea>
+                </div>
+
+                <button id="saveGoldenSettings"
+                    class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95"
+                    data-key="goldenSave">
+                    حفظ الإعدادات 💾
+                </button>
+            </div>
+        </div>
+    </div>
+    <style>
+        /* CSS للتذكرة الذهبية */
+        .golden-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.5s;
+        }
+
+        .golden-ticket-card {
+            background: linear-gradient(45deg, #FFD700, #FFC107, #FFD700);
+            border: 4px solid #FFF;
+            border-radius: 15px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 0 50px #FFD700;
+            transform: scale(0);
+            animation: popUp 0.6s cubic-bezier(0.17, 0.67, 0.33, 1.4) forwards;
+        }
+
+        .ticket-header {
+            font-size: 24px;
+            font-weight: bold;
+            color: #5c3c00;
+            margin-bottom: 10px;
+        }
+
+        .ticket-body p {
+            color: #333;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .prize-box {
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-size: 22px;
+            font-weight: bold;
+            color: #d32f2f;
+            border: 2px dashed #5c3c00;
+        }
+
+        .claim-btn {
+            background: #5c3c00;
+            color: #FFD700;
+            border: none;
+            padding: 10px 25px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        @keyframes popUp {
+            to {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+
 
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
