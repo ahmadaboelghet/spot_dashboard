@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spot Student | ذاكر بذكاء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        /* أنيميشن التحميل */
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { brand: '#FFD700', dark: '#0F0F0F' } } }
+        }
+    </script>
+</head>
+<body class="bg-dark text-white h-screen flex flex-col overflow-hidden">
+
+    <div id="loginScreen" class="absolute inset-0 z-50 bg-dark flex flex-col items-center justify-center p-6">
+        <div class="glass p-8 rounded-3xl w-full max-w-md text-center shadow-2xl border-t-4 border-brand">
+            <div class="w-20 h-20 bg-brand rounded-full mx-auto flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(255,215,0,0.3)]">
+                <i class="ri-robot-2-fill text-4xl text-black"></i>
+            </div>
+            <h1 class="text-3xl font-black mb-2">أهلاً بك في Spot AI</h1>
+            <p class="text-gray-400 mb-8">المساعد الذكي للمتفوقين 🚀</p>
+            
+            <div class="space-y-4">
+                <input type="text" id="teacherCodeInput" placeholder="أدخل كود المدرس (رقم هاتفه)" 
+                    class="w-full bg-black/50 border border-gray-700 rounded-xl px-5 py-4 text-center text-lg focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-all">
+                
+                <button onclick="enterStudentMode()" class="w-full bg-brand hover:bg-yellow-400 text-black font-bold py-4 rounded-xl text-lg shadow-lg transition-transform active:scale-95">
+                    ابدأ المذاكرة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chatScreen" class="flex-1 flex flex-col hidden h-full">
+        <div class="p-4 glass flex justify-between items-center z-10">
+            <div class="flex items-center gap-3">
+                <button onclick="location.reload()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                    <i class="ri-arrow-right-line"></i>
+                </button>
+                <div>
+                    <h2 class="font-bold text-lg">Spot Student</h2>
+                    <p class="text-xs text-brand" id="connectedTeacherName">جاري الاتصال...</p>
+                </div>
+            </div>
+            <div class="w-10 h-10 bg-brand rounded-full flex items-center justify-center text-black shadow-lg">
+                <i class="ri-robot-2-fill text-xl"></i>
+            </div>
+        </div>
+
+        <div id="messagesArea" class="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar scroll-smooth">
+            <div class="text-center py-10 opacity-50">
+                <i class="ri-chat-smile-2-line text-4xl mb-3 block"></i>
+                <p>اسألني في أي حاجة من الملازم!</p>
+            </div>
+        </div>
+
+        <div class="p-4 glass mb-safe">
+            <div class="flex gap-2 relative">
+                <input type="text" id="studentInput" placeholder="اكتب سؤالك هنا..." 
+                    class="flex-1 bg-white/10 border border-white/10 text-white rounded-2xl px-5 py-4 pl-12 focus:outline-none focus:border-brand/50 transition-all">
+                
+                <button onclick="sendStudentMessage()" class="absolute left-2 top-2 bottom-2 w-12 bg-brand text-black rounded-xl flex items-center justify-center hover:scale-105 transition-transform">
+                    <i class="ri-send-plane-fill text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // ⚠️ حط إعداداتك هنا (نفس اللي في dashboard)
+        const firebaseConfig = {
+            apiKey: "...",
+            authDomain: "...",
+            projectId: "...",
+            storageBucket: "...",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const functions = getFunctions(app);
+        const db = getFirestore(app);
+
+        let currentTeacherId = "";
+
+        window.enterStudentMode = async function() {
+            const code = document.getElementById('teacherCodeInput').value.trim();
+            if (!code) return alert("اكتب الكود الأول!");
+
+            // التأكد من وجود المدرس
+            try {
+                const docRef = doc(db, "teachers", code);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    currentTeacherId = code;
+                    document.getElementById('connectedTeacherName').innerText = `مع مستر: ${docSnap.data().name || 'المعلم'}`;
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('chatScreen').classList.remove('hidden');
+                } else {
+                    alert("الكود ده مش موجود، تأكد من الرقم.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("حصل خطأ في الاتصال");
+            }
+        }
+
+        window.sendStudentMessage = async function() {
+            const input = document.getElementById('studentInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            appendMsg(msg, 'user');
+            input.value = '';
+            
+            // Show Typing
+            const loadingId = showTyping();
+
+            try {
+                const chatFn = httpsCallable(functions, 'chatWithSpot');
+                const result = await chatFn({ 
+                    message: msg, 
+                    teacherId: currentTeacherId, 
+                    role: 'student' 
+                });
+
+                removeTyping(loadingId);
+                // تنسيق بسيط
+                const formatted = result.data.response.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+                appendMsg(formatted, 'bot');
+            } catch (e) {
+                removeTyping(loadingId);
+                appendMsg("معلش، حصلت مشكلة. جرب تاني.", 'bot');
+            }
+        }
+
+        function appendMsg(text, sender) {
+            const div = document.createElement('div');
+            const area = document.getElementById('messagesArea');
+            
+            if (sender === 'user') {
+                div.className = "flex justify-end animate-fade-in-up";
+                div.innerHTML = `<div class="bg-brand text-black px-5 py-3 rounded-2xl rounded-tr-none max-w-[85%] font-medium shadow-lg text-right">${text}</div>`;
+            } else {
+                div.className = "flex justify-start animate-fade-in-up";
+                div.innerHTML = `
+                    <div class="flex gap-3 max-w-[90%]">
+                        <div class="w-8 h-8 rounded-full bg-white/20 flex-shrink-0 flex items-center justify-center"><i class="ri-robot-2-fill text-brand"></i></div>
+                        <div class="bg-white/10 text-gray-100 px-5 py-3 rounded-2xl rounded-tl-none leading-relaxed border border-white/5 shadow-lg text-right">
+                            ${text}
+                        </div>
+                    </div>`;
+            }
+            area.appendChild(div);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function showTyping() {
+            const id = 'typing-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = "flex justify-start";
+            div.innerHTML = `
+                <div class="flex gap-3">
+                    <div class="w-8 h-8 rounded-full bg-white/20 flex-shrink-0"></div>
+                    <div class="bg-white/5 px-4 py-3 rounded-2xl rounded-tl-none flex gap-1 items-center h-10">
+                        <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                    </div>
+                </div>`;
+            document.getElementById('messagesArea').appendChild(div);
+            return id;
+        }
+
+        function removeTyping(id) {
+            const el = document.getElementById(id);
+            if(el) el.remove();
+        }
+
+        // Enter key
+        document.getElementById('studentInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendStudentMessage();
+        });
+    </script>
+    <div class="fixed bottom-8 right-8 z-[9999] group">
+    <div class="absolute bottom-full right-0 mb-4 w-48 bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-br-none shadow-xl border border-slate-100 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none transform translate-y-2 group-hover:translate-y-0">
+        <p class="text-xs text-slate-600 dark:text-slate-300 font-medium">محتار في سؤال؟ 🤔<br>أنا جاهز للمساعدة!</p>
+    </div>
+
+    <button onclick="toggleSpotChat()" 
+            class="relative w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] hover:shadow-[0_10px_35px_-5px_rgba(79,70,229,0.6)] hover:scale-110 transition-all duration-300 flex items-center justify-center overflow-hidden border border-white/10">
+        <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <i class="ri-robot-2-line text-3xl group-hover:rotate-12 transition-transform duration-300"></i>
+        <span class="absolute top-3 right-4 flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500"></span>
+        </span>
+    </button>
+</div>
+
+<div id="spotChatWindow" 
+     class="fixed bottom-28 right-8 w-[380px] h-[550px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl z-[9998] flex flex-col transform origin-bottom-right scale-0 opacity-0 transition-all duration-300 pointer-events-none overflow-hidden">
+    
+    <div class="bg-slate-900 p-5 flex justify-between items-center text-white relative overflow-hidden">
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-violet-600/30 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl"></div>
+        
+        <div class="flex items-center gap-3 relative z-10">
+            <div class="w-11 h-11 bg-gradient-to-br from-blue-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-violet-500/20">
+                <i class="ri-sparkling-2-fill text-xl"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-base tracking-wide font-sans">Spot AI</h3>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <p class="text-[11px] text-slate-300 font-medium">Online</p>
+                </div>
+            </div>
+        </div>
+        
+        <button onclick="toggleSpotChat()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors relative z-10 text-slate-300 hover:text-white">
+            <i class="ri-close-line text-lg"></i>
+        </button>
+    </div>
+
+    <div id="chatMessages" class="flex-1 p-5 overflow-y-auto space-y-5 bg-slate-50/50 dark:bg-black/20 custom-scrollbar scroll-smooth">
+        <div class="flex gap-3 animate-fade-in-up">
+            <div class="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0 text-slate-600 dark:text-slate-300 text-xs"><i class="ri-robot-2-fill"></i></div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 max-w-[85%] leading-relaxed">
+                أهلاً يا هندسة! 👋 <br> أنا قريت كل الملازم وجاهز أساعدك.
+            </div>
+        </div>
+    </div>
+
+    <div id="typingIndicator" class="hidden px-5 py-2">
+        <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 w-fit px-4 py-2.5 rounded-2xl rounded-tl-none">
+            <span class="text-[10px] text-violet-500 font-bold ml-1 uppercase tracking-wider">Spot AI</span>
+            <div class="flex gap-1">
+                <div class="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce"></div>
+                <div class="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce delay-75"></div>
+                <div class="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce delay-150"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+        <div class="relative flex items-center bg-slate-100 dark:bg-slate-800/50 rounded-xl transition-all border border-transparent focus-within:border-violet-500/30 focus-within:bg-white dark:focus-within:bg-slate-800 focus-within:shadow-sm">
+            <input type="text" id="chatInput" placeholder="اكتب سؤالك هنا..." 
+                   class="w-full bg-transparent text-slate-800 dark:text-white text-sm px-4 py-3.5 focus:outline-none placeholder-slate-400"
+                   onkeypress="if(event.key === 'Enter') sendSpotMessage()">
+            
+            <button onclick="sendSpotMessage()" class="absolute left-2 p-2 bg-blue-600 hover:bg-violet-600 text-white rounded-lg shadow-sm hover:shadow-md transition-all active:scale-95">
+                <i class="ri-send-plane-fill text-sm"></i>
+            </button>
+        </div>
+        <p class="text-[10px] text-center text-slate-400 mt-2">Powered by Gemini AI ✨</p>
+    </div>
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.3); border-radius: 20px; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
+</style>
+</body>
+</html>

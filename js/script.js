@@ -1165,9 +1165,7 @@ function switchTab(tabId) {
         }
     }
     if (tabId === 'bot') {
-        if (TEACHER_ID) {
-        document.getElementById('displayTeacherCode').innerText = TEACHER_ID;
-        }
+        
         loadBotFiles(); // دي الدالة اللي هنعملها تحت
     }
 }
@@ -2349,4 +2347,110 @@ https://wa.me/${botNumber.replace('+', '')}?text=join%20off-drive
     }).catch(err => {
         showToast("فشل النسخ", "error");
     });
+}
+
+// ==========================================
+// 4️⃣ منطق الشات (Spot Chat Logic)
+// ==========================================
+let isChatOpen = false;
+
+// دالة فتح وقفل الشات (مربوطة بـ window عشان HTML يشوفها)
+window.toggleSpotChat = function() {
+    const windowEl = document.getElementById('spotChatWindow');
+    const inputEl = document.getElementById('chatInput');
+    
+    if (!isChatOpen) {
+        // فتح
+        windowEl.classList.remove('scale-0', 'opacity-0', 'pointer-events-none');
+        windowEl.classList.add('scale-100', 'opacity-100', 'pointer-events-auto');
+        setTimeout(() => inputEl.focus(), 300);
+    } else {
+        // غلق
+        windowEl.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
+        windowEl.classList.add('scale-0', 'opacity-0', 'pointer-events-none');
+    }
+    isChatOpen = !isChatOpen;
+};
+
+// دالة إرسال الرسالة
+window.sendSpotMessage = async function() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    // 1. التأكد من تسجيل الدخول
+    const currentTeacherId = localStorage.getItem('learnaria-tid'); 
+
+    if (!currentTeacherId) {
+        addMessageToUI("⚠️ لازم تكون مسجل دخول عشان أقدر أساعدك!", 'bot');
+        return;
+    }
+
+    // 2. عرض رسالة المستخدم
+    addMessageToUI(msg, 'user');
+    input.value = '';
+
+    // 3. إظهار مؤشر الكتابة
+    document.getElementById('typingIndicator').classList.remove('hidden');
+    scrollToBottom();
+
+    try {
+        // 4. استدعاء الـ Function (بالطريقة القديمة المتوافقة مع كودك) 👇👇
+        // بدل httpsCallable(functions, ...)
+        const chatFn = firebase.functions().httpsCallable('chatWithSpot'); 
+        
+        const result = await chatFn({ 
+            message: msg, 
+            teacherId: currentTeacherId, 
+            role: 'teacher' 
+        });
+
+        // 5. إخفاء المؤشر وعرض الرد
+        document.getElementById('typingIndicator').classList.add('hidden');
+        
+        // تنسيق الرد
+        const cleanResponse = result.data.response.replace(/\n/g, '<br>'); 
+        addMessageToUI(cleanResponse, 'bot');
+
+    } catch (error) {
+        document.getElementById('typingIndicator').classList.add('hidden');
+        addMessageToUI("❌ حصل خطأ في الاتصال، حاول تاني.", 'bot');
+        console.error("Spot Chat Error:", error);
+    }
+};
+
+// دالة مساعدة لرسم الرسائل في الشاشة
+function addMessageToUI(text, sender) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = "animate-fade-in-up mb-4";
+    
+    if (sender === 'user') {
+        div.innerHTML = `
+            <div class="flex justify-end">
+                <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-5 py-3 rounded-2xl rounded-tr-none shadow-md shadow-yellow-500/10 text-sm font-bold max-w-[85%]">
+                    ${text}
+                </div>
+            </div>
+        `;
+    } else {
+        div.innerHTML = `
+            <div class="flex gap-3 justify-start">
+                <div class="w-8 h-8 bg-gray-100 dark:bg-zinc-700/50 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 dark:text-yellow-500 text-xs border border-gray-200 dark:border-zinc-600">
+                    <i class="ri-robot-2-fill"></i>
+                </div>
+                <div class="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-700 text-sm text-gray-700 dark:text-gray-200 max-w-[90%] leading-relaxed">
+                    ${text}
+                </div>
+            </div>
+        `;
+    }
+    
+    container.appendChild(div);
+    scrollToBottom();
+}
+
+function scrollToBottom() {
+    const container = document.getElementById('chatMessages');
+    container.scrollTop = container.scrollHeight;
 }
