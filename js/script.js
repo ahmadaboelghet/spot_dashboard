@@ -50,7 +50,7 @@ function openDB() {
                 if (!db.objectStoreNames.contains(store)) {
                     const params = store === 'syncQueue' ? { autoIncrement: true } : { keyPath: 'id' };
                     const s = db.createObjectStore(store, params);
-                    if(['groups', 'students', 'assignments', 'schedules'].includes(store)) s.createIndex(store === 'groups' ? 'teacherId' : 'groupId', store === 'groups' ? 'teacherId' : 'groupId', {unique:false});
+                    if (['groups', 'students', 'assignments', 'schedules'].includes(store)) s.createIndex(store === 'groups' ? 'teacherId' : 'groupId', store === 'groups' ? 'teacherId' : 'groupId', { unique: false });
                 }
             });
         };
@@ -295,7 +295,29 @@ const translations = {
         goldenSave: "حفظ الإعدادات 💾",
         goldenModalTitle: "🌟 مبروووووك! 🌟",
         goldenFoundMsg: "لقد عثرت على تذكرة ذهبية!",
-        goldenClaim: "استلم الجائزة"
+        goldenClaim: "استلم الجائزة",
+        tabBot: "المساعد الذكي",
+        botFeedTitle: "تغذية البوت (الملازم)",
+        botFeedHint: "أي ملف (PDF، صور، صوت) هترفع هنا، البوت هيذاكره فوراً ويجاوب منه على أسئلة الطلاب.",
+        botDropArea: "اضغط للرفع أو اسحب الملف هنا",
+        botFileHint: "PDF, Images & Audio (MP3, WAV)",
+        botLibraryTitle: "مكتبة المعرفة",
+        botLibraryEmpty: "المكتبة فارغة",
+        botProcessing: "جاري المعالجة بواسطة الذكاء الاصطناعي...",
+        botFileReady: "جاهز للاستخدام",
+        deleteConfirm: "هل أنت متأكد من حذف هذا الملف من ذاكرة البوت؟",
+        uploadSuccess: "تم الرفع! جاري المعالجة...",
+        uploadError: "فشل الرفع",
+        mustBePDF: "نوع الملف غير مدعوم. مسموح بـ PDF، صور، أو صوت فقط",
+        loginFirst: "يجب تسجيل الدخول أولاً",
+        
+        // كارت الدعوة
+        botInviteTitle: "رابط البوت الذكي",
+        botInviteDesc: "شارك هذا الرابط والكود مع طلابك ليبدأوا المذاكرة معك.",
+        teacherCodeLabel: "كود المدرس",
+        copyInviteBtn: "نسخ رسالة الدعوة",
+        inviteCopied: "تم نسخ رسالة الدعوة! ابعتها للطلاب فوراً 🚀",
+        inviteCopyFail: "فشل النسخ"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -405,7 +427,7 @@ const translations = {
         groupCreatedSuccess: "Group created successfully!",
         examCreatedSuccess: "Exam added successfully!",
         linkCopied: "Follow-up link copied successfully 📋",
-        copyFailed: "Copy failed ❌", 
+        copyFailed: "Copy failed ❌",
         landingNewVersion: "🚀 New Version Available",
         landingHeroTitle: "Manage Everything in <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>One Place.</span>",
         landingHeroSubtitle: "<strong>Spot</strong> is your smart personal assistant. QR Attendance, Grade Tracking, Fee Collection, and Instant Parent Communication.. all while you sip your coffee ☕",
@@ -428,7 +450,32 @@ const translations = {
         goldenSave: "Save Settings 💾",
         goldenModalTitle: "🌟 Congratulations! 🌟",
         goldenFoundMsg: "You found a Golden Ticket!",
-        goldenClaim: "Claim Prize"
+        goldenClaim: "Claim Prize",
+        // ... (Old Translations) ...
+
+        // 👇👇 Spot AI Additions 👇👇
+        tabBot: "Spot AI",
+        botFeedTitle: "Feed the Bot (Materials)",
+        botFeedHint: "Upload PDFs, Images, or Audio here. The bot will study them instantly to answer student questions.",
+        botDropArea: "Click to upload or drag file here",
+        botFileHint: "PDF, Images & Audio (MP3, WAV)",
+        botLibraryTitle: "Knowledge Library",
+        botLibraryEmpty: "Library is empty",
+        botProcessing: "Processing by AI...",
+        botFileReady: "Ready to use",
+        deleteConfirm: "Are you sure you want to delete this file?",
+        uploadSuccess: "Uploaded! Processing...",
+        uploadError: "Upload Failed",
+        mustBePDF: "Unsupported file type. Allowed: PDF, Images, Audio",
+        loginFirst: "Login required first",
+
+        // Invite Card
+        botInviteTitle: "Spot AI Link",
+        botInviteDesc: "Share this link and code with your students to start studying.",
+        teacherCodeLabel: "Teacher Code",
+        copyInviteBtn: "Copy Invite Message",
+        inviteCopied: "Invite message copied! Send it to students 🚀",
+        inviteCopyFail: "Copy failed"
 
     }
 };
@@ -441,10 +488,10 @@ function isValidEgyptianPhoneNumber(p) { return /^01[0125]\d{8}$/.test(p?.trim()
 function formatPhoneNumber(p) { return isValidEgyptianPhoneNumber(p) ? `+20${p.trim().substring(1)}` : null; }
 
 // ✅ كشف نوع الجهاز لضبط المراية
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // بنشوف هل الجهاز موبايل (أندرويد أو آيفون)
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
+
     // لو مش موبايل (يعني لابتوب)، ضيف الكلاس ده للـ Body
     if (!isMobile) {
         document.body.classList.add('desktop-device');
@@ -459,16 +506,16 @@ function playBeep() {
         osc.connect(gain); gain.connect(ctx.destination);
         osc.frequency.value = 800; gain.gain.value = 0.1;
         osc.start(); osc.stop(ctx.currentTime + 0.1);
-        if(navigator.vibrate) navigator.vibrate(50);
-    } catch(e){}
+        if (navigator.vibrate) navigator.vibrate(50);
+    } catch (e) { }
 }
 
-function showToast(msg, type='success') {
+function showToast(msg, type = 'success') {
     const div = document.createElement('div');
     div.className = `message-box ${type === 'error' ? 'border-red-500 text-red-500' : ''}`;
     div.innerHTML = type === 'error' ? `<i class="ri-error-warning-line"></i> ${msg}` : `<i class="ri-checkbox-circle-line"></i> ${msg}`;
     document.body.appendChild(div);
-    setTimeout(()=> div.remove(), 3000);
+    setTimeout(() => div.remove(), 3000);
 }
 
 // --- SYNC ---
@@ -500,14 +547,14 @@ function updateOnlineStatus() {
 }
 
 async function updateSyncUI() {
-    if(!localDB) await openDB();
+    if (!localDB) await openDB();
     const count = await new Promise(r => {
         const req = localDB.transaction('syncQueue').objectStore('syncQueue').count();
         req.onsuccess = () => r(req.result);
     });
     const el = document.getElementById('syncIndicator');
-    if(el) {
-        if(count > 0) el.innerHTML = `<i class="ri-refresh-line animate-spin text-yellow-500"></i> ${count}`;
+    if (el) {
+        if (count > 0) el.innerHTML = `<i class="ri-refresh-line animate-spin text-yellow-500"></i> ${count}`;
         else el.innerHTML = `<i class="ri-check-double-line text-green-500"></i>`;
     }
 }
@@ -532,12 +579,12 @@ async function processSyncQueue() {
                     else if (type === 'add') await firestoreDB.collection(path).doc(id).set(data, { merge: true });
                     else if (type === 'delete') await firestoreDB.doc(path).delete();
                     await deleteFromDB('syncQueue', keys[i]);
-                } catch(e) { console.error(e); }
+                } catch (e) { console.error(e); }
             }
             isSyncing = false;
             updateSyncUI();
         };
-    } catch(e) { isSyncing = false; }
+    } catch (e) { isSyncing = false; }
 }
 
 // ==========================================
@@ -551,7 +598,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateOnlineStatus();
 
     const dailyInput = document.getElementById('dailyDateInput');
-    if(dailyInput) dailyInput.valueAsDate = new Date();
+    if (dailyInput) dailyInput.valueAsDate = new Date();
 
     createTimePicker('recurringTimeContainer');
     createTimePicker('exceptionNewTimeContainer');
@@ -572,7 +619,7 @@ function setupListeners() {
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const tab = e.currentTarget.dataset.tab;
-            if(!SELECTED_GROUP_ID && tab !== 'profile') {
+            if (!SELECTED_GROUP_ID && tab !== 'profile') {
                 showToast(translations[currentLang].selectGroupPlaceholder, 'error');
                 return;
             }
@@ -582,17 +629,17 @@ function setupListeners() {
 
     document.getElementById('saveProfileButton').addEventListener('click', saveProfile);
     document.getElementById('createNewGroupBtn').addEventListener('click', createGroup);
-    
+
     document.getElementById('groupSelect').addEventListener('change', async (e) => {
         SELECTED_GROUP_ID = e.target.value;
-        switchTab('daily'); 
+        switchTab('daily');
         await loadGroupData();
     });
 
     document.getElementById('addNewGroupButton').addEventListener('click', () => {
         // 1. الانتقال لتابة الملف الشخصي (Profile)
         switchTab('profile');
-        
+
         // 2. الانتظار لحظة صغيرة (عشان التابة تفتح) ثم التركيز على حقل الاسم
         setTimeout(() => {
             const inputField = document.getElementById('newGroupName');
@@ -638,6 +685,7 @@ function setupListeners() {
     });
     document.getElementById('confirmSendMsgBtn').addEventListener('click', sendCustomMessageAction);
     document.getElementById('shareIdBtn').addEventListener('click', shareCardAction);
+    document.getElementById('botFileInput').addEventListener('change', handleBotFileUpload);
 }
 
 // ✅✅ NEW HELPER: Enable/Disable Student Inputs
@@ -649,7 +697,7 @@ function toggleStudentInputs(enable) {
     ];
     inputs.forEach(id => {
         const el = document.getElementById(id);
-        if(el) el.disabled = !enable;
+        if (el) el.disabled = !enable;
     });
 }
 
@@ -695,7 +743,7 @@ function formatTime12Hour(timeString) {
 
 function renderDayCheckboxes() {
     const container = document.getElementById('daysOfWeekContainer');
-    if(!container) return;
+    if (!container) return;
     container.innerHTML = '';
     translations[currentLang].days.forEach((day, index) => {
         const label = document.createElement('label');
@@ -704,8 +752,8 @@ function renderDayCheckboxes() {
             <input type="checkbox" class="day-checkbox w-4 h-4 accent-brand rounded" value="${index}">
             <span class="text-sm font-bold text-gray-700 dark:text-gray-300 select-none">${day}</span>
         `;
-        label.querySelector('input').addEventListener('change', function() {
-            if(this.checked) label.classList.add('bg-brand/10', 'border-brand');
+        label.querySelector('input').addEventListener('change', function () {
+            if (this.checked) label.classList.add('bg-brand/10', 'border-brand');
             else label.classList.remove('bg-brand/10', 'border-brand');
         });
         container.appendChild(label);
@@ -715,9 +763,9 @@ function renderDayCheckboxes() {
 async function saveRecurringSchedule() {
     if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
     const existing = await getAllFromDB('schedules', 'groupId', SELECTED_GROUP_ID);
-    if(existing && existing.length > 0) {
+    if (existing && existing.length > 0) {
         showToast("كل مجموعة لها موعد مكرر واحد فقط!", 'error');
-    return;
+        return;
     }
     const subject = document.getElementById('recurringSubject').value.trim();
     const location = document.getElementById('recurringLocation').value.trim();
@@ -744,23 +792,23 @@ async function saveRecurringSchedule() {
 
 async function fetchRecurringSchedules() {
     if (!SELECTED_GROUP_ID) return;
-    
+
     const container = document.getElementById('recurringSchedulesDisplay');
-    if(!container) return;
-    
+    if (!container) return;
+
     container.innerHTML = `<p class="text-center text-gray-500 py-4"><i class="ri-loader-4-line animate-spin"></i> Loading...</p>`;
 
     try {
         // 1. جلب البيانات (كما هو في السابق)
         let scheds = await getAllFromDB('schedules', 'groupId', SELECTED_GROUP_ID);
-        
+
         // Sync check (لو مفيش داتا محلياً، نجرب السيرفر)
-        if(scheds.length === 0 && navigator.onLine) {
+        if (scheds.length === 0 && navigator.onLine) {
             try {
                 const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules`).get();
                 scheds = snap.docs.map(doc => ({ id: doc.id, groupId: SELECTED_GROUP_ID, ...doc.data() }));
-                for(const s of scheds) await putToDB('schedules', s);
-            } catch(e){}
+                for (const s of scheds) await putToDB('schedules', s);
+            } catch (e) { }
         }
 
         // ============================================================
@@ -780,18 +828,18 @@ async function fetchRecurringSchedules() {
             btn.disabled = true;
             btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-400'); // شكل باهت
             btn.innerHTML = '<i class="ri-lock-2-fill"></i> مسجل بالفعل'; // تغيير النص
-            
+
             // تعطيل كل الخانات
-            allInputs.forEach(el => { if(el) el.disabled = true; });
-            
+            allInputs.forEach(el => { if (el) el.disabled = true; });
+
         } else {
             // 🔓 حالة الفتح: لا يوجد مواعيد
             btn.disabled = false;
             btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
             btn.innerHTML = translations[currentLang].saveRecurringScheduleButton || "إضافة للجدول";
-            
+
             // تفعيل كل الخانات
-            allInputs.forEach(el => { if(el) el.disabled = false; });
+            allInputs.forEach(el => { if (el) el.disabled = false; });
         }
         // ============================================================
 
@@ -819,15 +867,15 @@ async function fetchRecurringSchedules() {
                 </div>
                 <button class="btn-icon w-8 h-8 bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 rounded-lg" data-id="${s.id}"><i class="ri-delete-bin-line"></i></button>
             `;
-            
+
             // عند الحذف، نعيد تحميل الدالة فيتفك القفل تلقائياً
             div.querySelector('button').addEventListener('click', async () => {
-                 if(confirm(translations[currentLang].confirmScheduleDelete)) {
-                     await deleteFromDB('schedules', s.id);
-                     await addToSyncQueue({ type: 'delete', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules/${s.id}` });
-                     // إعادة التحميل عشان الزرار يفتح تاني
-                     fetchRecurringSchedules(); 
-                 }
+                if (confirm(translations[currentLang].confirmScheduleDelete)) {
+                    await deleteFromDB('schedules', s.id);
+                    await addToSyncQueue({ type: 'delete', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/recurringSchedules/${s.id}` });
+                    // إعادة التحميل عشان الزرار يفتح تاني
+                    fetchRecurringSchedules();
+                }
             });
             container.appendChild(div);
         });
@@ -922,7 +970,7 @@ async function loginTeacher() {
             if (storedPass === "" && password !== "") {
                 data.password = password;
                 await putToDB('teachers', data);
-                if(navigator.onLine) {
+                if (navigator.onLine) {
                     firestoreDB.collection('teachers').doc(fmt).set({ password: password }, { merge: true });
                 }
             }
@@ -936,7 +984,7 @@ async function loginTeacher() {
         document.getElementById('mainContent').classList.remove('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
 
-        if(data) {
+        if (data) {
             document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${data.name || ''}`;
             document.getElementById('teacherNameInput').value = data.name || '';
             document.getElementById('teacherSubjectInput').value = data.subject || '';
@@ -947,7 +995,7 @@ async function loginTeacher() {
         switchTab('daily');
 
     } catch (error) {
-        if(error.message !== "Offline first login") {
+        if (error.message !== "Offline first login") {
             console.error("Login Error:", error);
             showToast(translations[currentLang].error, "error");
         }
@@ -965,12 +1013,12 @@ async function loadGroups() {
     if (navigator.onLine) {
         try {
             const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups`).get();
-            const remoteGroups = snap.docs.map(doc => ({id: doc.id, teacherId: TEACHER_ID, ...doc.data()}));
-            for(const g of remoteGroups) {
+            const remoteGroups = snap.docs.map(doc => ({ id: doc.id, teacherId: TEACHER_ID, ...doc.data() }));
+            for (const g of remoteGroups) {
                 await putToDB('groups', g);
             }
             renderGroupsDropdown(remoteGroups);
-        } catch(e) {
+        } catch (e) {
             console.error("Failed to sync groups:", e);
         }
     }
@@ -985,35 +1033,35 @@ function renderGroupsDropdown(groupsList) {
         const opt = document.createElement('option');
         opt.value = g.id;
         opt.innerText = g.name;
-        if(currentVal === g.id) opt.selected = true;
+        if (currentVal === g.id) opt.selected = true;
         sel.appendChild(opt);
     });
 }
 
 async function createGroup() {
     const name = document.getElementById('newGroupName').value;
-    if(!name) return;
-    
+    if (!name) return;
+
     // 1. إنشاء الـ ID وحفظه
-    const id = generateUniqueId(); 
-    
+    const id = generateUniqueId();
+
     await putToDB('groups', { id, teacherId: TEACHER_ID, name });
     await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups`, id, data: { name } });
-    
+
     document.getElementById('newGroupName').value = '';
-    
+
     // 2. إعادة تحميل القوائم والانتظار حتى تنتهي
-    await loadGroups(); 
-    
+    await loadGroups();
+
     // 3. ✨ السحر هنا: تحديد المجموعة الجديدة تلقائياً ✨
     SELECTED_GROUP_ID = id; // تحديث المتغير العام
     document.getElementById('groupSelect').value = id; // تحديث شكل القائمة (Dropdown)
-    
+
     // 4. الانتقال لتابة الحصة وتحميل بيانات المجموعة الفارغة
-    switchTab('daily'); 
+    switchTab('daily');
     await loadGroupData(); // تفعيل أزرار الإضافة (عشان لو عايز يضيف طلاب علطول)
-    
-showToast(translations[currentLang].groupCreatedSuccess);
+
+    showToast(translations[currentLang].groupCreatedSuccess);
 }
 
 // ------------------------------------------------------------------
@@ -1023,18 +1071,18 @@ async function loadGroupData() {
     const scanBtn = document.getElementById('startSmartScanBtn');
     const goldBtn = document.getElementById('openGoldenSettingsBtn');
 
-    if(!SELECTED_GROUP_ID) {
-        toggleStudentInputs(false); 
-        if(scanBtn) scanBtn.disabled = true;
-        if(goldBtn) goldBtn.disabled = true;// ✅ ضمان الإغلاق لو مفيش مجموعة
+    if (!SELECTED_GROUP_ID) {
+        toggleStudentInputs(false);
+        if (scanBtn) scanBtn.disabled = true;
+        if (goldBtn) goldBtn.disabled = true;// ✅ ضمان الإغلاق لو مفيش مجموعة
         return;
     }
-    
+
     // ✅ تفعيل خانات الإضافة بمجرد اختيار مجموعة
     toggleStudentInputs(true);
-    if(scanBtn) scanBtn.disabled = false;
-    if(goldBtn) goldBtn.disabled = false;
-    
+    if (scanBtn) scanBtn.disabled = false;
+    if (goldBtn) goldBtn.disabled = false;
+
     document.querySelectorAll('.tab-button').forEach(b => b.disabled = false);
 
     // 1. محاولة جلب البيانات محلياً (داخل try-catch)
@@ -1062,20 +1110,20 @@ async function loadGroupData() {
             refreshCurrentTab();
             saveStudentsToLocalDB(remoteStudents);
 
-        } catch(e) {
+        } catch (e) {
             console.error("Sync error:", e);
         }
     }
 
     // تحديث مبدئي إذا لم يكن هناك تبويب نشط
-    if(!document.querySelector('.tab-button.active')) switchTab('daily');
+    if (!document.querySelector('.tab-button.active')) switchTab('daily');
 }
 
 // ✅ دالة حفظ الطلاب للـ Cache في الخلفية
 async function saveStudentsToLocalDB(students) {
     try {
-        for(const s of students) await putToDB('students', s);
-    } catch(e) { console.error("Cache update failed", e); }
+        for (const s of students) await putToDB('students', s);
+    } catch (e) { console.error("Cache update failed", e); }
 }
 
 // ✅ دالة تحديث الشاشة حسب التبويب المفتوح (تم تصحيح الشرط)
@@ -1097,24 +1145,30 @@ function switchTab(tabId) {
     document.getElementById(`tab-${tabId}`).classList.remove('hidden');
     document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
 
-    if(tabId === 'daily') renderDailyList();
-    if(tabId === 'students') renderStudents();
-    if(tabId === 'payments') {
+    if (tabId === 'daily') renderDailyList();
+    if (tabId === 'students') renderStudents();
+    if (tabId === 'payments') {
         const pm = document.getElementById('paymentMonthInput');
-        if(!pm.value) pm.value = new Date().toISOString().slice(0, 7);
+        if (!pm.value) pm.value = new Date().toISOString().slice(0, 7);
         renderPaymentsList();
     }
-    if(tabId === 'exams') loadExams();
+    if (tabId === 'exams') loadExams();
 
-    if(tabId === 'schedule') {
+    if (tabId === 'schedule') {
         fetchRecurringSchedules();
         createTimePicker('recurringTimeContainer');
         createTimePicker('exceptionNewTimeContainer');
         renderDayCheckboxes();
         const profileSubject = document.getElementById('teacherSubjectInput').value;
-        if(profileSubject) {
+        if (profileSubject) {
             document.getElementById('recurringSubject').value = profileSubject;
         }
+    }
+    if (tabId === 'bot') {
+        if (TEACHER_ID) {
+        document.getElementById('displayTeacherCode').innerText = TEACHER_ID;
+        }
+        loadBotFiles(); // دي الدالة اللي هنعملها تحت
     }
 }
 
@@ -1145,7 +1199,7 @@ async function renderDailyList() {
         hHw.classList.add('hidden');
     }
 
-    if(!date || !allStudents.length) {
+    if (!date || !allStudents.length) {
         list.innerHTML = `<p class="text-center text-gray-500 py-4">${translations[currentLang].noStudentsInGroup}</p>`;
         return;
     }
@@ -1156,13 +1210,13 @@ async function renderDailyList() {
     const [attDoc, hwDoc] = await Promise.all([getFromDB('attendance', attId), getFromDB('assignments', hwId)]);
 
     const attMap = {};
-    if(attDoc?.records) attDoc.records.forEach(r => attMap[r.studentId] = r.status);
+    if (attDoc?.records) attDoc.records.forEach(r => attMap[r.studentId] = r.status);
 
     const hwMap = {};
-    if(hwDoc?.scores) {
+    if (hwDoc?.scores) {
         Object.entries(hwDoc.scores).forEach(([sid, val]) => hwMap[sid] = val.submitted);
         // تفعيل الواجب تلقائياً لو فيه داتا محفوظة
-        if(!hasHomeworkToday) {
+        if (!hasHomeworkToday) {
             hasHomeworkToday = true;
             document.getElementById('homeworkToggle').checked = true;
             hStudent.className = "col-span-6 transition-all duration-300";
@@ -1175,8 +1229,8 @@ async function renderDailyList() {
 
     allStudents.forEach(s => {
         const status = attMap[s.id] || 'absent'; // الافتراضي غائب لو مفيش تسجيل
-        if(status === 'present') presentCount++;
-        
+        if (status === 'present') presentCount++;
+
         const hwSubmitted = hwMap[s.id];
         const isAbsent = status === 'absent';
 
@@ -1185,25 +1239,24 @@ async function renderDailyList() {
 
         const row = document.createElement('div');
         row.dataset.sid = s.id;
-        
+
         // تنسيق الصف حسب الحالة
-        row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 ${
-            status === 'present' 
-            ? 'bg-green-50 border-green-500 dark:bg-green-900/20' 
-            : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
-        }`;
+        row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 ${status === 'present'
+                ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
+                : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
+            }`;
 
         let html = `
             <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300">${s.name}</div>
             <div class="${attColSpan} flex justify-center transition-all duration-300">
                 <select class="att-select bg-gray-50 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded text-xs py-1 px-1 outline-none cursor-pointer">
-                    <option value="present" ${status==='present'?'selected':''}>${translations[currentLang].present}</option>
-                    <option value="absent" ${status==='absent'?'selected':''}>${translations[currentLang].absent}</option>
+                    <option value="present" ${status === 'present' ? 'selected' : ''}>${translations[currentLang].present}</option>
+                    <option value="absent" ${status === 'absent' ? 'selected' : ''}>${translations[currentLang].absent}</option>
                     </select>
             </div>
         `;
 
-        if(hasHomeworkToday) {
+        if (hasHomeworkToday) {
             html += `
             <div class="col-span-3 flex justify-center fade-in-up">
                 <input type="checkbox" class="hw-check w-5 h-5 accent-brand rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
@@ -1220,45 +1273,45 @@ async function renderDailyList() {
 
         attSelect.addEventListener('change', (e) => {
             const val = e.target.value;
-            
+
             // 1. تغيير ألوان الصف
-            if(val === 'present') {
+            if (val === 'present') {
                 row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 row.classList.remove('bg-white', 'dark:bg-darkSurface', 'border-transparent');
-                
+
                 // ✅ لو حضر: نفتح خانة الواجب
-                if(hwCheck) hwCheck.disabled = false;
-                
+                if (hwCheck) hwCheck.disabled = false;
+
             } else { // absent
                 row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent');
-                
+
                 // ✅ لو غاب: نقفل خانة الواجب ونشيل علامة الصح (reset)
-                if(hwCheck) {
+                if (hwCheck) {
                     hwCheck.checked = false;
                     hwCheck.disabled = true;
                 }
             }
-            
+
             // تحديث عداد الحضور المباشر
             updateAttendanceCount();
         });
 
         list.appendChild(row);
     });
-    
+
     // دالة صغيرة لتحديث العداد
     function updateAttendanceCount() {
         const count = document.querySelectorAll('.att-select option[value="present"]:checked').length;
         document.getElementById('attendanceCountBadge').innerText = `${count}/${allStudents.length}`;
     }
-    
+
     updateAttendanceCount(); // تشغيل العداد أول مرة
 }
 
 async function saveDailyData() {
-    if(!TEACHER_ID || !SELECTED_GROUP_ID) return;
-    
+    if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
+
     // إظهار اللودر فوراً
     const saveBtn = document.getElementById('saveDailyBtn');
     const oldText = saveBtn.innerText;
@@ -1269,20 +1322,20 @@ async function saveDailyData() {
         const date = document.getElementById('dailyDateInput').value;
         const attRecords = [];
         const hwScores = {};
-        
+
         document.querySelectorAll('#dailyStudentsList > div').forEach(row => {
             const sid = row.dataset.sid;
             // 1. نجيب حالة الحضور الأول
-            const status = row.querySelector('.att-select').value; 
-            
+            const status = row.querySelector('.att-select').value;
+
             // حفظ سجل الحضور (ده شغال للكل عادي)
             attRecords.push({ studentId: sid, status: status });
-            
+
             // 2. اللوجيك الجديد: حفظ الواجب فقط لو الطالب "مش غائب"
-            if(hasHomeworkToday && status !== 'absent') {
-                hwScores[sid] = { 
-                    submitted: row.querySelector('.hw-check').checked, 
-                    score: null 
+            if (hasHomeworkToday && status !== 'absent') {
+                hwScores[sid] = {
+                    submitted: row.querySelector('.hw-check').checked,
+                    score: null
                 };
             }
         });
@@ -1295,7 +1348,7 @@ async function saveDailyData() {
         promises.push(addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`, data: { date, records: attRecords } }));
 
         // 2. حفظ الواجب محلياً وسحابياً (لو موجود)
-        if(hasHomeworkToday) {
+        if (hasHomeworkToday) {
             const hwData = { id: `${SELECTED_GROUP_ID}_HW_${date}`, groupId: SELECTED_GROUP_ID, name: `واجب ${date}`, date, scores: hwScores, type: 'daily' };
             promises.push(putToDB('assignments', hwData));
             promises.push(addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwData.id}`, data: hwData }));
@@ -1335,14 +1388,14 @@ async function startScanner(mode) {
 
 function stopScanner() {
     isScannerPaused = true;
-    if(videoElement && videoElement.srcObject) videoElement.srcObject.getTracks().forEach(t => t.stop());
+    if (videoElement && videoElement.srcObject) videoElement.srcObject.getTracks().forEach(t => t.stop());
     document.getElementById('scannerModal').classList.add('hidden');
-    if(videoElement) videoElement.style.transform = "";
-    if(animationFrameId) cancelAnimationFrame(animationFrameId);
+    if (videoElement) videoElement.style.transform = "";
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
 }
 
 function tickScanner() {
-    if(isScannerPaused || document.getElementById('scannerModal').classList.contains('hidden')) return;
+    if (isScannerPaused || document.getElementById('scannerModal').classList.contains('hidden')) return;
     if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
         const canvas = document.createElement('canvas');
         canvas.width = videoElement.videoWidth;
@@ -1358,16 +1411,16 @@ function tickScanner() {
 
 function handleScan(scannedText) {
     // 1. تنظيف النص المقروء
-    const qrCode = scannedText.replace(/"/g, '').trim(); 
+    const qrCode = scannedText.replace(/"/g, '').trim();
 
     // 2. البحث في طلاب المجموعة الحالية
-    const matchedStudents = allStudents.filter(s => 
-        (s.parentPhoneNumber && s.parentPhoneNumber.trim() === qrCode) || 
+    const matchedStudents = allStudents.filter(s =>
+        (s.parentPhoneNumber && s.parentPhoneNumber.trim() === qrCode) ||
         s.id === qrCode
     );
 
     if (matchedStudents.length === 0) {
-        return; 
+        return;
     }
 
     // 3. لقينا طالب! نشغل الصوت ونوقف الكاميرا لحظة
@@ -1377,26 +1430,26 @@ function handleScan(scannedText) {
     // حالة 1: طالب واحد فقط (ده الطبيعي)
     if (matchedStudents.length === 1) {
         const student = matchedStudents[0];
-        showScanSuccessUI(student); 
-        
-        if(currentScannerMode === 'daily') {
+        showScanSuccessUI(student);
+
+        if (currentScannerMode === 'daily') {
             // 👇👇 ضيف السطر ده هنا 👇👇
             checkGoldenTicket(student.name); // 🎰 تفعيل التذكرة الذهبية
             // 👆👆 ------------------ 👆👆
             processDailyScan(student);
         }
         else if (currentScannerMode === 'payments') processPaymentScan(student);
-        
-    } 
+
+    }
     // حالة 2: أكتر من طالب بنفس الرقم (إخوات)
     else {
-        const student = matchedStudents[0]; 
-        
+        const student = matchedStudents[0];
+
         showToast(`تم العثور على ${matchedStudents.length} طلاب (إخوة)، تم اختيار ${student.name}`);
-        
+
         showScanSuccessUI(student);
-        
-        if(currentScannerMode === 'daily') {
+
+        if (currentScannerMode === 'daily') {
             // 👇👇 وهنا كمان عشان لو إخوات 👇👇
             checkGoldenTicket(student.name); // 🎰 تفعيل التذكرة الذهبية
             // 👆👆 --------------------- 👆👆
@@ -1410,7 +1463,7 @@ function handleScan(scannedText) {
 function showScanSuccessUI(student) {
     const overlay = document.getElementById('scannerOverlay');
     const feedback = document.getElementById('scannedStudentName');
-    
+
     // تحديث الاسم اللي بيظهر في نص الشاشة
     document.getElementById('feedbackNameText').innerText = student.name;
 
@@ -1427,13 +1480,13 @@ function showScanSuccessUI(student) {
 
 function processDailyScan(student) {
     const row = document.querySelector(`#dailyStudentsList > div[data-sid="${student.id}"]`);
-    if(row) {
+    if (row) {
         const sel = row.querySelector('.att-select');
         sel.value = 'present';
         sel.dispatchEvent(new Event('change'));
         row.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    if(hasHomeworkToday) {
+    if (hasHomeworkToday) {
         currentPendingStudentId = student.id;
         document.getElementById('hwStudentName').innerText = student.name;
         document.getElementById('hwConfirmModal').classList.remove('hidden');
@@ -1443,9 +1496,9 @@ function processDailyScan(student) {
 }
 
 function resolveHomework(isSubmitted) {
-    if(currentPendingStudentId) {
+    if (currentPendingStudentId) {
         const row = document.querySelector(`#dailyStudentsList > div[data-sid="${currentPendingStudentId}"]`);
-        if(row) {
+        if (row) {
             const chk = row.querySelector('.hw-check');
             chk.checked = isSubmitted;
         }
@@ -1460,11 +1513,11 @@ function processPaymentScan(student) {
     const row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
     const defaultAmountInput = document.getElementById('defaultAmountInput');
 
-    if(row) {
+    if (row) {
         const checkbox = row.querySelector('.payment-check');
         const input = row.querySelector('.payment-input');
 
-        if(!checkbox.checked) {
+        if (!checkbox.checked) {
             checkbox.checked = true;
             input.value = defaultAmountInput.value || 0;
             checkbox.dispatchEvent(new Event('change'));
@@ -1483,11 +1536,11 @@ function renderStudents(filter = "") {
     container.innerHTML = '';
     const filtered = allStudents.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
 
-    if(filtered.length === 0) {
+    if (filtered.length === 0) {
         container.innerHTML = `<p class="text-center text-gray-500">${translations[currentLang].noStudentsInGroup}</p>`;
         return;
     }
-    const DOMAIN_URL = "https://ahmadaboelghet.github.io/spot_dashboard/"; 
+    const DOMAIN_URL = "https://ahmadaboelghet.github.io/spot_dashboard/";
     filtered.forEach(s => {
         const pNum = s.parentPhoneNumber ? s.parentPhoneNumber.trim() : "";
         const fullDirectLink = `${DOMAIN_URL}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
@@ -1524,15 +1577,15 @@ function renderStudents(filter = "") {
             }
             const msg = `مرحباً ولي أمر الطالب  *${s.name}*\n\nلمتابعة مستوى الطالب (الغياب، الدرجات، والمصاريف) لحظياً، يرجى الدخول على الرابط الخاص به:\n${fullDirectLink}\n\nدمتم بخير`;
             let waPhone = pNum.replace(/\s+/g, '');
-            if (!waPhone.startsWith('+')) waPhone = '+2' + waPhone; 
+            if (!waPhone.startsWith('+')) waPhone = '+2' + waPhone;
 
             window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
         };
 
         div.querySelector('.link-btn').onclick = () => {
             navigator.clipboard.writeText(fullDirectLink)
-                .then(() => showToast(translations[currentLang].linkCopied)) 
-                .catch(() => showToast(translations[currentLang].copyFailed, "error")); 
+                .then(() => showToast(translations[currentLang].linkCopied))
+                .catch(() => showToast(translations[currentLang].copyFailed, "error"));
         };
 
         div.querySelector('.msg-btn').onclick = () => openMessageModal(s);
@@ -1552,7 +1605,7 @@ function openMessageModal(student) {
 
 async function sendCustomMessageAction() {
     const msg = document.getElementById('customMessageInput').value.trim();
-    if(!msg) return showToast(translations[currentLang].writeMsgFirst, "error");
+    if (!msg) return showToast(translations[currentLang].writeMsgFirst, "error");
 
     const btn = document.getElementById('confirmSendMsgBtn');
     const originalContent = btn.innerHTML;
@@ -1629,22 +1682,22 @@ async function shareCardAction() {
 function showStudentQR(student) {
     // 1. عرض اسم الطالب
     document.getElementById('idStudentName').innerText = student.name;
-    
+
     // 2. تجهيز البيانات (رقم التليفون)
     const qrContent = student.parentPhoneNumber ? student.parentPhoneNumber.trim() : student.id;
-    
+
     // 3. عرض الرقم تحت الـ QR (عشان لو الكاميرا معلجة المدرس يكتبه)
     document.getElementById('idStudentPhone').innerText = qrContent;
 
     // 4. توليد الـ QR Code
     document.getElementById('idQrcode').innerHTML = '';
     new QRCode(document.getElementById('idQrcode'), {
-        text: qrContent, 
+        text: qrContent,
         width: 180, // صغرته سنة عشان يبان أشيك
         height: 180,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
     });
 
     // 5. فتح المودال
@@ -1653,7 +1706,7 @@ function showStudentQR(student) {
 
 async function addNewStudent() {
     // ✅ زيادة أمان: التأكد من وجود مجموعة
-    if(!SELECTED_GROUP_ID) {
+    if (!SELECTED_GROUP_ID) {
         showToast(translations[currentLang].selectGroupFirst || "الرجاء اختيار مجموعة أولاً", "error");
         return;
     }
@@ -1662,7 +1715,7 @@ async function addNewStudent() {
     const phoneInput = document.getElementById('newParentPhoneNumber');
     const name = nameInput.value;
     const phone = phoneInput.value;
-    if(!name) return;
+    if (!name) return;
     const id = generateUniqueId();
     const data = { id, groupId: SELECTED_GROUP_ID, name, parentPhoneNumber: phone };
     await putToDB('students', data);
@@ -1674,7 +1727,7 @@ async function addNewStudent() {
 }
 
 async function deleteStudent(id) {
-    if(!confirm(translations[currentLang].confirmDelete)) return;
+    if (!confirm(translations[currentLang].confirmDelete)) return;
     await deleteFromDB('students', id);
     await addToSyncQueue({ type: 'delete', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${id}` });
     allStudents = allStudents.filter(s => s.id !== id);
@@ -1688,12 +1741,12 @@ async function renderPaymentsList() {
     const container = document.getElementById('paymentsList');
     container.innerHTML = '';
 
-    if(!month || !allStudents.length) return;
+    if (!month || !allStudents.length) return;
 
     const payId = `${SELECTED_GROUP_ID}_PAY_${month}`;
     const doc = await getFromDB('payments', payId);
     const map = {};
-    if(doc?.records) {
+    if (doc?.records) {
         doc.records.forEach(r => map[r.studentId] = r.amount);
     }
 
@@ -1720,8 +1773,8 @@ async function renderPaymentsList() {
 
         checkbox.addEventListener('change', (e) => {
             const defaultVal = defaultAmountInput.value || 0;
-            if(e.target.checked) {
-                if(!input.value || input.value == 0) input.value = defaultVal;
+            if (e.target.checked) {
+                if (!input.value || input.value == 0) input.value = defaultVal;
                 div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.add('text-green-600', 'font-bold');
             } else {
@@ -1732,7 +1785,7 @@ async function renderPaymentsList() {
         });
 
         input.addEventListener('input', (e) => {
-            if(e.target.value > 0) {
+            if (e.target.value > 0) {
                 checkbox.checked = true;
                 div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
             } else {
@@ -1746,7 +1799,7 @@ async function renderPaymentsList() {
 
 async function savePayments() {
     const month = document.getElementById('paymentMonthInput').value;
-    if(!month) return showToast(translations[currentLang].paymentMonthMissing, 'error');
+    if (!month) return showToast(translations[currentLang].paymentMonthMissing, 'error');
     const records = [];
     document.querySelectorAll('#paymentsList > div').forEach(div => {
         const val = div.querySelector('.payment-input').value;
@@ -1771,42 +1824,42 @@ async function loadExams() {
 }
 async function addNewExam() {
     const name = document.getElementById('newExamName').value;
-    if(!name) return;
-    
+    if (!name) return;
+
     // 1. إنشاء الـ ID وحفظه
     const id = generateUniqueId();
-    
-    const data = { 
-        id, 
-        groupId: SELECTED_GROUP_ID, 
-        name, 
-        type: 'exam', 
-        scores: {}, 
-        date: new Date().toISOString().slice(0, 10) 
-    }; 
-    
+
+    const data = {
+        id,
+        groupId: SELECTED_GROUP_ID,
+        name,
+        type: 'exam',
+        scores: {},
+        date: new Date().toISOString().slice(0, 10)
+    };
+
     await putToDB('assignments', data);
     await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`, id, data });
-    
+
     document.getElementById('newExamName').value = '';
-    
+
     // 2. إعادة تحميل قائمة الامتحانات
     await loadExams();
-    
+
     // 3. ✨ السحر هنا: تحديد الامتحان الجديد تلقائياً ✨
     const examSelect = document.getElementById('examSelect');
     examSelect.value = id; // اختيار الامتحان الجديد في القائمة
-    
+
     // 4. عرض جدول الدرجات فوراً
     renderExamGrades();
-    
+
     showToast(translations[currentLang].examCreatedSuccess);
 }
 async function renderExamGrades() {
     const examId = document.getElementById('examSelect').value;
     const container = document.getElementById('examGradesList');
     container.innerHTML = '';
-    if(!examId) return;
+    if (!examId) return;
     const exam = await getFromDB('assignments', examId);
     const scores = exam.scores || {};
     allStudents.forEach(s => {
@@ -1819,9 +1872,9 @@ async function renderExamGrades() {
 }
 async function saveExamGrades() {
     const examId = document.getElementById('examSelect').value;
-    if(!examId) return;
+    if (!examId) return;
     const scores = {};
-    document.querySelectorAll('.exam-score-input').forEach(inp => { if(inp.value !== '') scores[inp.dataset.sid] = { score: inp.value }; });
+    document.querySelectorAll('.exam-score-input').forEach(inp => { if (inp.value !== '') scores[inp.dataset.sid] = { score: inp.value }; });
     const existing = await getFromDB('assignments', examId);
     existing.scores = scores;
     await putToDB('assignments', existing);
@@ -1833,7 +1886,7 @@ function saveProfile() {
     const name = document.getElementById('teacherNameInput').value;
     const subject = document.getElementById('teacherSubjectInput').value;
     const password = document.getElementById('profilePasswordInput').value.trim();
-    if(!name) return;
+    if (!name) return;
     putToDB('teachers', { id: TEACHER_ID, name, subject, password });
     addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}`, data: { name, subject, password } });
     document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${name}`;
@@ -1853,28 +1906,28 @@ function updateThemeIcon() {
 // ✅ دالة استرجاع الإعدادات وتسجيل الدخول التلقائي
 async function loadPreferences() {
     // 1. استرجاع الوضع الليلي
-    if(localStorage.getItem('learnaria-dark') === 'true') {
+    if (localStorage.getItem('learnaria-dark') === 'true') {
         document.body.classList.add('dark-mode');
         updateThemeIcon();
     }
 
     // 2. استرجاع بيانات المعلم (تسجيل الدخول التلقائي)
     const storedID = localStorage.getItem('learnaria-tid');
-    
-    if(storedID) {
+
+    if (storedID) {
         // لو لقينا ID، نرجعه للمتغير ونخفي شاشة الدخول
         TEACHER_ID = storedID;
-        
+
         // محاولة جلب بيانات المعلم من الداتابيز المحلية لتعبئة البروفايل
         try {
             const teacherData = await getFromDB('teachers', TEACHER_ID);
-            if(teacherData) {
+            if (teacherData) {
                 document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${teacherData.name || ''}`;
                 document.getElementById('teacherNameInput').value = teacherData.name || '';
                 document.getElementById('teacherSubjectInput').value = teacherData.subject || '';
                 document.getElementById('profilePasswordInput').value = teacherData.password || '';
             }
-        } catch(e) { console.log("Auto-login fetch error:", e); }
+        } catch (e) { console.log("Auto-login fetch error:", e); }
 
         // إخفاء شاشة تسجيل الدخول وإظهار المحتوى
         document.getElementById('landingSection').classList.add('hidden');
@@ -1890,23 +1943,23 @@ function toggleLang() {
     currentLang = currentLang === 'ar' ? 'en' : 'ar';
     document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
     document.getElementById('languageToggleButton').innerText = currentLang === 'ar' ? 'EN' : 'ع';
-    
+
     document.querySelectorAll('[data-key]').forEach(el => {
         const key = el.dataset.key;
-        if(translations[currentLang][key]) {
+        if (translations[currentLang][key]) {
             // ✅ التعديل الضروري هنا: استخدمنا innerHTML بدل innerText
-            el.innerHTML = translations[currentLang][key]; 
+            el.innerHTML = translations[currentLang][key];
         }
     });
 
     document.querySelectorAll('[data-key-placeholder]').forEach(el => {
         const key = el.dataset.keyPlaceholder;
-        if(translations[currentLang][key]) el.placeholder = translations[currentLang][key];
+        if (translations[currentLang][key]) el.placeholder = translations[currentLang][key];
     });
 
-    if(SELECTED_GROUP_ID && !document.getElementById('tab-daily').classList.contains('hidden')) renderDailyList();
-    if(SELECTED_GROUP_ID && !document.getElementById('tab-students').classList.contains('hidden')) renderStudents();
-    
+    if (SELECTED_GROUP_ID && !document.getElementById('tab-daily').classList.contains('hidden')) renderDailyList();
+    if (SELECTED_GROUP_ID && !document.getElementById('tab-students').classList.contains('hidden')) renderStudents();
+
     loadGroups();
     renderDayCheckboxes();
     updateOnlineStatus();
@@ -1916,7 +1969,7 @@ function setupPhoneInput(inputId) {
     const input = document.getElementById(inputId);
     if (!input) return;
 
-    input.addEventListener('input', function(e) {
+    input.addEventListener('input', function (e) {
         let val = this.value;
 
         const arabicMap = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
@@ -1926,7 +1979,7 @@ function setupPhoneInput(inputId) {
 
         if (val.length >= 2) {
             if (!val.startsWith('01')) {
-            
+
             }
         }
 
@@ -1936,9 +1989,9 @@ function setupPhoneInput(inputId) {
 
         this.value = val;
     });
-    
+
     input.setAttribute("maxLength", "11");
-    input.setAttribute("inputmode", "numeric"); 
+    input.setAttribute("inputmode", "numeric");
 }
 
 // ==========================================
@@ -1983,13 +2036,13 @@ function saveGoldenSettingsUI() {
 
     // تحديث المتغير العام
     goldenConfig = { isEnabled, winRate, prizes };
-    
+
     // حفظ في الذاكرة
     localStorage.setItem('spot_golden_config', JSON.stringify(goldenConfig));
-    
+
     // إخفاء المودال
     document.getElementById('goldenSettingsModal').classList.add('hidden');
-    
+
     // تحديث شكل الشريط
     updateGoldenButtonUI();
 
@@ -2010,14 +2063,14 @@ function updateGoldenButtonUI() {
         dot.classList.remove('hidden');
         badge.innerText = goldenConfig.winRate + '%';
         badge.classList.remove('hidden');
-        
+
         // نور الشريط
         btnBar.classList.add('bg-yellow-50/80', 'dark:bg-yellow-900/30', '!border-yellow-500');
     } else {
         // ⛔ حالة الإيقاف
         dot.classList.add('hidden');
         badge.classList.add('hidden');
-        
+
         // طفي الشريط
         btnBar.classList.remove('bg-yellow-50/80', 'dark:bg-yellow-900/30', '!border-yellow-500');
     }
@@ -2029,7 +2082,7 @@ function openGoldenSettings() {
     document.getElementById('winRateInput').value = goldenConfig.winRate;
     document.getElementById('winRateDisplay').innerText = goldenConfig.winRate + '%';
     document.getElementById('prizesInput').value = goldenConfig.prizes.join('\n');
-    
+
     document.getElementById('goldenSettingsModal').classList.remove('hidden');
 }
 
@@ -2042,7 +2095,7 @@ function checkGoldenTicket(studentName) {
 
     if (luck <= goldenConfig.winRate) {
         const randomPrize = goldenConfig.prizes[Math.floor(Math.random() * goldenConfig.prizes.length)];
-        
+
         // تشغيل الزينة (لو الدالة موجودة)
         if (typeof launchConfetti === 'function') {
             launchConfetti();
@@ -2056,7 +2109,7 @@ function checkGoldenTicket(studentName) {
             prizeNameEl.innerText = randomPrize;
             modalEl.style.display = 'flex';
         }
-        
+
         console.log(`🎰 Winner! Student: ${studentName}, Prize: ${randomPrize}`);
     }
 }
@@ -2072,7 +2125,7 @@ function launchConfetti() {
 
     function random(min, max) { return Math.random() * (max - min) + min; }
 
-    var interval = setInterval(function() {
+    var interval = setInterval(function () {
         var timeLeft = animationEnd - Date.now();
         if (timeLeft <= 0) return clearInterval(interval);
         var particleCount = 50 * (timeLeft / duration);
@@ -2084,7 +2137,7 @@ function launchConfetti() {
 // 7. دالة إغلاق النافذة
 function closeGoldenTicket() {
     const modal = document.getElementById('goldenTicketModal');
-    if(modal) modal.style.display = 'none';
+    if (modal) modal.style.display = 'none';
 }
 
 // 8. تفعيل المستمعين (Listeners)
@@ -2093,23 +2146,207 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // زرار الإعدادات
     const openBtn = document.getElementById('openGoldenSettingsBtn');
-    if(openBtn) openBtn.addEventListener('click', openGoldenSettings);
+    if (openBtn) openBtn.addEventListener('click', openGoldenSettings);
 
     // زرار إغلاق الإعدادات
     const closeBtn = document.getElementById('closeGoldenSettings');
-    if(closeBtn) closeBtn.addEventListener('click', () => {
+    if (closeBtn) closeBtn.addEventListener('click', () => {
         document.getElementById('goldenSettingsModal').classList.add('hidden');
     });
 
     // زرار الحفظ
     const saveBtn = document.getElementById('saveGoldenSettings');
-    if(saveBtn) saveBtn.addEventListener('click', saveGoldenSettingsUI);
+    if (saveBtn) saveBtn.addEventListener('click', saveGoldenSettingsUI);
 
     // تحديث رقم النسبة
     const rateInput = document.getElementById('winRateInput');
-    if(rateInput) {
+    if (rateInput) {
         rateInput.addEventListener('input', (e) => {
             document.getElementById('winRateDisplay').innerText = e.target.value + '%';
         });
     }
 });
+
+// ==========================================
+// 10. SPOT BOT (AI MANAGER) 🤖
+// ==========================================
+
+// رفع الملف وتشغيل الـ Pipeline
+async function handleBotFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = [
+        'application/pdf',
+        'image/jpeg', 'image/png', 'image/webp',
+        'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-m4a', 'audio/mp4', 'audio/aac', 'audio/ogg'
+    ];
+
+    if (!allowedTypes.includes(file.type) && !file.type.startsWith('audio/')) {
+        showToast("نوع الملف غير مدعوم. مسموح بـ PDF، صور، أو صوت فقط", "error");
+        return;
+    }
+
+    if (!TEACHER_ID) {
+        showToast("يجب تسجيل الدخول أولاً", "error");
+        return;
+    }
+
+    // إظهار شريط التقدم
+    const progressContainer = document.getElementById('uploadProgressContainer');
+    const progressBar = document.getElementById('uploadProgressBar');
+    const percentText = document.getElementById('uploadPercent');
+    const nameText = document.getElementById('uploadFileName');
+
+    progressContainer.classList.remove('hidden');
+    nameText.innerText = file.name;
+    progressBar.style.width = '0%';
+    percentText.innerText = '0%';
+
+    // المسار السحري اللي بيشغل الـ Cloud Function
+    // teachers/{teacherId}/{filename}
+    const storageRef = firebase.storage().ref().child(`teachers/${TEACHER_ID}/${file.name}`);
+    const uploadTask = storageRef.put(file);
+
+    uploadTask.on('state_changed',
+        (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            progressBar.style.width = progress + '%';
+            percentText.innerText = Math.floor(progress) + '%';
+        },
+        (error) => {
+            console.error(error);
+            showToast("فشل الرفع", "error");
+            progressContainer.classList.add('hidden');
+        },
+        () => {
+            // اكتمل الرفع
+            showToast("تم الرفع! جاري المعالجة...", "success");
+
+            // تصفير الانبوت
+            document.getElementById('botFileInput').value = '';
+
+            // إخفاء الشريط بعد ثانية
+            setTimeout(() => {
+                progressContainer.classList.add('hidden');
+                loadBotFiles(); // تحديث القائمة
+            }, 2000);
+        }
+    );
+}
+
+// تحميل الملفات المرفوعة
+async function loadBotFiles() {
+    const listContainer = document.getElementById('botFilesList');
+    listContainer.innerHTML = '<div class="flex justify-center p-4"><i class="ri-loader-4-line animate-spin text-2xl"></i></div>';
+
+    if (!TEACHER_ID) return;
+
+    try {
+        // بنجيب الملفات من Storage مباشرة عشان نعرض الأسماء الحقيقية
+        const storageRef = firebase.storage().ref().child(`teachers/${TEACHER_ID}`);
+        const result = await storageRef.listAll();
+
+        if (result.items.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center py-8 opacity-50">
+                    <i class="ri-folder-open-line text-4xl mb-2"></i>
+                    <p>المكتبة فارغة</p>
+                </div>
+            `;
+            return;
+        }
+
+        listContainer.innerHTML = '';
+
+        result.items.forEach(itemRef => {
+            // تحديد نوع الملف
+            const isImg = itemRef.name.match(/\.(jpg|jpeg|png|webp)$/i);
+            const isAudio = itemRef.name.match(/\.(mp3|wav|m4a|aac|ogg)$/i); // 👈 كشف الصوت
+
+            let iconClass = "ri-file-pdf-2-fill text-red-500";
+            let bgClass = "bg-red-50";
+
+            if (isImg) {
+                iconClass = "ri-image-2-fill text-blue-500";
+                bgClass = "bg-blue-50";
+            } else if (isAudio) { // 👈 ستايل الصوت
+                iconClass = "ri-mic-2-fill text-purple-500";
+                bgClass = "bg-purple-50";
+            }
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-3 bg-white dark:bg-darkSurface border border-gray-100 dark:border-gray-700 rounded-xl transition-all hover:border-brand';
+
+            div.innerHTML = `
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                        <i class="ri-file-pdf-2-fill text-xl"></i>
+                    </div>
+                    <div class="truncate">
+                        <p class="font-bold text-sm text-gray-800 dark:text-gray-200 truncate">${itemRef.name}</p>
+                        <p class="text-[10px] text-green-600 font-bold flex items-center gap-1">
+                            <i class="ri-check-double-line"></i> جاهز للاستخدام
+                        </p>
+                    </div>
+                </div>
+                <button class="btn-icon w-8 h-8 bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 dark:bg-white/5 dark:hover:bg-red-900/20 transition-colors" title="حذف">
+                    <i class="ri-delete-bin-line"></i>
+                </button>
+            `;
+
+            // زرار الحذف
+            div.querySelector('button').onclick = async () => {
+                if (confirm("هل أنت متأكد من حذف هذا الملف من ذاكرة البوت؟")) {
+                    try {
+                        await itemRef.delete();
+                        showToast("تم الحذف بنجاح");
+
+                        // ملاحظة: الحذف هنا من Storage بس
+                        // الـ Cloud Function مش هتمسح الـ Link من Firestore أوتوماتيك (إلا لو عملنا Trigger للحذف)
+                        // بس مش مشكلة كبيرة دلوقتي، البوت هيحاول يفتح لينك مكسور وهيتجاهله
+
+                        loadBotFiles(); // تحديث القائمة
+                    } catch (err) {
+                        showToast("خطأ في الحذف", "error");
+                    }
+                }
+            };
+
+            listContainer.appendChild(div);
+        });
+
+    } catch (error) {
+        console.error(error);
+        listContainer.innerHTML = `<p class="text-center text-red-500">حدث خطأ في تحميل الملفات</p>`;
+    }
+}
+
+// دالة نسخ رسالة الدعوة
+function copyBotInvite() {
+    if (!TEACHER_ID) return;
+
+    // رقم البوت (تويليو ساندبوكس حالياً - غيره لما تطلع لايف)
+    const botNumber = "+14155238886"; 
+    
+    // رسالة الدعوة الاحترافية
+    const inviteMsg = `
+👋 أهلاً يا شباب!
+
+أنا فعلت ليكم "المساعد الذكي" (Spot AI) عشان يساعدكم في المذاكرة ويجاوب على أسئلتكم من الملازم بتاعتي طول الـ 24 ساعة! 🤖📚
+
+1️⃣ ادخلوا كلموا البوت هنا:
+https://wa.me/${botNumber.replace('+', '')}?text=join%20off-drive
+
+2️⃣ أول ما يرد عليكم، ابعتوا له "كود المدرس" ده عشان يعرف إنكم تبعي:
+*${TEACHER_ID}*
+
+جربوه واسألوه في أي حاجة في المنهج! 🚀
+`;
+
+    // النسخ للحافظة
+    navigator.clipboard.writeText(inviteMsg).then(() => {
+        showToast("تم نسخ رسالة الدعوة! ابعتها للطلاب فوراً 🚀");
+    }).catch(err => {
+        showToast("فشل النسخ", "error");
+    });
+}
