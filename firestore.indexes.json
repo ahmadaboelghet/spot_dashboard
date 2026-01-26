@@ -1,0 +1,20 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "students",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "parentPhoneNumber",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "parentPhoneNumber",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    }
+  ],
+  "fieldOverrides": []
+}

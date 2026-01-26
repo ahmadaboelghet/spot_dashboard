@@ -9,7 +9,7 @@
 // ==========================================
 // 1. FIREBASE CONFIG
 // ==========================================
-const firebaseConfig = {
+const prodConfig = {
     apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
     authDomain: "learnaria-483e7.firebaseapp.com",
     projectId: "learnaria-483e7",
@@ -19,14 +19,56 @@ const firebaseConfig = {
     measurementId: "G-T68CEZS4YC"
 };
 
-let app, firestoreDB;
+const devConfig = {
+  apiKey: "AIzaSyAvWZpOmVqXxJhpcnuUod-kGn_JEFN7XFE",
+  authDomain: "spot-dev-17336.firebaseapp.com",
+  projectId: "spot-dev-17336",
+  storageBucket: "spot-dev-17336.firebasestorage.app",
+  messagingSenderId: "581004817275",
+  appId: "1:581004817275:web:59c8d43a4c4aeae7fd43de",
+  measurementId: "G-E4TN12XLED"
+};
+
+// ==========================================
+// 2. SMART INITIALIZATION (Auto-Switch)
+// ==========================================
+let app, firestoreDB, storage, functions;
+let activeConfig; // المتغير اللي شايل الكونفيج المختار
+
 try {
-    if (typeof firebase !== 'undefined') {
-        app = firebase.initializeApp(firebaseConfig);
-        firestoreDB = firebase.firestore();
-        firestoreDB.enablePersistence().catch(err => console.log("Persistence:", err.code));
+    // الكشف عن البيئة (لو العنوان localhost أو 127.0.0.1 يبقى إحنا بنجرب)
+    if (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "file:") {
+        console.log("🚧 Running in DEVELOPMENT mode (Test DB)");
+        activeConfig = devConfig;
+        
+        // علامة أمان: خط أحمر فوق عشان تعرف إنك في التست وماتقلقش وانت بتمسح
+        document.body.style.borderTop = "5px solid red"; 
+    } else {
+        console.log("🟢 Running in PRODUCTION mode (Live DB)");
+        activeConfig = prodConfig;
     }
-} catch (e) { console.error("Firebase Error:", e); }
+
+    if (typeof firebase !== 'undefined') {
+        // تشغيل التطبيق بالكونفيج المختار
+        app = firebase.initializeApp(activeConfig);
+        
+        // تفعيل الخدمات
+        firestoreDB = firebase.firestore();
+        storage = firebase.storage();
+        functions = firebase.functions(); // مهم عشان الشات بوت يشتغل
+
+        // تفعيل الكاش (Offline Persistence)
+        firestoreDB.enablePersistence().catch(err => {
+            if (err.code == 'failed-precondition') {
+                console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+            } else if (err.code == 'unimplemented') {
+                console.log('The current browser does not support all of the features required to enable persistence');
+            }
+        });
+    }
+} catch (e) { 
+    console.error("Firebase Initialization Error:", e); 
+}
 
 // ==========================================
 // 2. LOCAL DATABASE (IndexedDB) - FIXED
@@ -2420,8 +2462,10 @@ window.sendSpotMessage = async function() {
 };
 
 // دالة مساعدة لرسم الرسائل في الشاشة
+// دالة رسم الرسائل (مع زرار PDF)
 function addMessageToUI(text, sender) {
     const container = document.getElementById('chatMessages');
+    const msgId = `msg-${Date.now()}`; // ID فريد لكل رسالة عشان نعرف نصورها
     const div = document.createElement('div');
     div.className = "animate-fade-in-up mb-4";
     
@@ -2434,13 +2478,22 @@ function addMessageToUI(text, sender) {
             </div>
         `;
     } else {
+        // رسالة البوت + زرار الـ PDF
         div.innerHTML = `
-            <div class="flex gap-3 justify-start">
-                <div class="w-8 h-8 bg-gray-100 dark:bg-zinc-700/50 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 dark:text-yellow-500 text-xs border border-gray-200 dark:border-zinc-600">
+            <div class="flex gap-3 justify-start items-end group">
+                <div class="w-8 h-8 bg-zinc-200 dark:bg-zinc-700/50 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 dark:text-yellow-500 text-xs border border-gray-200 dark:border-zinc-600 mb-2">
                     <i class="ri-robot-2-fill"></i>
                 </div>
-                <div class="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-700 text-sm text-gray-700 dark:text-gray-200 max-w-[90%] leading-relaxed">
-                    ${text}
+                
+                <div class="flex flex-col gap-1 max-w-[90%]">
+                    <div id="${msgId}" class="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-700 text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
+                        ${text}
+                    </div>
+                    
+                    <button onclick="downloadMessageAsPDF('${msgId}')" 
+                            class="self-start text-[10px] bg-gray-100 dark:bg-zinc-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 hover:text-red-500 px-3 py-1 rounded-full transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100 duration-300">
+                        <i class="ri-file-pdf-line"></i> تحميل كملف PDF
+                    </button>
                 </div>
             </div>
         `;
@@ -2449,6 +2502,30 @@ function addMessageToUI(text, sender) {
     container.appendChild(div);
     scrollToBottom();
 }
+
+// دالة تحويل الرسالة لـ PDF 🖨️
+window.downloadMessageAsPDF = function(elementId) {
+    const element = document.getElementById(elementId);
+    
+    // إعدادات الملف
+    const opt = {
+        margin:       [10, 10, 10, 10], // الهوامش
+        filename:     `Spot_Exam_${new Date().toLocaleDateString()}.pdf`, // اسم الملف
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true }, // scale 2 عشان الجودة تبقي عالية
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // بدء التحويل (بيظهر لودينج صغير)
+    showToast("جاري إنشاء ملف الـ PDF... 📄");
+    
+    html2pdf().set(opt).from(element).save().then(() => {
+        showToast("تم تحميل الملف بنجاح! ✅");
+    }).catch(err => {
+        console.error(err);
+        showToast("حدث خطأ أثناء التحميل", "error");
+    });
+};
 
 function scrollToBottom() {
     const container = document.getElementById('chatMessages');

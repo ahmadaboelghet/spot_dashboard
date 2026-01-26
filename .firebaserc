@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "default": "learnaria-483e7",
+    "dev": "spot-dev-17336",
+    "prod": "learnaria-483e7"
+  },
+  "targets": {},
+  "etags": {}
+}
