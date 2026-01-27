@@ -2,6 +2,7 @@
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
+const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -681,8 +682,7 @@ initializeApp();
 // ==========================================
 const accountSid = "ACff17306c0ec58f2075e96940ea289bea";
 const authToken = "b530f2fbe1d6267edbeabf3a9be1ffca";
-const geminiApiKey = "AIzaSyDAE0-iJUruVI5M5v_NpXntiYe8CB62qj0";
-
+const geminiApiKey = "AIzaSyDwjmqQlri4OlBXbqTNGPby7ZLkH1sfgjk";
 const client = twilio(accountSid, authToken);
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 const fileManager = new GoogleAIFileManager(geminiApiKey);
@@ -892,70 +892,114 @@ exports.whatsappWebhook = onRequest(async (req, res) => {
 });
 
 /**
- * 3️⃣ شات الويب (للداش بورد والطلاب) 🌐
- * بتقبل: { message, teacherId, role }
+ * 🧠 دالة الشات الذكي (تدعم الامتحانات + الصور + الملفات)
  */
-exports.chatWithSpot = onCall({cors: true}, async (request) => {
-  const {message, teacherId, role} = request.data;
+exports.chatWithSpot = onCall({ 
+    cors: true, 
+    timeoutSeconds: 300, // ⏳ وقت كافي للتفكير
+    memory: "1GiB" 
+}, async (request) => {
+    
+    // 1. استلام البيانات
+    const { message, teacherId, role, image } = request.data;
 
-  if (!message || !teacherId) {
-    throw new HttpsError("invalid-argument", "الرسالة وكود المدرس مطلوبين");
-  }
+    try {
+        // 2. إعدادات الأمان (عشان الامتحانات تعدي)
+        const safetySettings = [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
+        ];
 
-  try {
-    // 1. هات ملفات المدرس
-    const teacherDoc = await db.collection("teachers").doc(teacherId).get();
-    let promptParts = [];
+        let promptParts = [];
 
-    // لو المدرس عنده ملفات، ضيفها للـ Prompt
-    if (teacherDoc.exists && teacherDoc.data().knowledgeBase) {
-      const knowledgeItems = teacherDoc.data().knowledgeBase;
-
-      promptParts = knowledgeItems.map((item) => {
-        // التعامل مع النظام الجديد (Object) والقديم (String)
-        if (typeof item === "object" && item.uri) {
-          return {
-            fileData: {mimeType: item.mimeType || "application/pdf", fileUri: item.uri},
-          };
+        // 3. جلب "ذاكرة" المدرس (الملفات المرفقة)
+        if (teacherId) {
+            const teacherDoc = await db.collection("teachers").doc(teacherId).get();
+            if (teacherDoc.exists && teacherDoc.data().knowledgeBase) {
+                const knowledgeItems = teacherDoc.data().knowledgeBase;
+                promptParts = knowledgeItems.map(item => ({
+                    fileData: { mimeType: item.mimeType || "application/pdf", fileUri: item.uri || item }
+                }));
+            }
         }
-        return {
-          fileData: {mimeType: "application/pdf", fileUri: item},
-        };
-      });
+
+        // 4. لو فيه صورة (للتصحيح)
+        if (image) {
+            promptParts.push({ inlineData: { mimeType: "image/jpeg", data: image } });
+        }
+
+        // 5. 🔥 "التعويذة" (System Instruction)
+        // دي أهم حتة.. بنقوله لو طلب امتحان، رد بـ JSON بس
+        let systemInstructionText = "";
+        
+        if (role === "teacher") {
+            systemInstructionText = `
+            أنت "Spot"، مساعد ذكي للمعلمين.
+            
+            🛑 تعليمات الامتحانات (STRICT JSON & LATEX & SVG MODE):
+            
+            1. **الرد يجب أن يكون Raw JSON فقط**. لا تضف أي مقدمات أو خاتمات.
+
+            2. ⚠️ **هام جداً: (تنسيق الرياضيات و LaTeX):**
+               - يجب كتابة **جميع** المعادلات والأرقام والرموز الرياضية بصيغة **LaTeX** محاطة بعلامات الدولار ($).
+               - **قاعدة الهروب (Escaping Rule):** عند كتابة أوامر LaTeX التي تبدأ بـ Backslash (مثل sqrt, frac, circ)، **يجب** استخدام **Double Backslash** (\\\\).
+               - أمثلة صحيحة: "$\\\\sqrt{25}$", "$90^\\\\circ$", "$\\\\frac{1}{2}$".
+
+            3. 🎨 **الرسم الهندسي (Geometry & Diagrams):**
+               - إذا كان السؤال هندسياً ويحتاج رسم توضيحي (مثل: مثلث، دائرة، شبه منحرف)، أضف حقلاً جديداً اسمه "diagram".
+               - القيمة يجب أن تكون كود **SVG** بسيط وصغير.
+               - ⚠️ **هام:** استخدم **Single Quotes (')** حصراً داخل سمات الـ SVG لتجنب كسر الـ JSON (مثال: <svg viewBox='0 0 100 100'>).
+               - استخدم خطوط سوداء وخلفية شفافة (stroke='black' fill='none' stroke-width='2').
+
+            4. **الصيغة المطلوبة (JSON Structure):**
+               {
+                 "isExam": true,
+                 "title": "عنوان الامتحان",
+                 "questions": [
+                   { 
+                     "q": "في الشكل المقابل، أوجد طول الضلع $AC$.", 
+                     "diagram": "<svg viewBox='0 0 200 150'><polygon points='50,130 150,130 150,50' stroke='black' fill='none' stroke-width='2'/><text x='155' y='45' font-size='12'>A</text></svg>",
+                     "type": "mcq", 
+                     "options": ["$5$", "$7$", "$10$", "$12$"], 
+                     "answer": "$5$" 
+                   },
+                   {
+                     "q": "أوجد ناتج $\\\\sqrt{64} + 3^2$",
+                     "type": "mcq",
+                     "options": ["$17$", "$11$"],
+                     "answer": "$17$"
+                   }
+                 ]
+               }
+
+            5. **للدردشة العادية (شرح درس، تلخيص، قوانين):**
+               - الهدف: إنشاء "مذكرة شرح" منسقة رياضياً.
+               - استخدم التنسيق التالي:
+                 * العناوين الرئيسية ابدأها بـ "## ".
+                 * الأمثلة اكتب قبلها "مثال:".
+                 * الملاحظات الهامة اكتب قبلها "ملاحظة هامة:".
+                 * اكتب المعادلات بصيغة LaTeX بين علامات الدولار ($).
+            `;
+        } else {
+            systemInstructionText = `أنت معلم خصوصي. اشرح للطالب من الملفات المرفقة فقط.`;
+        }
+
+        promptParts.push({ text: systemInstructionText });
+        if (message) promptParts.push({ text: `السؤال: ${message}` });
+
+        // 6. الإرسال للموديل السريع (1.5 Flash)
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: promptParts }],
+            safetySettings: safetySettings
+        });
+
+        return { response: result.response.text() };
+
+    } catch (error) {
+        console.error("Chat Error:", error);
+        return { response: "معلش، حصل خطأ بسيط في السيرفر. جرب تاني!" };
     }
-
-    // 2. تحديد شخصية البوت حسب الـ Role (مدرس ولا طالب)
-    let systemInstruction = "";
-    if (role === "teacher") {
-      systemInstruction = `
-        أنت مساعد شخصي ذكي للمعلم.
-        مهمتك مساعدته في تحضير الامتحانات، التلخيص، واستخراج الأسئلة من الملفات المرفقة.
-        أسلوبك: احترافي، دقيق، ومنظم.
-        السؤال: ${message}
-      `;
-    } else {
-      systemInstruction = `
-        أنت معلم خصوصي ذكي للطالب.
-        جاوب على أسئلة الطالب وشرح له الدروس بناءً *فقط* على ملفات المدرس المرفقة.
-        لو الإجابة مش في الملفات، اعتذر بأدب.
-        أسلوبك: ودود، مشجع، وبسيط.
-        السؤال: ${message}
-      `;
-    }
-
-    promptParts.push({text: systemInstruction});
-
-    // 3. الإرسال لـ Gemini
-    if (promptParts.length === 1) {
-      return {response: "⚠️ المدرس لسه مارفعش أي ملفات أو ملازم."};
-    }
-
-    const result = await model.generateContent(promptParts);
-    const responseText = result.response.text();
-
-    return {response: responseText};
-  } catch (error) {
-    console.error("Web Chat Error:", error);
-    throw new HttpsError("internal", "حصلت مشكلة أثناء التفكير");
-  }
 });
+

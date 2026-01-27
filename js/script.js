@@ -2461,48 +2461,119 @@ window.sendSpotMessage = async function() {
     }
 };
 
-// دالة مساعدة لرسم الرسائل في الشاشة
-// دالة رسم الرسائل (مع زرار PDF)
+// 🧹 دالة التنظيف (الإصدار "العبقري" لإصلاح كل أخطاء الباك سلاش)
+function cleanJSON(text) {
+    if (!text) return null;
+
+    // 1. تنظيف الـ HTML والماركداون
+    let clean = text.replace(/<br\s*\/?>/gi, ' ')
+                    .replace(/```json/gi, '')
+                    .replace(/```/g, '')
+                    .trim();
+
+    // 2. 🔥 الإصلاح الذكي (Smart Fix for Bad Escapes)
+    // بيمشي على أي (\) ويشوف الحرف اللي وراها
+    clean = clean.replace(/\\(.)/g, function(match, char) {
+        // دي الحروف الوحيدة المسموح يجي قبلها شرطة في الـ JSON
+        const validEscapes = ["\"", "\\", "/", "b", "f", "n", "r", "t", "u"];
+        
+        if (validEscapes.includes(char)) {
+            return match; // لو الحرف مسموح (زي \n أو \\)، سيبه زي ما هو
+        } else {
+            return "\\\\" + char; // لو مش مسموح (زي \d أو \p)، زود شرطة كمان (\\d)
+        }
+    });
+
+    // 3. استخراج الـ JSON
+    const startIndex = clean.indexOf('{');
+    const endIndex = clean.lastIndexOf('}');
+    
+    if (startIndex !== -1 && endIndex !== -1) {
+        return clean.substring(startIndex, endIndex + 1);
+    }
+    
+    return null;
+}
+
+// 🎨 دالة العرض (مع التقاط الأخطاء)
 function addMessageToUI(text, sender) {
     const container = document.getElementById('chatMessages');
-    const msgId = `msg-${Date.now()}`; // ID فريد لكل رسالة عشان نعرف نصورها
     const div = document.createElement('div');
-    div.className = "animate-fade-in-up mb-4";
-    
+    div.className = "mb-6 animate-fade-in-up w-full"; 
+
+    let examData = null;
+
+    if (sender === 'bot') {
+        const jsonStr = cleanJSON(text);
+        if (jsonStr) {
+            try {
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.isExam) examData = parsed;
+            } catch (e) {
+                // ليس امتحان، تجاهل الخطأ
+            }
+        }
+    }
+
     if (sender === 'user') {
+        // رسالة المستخدم
         div.innerHTML = `
-            <div class="flex justify-end">
-                <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-5 py-3 rounded-2xl rounded-tr-none shadow-md shadow-yellow-500/10 text-sm font-bold max-w-[85%]">
+            <div class="flex justify-end items-end gap-2">
+                <div class="bg-gradient-to-tr from-yellow-500 to-yellow-600 text-black px-5 py-3 rounded-2xl rounded-tr-none font-bold text-sm shadow-md max-w-[85%]">
                     ${text}
                 </div>
-            </div>
-        `;
-    } else {
-        // رسالة البوت + زرار الـ PDF
+            </div>`;
+    } 
+    else if (examData) {
+        // 📝 كارت الامتحان (زرار طباعة الامتحان)
         div.innerHTML = `
-            <div class="flex gap-3 justify-start items-end group">
-                <div class="w-8 h-8 bg-zinc-200 dark:bg-zinc-700/50 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 dark:text-yellow-500 text-xs border border-gray-200 dark:border-zinc-600 mb-2">
+            <div class="flex gap-3 justify-start items-start w-full">
+                <div class="w-10 h-10 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 border border-gray-100 shadow-sm">
+                    <i class="ri-file-list-3-line text-xl"></i>
+                </div>
+                <div class="bg-white dark:bg-zinc-900 border border-yellow-400 rounded-2xl rounded-tl-none overflow-hidden w-full md:w-[85%] shadow-xl">
+                    <div class="p-5">
+                        <h3 class="font-black text-xl text-gray-800 dark:text-white mb-2">${examData.title}</h3>
+                        <p class="text-xs text-gray-500 mb-6">عدد الأسئلة: ${examData.questions.length}</p>
+                        <button onclick='printExam(${JSON.stringify(examData).replace(/'/g, "&apos;")})' 
+                                class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md">
+                            <i class="ri-printer-fill text-lg"></i>
+                            <span>طباعة الامتحان (PDF)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+    } 
+    else {
+        // 🤖 رسالة الشرح العادية (زرار حفظ المذكرة PDF)
+        
+        // تشفير النص عشان نقدر نبعته للدالة من غير مشاكل
+        const safeText = encodeURIComponent(text);
+
+        div.innerHTML = `
+            <div class="flex gap-3 justify-start items-start group">
+                 <div class="w-8 h-8 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 border border-gray-100 shadow-sm">
                     <i class="ri-robot-2-fill"></i>
                 </div>
-                
-                <div class="flex flex-col gap-1 max-w-[90%]">
-                    <div id="${msgId}" class="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-700 text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
+                <div class="flex flex-col gap-2 max-w-[90%]">
+                    <div class="bg-white dark:bg-zinc-900 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-800 text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
                         ${text}
                     </div>
                     
-                    <button onclick="downloadMessageAsPDF('${msgId}')" 
-                            class="self-start text-[10px] bg-gray-100 dark:bg-zinc-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 hover:text-red-500 px-3 py-1 rounded-full transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100 duration-300">
-                        <i class="ri-file-pdf-line"></i> تحميل كملف PDF
+                    <button onclick="printStudyNote(decodeURIComponent('${safeText}'))" 
+                            class="self-start text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 border cursor-pointer
+                                   bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100
+                                   dark:bg-zinc-800 dark:text-gray-200 dark:border-zinc-700 dark:hover:bg-zinc-700">
+                        <i class="ri-file-pdf-2-line text-red-500"></i>
+                        <span>حفظ كـ مذكرة (PDF)</span>
                     </button>
                 </div>
-            </div>
-        `;
+            </div>`;
     }
     
     container.appendChild(div);
-    scrollToBottom();
+    container.scrollTop = container.scrollHeight;
 }
-
 // دالة تحويل الرسالة لـ PDF 🖨️
 window.downloadMessageAsPDF = function(elementId) {
     const element = document.getElementById(elementId);
@@ -2531,3 +2602,275 @@ function scrollToBottom() {
     const container = document.getElementById('chatMessages');
     container.scrollTop = container.scrollHeight;
 }
+
+window.printExam = function(examData) {
+    const printWindow = window.open('', '_blank');
+    
+    const toArabicNum = (n) => n.toLocaleString('ar-EG');
+    const getOptionLabel = (i) => ['(أ)', '(ب)', '(ج)', '(د)'][i] || `(${i+1})`;
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <title>${examData.title}</title>
+        <meta charset="UTF-8">
+        
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+        <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+        
+        <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+        
+        <style>
+            body { font-family: 'IBM Plex Sans Arabic', sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; background: #fff; }
+            mjx-container { font-size: 115% !important; direction: ltr; display: inline-block; }
+            
+            .exam-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 40px; }
+            .exam-title { font-family: 'Amiri', serif; font-size: 28px; font-weight: 900; margin-bottom: 15px; }
+            .student-info { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; font-family: 'Amiri', serif; }
+
+            .question-container { display: flex; gap: 15px; margin-bottom: 30px; page-break-inside: avoid; align-items: flex-start; }
+            .q-num-box { background-color: #0056b3; color: white; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-top: 5px; flex-shrink: 0; }
+            .q-body { width: 100%; }
+            .q-text { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: #222; }
+
+            /* تنسيق الرسم الهندسي */
+            .diagram-box {
+                margin: 15px 0;
+                display: flex;
+                justify-content: center;
+            }
+            .diagram-box svg {
+                max-width: 250px; /* حجم مناسب للرسمة */
+                height: auto;
+                border: 1px dashed #ccc; /* إطار خفيف عشان تبان */
+                padding: 10px;
+                border-radius: 8px;
+            }
+            /* تنسيق النصوص داخل الرسمة */
+            .diagram-box text { font-family: sans-serif; font-weight: bold; }
+
+            .mcq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px 30px; }
+            .option-row { display: flex; align-items: center; gap: 10px; font-size: 18px; }
+            .opt-char { color: #0056b3; font-weight: 900; font-family: 'Amiri', serif; }
+
+            .footer { position: fixed; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #eee; padding-top: 10px; }
+        </style>
+
+        <script>
+            window.MathJax = {
+                tex: { inlineMath: [['$', '$']] },
+                startup: {
+                    pageReady: () => {
+                        return MathJax.startup.defaultPageReady().then(() => {
+                            setTimeout(() => window.print(), 1000);
+                        });
+                    }
+                }
+            };
+        </script>
+    </head>
+    <body>
+        <div class="exam-header">
+            <div class="exam-title">${examData.title}</div>
+            <div class="student-info">
+                <span>اسم الطالب: ...........................................</span>
+                <span>الدرجة: .......... / ${toArabicNum(examData.questions.length)}</span>
+            </div>
+        </div>
+
+        ${examData.questions.map((q, i) => `
+            <div class="question-container">
+                <div class="q-num-box">${toArabicNum(i + 1)}</div>
+                <div class="q-body">
+                    <div class="q-text">${q.q}</div>
+                    
+                    ${q.diagram ? `<div class="diagram-box">${q.diagram}</div>` : ''}
+
+                    ${q.type === 'mcq' ? `
+                        <div class="mcq-grid">
+                            ${q.options.map((opt, idx) => `
+                                <div class="option-row">
+                                    <span class="opt-char">${getOptionLabel(idx)}</span>
+                                    <span>${opt}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div style="border-bottom: 1px dashed #ccc; height: 40px; margin-top:10px;"></div>
+                        <div style="border-bottom: 1px dashed #ccc; height: 40px;"></div>
+                    `}
+                </div>
+            </div>
+        `).join('')}
+
+        <div class="footer">
+            Generated by Spot AI ✨<br>Enjoy 🤓
+        </div>
+    </body>
+    </html>`;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+};
+
+// 🖨️ دالة طباعة المذكرات (نسخة الرياضيات الاحترافية)
+window.printStudyNote = function(content) {
+    const printWindow = window.open('', '_blank');
+    
+    // معالجة النص لتحويله لـ HTML منسق
+    const formattedContent = content
+        // تحويل العناوين الرئيسية (## عنوان)
+        .replace(/## (.*?)\n/g, '<h2 class="section-title"><i class="ri-focus-3-line"></i> $1</h2>')
+        // تحويل النقاط المرقمة
+        .replace(/(\d+)\.\s\*\*(.*?)\*\*/g, '<div class="sub-point"><span class="num">$1</span> <strong>$2</strong></div>')
+        // تحويل "مثال:" لصندوق ملون
+        .replace(/مثال:(.*?)\n/g, '<div class="example-box"><strong><span class="ex-icon">💡</span> مثال:</strong> $1</div>')
+        // تحويل "ملاحظة:" لصندوق تحذيري
+        .replace(/ملاحظة هامة:(.*?)\n/g, '<div class="note-box"><strong>⚠️ ملاحظة هامة:</strong> $1</div>')
+        // تحويل الخط العريض (**نص**)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // تحويل السطر الجديد
+        .replace(/\n/g, '<br>');
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <title>ملخص درس - Spot AI</title>
+        <meta charset="UTF-8">
+        
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+        <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+        
+        <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+        
+        <style>
+            body { 
+                font-family: 'IBM Plex Sans Arabic', sans-serif;
+                padding: 40px; 
+                max-width: 850px; 
+                margin: 0 auto; 
+                background: #fff;
+                color: #333;
+                line-height: 1.8;
+            }
+
+            /* إعدادات المعادلات */
+            mjx-container { font-size: 110% !important; direction: ltr; display: inline-block; }
+
+            /* الهيدر */
+            .header {
+                text-align: center;
+                border-bottom: 3px solid #facc15;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+                background: linear-gradient(to bottom, #fff, #fefce8);
+                border-radius: 15px;
+                padding-top: 20px;
+            }
+            .logo-text { font-size: 26px; font-weight: 900; color: #000; }
+            .sub-header { font-size: 14px; color: #666; margin-top: 5px; }
+
+            /* العناوين */
+            .section-title {
+                color: #b45309;
+                font-family: 'IBM Plex Sans Arabic', sans-serif;
+                margin-top: 30px;
+                border-bottom: 2px dashed #fcd34d;
+                padding-bottom: 5px;
+                font-size: 22px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            /* تنسيق النصوص */
+            strong { color: #000; font-weight: 800; }
+
+            /* النقاط الفرعية */
+            .sub-point {
+                margin-top: 15px;
+                font-size: 18px;
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .num {
+                background: #000; color: #fff;
+                min-width: 25px; height: 25px;
+                border-radius: 50%;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 14px; margin-top: 5px;
+            }
+
+            /* صندوق الأمثلة */
+            .example-box {
+                background-color: #f0f9ff;
+                border-right: 4px solid #0ea5e9;
+                padding: 15px;
+                margin: 15px 0;
+                border-radius: 8px;
+                color: #0369a1;
+            }
+            
+            /* صندوق الملاحظات */
+            .note-box {
+                background-color: #fef2f2;
+                border-right: 4px solid #ef4444;
+                padding: 15px;
+                margin: 15px 0;
+                border-radius: 8px;
+                color: #991b1b;
+            }
+
+            /* الفوتر */
+            .footer {
+                position: fixed;
+                bottom: 20px;
+                left: 0; right: 0;
+                text-align: center;
+                font-size: 14px;
+                color: #888;
+                border-top: 1px solid #eee;
+                padding-top: 10px;
+                font-family: 'IBM Plex Sans Arabic', sans-serif;
+                background: #fff;
+            }
+        </style>
+
+        <script>
+            window.MathJax = {
+                tex: { inlineMath: [['$', '$']] },
+                startup: {
+                    pageReady: () => {
+                        return MathJax.startup.defaultPageReady().then(() => {
+                            setTimeout(() => window.print(), 1000);
+                        });
+                    }
+                }
+            };
+        </script>
+    </head>
+    <body>
+        <div class="header">
+            <div class="logo-text">مذكرة تعليمية ذكية 📚</div>
+            <div class="sub-header">ملخص الدرس بواسطة المساعد الذكي Spot AI</div>
+        </div>
+
+        <div class="content">
+            ${formattedContent}
+        </div>
+
+        <div style="height: 100px;"></div>
+
+        <div class="footer">
+            Generated by Spot AI ✨<br>
+            Enjoy 🤓
+        </div>
+    </body>
+    </html>`;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+};
