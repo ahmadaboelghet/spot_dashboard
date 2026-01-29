@@ -76,6 +76,14 @@ try {
 const DB_NAME = 'LearnariaDB';
 const DB_VERSION = 6;
 let localDB = null;
+const motivationQuotes = [
+    "بطل اليوم.. عالم الغد! 🚀",
+    "كل خطوة صغيرة بتقربك من حلمك الكبير. ✨",
+    "عافر.. النجاح طعمه يستاهل. 💪",
+    "مكانك في القمة محجوز، مستنيك توصله! 🏔️",
+    "الذكاء مش بس وراثة، الذكاء اجتهاد وتدريب. 🧠",
+    "أنت أقوى مما تخيل.. كمل طريقك.🌟"
+];
 
 function openDB() {
     return new Promise((resolve, reject) => {
@@ -1727,8 +1735,15 @@ function showStudentQR(student) {
     const qrContent = student.parentPhoneNumber ? student.parentPhoneNumber.trim() : student.id;
 
     // 3. عرض الرقم تحت الـ QR (عشان لو الكاميرا معلجة المدرس يكتبه)
-    document.getElementById('idStudentPhone').innerText = qrContent;
+   const randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
 
+    // ب. الإمساك بالعنصر وتغيير محتواه
+    const quoteElement = document.getElementById('idStudentPhone');
+    quoteElement.innerText = randomQuote;
+
+    quoteElement.classList.remove('font-mono', 'tracking-wider', 'text-gray-400');
+    // quoteElement.classList.add('text-gray-600', 'italic', 'text-sm');
+    quoteElement.classList.add('text-yellow-600', 'font-bold');
     // 4. توليد الـ QR Code
     document.getElementById('idQrcode').innerHTML = '';
     new QRCode(document.getElementById('idQrcode'), {
