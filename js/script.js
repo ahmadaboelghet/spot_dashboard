@@ -1743,7 +1743,7 @@ function showStudentQR(student) {
 
     quoteElement.classList.remove('font-mono', 'tracking-wider', 'text-gray-400');
     // quoteElement.classList.add('text-gray-600', 'italic', 'text-sm');
-    quoteElement.classList.add('text-yellow-600', 'font-bold');
+    quoteElement.classList.add('text-gray-600', 'font-bold');
     // 4. توليد الـ QR Code
     document.getElementById('idQrcode').innerHTML = '';
     new QRCode(document.getElementById('idQrcode'), {
