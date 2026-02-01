@@ -1623,7 +1623,7 @@ function renderStudents(filter = "") {
                 showToast("لا يوجد رقم هاتف لولي الأمر", "error");
                 return;
             }
-            const msg = `مرحباً ولي أمر الطالب  *${s.name}*\n\nلمتابعة مستوى الطالب (الغياب، الدرجات، والمصاريف) لحظياً، يرجى الدخول على الرابط الخاص به:\n${fullDirectLink}\n\nدمتم بخير`;
+            const msg = `مرحباً ولي أمر الطالب *${s.name}*\n\nلمتابعة مستوى الطالب (الغياب، الدرجات، والمصاريف) لحظياً، يرجى الدخول على الرابط الخاص به:\n${fullDirectLink}\n\n⚠️ *يرجي ارسال اللينك لولي الامر وعدم فتحه اطلاقا من قبل الطالب*\n\nدمتم بخير`;
             let waPhone = pNum.replace(/\s+/g, '');
             if (!waPhone.startsWith('+')) waPhone = '+2' + waPhone;
 
