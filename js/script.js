@@ -1417,26 +1417,84 @@ async function saveDailyData() {
     }
 }
 
+// ==========================================
+// 🔦 منطق الفلاش والماسح الضوئي المحدث 📸
+// ==========================================
+
+let isTorchOn = false; // متغير لحالة الفلاش
+
 async function startScanner(mode) {
     currentScannerMode = mode;
     isScannerPaused = false;
     document.getElementById('scannerModal').classList.remove('hidden');
+
+    // زر الفلاش
+    const flashBtn = document.getElementById('toggleFlashBtn');
+    if (flashBtn) flashBtn.classList.add('hidden'); // إخفاء مبدئي
+
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+        });
+
         videoElement.srcObject = stream;
+
+        // إعدادات الفيديو
         const videoTrack = stream.getVideoTracks()[0];
         const settings = videoTrack.getSettings();
+        
+        // ضبط المراية (Mirroring)
         if (settings.facingMode === 'user') videoElement.style.transform = "scaleX(-1)";
         else videoElement.style.transform = "";
 
+        // ✅ تشغيل زر الفلاش لو الموبايل بيدعمه
+        const capabilities = videoTrack.getCapabilities();
+        if (capabilities.torch) {
+            if (flashBtn) {
+                flashBtn.classList.remove('hidden');
+                
+                // إعادة تعيين الأيقونة واللون
+                isTorchOn = false;
+                updateFlashBtnUI(flashBtn);
+
+                flashBtn.onclick = async () => {
+                    isTorchOn = !isTorchOn;
+                    await videoTrack.applyConstraints({
+                        advanced: [{ torch: isTorchOn }]
+                    });
+                    updateFlashBtnUI(flashBtn);
+                };
+            }
+        }
+
         await videoElement.play();
         requestAnimationFrame(tickScanner);
-    } catch (e) { alert("Camera Error"); stopScanner(); }
+    } catch (e) {
+        console.error(e);
+        alert("لا يمكن الوصول للكاميرا");
+        stopScanner();
+    }
+}
+
+function updateFlashBtnUI(btn) {
+    if (isTorchOn) {
+        btn.classList.add('bg-yellow-400', 'text-black', 'border-yellow-500');
+        btn.classList.remove('bg-white/20', 'text-white', 'border-white/30');
+    } else {
+        btn.classList.remove('bg-yellow-400', 'text-black', 'border-yellow-500');
+        btn.classList.add('bg-white/20', 'text-white', 'border-white/30');
+    }
 }
 
 function stopScanner() {
     isScannerPaused = true;
-    if (videoElement && videoElement.srcObject) videoElement.srcObject.getTracks().forEach(t => t.stop());
+    isTorchOn = false; // إطفاء الفلاش منطقياً
+
+    if (videoElement && videoElement.srcObject) {
+        videoElement.srcObject.getTracks().forEach(t => {
+            t.stop(); // هذا يغلق الكاميرا والفلاش تلقائياً
+        });
+    }
     document.getElementById('scannerModal').classList.add('hidden');
     if (videoElement) videoElement.style.transform = "";
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -1457,54 +1515,126 @@ function tickScanner() {
     animationFrameId = requestAnimationFrame(tickScanner);
 }
 
-function handleScan(scannedText) {
-    // 1. تنظيف النص المقروء
+// ==========================================
+// 🚀 التعديل الجوهري: هندلة الطالب الغريب وتسجيله فوراً
+// ==========================================
+
+async function handleScan(scannedText) {
     const qrCode = scannedText.replace(/"/g, '').trim();
 
-    // 2. البحث في طلاب المجموعة الحالية
+    // 1. البحث في المجموعة الحالية (الأولوية)
     const matchedStudents = allStudents.filter(s =>
         (s.parentPhoneNumber && s.parentPhoneNumber.trim() === qrCode) ||
         s.id === qrCode
     );
 
+    // 🛑 الحالة: الطالب مش في المجموعة دي
     if (matchedStudents.length === 0) {
-        return;
+        
+        // نوقف الكاميرا لحظة عشان المعالجة
+        isScannerPaused = true; 
+
+        try {
+            // بحث شامل في كل الطلاب (Global Search)
+            const allLocalStudents = await getAllFromDB('students'); 
+            const globalMatch = allLocalStudents.find(s => 
+                (s.parentPhoneNumber && s.parentPhoneNumber.trim() === qrCode) ||
+                s.id === qrCode
+            );
+
+            if (globalMatch) {
+                playBeep();
+
+                // نجيب اسم مجموعته الأصلية
+                let groupName = "مجموعة أخرى";
+                const groupDoc = await getFromDB('groups', globalMatch.groupId);
+                if (groupDoc) groupName = groupDoc.name;
+
+                // ✅✅ تسجيل الحضور فوراً في الداتابيز ✅✅
+                await saveCrossGroupAttendance(globalMatch);
+
+                // إظهار تنبيه واضح للمدرس
+                showToast(`⚠️ تنبيه: الطالب "${globalMatch.name}" في (${groupName})`, 'warning'); // أصفر
+                setTimeout(() => {
+                    showToast(`✅ تم تسجيل حضوره في مجموعته بنجاح!`, 'success'); // أخضر
+                }, 1000);
+
+            } else {
+                // كود غلط خالص ومش موجود في السيستم
+                // showToast("كود غير معروف", "error");
+            }
+
+        } catch (err) {
+            console.error("Cross-Group Error:", err);
+        }
+
+        // استئناف الكاميرا بعد 2.5 ثانية (عشان يلحق يقرأ الرسالة)
+        setTimeout(() => {
+            isScannerPaused = false;
+            requestAnimationFrame(tickScanner);
+        }, 2500);
+
+        return; 
     }
 
-    // 3. لقينا طالب! نشغل الصوت ونوقف الكاميرا لحظة
+    // ✅ الحالة الطبيعية: الطالب في نفس المجموعة
     playBeep();
     isScannerPaused = true;
 
-    // حالة 1: طالب واحد فقط (ده الطبيعي)
-    if (matchedStudents.length === 1) {
-        const student = matchedStudents[0];
-        showScanSuccessUI(student);
-
-        if (currentScannerMode === 'daily') {
-            // 👇👇 ضيف السطر ده هنا 👇👇
-            checkGoldenTicket(student.name); // 🎰 تفعيل التذكرة الذهبية
-            // 👆👆 ------------------ 👆👆
-            processDailyScan(student);
-        }
-        else if (currentScannerMode === 'payments') processPaymentScan(student);
-
-    }
-    // حالة 2: أكتر من طالب بنفس الرقم (إخوات)
-    else {
-        const student = matchedStudents[0];
-
+    const student = matchedStudents[0]; // لو فيه إخوات هناخد الأول (أو ممكن تظهر ديالوج لو حابب)
+    
+    // لو فيه إخوات نوضح للمستر
+    if (matchedStudents.length > 1) {
         showToast(`تم العثور على ${matchedStudents.length} طلاب (إخوة)، تم اختيار ${student.name}`);
-
-        showScanSuccessUI(student);
-
-        if (currentScannerMode === 'daily') {
-            // 👇👇 وهنا كمان عشان لو إخوات 👇👇
-            checkGoldenTicket(student.name); // 🎰 تفعيل التذكرة الذهبية
-            // 👆👆 --------------------- 👆👆
-            processDailyScan(student);
-        }
-        else if (currentScannerMode === 'payments') processPaymentScan(student);
     }
+
+    showScanSuccessUI(student);
+
+    if (currentScannerMode === 'daily') {
+        checkGoldenTicket(student.name); // 🎰 التذكرة الذهبية
+        processDailyScan(student);
+    }
+    else if (currentScannerMode === 'payments') {
+        processPaymentScan(student);
+    }
+}
+
+// ✅ دالة مساعدة لتسجيل الحضور في مجموعة أخرى (بدون فتحها)
+async function saveCrossGroupAttendance(student) {
+    const date = document.getElementById('dailyDateInput').value; // تاريخ اليوم المختار
+    const groupId = student.groupId;
+    const attId = `${groupId}_${date}`;
+
+    // 1. جلب سجل الحضور القديم للمجموعة دي (عشان منمسحش اللي حضروا)
+    let attDoc = await getFromDB('attendance', attId);
+    
+    // لو مفيش سجل لسه، ننشئ واحد جديد
+    if (!attDoc) {
+        attDoc = { id: attId, date: date, records: [] };
+    }
+
+    // 2. التحقق هل الطالب متسجل قبل كده؟
+    const existingRecordIndex = attDoc.records.findIndex(r => r.studentId === student.id);
+
+    if (existingRecordIndex !== -1) {
+        // لو متسجل، نحدث حالته لـ "حاضر" (جايز كان غايب)
+        attDoc.records[existingRecordIndex].status = 'present';
+    } else {
+        // لو مش متسجل، نضيفه
+        attDoc.records.push({ studentId: student.id, status: 'present' });
+    }
+
+    // 3. الحفظ في Local DB (عشان لو النت قاطع)
+    await putToDB('attendance', attDoc);
+
+    // 4. الرفع للسيرفر (Sync Queue)
+    await addToSyncQueue({ 
+        type: 'set', 
+        path: `teachers/${TEACHER_ID}/groups/${groupId}/dailyAttendance/${date}`, 
+        data: { date: date, records: attDoc.records } 
+    });
+
+    console.log(`✅ Cross-Attendance Saved for ${student.name} in Group ${groupId}`);
 }
 
 // --- دالة مساعدة للمؤثرات البصرية (عشان الكود يبقى نظيف) ---
