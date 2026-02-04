@@ -211,7 +211,7 @@ async function deleteFromDB(store, key) {
 let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = 'ar';
 let isSyncing = false;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
-let hasHomeworkToday = false, currentPendingStudentId = null, currentMessageStudentId = null;
+let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null;
 
 const translations = {
     ar: {
@@ -367,7 +367,8 @@ const translations = {
         teacherCodeLabel: "كود المدرس",
         copyInviteBtn: "نسخ رسالة الدعوة",
         inviteCopied: "تم نسخ رسالة الدعوة! ابعتها للطلاب فوراً 🚀",
-        inviteCopyFail: "فشل النسخ"
+        inviteCopyFail: "فشل النسخ",
+        addNewStudentSectionTitle: "إضافة طالب جديد"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -525,7 +526,8 @@ const translations = {
         teacherCodeLabel: "Teacher Code",
         copyInviteBtn: "Copy Invite Message",
         inviteCopied: "Invite message copied! Send it to students 🚀",
-        inviteCopyFail: "Copy failed"
+        inviteCopyFail: "Copy failed",
+        addNewStudentSectionTitle: "Add New Student"
 
     }
 };
@@ -682,9 +684,28 @@ function setupListeners() {
 
     document.getElementById('groupSelect').addEventListener('change', async (e) => {
         SELECTED_GROUP_ID = e.target.value;
+        
+        // محاولة استرجاع المبلغ المحفوظ لهذه المجموعة
+        const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
+        const amountInput = document.getElementById('defaultAmountInput');
+        
+        if (amountInput) {
+            // لو لقينا مبلغ محفوظ نكتبه، لو ملقيناش نسيبها فاضية
+            amountInput.value = savedAmount || ''; 
+        }
+
         switchTab('daily');
         await loadGroupData();
     });
+
+    const amountInput = document.getElementById('defaultAmountInput');
+    if (amountInput) {
+        amountInput.addEventListener('input', (e) => {
+            if (SELECTED_GROUP_ID) {
+                localStorage.setItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`, e.target.value);
+            }
+        });
+    }
 
     document.getElementById('addNewGroupButton').addEventListener('click', () => {
         // 1. الانتقال لتابة الملف الشخصي (Profile)
@@ -1110,7 +1131,7 @@ async function createGroup() {
     // 4. الانتقال لتابة الحصة وتحميل بيانات المجموعة الفارغة
     switchTab('daily');
     await loadGroupData(); // تفعيل أزرار الإضافة (عشان لو عايز يضيف طلاب علطول)
-
+    document.getElementById('defaultAmountInput').value = ''; 
     showToast(translations[currentLang].groupCreatedSuccess);
 }
 
@@ -1528,11 +1549,10 @@ async function handleScan(scannedText) {
         s.id === qrCode
     );
 
-    // 🛑 الحالة: الطالب مش في المجموعة دي
+    // 🛑 الحالة: الطالب مش في المجموعة دي (Cross-Group Logic)
     if (matchedStudents.length === 0) {
         
-        // نوقف الكاميرا لحظة عشان المعالجة
-        isScannerPaused = true; 
+        isScannerPaused = true; // إيقاف الكاميرا مؤقتاً
 
         try {
             // بحث شامل في كل الطلاب (Global Search)
@@ -1545,22 +1565,31 @@ async function handleScan(scannedText) {
             if (globalMatch) {
                 playBeep();
 
-                // نجيب اسم مجموعته الأصلية
+                // ✅ التحقق: هل المدرس مفعل خيار الواجب؟
+                if (hasHomeworkToday) {
+                    currentCrossGroupStudent = globalMatch; // حفظ الطالب مؤقتاً
+                    
+                    // تجهيز وعرض المودال
+                    document.getElementById('hwStudentName').innerText = globalMatch.name;
+                    document.getElementById('hwConfirmModal').classList.remove('hidden');
+                    return; // نخرج من الدالة وننتظر قرار المدرس (نعم/لا)
+                }
+
+                // لو مفيش واجب، نسجل حضور فوراً
+                await saveCrossGroupAttendance(globalMatch, false);
+
+                // إشعار للمدرس
                 let groupName = "مجموعة أخرى";
                 const groupDoc = await getFromDB('groups', globalMatch.groupId);
                 if (groupDoc) groupName = groupDoc.name;
 
-                // ✅✅ تسجيل الحضور فوراً في الداتابيز ✅✅
-                await saveCrossGroupAttendance(globalMatch);
-
-                // إظهار تنبيه واضح للمدرس
-                showToast(`⚠️ تنبيه: الطالب "${globalMatch.name}" في (${groupName})`, 'warning'); // أصفر
+                showToast(`⚠️ تنبيه: الطالب "${globalMatch.name}" في (${groupName})`, 'warning');
                 setTimeout(() => {
-                    showToast(`✅ تم تسجيل حضوره في مجموعته بنجاح!`, 'success'); // أخضر
-                }, 1000);
+                    showToast(`✅ تم تسجيل الحضور (ضيف)!`, 'success');
+                }, 1200);
 
             } else {
-                // كود غلط خالص ومش موجود في السيستم
+                // كود غير معروف تماماً
                 // showToast("كود غير معروف", "error");
             }
 
@@ -1568,7 +1597,7 @@ async function handleScan(scannedText) {
             console.error("Cross-Group Error:", err);
         }
 
-        // استئناف الكاميرا بعد 2.5 ثانية (عشان يلحق يقرأ الرسالة)
+        // إعادة تشغيل الكاميرا بعد مهلة قصيرة
         setTimeout(() => {
             isScannerPaused = false;
             requestAnimationFrame(tickScanner);
@@ -1577,64 +1606,97 @@ async function handleScan(scannedText) {
         return; 
     }
 
-    // ✅ الحالة الطبيعية: الطالب في نفس المجموعة
+    // ✅ الحالة الطبيعية: الطالب موجود في المجموعة الحالية
     playBeep();
     isScannerPaused = true;
 
-    const student = matchedStudents[0]; // لو فيه إخوات هناخد الأول (أو ممكن تظهر ديالوج لو حابب)
-    
-    // لو فيه إخوات نوضح للمستر
+    // منطق التوأم (اختيار من لم يحضر بعد)
+    let studentToMark = matchedStudents[0];
     if (matchedStudents.length > 1) {
-        showToast(`تم العثور على ${matchedStudents.length} طلاب (إخوة)، تم اختيار ${student.name}`);
+        const absentSibling = matchedStudents.find(s => {
+            const row = document.querySelector(`#dailyStudentsList > div[data-sid="${s.id}"]`);
+            return row && row.querySelector('.att-select').value !== 'present';
+        });
+        if (absentSibling) studentToMark = absentSibling;
     }
 
-    showScanSuccessUI(student);
+    showScanSuccessUI(studentToMark);
 
+    // توجيه حسب الوضع
     if (currentScannerMode === 'daily') {
-        checkGoldenTicket(student.name); // 🎰 التذكرة الذهبية
-        processDailyScan(student);
+        checkGoldenTicket(studentToMark.name);
+        processDailyScan(studentToMark);
     }
     else if (currentScannerMode === 'payments') {
-        processPaymentScan(student);
+        processPaymentScan(studentToMark);
     }
 }
 
 // ✅ دالة مساعدة لتسجيل الحضور في مجموعة أخرى (بدون فتحها)
-async function saveCrossGroupAttendance(student) {
-    const date = document.getElementById('dailyDateInput').value; // تاريخ اليوم المختار
+async function saveCrossGroupAttendance(student, homeworkSubmitted) {
+    const date = document.getElementById('dailyDateInput').value;
     const groupId = student.groupId;
-    const attId = `${groupId}_${date}`;
-
-    // 1. جلب سجل الحضور القديم للمجموعة دي (عشان منمسحش اللي حضروا)
-    let attDoc = await getFromDB('attendance', attId);
     
-    // لو مفيش سجل لسه، ننشئ واحد جديد
+    // 1️⃣ تسجيل الحضور (Attendance)
+    const attId = `${groupId}_${date}`;
+    
+    // جلب أو إنشاء سجل الحضور
+    let attDoc = await getFromDB('attendance', attId);
     if (!attDoc) {
         attDoc = { id: attId, date: date, records: [] };
     }
-
-    // 2. التحقق هل الطالب متسجل قبل كده؟
-    const existingRecordIndex = attDoc.records.findIndex(r => r.studentId === student.id);
-
-    if (existingRecordIndex !== -1) {
-        // لو متسجل، نحدث حالته لـ "حاضر" (جايز كان غايب)
-        attDoc.records[existingRecordIndex].status = 'present';
+    
+    // تحديث حالة الطالب
+    const existingRec = attDoc.records.find(r => r.studentId === student.id);
+    if (existingRec) {
+        existingRec.status = 'present';
     } else {
-        // لو مش متسجل، نضيفه
         attDoc.records.push({ studentId: student.id, status: 'present' });
     }
 
-    // 3. الحفظ في Local DB (عشان لو النت قاطع)
+    // حفظ الحضور (Local & Sync)
     await putToDB('attendance', attDoc);
-
-    // 4. الرفع للسيرفر (Sync Queue)
     await addToSyncQueue({ 
         type: 'set', 
         path: `teachers/${TEACHER_ID}/groups/${groupId}/dailyAttendance/${date}`, 
         data: { date: date, records: attDoc.records } 
     });
 
-    console.log(`✅ Cross-Attendance Saved for ${student.name} in Group ${groupId}`);
+    // 2️⃣ تسجيل الواجب (Homework) - إذا تم التسليم
+    if (homeworkSubmitted) {
+        const hwId = `${groupId}_HW_${date}`;
+        
+        // جلب أو إنشاء سجل الواجب
+        let hwDoc = await getFromDB('assignments', hwId);
+        if (!hwDoc) {
+            hwDoc = { 
+                id: hwId, 
+                groupId: groupId, 
+                name: `واجب ${date}`, 
+                date: date, 
+                scores: {}, 
+                type: 'daily' 
+            };
+        }
+
+        // التأكد من وجود كائن الدرجات
+        if (!hwDoc.scores) hwDoc.scores = {};
+
+        // تسجيل التسليم (submitted: true)
+        hwDoc.scores[student.id] = { submitted: true, score: null };
+
+        // حفظ الواجب (Local & Sync)
+        await putToDB('assignments', hwDoc);
+        await addToSyncQueue({ 
+            type: 'set', 
+            path: `teachers/${TEACHER_ID}/groups/${groupId}/assignments/${hwId}`, 
+            data: hwDoc 
+        });
+        
+        console.log(`✅ Cross-Homework Saved for ${student.name}`);
+    }
+
+    console.log(`✅ Cross-Attendance Saved for ${student.name}`);
 }
 
 // --- دالة مساعدة للمؤثرات البصرية (عشان الكود يبقى نظيف) ---
@@ -1673,14 +1735,50 @@ function processDailyScan(student) {
     }
 }
 
-function resolveHomework(isSubmitted) {
+async function resolveHomework(isSubmitted) {
+    // ✅ الحالة 1: الطالب من مجموعة أخرى (Cross-Group)
+    if (currentCrossGroupStudent) {
+        // حفظ الحضور + الواجب (حسب الاختيار)
+        await saveCrossGroupAttendance(currentCrossGroupStudent, isSubmitted);
+        
+        // جلب اسم المجموعة للعرض
+        let groupName = "مجموعة أخرى";
+        try {
+            const gDoc = await getFromDB('groups', currentCrossGroupStudent.groupId);
+            if (gDoc) groupName = gDoc.name;
+        } catch (e) {}
+
+        // رسائل تأكيد
+        showToast(`⚠️ الطالب "${currentCrossGroupStudent.name}" مسجل في (${groupName})`, 'warning');
+        setTimeout(() => {
+            if (isSubmitted) showToast(`✅ تم تسجيل الحضور واستلام الواجب!`);
+            else showToast(`✅ تم تسجيل الحضور (بدون واجب)`);
+        }, 1000);
+
+        // تنظيف وإعادة تشغيل
+        currentCrossGroupStudent = null;
+        document.getElementById('hwConfirmModal').classList.add('hidden');
+        
+        setTimeout(() => {
+            isScannerPaused = false;
+            requestAnimationFrame(tickScanner);
+        }, 1500);
+        return;
+    }
+
+    // ✅ الحالة 2: الطالب من المجموعة الحالية (Logic القديم)
     if (currentPendingStudentId) {
         const row = document.querySelector(`#dailyStudentsList > div[data-sid="${currentPendingStudentId}"]`);
         if (row) {
             const chk = row.querySelector('.hw-check');
-            chk.checked = isSubmitted;
+            if (chk) {
+                chk.checked = isSubmitted;
+                // تلوين الصف لو تم التسليم (اختياري)
+                if(isSubmitted) row.classList.add('bg-green-50'); 
+            }
         }
     }
+    
     document.getElementById('hwConfirmModal').classList.add('hidden');
     currentPendingStudentId = null;
     isScannerPaused = false;
@@ -1696,12 +1794,30 @@ function processPaymentScan(student) {
         const input = row.querySelector('.payment-input');
 
         if (!checkbox.checked) {
+            const val = defaultAmountInput.value;
+
+            // ✅✅ التعديل الجديد: منع الـ Scan لو المبلغ مش محدد ✅✅
+            if (!val) {
+                showToast(`⚠️ لا يمكن تحصيل المصاريف لـ "${student.name}"`, "error");
+                setTimeout(() => showToast("يرجى تحديد المبلغ أولاً في الخانة العلوية", "error"), 1000);
+                
+                // تشغيل صوت خطأ لو متاح، أو هزة للصف
+                row.classList.add('shake-anim'); 
+                defaultAmountInput.focus(); // توجيه المؤشر للخانة الفاضية
+                setTimeout(() => row.classList.remove('shake-anim'), 500);
+                return; // وقف التنفيذ
+            }
+
+            // لو المبلغ موجود، كمل عادي
             checkbox.checked = true;
-            input.value = defaultAmountInput.value || 0;
+            input.value = val;
+
             checkbox.dispatchEvent(new Event('change'));
             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
             row.classList.add('ring-4', 'ring-green-300');
             setTimeout(() => row.classList.remove('ring-4', 'ring-green-300'), 1000);
+        } else {
+            showToast(`تم دفع المصاريف مسبقاً للطالب: ${student.name}`);
         }
     }
 }
@@ -1924,7 +2040,10 @@ async function renderPaymentsList() {
     const month = document.getElementById('paymentMonthInput').value;
     const defaultAmountInput = document.getElementById('defaultAmountInput');
     const container = document.getElementById('paymentsList');
+    const groupTotalDisplay = document.getElementById('groupTotalDisplay');
+    
     container.innerHTML = '';
+    let currentGroupTotal = 0; // ده العداد الحي للمجموعة
 
     if (!month || !allStudents.length) return;
 
@@ -1935,6 +2054,17 @@ async function renderPaymentsList() {
         doc.records.forEach(r => map[r.studentId] = r.amount);
     }
 
+    // 1. الحساب المبدئي عند التحميل
+    allStudents.forEach(s => {
+        let amount = map[s.id];
+        if (amount && amount > 0) currentGroupTotal += parseInt(amount);
+    });
+
+    // عرض الأرقام الأولية
+    groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
+    calculateOverallIncome(currentGroupTotal); // ✅ بنبعت الرقم المبدئي
+
+    // 2. رسم القائمة
     allStudents.forEach(s => {
         let amount = map[s.id];
         const isPaid = amount && amount > 0;
@@ -1956,28 +2086,55 @@ async function renderPaymentsList() {
         const checkbox = div.querySelector('.payment-check');
         const input = div.querySelector('.payment-input');
 
+        // ---- تفاعل الـ Checkbox ----
         checkbox.addEventListener('change', (e) => {
-            const defaultVal = defaultAmountInput.value || 0;
+            const defaultVal = defaultAmountInput.value;
+            
+            // تحقق من وجود مبلغ
+            if (e.target.checked && !defaultVal) {
+                e.target.checked = false;
+                showToast("⚠️ يرجى إدخال مبلغ التحصيل أولاً", "error");
+                defaultAmountInput.focus();
+                return;
+            }
+
             if (e.target.checked) {
                 if (!input.value || input.value == 0) input.value = defaultVal;
                 div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.add('text-green-600', 'font-bold');
+                
+                // ➕ تزويد المجموع
+                currentGroupTotal += parseInt(input.value || 0);
             } else {
+                // ➖ تنقيص المجموع
+                currentGroupTotal -= parseInt(input.value || 0);
+                
                 input.value = '';
                 div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.remove('text-green-600', 'font-bold');
             }
+            
+            // تحديث الشاشة
+            groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
+            calculateOverallIncome(currentGroupTotal); // ✅ تحديث الكلي فوراً
         });
 
-        input.addEventListener('input', (e) => {
-            if (e.target.value > 0) {
-                checkbox.checked = true;
-                div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-            } else {
-                checkbox.checked = false;
-                div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-            }
+        // ---- تفاعل تغيير الرقم يدوياً ----
+        let oldVal = 0;
+        input.addEventListener('focus', () => oldVal = parseInt(input.value) || 0);
+        
+        input.addEventListener('change', () => {
+             const newVal = parseInt(input.value) || 0;
+             if (checkbox.checked) {
+                 // معادلة التحديث: (المجموع القديم - القيمة القديمة) + القيمة الجديدة
+                 currentGroupTotal = (currentGroupTotal - oldVal) + newVal;
+                 
+                 groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
+                 calculateOverallIncome(currentGroupTotal); // ✅ تحديث الكلي فوراً
+             }
+             oldVal = newVal;
         });
+
         container.appendChild(div);
     });
 }
@@ -2122,6 +2279,14 @@ async function loadPreferences() {
         // تحميل المجموعات والذهاب للحصة اليومية
         await loadGroups();
         switchTab('daily');
+
+        if (SELECTED_GROUP_ID) {
+        const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
+        const amountInput = document.getElementById('defaultAmountInput');
+        if (amountInput && savedAmount) {
+            amountInput.value = savedAmount;
+        }
+    }
     }
 }
 function toggleLang() {
@@ -3019,3 +3184,48 @@ window.printStudyNote = function(content) {
     printWindow.document.write(htmlContent);
     printWindow.document.close();
 };
+
+// دالة حساب الدخل الكلي (بذكاء 🧠)
+async function calculateOverallIncome(liveGroupTotal = null) {
+    const month = document.getElementById('paymentMonthInput').value;
+    const display = document.getElementById('overallTotalDisplay');
+    
+    if (!month) return;
+
+    try {
+        let groups = await getAllFromDB('groups');
+        
+        if (!groups || groups.length === 0) {
+            display.innerText = "0 ج.م";
+            return;
+        }
+
+        // مصفوفة وعود لحساب كل مجموعة بالتوازي
+        const promises = groups.map(async (group) => {
+            // ✅ اللوجيك الجديد:
+            // لو دي المجموعة اللي أنا فاتحها دلوقتي + باعتلها رقم مباشر (Live)
+            // استخدم الرقم المباشر ومتروحش للداتابيز القديمة
+            if (group.id === SELECTED_GROUP_ID && liveGroupTotal !== null) {
+                return parseInt(liveGroupTotal) || 0;
+            }
+
+            // باقي المجموعات: هاتها من الداتابيز عادي
+            const payId = `${group.id}_PAY_${month}`;
+            const doc = await getFromDB('payments', payId);
+            
+            if (doc && doc.records) {
+                return doc.records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
+            }
+            return 0;
+        });
+
+        // تجميع النتائج
+        const results = await Promise.all(promises);
+        const totalIncome = results.reduce((acc, curr) => acc + curr, 0);
+
+        display.innerText = `${totalIncome.toLocaleString()} ج.م`;
+
+    } catch (error) {
+        console.error(error);
+    }
+}

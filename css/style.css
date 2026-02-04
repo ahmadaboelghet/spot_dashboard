@@ -592,3 +592,13 @@ body.desktop-device video {
 .animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+.shake-anim {
+  animation: shake 0.3s ease-in-out;
+  border-color: #ef4444 !important; /* لون أحمر */
+}

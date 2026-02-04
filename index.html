@@ -439,25 +439,37 @@
                             <h3 data-key="manageStudentsTitle">الطلاب</h3>
                         </div>
                     </div>
+
+                    <div class="relative mb-4">
+                        <i class="ri-search-line absolute top-3 right-3 text-gray-400"></i>
+                        <input type="search" id="studentSearchInput" class="input-field pr-10"
+                            data-key-placeholder="searchPlaceholder" placeholder="بحث عن طالب...">
+                    </div>
+
+                    <div id="studentsListDisplay"
+                        class="space-y-2 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar mb-6">
+                    </div>
+
                     <div
-                        class="bg-gray-50 dark:bg-black/40 p-5 rounded-2xl mb-6 border border-gray-100 dark:border-gray-700">
+                        class="bg-gray-50 dark:bg-black/40 p-5 rounded-2xl border-t-4 border-brand shadow-sm border-gray-100 dark:border-gray-700">
+                        <h4 class="font-bold text-sm mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <i class="ri-add-circle-fill text-brand"></i>
+                            <span data-key="addNewStudentSectionTitle">إضافة طالب جديد</span>
+                        </h4>
+
                         <div class="grid md:grid-cols-2 gap-4 mb-4">
                             <input type="text" id="newStudentName" class="input-field"
                                 data-key-placeholder="newStudentPlaceholder" placeholder="اسم الطالب">
                             <input type="text" id="newParentPhoneNumber" class="input-field"
                                 data-key-placeholder="parentPhonePlaceholder" placeholder="رقم ولي الأمر">
                         </div>
-                        <button id="addNewStudentButton" class="btn-secondary-outline w-full"
-                            data-key="addNewStudentButton"><i class="ri-user-follow-line mr-2"></i> إضافة
-                            للقائمة</button>
+
+                        <button id="addNewStudentButton" class="btn-primary-custom w-full"
+                            data-key="addNewStudentButton">
+                            <i class="ri-user-follow-line mr-2"></i> إضافة للقائمة
+                        </button>
                     </div>
-                    <div class="relative mb-4">
-                        <i class="ri-search-line absolute top-3 right-3 text-gray-400"></i>
-                        <input type="search" id="studentSearchInput" class="input-field pr-10"
-                            data-key-placeholder="searchPlaceholder">
-                    </div>
-                    <div id="studentsListDisplay" class="space-y-2 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
-                    </div>
+
                 </section>
             </div>
 
@@ -496,15 +508,37 @@
 
                             <div class="w-full md:w-32">
                                 <label class="label-custom" data-key="amountLabel">قيمة المصاريف</label>
+
                                 <input type="number" id="defaultAmountInput"
                                     class="input-field text-center font-bold text-green-600 dark:text-green-400"
-                                    data-key-placeholder="defaultAmountPlaceholder" placeholder="مثلاً 150" value="150">
+                                    data-key-placeholder="defaultAmountPlaceholder" placeholder="150">
                             </div>
 
                             <button id="scanPaymentsBtn"
                                 class="bg-gray-900 dark:bg-white text-white dark:text-black font-bold p-3 rounded-xl shadow-lg">
                                 <i class="ri-qr-scan-2-line text-xl"></i>
                             </button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-4 animate-fade-up">
+                        <div
+                            class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 rounded-2xl text-center">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">تحصيل المجموعة</p>
+                            <h3 id="groupTotalDisplay" class="text-xl font-black text-green-600 dark:text-green-400">0
+                                ج.م</h3>
+                        </div>
+
+                        <div
+                            class="bg-brand/10 border border-brand/20 p-3 rounded-2xl text-center relative overflow-hidden">
+                            <div
+                                class="absolute top-0 right-0 w-8 h-8 bg-brand/20 rounded-bl-xl flex items-center justify-center">
+                                <i class="ri-wallet-3-fill text-brand text-xs"></i>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">إجمالي الدخل (الشهر)</p>
+                            <h3 id="overallTotalDisplay"
+                                class="text-xl font-black text-gray-900 dark:text-white flex items-center justify-center gap-2">
+                                <span>--</span>
+                            </h3>
                         </div>
                     </div>
                     <div id="paymentsList" class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar"></div>
@@ -653,8 +687,15 @@
     </div>
 
     <div id="scannerModal" class="hidden fixed inset-0 z-[2000] bg-black flex flex-col">
+
         <div class="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
+
             <video id="scannerVideo" class="absolute inset-0 w-full h-full object-cover opacity-60" playsinline></video>
+
+            <button id="toggleFlashBtn"
+                class="hidden absolute top-6 left-6 z-50 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 active:scale-95 transition-all shadow-lg">
+                <i class="ri-flashlight-line text-xl"></i>
+            </button>
 
             <div
                 class="relative z-20 w-72 h-72 border-2 border-brand/50 rounded-3xl flex flex-col items-center justify-center box-content p-1">
@@ -691,12 +732,7 @@
         <div class="p-6 bg-black flex justify-center">
             <button id="closeScannerModal"
                 class="bg-white/10 text-white border border-white/20 rounded-full px-8 py-3 font-bold hover:bg-white/20 transition-all backdrop-blur-md"
-                data-key="closeCamera">إغلاق
-                الكاميرا</button>
-            <button id="toggleFlashBtn"
-                class="hidden absolute top-6 left-6 z-50 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 active:scale-95 transition-all shadow-lg">
-                <i class="ri-flashlight-line text-xl"></i>
-            </button>
+                data-key="closeCamera">إغلاق الكاميرا</button>
         </div>
 
     </div>
