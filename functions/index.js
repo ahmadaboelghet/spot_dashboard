@@ -152,43 +152,128 @@ async function sendNotificationToParent(studentData, payload, context, studentId
 // ===================================================================
 
 // 1. إشعار الغياب (محسن للسرعة)
-exports.notifyOnAbsence = onDocumentWritten(
-    "teachers/{teacherId}/groups/{groupId}/dailyAttendance/{date}",
-    async (event) => {
-      const teacherId = event.params.teacherId;
-      const groupId = event.params.groupId;
-      const snap = event.data.after;
+// exports.notifyOnAbsence = onDocumentWritten(
+//     "teachers/{teacherId}/groups/{groupId}/dailyAttendance/{date}",
+//     async (event) => {
+//       const teacherId = event.params.teacherId;
+//       const groupId = event.params.groupId;
+//       const snap = event.data.after;
 
-      if (!snap || !snap.exists) return;
+//       if (!snap || !snap.exists) return;
 
-      const attendanceData = snap.data();
-      const records = attendanceData.records || [];
-      const subjectName = await getTeacherSubject(teacherId);
+//       const attendanceData = snap.data();
+//       const records = attendanceData.records || [];
+//       const subjectName = await getTeacherSubject(teacherId);
 
-      // تحسين السرعة: استخدام Promise.all لإرسال الإشعارات بالتوازي
-      const notifications = records
-          .filter((r) => r.status === "absent")
-          .map(async (record) => {
-            const studentId = record.studentId;
-            const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
+//       // تحسين السرعة: استخدام Promise.all لإرسال الإشعارات بالتوازي
+//       const notifications = records
+//           .filter((r) => r.status === "absent")
+//           .map(async (record) => {
+//             const studentId = record.studentId;
+//             const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
 
-            if (sDoc.exists) {
-              const sData = sDoc.data();
-              const payload = {
-                notification: {
-                  title: "تنبيه غياب",
-                  body: `تم تسجيل غياب الطالب ${sData.name} اليوم في مادة ${subjectName}.`,
-                },
-                data: {"screen": "attendance", "studentId": studentId},
-              };
-              return sendNotificationToParent(sData, payload, "notifyOnAbsence", studentId);
+//             if (sDoc.exists) {
+//               const sData = sDoc.data();
+//               const payload = {
+//                 notification: {
+//                   title: "تنبيه غياب",
+//                   body: `تم تسجيل غياب الطالب ${sData.name} اليوم في مادة ${subjectName}.`,
+//                 },
+//                 data: {"screen": "attendance", "studentId": studentId},
+//               };
+//               return sendNotificationToParent(sData, payload, "notifyOnAbsence", studentId);
+//             }
+//           });
+
+//       await Promise.all(notifications);
+//     });
+
+// 3. دالة الغياب اليدوية (التصحيح: المسار الصحيح للطلاب)
+exports.sendAbsenceNotifications = onCall({ cors: true }, async (request) => {
+    // استقبال البيانات
+    const { groupId, date, teacherId } = request.data;
+
+    if (!teacherId) {
+        throw new HttpsError("invalid-argument", "Teacher ID is required");
+    }
+
+    try {
+        const subjectName = await getTeacherSubject(teacherId);
+
+        // 1. جلب سجل الحضور (عشان نعرف مين حضر)
+        const attendanceDoc = await admin.firestore()
+            .doc(`teachers/${teacherId}/groups/${groupId}/dailyAttendance/${date}`)
+            .get();
+
+        const attendanceData = attendanceDoc.exists ? attendanceDoc.data() : { records: [] };
+        
+        // قايمة باللي حضروا
+        const presentStudentIds = new Set(
+            attendanceData.records
+                .filter((r) => r.status === "present")
+                .map((r) => r.studentId),
+        );
+
+        // 2. جلب الطلاب (🔥🔥 هنا كان الخطأ وصححناه 🔥🔥)
+        // بنجيب الطلاب من جوه مجلد المدرس والمجموعة مش من بره
+        const studentsSnapshot = await admin.firestore()
+            .collection("teachers")
+            .doc(teacherId)
+            .collection("groups")
+            .doc(groupId)
+            .collection("students") 
+            .get();
+
+        if (studentsSnapshot.empty) {
+            console.log(`No students found in path: teachers/${teacherId}/groups/${groupId}/students`);
+            return { success: true, message: "لا يوجد طلاب في هذه المجموعة" };
+        }
+
+        // 3. الفلترة والإرسال
+        const promises = [];
+        let sentCount = 0;
+
+        studentsSnapshot.docs.forEach((doc) => {
+            // لو الطالب مش في قايمة الحضور (يعني غايب)
+            if (!presentStudentIds.has(doc.id)) {
+                const student = doc.data();
+                
+                // نتأكد إن الطالب عنده ولي أمر وتوكن قبل ما نحاول نبعت
+                // (اختياري: ممكن تشيل الشرط ده لو الدالة sendNotificationToParent بتهندله)
+                const payload = {
+                    notification: {
+                        title: "تنبيه غياب ❌",
+                        body: `نحيطكم علماً بأن الطالب ${student.name} تغيب عن حصة اليوم (${date}) في مادة ${subjectName}.`,
+                    },
+                    data: {
+                        type: "absence_alert",
+                        studentId: doc.id,
+                        date: date,
+                    },
+                };
+                
+                promises.push(
+                    sendNotificationToParent(student, payload, "ManualAbsence", doc.id)
+                        .then(() => sentCount++),
+                );
             }
-          });
+        });
 
-      await Promise.all(notifications);
-    });
+        await Promise.all(promises);
 
-// 2. إشعار الدرجات وعدم التسليم (تم التعديل ليكون فوري وسريع)
+        return {
+            success: true,
+            sentCount: sentCount,
+            message: sentCount > 0 ? `تم إرسال تنبيه الغياب لـ ${sentCount} طالب بنجاح` : "لا يوجد غياب اليوم (الكل حاضر)",
+        };
+
+    } catch (error) {
+        console.error("Absence Notification Error:", error);
+        throw new HttpsError("internal", "حدث خطأ أثناء إرسال التنبيهات");
+    }
+});
+
+// 2. إشعار الدرجات (معدلة: ترسل فقط عند رصد درجة لمنع التكرار مع الحضور)
 exports.notifyOnNewGrades = onDocumentWritten(
     "teachers/{teacherId}/groups/{groupId}/assignments/{assignmentId}",
     async (event) => {
@@ -204,7 +289,6 @@ exports.notifyOnNewGrades = onDocumentWritten(
       const scoresAfter = afterData.scores || {};
       const subjectName = await getTeacherSubject(teacherId);
 
-      // مصفوفة لتخزين عمليات الإرسال وتنفيذها دفعة واحدة
       const sendPromises = [];
 
       for (const studentId in scoresAfter) {
@@ -212,30 +296,18 @@ exports.notifyOnNewGrades = onDocumentWritten(
           const scoreData = scoresAfter[studentId];
 
           if (scoreData) {
-            // نجهز العملية ونضيفها للقائمة
             const processStudent = async () => {
-              const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
+              // ✅ الشرط الجديد: نرسل فقط إذا كان هناك "درجة" مرصودة
+              const hasScore = scoreData.score !== "" && scoreData.score != null;
 
-              if (sDoc.exists) {
-                const sData = sDoc.data();
-                const hasScore = scoreData.score !== "" && scoreData.score != null;
-                const isSubmitted = scoreData.submitted === true || (scoreData.submitted === undefined && hasScore);
+              if (hasScore) {
+                const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
 
-                // الحالة الأولى: لم يتم التسليم (الأولوية للسرعة هنا)
-                if (scoreData.submitted === false) {
+                if (sDoc.exists) {
+                  const sData = sDoc.data();
                   const payload = {
                     notification: {
-                      title: "لم يتم تسليم الواجب",
-                      body: `نود إعلامكم بأن الطالب ${sData.name} لم يقم بتسليم واجب "${assignmentName}" في مادة ${subjectName}.`,
-                    },
-                    data: {"screen": "grades", "assignmentId": assignmentId},
-                  };
-                  await sendNotificationToParent(sData, payload, "notifyMissingHomework", studentId);
-                } else if (isSubmitted && hasScore) {
-                  // الحالة الثانية: رصد درجة جديدة
-                  const payload = {
-                    notification: {
-                      title: "تم رصد درجة جديدة",
+                      title: "تم رصد درجة جديدة 📝",
                       body: `حصل الطالب ${sData.name} على ${scoreData.score} في "${assignmentName}" لمادة ${subjectName}.`,
                     },
                     data: {"screen": "grades", "assignmentId": assignmentId},
@@ -249,7 +321,6 @@ exports.notifyOnNewGrades = onDocumentWritten(
         }
       }
 
-      // تنفيذ كل الإشعارات في نفس اللحظة لعدم التأخير
       await Promise.all(sendPromises);
     });
 
@@ -682,7 +753,7 @@ initializeApp();
 // ==========================================
 const accountSid = "ACff17306c0ec58f2075e96940ea289bea";
 const authToken = "b530f2fbe1d6267edbeabf3a9be1ffca";
-const geminiApiKey = "AIzaSyDwjmqQlri4OlBXbqTNGPby7ZLkH1sfgjk";
+const geminiApiKey = "AIzaSyBwTtYPXeDuOfDYbiPJn1nSqpjqKiBIXSk";
 const client = twilio(accountSid, authToken);
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 const fileManager = new GoogleAIFileManager(geminiApiKey);
@@ -1003,3 +1074,104 @@ exports.chatWithSpot = onCall({
     }
 });
 
+// ============================================================
+// 🌟 دالة إشعار الحضور (مع فحص الواجب تلقائياً)
+// ============================================================
+exports.notifyOnPresence = onDocumentWritten(
+    "teachers/{teacherId}/groups/{groupId}/dailyAttendance/{date}",
+    async (event) => {
+      // 1. التحقق من صحة البيانات
+      const snapAfter = event.data.after;
+      const snapBefore = event.data.before;
+
+      if (!snapAfter.exists) return; // تم الحذف، لا نفعل شيئاً
+
+      const afterData = snapAfter.data();
+      const beforeData = snapBefore.exists ? snapBefore.data() : {records: []};
+
+      const afterRecords = afterData.records || [];
+      const beforeRecords = beforeData.records || [];
+
+      // 2. استخراج الطلاب الذين تم تسجيل حضورهم *الآن* (الجدد فقط)
+      // (عشان لو عدلت طالب تاني، منبعتش للي اتسجل قبل كده مرة تانية)
+      const newlyPresentStudents = afterRecords.filter((rAfter) => {
+        const isPresentNow = rAfter.status === "present";
+        // نتأكد إنه ماكنش حاضر قبل التعديل ده
+        const wasPresent = beforeRecords.some((rBefore) =>
+          rBefore.studentId === rAfter.studentId && rBefore.status === "present",
+        );
+        return isPresentNow && !wasPresent;
+      });
+
+      if (newlyPresentStudents.length === 0) return;
+
+      const teacherId = event.params.teacherId;
+      const groupId = event.params.groupId;
+      const date = event.params.date;
+
+      // 3. جلب بيانات مساعدة (اسم المادة + ملف الواجب لهذا اليوم)
+      const subjectName = await getTeacherSubject(teacherId);
+
+      // بنحاول نجيب ملف الواجب بنفس الـ ID اللي بنعمله في الـ Frontend
+      // ID Format: {groupId}_HW_{date}
+      const hwId = `${groupId}_HW_${date}`;
+      const hwDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/assignments/${hwId}`).get();
+
+      let hwScores = {};
+      let hasHomeworkToday = false;
+      let homeworkName = "الواجب";
+
+      if (hwDoc.exists) {
+        hasHomeworkToday = true;
+        const hwData = hwDoc.data();
+        hwScores = hwData.scores || {};
+        homeworkName = hwData.name || "الواجب";
+      }
+
+      // 4. إرسال الإشعارات لكل طالب تم تسجيله
+      const notifications = newlyPresentStudents.map(async (record) => {
+        const studentId = record.studentId;
+
+        // جلب بيانات الطالب (الاسم + التوكن)
+        const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
+        if (!sDoc.exists) return;
+
+        const sData = sDoc.data();
+
+        // 5. تحديد نص الرسالة بناءً على الواجب
+        let title = "تم تسجيل الحضور ✅";
+        let body = `تم تسجيل حضور الطالب ${sData.name} اليوم في حصة ${subjectName}.`;
+
+        if (hasHomeworkToday) {
+          const studentHw = hwScores[studentId];
+          // التحقق: هل سلم الواجب؟ (submitted = true)
+          const isSubmitted = studentHw && studentHw.submitted === true;
+
+          if (isSubmitted) {
+            title = "حضور + تسليم واجب 🌟";
+            body = `ممتاز! حضر الطالب ${sData.name} حصة ${subjectName} وقام بتسليم "${homeworkName}" بنجاح.`;
+          } else {
+            title = "تنبيه واجب ⚠️";
+            body = `تم تسجيل حضور ${sData.name} في حصة ${subjectName}، ولكن لم يتم تسليم "${homeworkName}".`;
+          }
+        }
+
+        const payload = {
+          notification: {
+            title: title,
+            body: body,
+          },
+          data: {
+            "screen": "attendance",
+            "date": date,
+            "studentId": studentId,
+          },
+        };
+
+        // استخدام الدالة المساعدة الموجودة في ملفك لإرسال الإشعار
+        return sendNotificationToParent(sData, payload, "notifyOnPresence", studentId);
+      });
+
+      await Promise.all(notifications);
+    },
+);

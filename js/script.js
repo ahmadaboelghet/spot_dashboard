@@ -20,13 +20,13 @@ const prodConfig = {
 };
 
 const devConfig = {
-  apiKey: "AIzaSyAvWZpOmVqXxJhpcnuUod-kGn_JEFN7XFE",
-  authDomain: "spot-dev-17336.firebaseapp.com",
-  projectId: "spot-dev-17336",
-  storageBucket: "spot-dev-17336.firebasestorage.app",
-  messagingSenderId: "581004817275",
-  appId: "1:581004817275:web:59c8d43a4c4aeae7fd43de",
-  measurementId: "G-E4TN12XLED"
+    apiKey: "AIzaSyAvWZpOmVqXxJhpcnuUod-kGn_JEFN7XFE",
+    authDomain: "spot-dev-17336.firebaseapp.com",
+    projectId: "spot-dev-17336",
+    storageBucket: "spot-dev-17336.firebasestorage.app",
+    messagingSenderId: "581004817275",
+    appId: "1:581004817275:web:59c8d43a4c4aeae7fd43de",
+    measurementId: "G-E4TN12XLED"
 };
 
 // ==========================================
@@ -40,9 +40,9 @@ try {
     if (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "file:") {
         console.log("🚧 Running in DEVELOPMENT mode (Test DB)");
         activeConfig = devConfig;
-        
+
         // علامة أمان: خط أحمر فوق عشان تعرف إنك في التست وماتقلقش وانت بتمسح
-        document.body.style.borderTop = "5px solid red"; 
+        document.body.style.borderTop = "5px solid red";
     } else {
         console.log("🟢 Running in PRODUCTION mode (Live DB)");
         activeConfig = prodConfig;
@@ -51,7 +51,7 @@ try {
     if (typeof firebase !== 'undefined') {
         // تشغيل التطبيق بالكونفيج المختار
         app = firebase.initializeApp(activeConfig);
-        
+
         // تفعيل الخدمات
         firestoreDB = firebase.firestore();
         storage = firebase.storage();
@@ -66,8 +66,8 @@ try {
             }
         });
     }
-} catch (e) { 
-    console.error("Firebase Initialization Error:", e); 
+} catch (e) {
+    console.error("Firebase Initialization Error:", e);
 }
 
 // ==========================================
@@ -211,7 +211,7 @@ async function deleteFromDB(store, key) {
 let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = 'ar';
 let isSyncing = false;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
-let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null;
+let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null;
 
 const translations = {
     ar: {
@@ -360,7 +360,7 @@ const translations = {
         uploadError: "فشل الرفع",
         mustBePDF: "نوع الملف غير مدعوم. مسموح بـ PDF، صور، أو صوت فقط",
         loginFirst: "يجب تسجيل الدخول أولاً",
-        
+
         // كارت الدعوة
         botInviteTitle: "رابط البوت الذكي",
         botInviteDesc: "شارك هذا الرابط والكود مع طلابك ليبدأوا المذاكرة معك.",
@@ -598,6 +598,12 @@ function updateOnlineStatus() {
     updateSyncUI();
 }
 
+// دالة الحفظ الصامت (بدون Loading Screen يوقف الشغل)
+async function silentSave() {
+    console.log("🔄 جاري الحفظ التلقائي في الخلفية...");
+    await saveDailyData(true); // true دي عشان نعرف الدالة إن ده حفظ صامت
+}
+
 async function updateSyncUI() {
     if (!localDB) await openDB();
     const count = await new Promise(r => {
@@ -684,14 +690,14 @@ function setupListeners() {
 
     document.getElementById('groupSelect').addEventListener('change', async (e) => {
         SELECTED_GROUP_ID = e.target.value;
-        
+
         // محاولة استرجاع المبلغ المحفوظ لهذه المجموعة
         const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
         const amountInput = document.getElementById('defaultAmountInput');
-        
+
         if (amountInput) {
             // لو لقينا مبلغ محفوظ نكتبه، لو ملقيناش نسيبها فاضية
-            amountInput.value = savedAmount || ''; 
+            amountInput.value = savedAmount || '';
         }
 
         switchTab('daily');
@@ -1131,7 +1137,7 @@ async function createGroup() {
     // 4. الانتقال لتابة الحصة وتحميل بيانات المجموعة الفارغة
     switchTab('daily');
     await loadGroupData(); // تفعيل أزرار الإضافة (عشان لو عايز يضيف طلاب علطول)
-    document.getElementById('defaultAmountInput').value = ''; 
+    document.getElementById('defaultAmountInput').value = '';
     showToast(translations[currentLang].groupCreatedSuccess);
 }
 
@@ -1236,7 +1242,7 @@ function switchTab(tabId) {
         }
     }
     if (tabId === 'bot') {
-        
+
         loadBotFiles(); // دي الدالة اللي هنعملها تحت
     }
 }
@@ -1311,8 +1317,8 @@ async function renderDailyList() {
 
         // تنسيق الصف حسب الحالة
         row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 ${status === 'present'
-                ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
-                : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
+            ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
+            : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
             }`;
 
         let html = `
@@ -1364,8 +1370,19 @@ async function renderDailyList() {
 
             // تحديث عداد الحضور المباشر
             updateAttendanceCount();
+            saveTimeout = setTimeout(() => {
+                silentSave(); // هيحفظ التغيير ده لوحده بعد 3 ثواني
+            }, 3000);
         });
-
+        if (hwCheck) {
+            hwCheck.addEventListener('change', () => {
+                // ✅✅ الإضافة السحرية: حفظ تلقائي للواجب اليدوي ✅✅
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    silentSave();
+                }, 3000);
+            });
+        }
         list.appendChild(row);
     });
 
@@ -1378,63 +1395,122 @@ async function renderDailyList() {
     updateAttendanceCount(); // تشغيل العداد أول مرة
 }
 
-async function saveDailyData() {
-    if (!TEACHER_ID || !SELECTED_GROUP_ID) return;
-
-    // إظهار اللودر فوراً
+async function saveDailyData(isSilent = false) {
+    // تعريف الزرار خارج الـ try عشان نقدر نرجعه لأصله في finally
     const saveBtn = document.getElementById('saveDailyBtn');
-    const oldText = saveBtn.innerText;
-    saveBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
-    saveBtn.disabled = true;
+    let oldText = "";
 
     try {
-        const date = document.getElementById('dailyDateInput').value;
-        const attRecords = [];
-        const hwScores = {};
-
-        document.querySelectorAll('#dailyStudentsList > div').forEach(row => {
-            const sid = row.dataset.sid;
-            // 1. نجيب حالة الحضور الأول
-            const status = row.querySelector('.att-select').value;
-
-            // حفظ سجل الحضور (ده شغال للكل عادي)
-            attRecords.push({ studentId: sid, status: status });
-
-            // 2. اللوجيك الجديد: حفظ الواجب فقط لو الطالب "مش غائب"
-            if (hasHomeworkToday && status !== 'absent') {
-                hwScores[sid] = {
-                    submitted: row.querySelector('.hw-check').checked,
-                    score: null
-                };
-            }
-        });
-
-        // ✅ التعديل هنا: تجميع كل العمليات في مصفوفة واحدة
-        const promises = [];
-
-        // 1. حفظ الحضور محلياً وسحابياً
-        promises.push(putToDB('attendance', { id: `${SELECTED_GROUP_ID}_${date}`, date, records: attRecords }));
-        promises.push(addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`, data: { date, records: attRecords } }));
-
-        // 2. حفظ الواجب محلياً وسحابياً (لو موجود)
-        if (hasHomeworkToday) {
-            const hwData = { id: `${SELECTED_GROUP_ID}_HW_${date}`, groupId: SELECTED_GROUP_ID, name: `واجب ${date}`, date, scores: hwScores, type: 'daily' };
-            promises.push(putToDB('assignments', hwData));
-            promises.push(addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwData.id}`, data: hwData }));
+        // 1. (تم إلغاء فحص Auth) - التحقق فقط من وجود بيانات المدرس والمجموعة
+        if (!TEACHER_ID || !SELECTED_GROUP_ID) {
+            if (!isSilent) console.warn("⚠️ لا يوجد معرف مدرس أو مجموعة. تم إلغاء الحفظ.");
+            return;
         }
 
-        // ✅ تنفيذ الكل في نفس اللحظة (أسرع بكتير)
-        await Promise.all(promises);
+        // 2. التحقق من وجود حقل التاريخ
+        const dateInput = document.getElementById('dailyDateInput');
+        if (!dateInput) {
+            console.warn("⚠️ Save aborted: Date input not found in DOM.");
+            return;
+        }
+        const date = dateInput.value;
+        if (!date) {
+             if (!isSilent) showToast("يرجى اختيار التاريخ", "error");
+             return;
+        }
 
-        showToast(translations[currentLang].saved);
-        renderDailyList();
+        // 3. تغيير شكل الزرار (فقط لو الزرار موجود ومش صامت)
+        if (!isSilent && saveBtn) {
+            oldText = saveBtn.innerText;
+            saveBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
+            saveBtn.disabled = true;
+        }
+
+        const promises = [];
+        
+        // --- تجميع بيانات الحضور ---
+        const records = [];
+        const studentRows = document.querySelectorAll('#dailyStudentsList > div');
+        
+        // لو مفيش طلاب، مفيش داعي نكمل (إلا لو لسه بنحمل)
+        if (studentRows.length > 0) {
+            studentRows.forEach(div => {
+                const attSelect = div.querySelector('.att-select');
+                if (attSelect) {
+                    records.push({ studentId: div.dataset.sid, status: attSelect.value });
+                }
+            });
+
+            const attendanceData = { 
+                id: `${SELECTED_GROUP_ID}_${date}`, 
+                date: date, 
+                records: records 
+            };
+
+            promises.push(putToDB('attendance', attendanceData));
+            promises.push(addToSyncQueue({ 
+                type: 'set', 
+                path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`, 
+                data: attendanceData 
+            }));
+        }
+
+        // --- تجميع بيانات الواجب ---
+        // نتأكد إن المتغير hasHomeworkToday متعرف أصلاً
+        if (typeof hasHomeworkToday !== 'undefined' && hasHomeworkToday) {
+            const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
+            const scores = {};
+            
+            if (studentRows.length > 0) {
+                studentRows.forEach(div => {
+                    const chk = div.querySelector('.hw-check');
+                    if (chk) {
+                        scores[div.dataset.sid] = { 
+                            submitted: chk.checked, 
+                            score: null 
+                        };
+                    }
+                });
+
+                const hwData = { 
+                    id: hwId, 
+                    groupId: SELECTED_GROUP_ID, 
+                    name: `واجب ${date}`, 
+                    date: date, 
+                    scores: scores, 
+                    type: 'daily' 
+                };
+
+                promises.push(putToDB('assignments', hwData));
+                promises.push(addToSyncQueue({ 
+                    type: 'set', 
+                    path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`, 
+                    data: hwData 
+                }));
+            }
+        }
+
+        // تنفيذ الحفظ
+        if (promises.length > 0) {
+            await Promise.all(promises);
+
+            if (!isSilent) {
+                showToast(translations[currentLang]?.saved || "تم الحفظ");
+            } else {
+                console.log("✅ Auto-saved successfully (Background)");
+            }
+        }
 
     } catch (error) {
-        console.error(error);
-        showToast("حدث خطأ أثناء الحفظ", "error");
+        // 🔥 هنا يتم اصطياد أي خطأ غير متوقع ومنع توقف البرنامج
+        console.error("❌ Save Error Handled:", error);
+        if (!isSilent) showToast("حدث خطأ أثناء الحفظ", "error");
     } finally {
-        saveBtn.innerText = oldText;
-        saveBtn.disabled = false;
+        // 4. إرجاع الزرار لأصله دائماً
+        if (!isSilent && saveBtn) {
+            saveBtn.innerText = oldText || "حفظ الكل";
+            saveBtn.disabled = false;
+        }
     }
 }
 
@@ -1463,7 +1539,7 @@ async function startScanner(mode) {
         // إعدادات الفيديو
         const videoTrack = stream.getVideoTracks()[0];
         const settings = videoTrack.getSettings();
-        
+
         // ضبط المراية (Mirroring)
         if (settings.facingMode === 'user') videoElement.style.transform = "scaleX(-1)";
         else videoElement.style.transform = "";
@@ -1473,7 +1549,7 @@ async function startScanner(mode) {
         if (capabilities.torch) {
             if (flashBtn) {
                 flashBtn.classList.remove('hidden');
-                
+
                 // إعادة تعيين الأيقونة واللون
                 isTorchOn = false;
                 updateFlashBtnUI(flashBtn);
@@ -1551,13 +1627,13 @@ async function handleScan(scannedText) {
 
     // 🛑 الحالة: الطالب مش في المجموعة دي (Cross-Group Logic)
     if (matchedStudents.length === 0) {
-        
+
         isScannerPaused = true; // إيقاف الكاميرا مؤقتاً
 
         try {
             // بحث شامل في كل الطلاب (Global Search)
-            const allLocalStudents = await getAllFromDB('students'); 
-            const globalMatch = allLocalStudents.find(s => 
+            const allLocalStudents = await getAllFromDB('students');
+            const globalMatch = allLocalStudents.find(s =>
                 (s.parentPhoneNumber && s.parentPhoneNumber.trim() === qrCode) ||
                 s.id === qrCode
             );
@@ -1568,7 +1644,7 @@ async function handleScan(scannedText) {
                 // ✅ التحقق: هل المدرس مفعل خيار الواجب؟
                 if (hasHomeworkToday) {
                     currentCrossGroupStudent = globalMatch; // حفظ الطالب مؤقتاً
-                    
+
                     // تجهيز وعرض المودال
                     document.getElementById('hwStudentName').innerText = globalMatch.name;
                     document.getElementById('hwConfirmModal').classList.remove('hidden');
@@ -1603,7 +1679,7 @@ async function handleScan(scannedText) {
             requestAnimationFrame(tickScanner);
         }, 2500);
 
-        return; 
+        return;
     }
 
     // ✅ الحالة الطبيعية: الطالب موجود في المجموعة الحالية
@@ -1626,6 +1702,14 @@ async function handleScan(scannedText) {
     if (currentScannerMode === 'daily') {
         checkGoldenTicket(studentToMark.name);
         processDailyScan(studentToMark);
+        // ✅✅ الإضافة الجديدة: الحفظ التلقائي الذكي ✅✅
+        // لو المدرس بيعمل scan ورا بعض بسرعة، بنلغي الحفظ القديم ونستنى الجديد
+        clearTimeout(saveTimeout);
+
+        // بنقوله: استنى 3 ثواني، لو مفيش حد تاني جه، احفظ اللي فات كله
+        saveTimeout = setTimeout(() => {
+            silentSave();
+        }, 3000);
     }
     else if (currentScannerMode === 'payments') {
         processPaymentScan(studentToMark);
@@ -1636,16 +1720,16 @@ async function handleScan(scannedText) {
 async function saveCrossGroupAttendance(student, homeworkSubmitted) {
     const date = document.getElementById('dailyDateInput').value;
     const groupId = student.groupId;
-    
+
     // 1️⃣ تسجيل الحضور (Attendance)
     const attId = `${groupId}_${date}`;
-    
+
     // جلب أو إنشاء سجل الحضور
     let attDoc = await getFromDB('attendance', attId);
     if (!attDoc) {
         attDoc = { id: attId, date: date, records: [] };
     }
-    
+
     // تحديث حالة الطالب
     const existingRec = attDoc.records.find(r => r.studentId === student.id);
     if (existingRec) {
@@ -1656,26 +1740,26 @@ async function saveCrossGroupAttendance(student, homeworkSubmitted) {
 
     // حفظ الحضور (Local & Sync)
     await putToDB('attendance', attDoc);
-    await addToSyncQueue({ 
-        type: 'set', 
-        path: `teachers/${TEACHER_ID}/groups/${groupId}/dailyAttendance/${date}`, 
-        data: { date: date, records: attDoc.records } 
+    await addToSyncQueue({
+        type: 'set',
+        path: `teachers/${TEACHER_ID}/groups/${groupId}/dailyAttendance/${date}`,
+        data: { date: date, records: attDoc.records }
     });
 
     // 2️⃣ تسجيل الواجب (Homework) - إذا تم التسليم
     if (homeworkSubmitted) {
         const hwId = `${groupId}_HW_${date}`;
-        
+
         // جلب أو إنشاء سجل الواجب
         let hwDoc = await getFromDB('assignments', hwId);
         if (!hwDoc) {
-            hwDoc = { 
-                id: hwId, 
-                groupId: groupId, 
-                name: `واجب ${date}`, 
-                date: date, 
-                scores: {}, 
-                type: 'daily' 
+            hwDoc = {
+                id: hwId,
+                groupId: groupId,
+                name: `واجب ${date}`,
+                date: date,
+                scores: {},
+                type: 'daily'
             };
         }
 
@@ -1687,12 +1771,12 @@ async function saveCrossGroupAttendance(student, homeworkSubmitted) {
 
         // حفظ الواجب (Local & Sync)
         await putToDB('assignments', hwDoc);
-        await addToSyncQueue({ 
-            type: 'set', 
-            path: `teachers/${TEACHER_ID}/groups/${groupId}/assignments/${hwId}`, 
-            data: hwDoc 
+        await addToSyncQueue({
+            type: 'set',
+            path: `teachers/${TEACHER_ID}/groups/${groupId}/assignments/${hwId}`,
+            data: hwDoc
         });
-        
+
         console.log(`✅ Cross-Homework Saved for ${student.name}`);
     }
 
@@ -1740,13 +1824,13 @@ async function resolveHomework(isSubmitted) {
     if (currentCrossGroupStudent) {
         // حفظ الحضور + الواجب (حسب الاختيار)
         await saveCrossGroupAttendance(currentCrossGroupStudent, isSubmitted);
-        
+
         // جلب اسم المجموعة للعرض
         let groupName = "مجموعة أخرى";
         try {
             const gDoc = await getFromDB('groups', currentCrossGroupStudent.groupId);
             if (gDoc) groupName = gDoc.name;
-        } catch (e) {}
+        } catch (e) { }
 
         // رسائل تأكيد
         showToast(`⚠️ الطالب "${currentCrossGroupStudent.name}" مسجل في (${groupName})`, 'warning');
@@ -1758,7 +1842,7 @@ async function resolveHomework(isSubmitted) {
         // تنظيف وإعادة تشغيل
         currentCrossGroupStudent = null;
         document.getElementById('hwConfirmModal').classList.add('hidden');
-        
+
         setTimeout(() => {
             isScannerPaused = false;
             requestAnimationFrame(tickScanner);
@@ -1774,11 +1858,11 @@ async function resolveHomework(isSubmitted) {
             if (chk) {
                 chk.checked = isSubmitted;
                 // تلوين الصف لو تم التسليم (اختياري)
-                if(isSubmitted) row.classList.add('bg-green-50'); 
+                if (isSubmitted) row.classList.add('bg-green-50');
             }
         }
     }
-    
+
     document.getElementById('hwConfirmModal').classList.add('hidden');
     currentPendingStudentId = null;
     isScannerPaused = false;
@@ -1800,9 +1884,9 @@ function processPaymentScan(student) {
             if (!val) {
                 showToast(`⚠️ لا يمكن تحصيل المصاريف لـ "${student.name}"`, "error");
                 setTimeout(() => showToast("يرجى تحديد المبلغ أولاً في الخانة العلوية", "error"), 1000);
-                
+
                 // تشغيل صوت خطأ لو متاح، أو هزة للصف
-                row.classList.add('shake-anim'); 
+                row.classList.add('shake-anim');
                 defaultAmountInput.focus(); // توجيه المؤشر للخانة الفاضية
                 setTimeout(() => row.classList.remove('shake-anim'), 500);
                 return; // وقف التنفيذ
@@ -1981,7 +2065,7 @@ function showStudentQR(student) {
     const qrContent = student.parentPhoneNumber ? student.parentPhoneNumber.trim() : student.id;
 
     // 3. عرض الرقم تحت الـ QR (عشان لو الكاميرا معلجة المدرس يكتبه)
-   const randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
+    const randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
 
     // ب. الإمساك بالعنصر وتغيير محتواه
     const quoteElement = document.getElementById('idStudentPhone');
@@ -2041,7 +2125,7 @@ async function renderPaymentsList() {
     const defaultAmountInput = document.getElementById('defaultAmountInput');
     const container = document.getElementById('paymentsList');
     const groupTotalDisplay = document.getElementById('groupTotalDisplay');
-    
+
     container.innerHTML = '';
     let currentGroupTotal = 0; // ده العداد الحي للمجموعة
 
@@ -2089,7 +2173,7 @@ async function renderPaymentsList() {
         // ---- تفاعل الـ Checkbox ----
         checkbox.addEventListener('change', (e) => {
             const defaultVal = defaultAmountInput.value;
-            
+
             // تحقق من وجود مبلغ
             if (e.target.checked && !defaultVal) {
                 e.target.checked = false;
@@ -2102,18 +2186,18 @@ async function renderPaymentsList() {
                 if (!input.value || input.value == 0) input.value = defaultVal;
                 div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.add('text-green-600', 'font-bold');
-                
+
                 // ➕ تزويد المجموع
                 currentGroupTotal += parseInt(input.value || 0);
             } else {
                 // ➖ تنقيص المجموع
                 currentGroupTotal -= parseInt(input.value || 0);
-                
+
                 input.value = '';
                 div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.remove('text-green-600', 'font-bold');
             }
-            
+
             // تحديث الشاشة
             groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
             calculateOverallIncome(currentGroupTotal); // ✅ تحديث الكلي فوراً
@@ -2122,17 +2206,17 @@ async function renderPaymentsList() {
         // ---- تفاعل تغيير الرقم يدوياً ----
         let oldVal = 0;
         input.addEventListener('focus', () => oldVal = parseInt(input.value) || 0);
-        
+
         input.addEventListener('change', () => {
-             const newVal = parseInt(input.value) || 0;
-             if (checkbox.checked) {
-                 // معادلة التحديث: (المجموع القديم - القيمة القديمة) + القيمة الجديدة
-                 currentGroupTotal = (currentGroupTotal - oldVal) + newVal;
-                 
-                 groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
-                 calculateOverallIncome(currentGroupTotal); // ✅ تحديث الكلي فوراً
-             }
-             oldVal = newVal;
+            const newVal = parseInt(input.value) || 0;
+            if (checkbox.checked) {
+                // معادلة التحديث: (المجموع القديم - القيمة القديمة) + القيمة الجديدة
+                currentGroupTotal = (currentGroupTotal - oldVal) + newVal;
+
+                groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
+                calculateOverallIncome(currentGroupTotal); // ✅ تحديث الكلي فوراً
+            }
+            oldVal = newVal;
         });
 
         container.appendChild(div);
@@ -2281,12 +2365,12 @@ async function loadPreferences() {
         switchTab('daily');
 
         if (SELECTED_GROUP_ID) {
-        const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
-        const amountInput = document.getElementById('defaultAmountInput');
-        if (amountInput && savedAmount) {
-            amountInput.value = savedAmount;
+            const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
+            const amountInput = document.getElementById('defaultAmountInput');
+            if (amountInput && savedAmount) {
+                amountInput.value = savedAmount;
+            }
         }
-    }
     }
 }
 function toggleLang() {
@@ -2676,8 +2760,8 @@ function copyBotInvite() {
     if (!TEACHER_ID) return;
 
     // رقم البوت (تويليو ساندبوكس حالياً - غيره لما تطلع لايف)
-    const botNumber = "+14155238886"; 
-    
+    const botNumber = "+14155238886";
+
     // رسالة الدعوة الاحترافية
     const inviteMsg = `
 👋 أهلاً يا شباب!
@@ -2707,10 +2791,10 @@ https://wa.me/${botNumber.replace('+', '')}?text=join%20off-drive
 let isChatOpen = false;
 
 // دالة فتح وقفل الشات (مربوطة بـ window عشان HTML يشوفها)
-window.toggleSpotChat = function() {
+window.toggleSpotChat = function () {
     const windowEl = document.getElementById('spotChatWindow');
     const inputEl = document.getElementById('chatInput');
-    
+
     if (!isChatOpen) {
         // فتح
         windowEl.classList.remove('scale-0', 'opacity-0', 'pointer-events-none');
@@ -2725,13 +2809,13 @@ window.toggleSpotChat = function() {
 };
 
 // دالة إرسال الرسالة
-window.sendSpotMessage = async function() {
+window.sendSpotMessage = async function () {
     const input = document.getElementById('chatInput');
     const msg = input.value.trim();
     if (!msg) return;
 
     // 1. التأكد من تسجيل الدخول
-    const currentTeacherId = localStorage.getItem('learnaria-tid'); 
+    const currentTeacherId = localStorage.getItem('learnaria-tid');
 
     if (!currentTeacherId) {
         addMessageToUI("⚠️ لازم تكون مسجل دخول عشان أقدر أساعدك!", 'bot');
@@ -2749,19 +2833,19 @@ window.sendSpotMessage = async function() {
     try {
         // 4. استدعاء الـ Function (بالطريقة القديمة المتوافقة مع كودك) 👇👇
         // بدل httpsCallable(functions, ...)
-        const chatFn = firebase.functions().httpsCallable('chatWithSpot'); 
-        
-        const result = await chatFn({ 
-            message: msg, 
-            teacherId: currentTeacherId, 
-            role: 'teacher' 
+        const chatFn = firebase.functions().httpsCallable('chatWithSpot');
+
+        const result = await chatFn({
+            message: msg,
+            teacherId: currentTeacherId,
+            role: 'teacher'
         });
 
         // 5. إخفاء المؤشر وعرض الرد
         document.getElementById('typingIndicator').classList.add('hidden');
-        
+
         // تنسيق الرد
-        const cleanResponse = result.data.response.replace(/\n/g, '<br>'); 
+        const cleanResponse = result.data.response.replace(/\n/g, '<br>');
         addMessageToUI(cleanResponse, 'bot');
 
     } catch (error) {
@@ -2777,16 +2861,16 @@ function cleanJSON(text) {
 
     // 1. تنظيف الـ HTML والماركداون
     let clean = text.replace(/<br\s*\/?>/gi, ' ')
-                    .replace(/```json/gi, '')
-                    .replace(/```/g, '')
-                    .trim();
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
 
     // 2. 🔥 الإصلاح الذكي (Smart Fix for Bad Escapes)
     // بيمشي على أي (\) ويشوف الحرف اللي وراها
-    clean = clean.replace(/\\(.)/g, function(match, char) {
+    clean = clean.replace(/\\(.)/g, function (match, char) {
         // دي الحروف الوحيدة المسموح يجي قبلها شرطة في الـ JSON
         const validEscapes = ["\"", "\\", "/", "b", "f", "n", "r", "t", "u"];
-        
+
         if (validEscapes.includes(char)) {
             return match; // لو الحرف مسموح (زي \n أو \\)، سيبه زي ما هو
         } else {
@@ -2797,11 +2881,11 @@ function cleanJSON(text) {
     // 3. استخراج الـ JSON
     const startIndex = clean.indexOf('{');
     const endIndex = clean.lastIndexOf('}');
-    
+
     if (startIndex !== -1 && endIndex !== -1) {
         return clean.substring(startIndex, endIndex + 1);
     }
-    
+
     return null;
 }
 
@@ -2809,7 +2893,7 @@ function cleanJSON(text) {
 function addMessageToUI(text, sender) {
     const container = document.getElementById('chatMessages');
     const div = document.createElement('div');
-    div.className = "mb-6 animate-fade-in-up w-full"; 
+    div.className = "mb-6 animate-fade-in-up w-full";
 
     let examData = null;
 
@@ -2833,7 +2917,7 @@ function addMessageToUI(text, sender) {
                     ${text}
                 </div>
             </div>`;
-    } 
+    }
     else if (examData) {
         // 📝 كارت الامتحان (زرار طباعة الامتحان)
         div.innerHTML = `
@@ -2853,10 +2937,10 @@ function addMessageToUI(text, sender) {
                     </div>
                 </div>
             </div>`;
-    } 
+    }
     else {
         // 🤖 رسالة الشرح العادية (زرار حفظ المذكرة PDF)
-        
+
         // تشفير النص عشان نقدر نبعته للدالة من غير مشاكل
         const safeText = encodeURIComponent(text);
 
@@ -2880,26 +2964,26 @@ function addMessageToUI(text, sender) {
                 </div>
             </div>`;
     }
-    
+
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 }
 // دالة تحويل الرسالة لـ PDF 🖨️
-window.downloadMessageAsPDF = function(elementId) {
+window.downloadMessageAsPDF = function (elementId) {
     const element = document.getElementById(elementId);
-    
+
     // إعدادات الملف
     const opt = {
-        margin:       [10, 10, 10, 10], // الهوامش
-        filename:     `Spot_Exam_${new Date().toLocaleDateString()}.pdf`, // اسم الملف
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true }, // scale 2 عشان الجودة تبقي عالية
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        margin: [10, 10, 10, 10], // الهوامش
+        filename: `Spot_Exam_${new Date().toLocaleDateString()}.pdf`, // اسم الملف
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true }, // scale 2 عشان الجودة تبقي عالية
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     // بدء التحويل (بيظهر لودينج صغير)
     showToast("جاري إنشاء ملف الـ PDF... 📄");
-    
+
     html2pdf().set(opt).from(element).save().then(() => {
         showToast("تم تحميل الملف بنجاح! ✅");
     }).catch(err => {
@@ -2913,11 +2997,11 @@ function scrollToBottom() {
     container.scrollTop = container.scrollHeight;
 }
 
-window.printExam = function(examData) {
+window.printExam = function (examData) {
     const printWindow = window.open('', '_blank');
-    
+
     const toArabicNum = (n) => n.toLocaleString('ar-EG');
-    const getOptionLabel = (i) => ['(أ)', '(ب)', '(ج)', '(د)'][i] || `(${i+1})`;
+    const getOptionLabel = (i) => ['(أ)', '(ب)', '(ج)', '(د)'][i] || `(${i + 1})`;
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -3025,9 +3109,9 @@ window.printExam = function(examData) {
 };
 
 // 🖨️ دالة طباعة المذكرات (نسخة الرياضيات الاحترافية)
-window.printStudyNote = function(content) {
+window.printStudyNote = function (content) {
     const printWindow = window.open('', '_blank');
-    
+
     // معالجة النص لتحويله لـ HTML منسق
     const formattedContent = content
         // تحويل العناوين الرئيسية (## عنوان)
@@ -3189,12 +3273,12 @@ window.printStudyNote = function(content) {
 async function calculateOverallIncome(liveGroupTotal = null) {
     const month = document.getElementById('paymentMonthInput').value;
     const display = document.getElementById('overallTotalDisplay');
-    
+
     if (!month) return;
 
     try {
         let groups = await getAllFromDB('groups');
-        
+
         if (!groups || groups.length === 0) {
             display.innerText = "0 ج.م";
             return;
@@ -3212,7 +3296,7 @@ async function calculateOverallIncome(liveGroupTotal = null) {
             // باقي المجموعات: هاتها من الداتابيز عادي
             const payId = `${group.id}_PAY_${month}`;
             const doc = await getFromDB('payments', payId);
-            
+
             if (doc && doc.records) {
                 return doc.records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
             }
@@ -3229,3 +3313,104 @@ async function calculateOverallIncome(liveGroupTotal = null) {
         console.error(error);
     }
 }
+// ==========================================
+// 🔔 منطق نافذة الغياب الجديدة (Modal Logic - No Auth Version)
+// ==========================================
+
+function setupAbsenceModalListeners() {
+    const sendBtn = document.getElementById('sendAbsenceBtn');
+    const confirmBtn = document.getElementById('confirmSendAbsenceBtn');
+    const overlay = document.getElementById('absenceModalOverlay');
+    
+    // 1. فتح النافذة (نتأكد إن الزرار موجود الأول)
+    if (sendBtn) {
+        sendBtn.onclick = () => {
+            const modal = document.getElementById('absenceModal');
+            const overlay = document.getElementById('absenceModalOverlay');
+            const content = document.getElementById('absenceModalContent');
+
+            if (modal && overlay && content) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    overlay.classList.remove('opacity-0');
+                    content.classList.remove('opacity-0', 'scale-95');
+                    content.classList.add('opacity-100', 'scale-100');
+                }, 10);
+            }
+        };
+    }
+
+    // 2. إغلاق النافذة
+    window.closeAbsenceModal = function() {
+        const modal = document.getElementById('absenceModal');
+        const overlay = document.getElementById('absenceModalOverlay');
+        const content = document.getElementById('absenceModalContent');
+
+        if (modal && overlay && content) {
+            overlay.classList.add('opacity-0');
+            content.classList.remove('opacity-100', 'scale-100');
+            content.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+    };
+
+    // 3. تأكيد الإرسال
+    if (confirmBtn) {
+        confirmBtn.onclick = async () => {
+            const originalText = confirmBtn.innerText;
+            
+            confirmBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري الإرسال...';
+            confirmBtn.disabled = true;
+
+            try {
+                const dateInput = document.getElementById('dailyDateInput');
+                
+                // تحقق مزدوج من البيانات قبل الإرسال
+                if (!dateInput || !dateInput.value) {
+                    showToast("يرجى اختيار التاريخ", "error");
+                    return;
+                }
+
+                if (!TEACHER_ID || !SELECTED_GROUP_ID) {
+                    showToast("بيانات المدرس أو المجموعة غير متوفرة", "error");
+                    return;
+                }
+
+                const sendAbsenceFn = firebase.functions().httpsCallable('sendAbsenceNotifications');
+                
+                // ✅ التعديل هنا: إرسال teacherId يدوياً
+                const result = await sendAbsenceFn({
+                    groupId: SELECTED_GROUP_ID,
+                    date: dateInput.value,
+                    teacherId: TEACHER_ID // لازم نبعته عشان مفيش Auth
+                });
+
+                closeAbsenceModal();
+
+                if (result.data.success) {
+                    showToast(`✅ ${result.data.message}`);
+                } else {
+                    showToast(result.data.message || "لا يوجد غياب", "warning");
+                }
+
+            } catch (error) {
+                console.error("Absence Send Error:", error);
+                closeAbsenceModal();
+                showToast("فشل إرسال التنبيهات", "error");
+            } finally {
+                confirmBtn.innerHTML = originalText;
+                confirmBtn.disabled = false;
+            }
+        };
+    }
+
+    // إغلاق عند الضغط على الخلفية
+    if (overlay) {
+        overlay.onclick = closeAbsenceModal;
+    }
+}
+
+// تشغيل الدالة بعد تحميل الصفحة
+document.addEventListener('DOMContentLoaded', setupAbsenceModalListeners);
