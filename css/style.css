@@ -1,35 +1,64 @@
 /* css/style.css - Corrected Brand Color & Dark Mode Fixes */
 
 :root {
-    --primary: #F2CE5A; 
+    --primary: #F2CE5A;
     --primary-hover: #e6c045;
-    
+
     --secondary: #121212;
     --dark-bg: #121212;
     --dark-surface: #1E1E1E;
-    --glass-border: rgba(255, 255, 255, 0.5);
-    --glass-bg: rgba(255, 255, 255, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --dark-glass-bg: rgba(30, 30, 30, 0.7);
+    --dark-glass-border: rgba(255, 255, 255, 0.05);
 }
 
 /* Animations */
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .fade-in-up {
     animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.delay-100 { animation-delay: 0.1s; }
+.delay-100 {
+    animation-delay: 0.1s;
+}
 
 /* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar { width: 6px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-.dark-mode .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--primary); }
-.scrollbar-hide::-webkit-scrollbar { display: none; }
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 20px;
+}
+
+.dark-mode .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #475569;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
 
 /* Glass Panel Component */
 .glass-panel {
@@ -43,13 +72,42 @@
 }
 
 .dark-mode .glass-panel {
-    background: #1E1E1E;
-    border-color: #333;
-    backdrop-filter: none;
+    background: var(--dark-glass-bg);
+    border-color: var(--dark-glass-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
-.glass-panel:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 28px;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark-mode .glass-card {
+    background: var(--dark-glass-bg);
+    border-color: var(--dark-glass-border);
+}
+
+.glass-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary);
+}
+
+.profile-grid-bg {
+    background-image: linear-gradient(to right, rgba(128, 128, 128, 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(128, 128, 128, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+.dark-mode .profile-grid-bg {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 }
 
 /* ابحث عن هذا الكلاس وعدله */
@@ -58,15 +116,15 @@
     padding: 0.75rem 1rem;
     border-radius: 12px;
     background-color: #f9fafb;
-    
+
     /* التعديل هنا: غيرنا transparent لـ لون رصاصي #e5e7eb */
-    border: 1px solid #e5e7eb; 
-    
+    border: 1px solid #e5e7eb;
+
     color: #1f2937;
     font-weight: 500;
     transition: all 0.2s;
     outline: none;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 /* تأكد إن الدارك مود لسه زي ما هو بيغير اللون */
@@ -95,7 +153,10 @@
     color: #4b5563;
     margin-bottom: 0.5rem;
 }
-.dark-mode .label-custom { color: #e5e7eb; }
+
+.dark-mode .label-custom {
+    color: #e5e7eb;
+}
 
 /* Buttons */
 .btn-primary-custom {
@@ -116,7 +177,9 @@
     box-shadow: 0 8px 12px rgba(242, 206, 90, 0.3);
 }
 
-.btn-primary-custom:active { transform: scale(0.98); }
+.btn-primary-custom:active {
+    transform: scale(0.98);
+}
 
 .btn-secondary-outline {
     background: transparent;
@@ -138,6 +201,7 @@
     background: var(--secondary);
     color: white;
 }
+
 .dark-mode .btn-secondary-outline:hover {
     background: #e5e7eb;
     color: black;
@@ -168,12 +232,15 @@
     white-space: nowrap;
 }
 
-.dark-mode .tab-button { color: #d1d5db; }
+.dark-mode .tab-button {
+    color: #d1d5db;
+}
 
 .tab-button:hover:not(:disabled) {
     background-color: #fff9c4;
     color: #a16207;
 }
+
 .dark-mode .tab-button:hover:not(:disabled) {
     background-color: #333;
     color: var(--primary);
@@ -209,19 +276,22 @@
     border-color: #333;
     color: #fff;
 }
-.dark-mode .record-item p, 
+
+.dark-mode .record-item p,
 .dark-mode .record-item span {
     color: #fff !important;
 }
+
 .dark-mode .record-item p.text-sm {
     color: #9ca3af !important;
 }
 
 .record-item:hover {
     transform: scale(1.01);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     border-right: 4px solid var(--primary);
 }
+
 html[dir="rtl"] .record-item:hover {
     border-right: 4px solid var(--primary);
     border-left: 1px solid #f3f4f6;
@@ -245,13 +315,19 @@ html[dir="rtl"] .record-item:hover {
     border-color: #333;
     color: #fff;
 }
+
 .dark-mode .student-name {
     color: #ffffff !important;
     font-weight: 600;
 }
 
-.student-row:hover { background-color: #fff9c4; }
-.dark-mode .student-row:hover { background-color: #2c2c2c; }
+.student-row:hover {
+    background-color: #fff9c4;
+}
+
+.dark-mode .student-row:hover {
+    background-color: #2c2c2c;
+}
 
 .student-row .attendance-status-select,
 .student-row .grade-input {
@@ -289,19 +365,27 @@ html[dir="rtl"] .record-item:hover {
     transition: all 0.2s;
     user-select: none;
 }
+
 .dark-mode .day-checkbox-container {
     background: #121212;
     border-color: #333;
     color: #d1d5db;
 }
-.day-checkbox-container:hover { border-color: var(--primary); }
+
+.day-checkbox-container:hover {
+    border-color: var(--primary);
+}
+
 .day-checkbox-container:has(input:checked) {
     background-color: var(--primary);
     color: black;
     border-color: var(--primary);
     font-weight: bold;
 }
-.day-checkbox { display: none; } 
+
+.day-checkbox {
+    display: none;
+}
 
 /* Selects */
 #recurringTimeContainer select,
@@ -313,6 +397,7 @@ html[dir="rtl"] .record-item:hover {
     width: 100%;
     outline: none;
 }
+
 .dark-mode #recurringTimeContainer select,
 .dark-mode #exceptionNewTimeContainer select {
     background-color: #121212;
@@ -326,42 +411,56 @@ html[dir="rtl"] .record-item:hover {
 
 #statusIndicator {
     transition: all 0.3s ease;
-    background-color: transparent !important; /* إلغاء المربع الخلفي تماماً */
-    border: 1px solid transparent !important; /* إلغاء البرواز */
-    padding: 0 5px; /* مسافة بسيطة */
+    background-color: transparent !important;
+    /* إلغاء المربع الخلفي تماماً */
+    border: 1px solid transparent !important;
+    /* إلغاء البرواز */
+    padding: 0 5px;
+    /* مسافة بسيطة */
 }
 
 /* --- في الوضع الليلي (Dark Mode) --- */
 
 /* حالة الاتصال (Online) */
 .dark-mode #statusIndicator.online {
-    color: #ffffff !important; /* النص أبيض زي ما طلبت */
+    color: #ffffff !important;
+    /* النص أبيض زي ما طلبت */
 }
 
 /* حالة عدم الاتصال (Offline) */
 .dark-mode #statusIndicator.offline {
-    color: #ffffff !important; /* النص أبيض برضه */
-    opacity: 0.7; /* نخلي النص باهت سنة بسيطة عشان يبان إنه أوفلاين */
+    color: #ffffff !important;
+    /* النص أبيض برضه */
+    opacity: 0.7;
+    /* نخلي النص باهت سنة بسيطة عشان يبان إنه أوفلاين */
 }
 
 /* --- ألوان النقطة (Dot Colors) --- */
 
 /* النقطة الخضراء (أونلاين) */
 #statusIndicator.online .status-dot {
-    background-color: #22c55e !important; /* أخضر */
-    box-shadow: 0 0 8px #22c55e; /* لمعة خضراء */
+    background-color: #22c55e !important;
+    /* أخضر */
+    box-shadow: 0 0 8px #22c55e;
+    /* لمعة خضراء */
 }
 
 /* النقطة الحمراء (أوفلاين) */
 #statusIndicator.offline .status-dot {
-    background-color: #ef4444 !important; /* أحمر */
+    background-color: #ef4444 !important;
+    /* أحمر */
     box-shadow: none;
 }
 
 /* --- (اختياري) الوضع النهاري Light Mode --- */
 /* عشان يفضل شكله حلو في الفاتح */
-#statusIndicator.online { color: #166534; }
-#statusIndicator.offline { color: #991b1b; }
+#statusIndicator.online {
+    color: #166534;
+}
+
+#statusIndicator.offline {
+    color: #991b1b;
+}
 
 /* Section Header */
 .section-header {
@@ -370,20 +469,30 @@ html[dir="rtl"] .record-item:hover {
     gap: 0.75rem;
     margin-bottom: 1.5rem;
 }
+
 .section-header i {
     font-size: 1.5rem;
     color: var(--primary);
 }
+
 .section-header h3 {
     font-size: 1.25rem;
     font-weight: 800;
     color: #1f2937;
 }
-.dark-mode .section-header h3 { color: #f3f4f6; }
+
+.dark-mode .section-header h3 {
+    color: #f3f4f6;
+}
 
 /* Scanner Overlay */
-#scannerOverlay.success { border-color: #10b981; }
-#scannerOverlay.error { border-color: #ef4444; }
+#scannerOverlay.success {
+    border-color: #10b981;
+}
+
+#scannerOverlay.error {
+    border-color: #ef4444;
+}
 
 /* Message Box */
 .message-box {
@@ -395,7 +504,7 @@ html[dir="rtl"] .record-item:hover {
     color: var(--primary);
     padding: 12px 24px;
     border-radius: 99px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(242, 206, 90, 0.3);
     z-index: 3000;
     font-weight: 700;
@@ -404,19 +513,38 @@ html[dir="rtl"] .record-item:hover {
     gap: 10px;
     animation: slideUp 0.3s ease;
 }
-@keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+@keyframes slideUp {
+    from {
+        transform: translate(-50%, 20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
 
 @media print {
-    body * { visibility: hidden; }
-    #printableIdCard, #printableIdCard * { visibility: visible; }
-    #printableIdCard { 
-        position: fixed; 
-        left: 50%; 
-        top: 50%; 
-        transform: translate(-50%, -50%); 
-        width: 350px; 
+    body * {
+        visibility: hidden;
+    }
+
+    #printableIdCard,
+    #printableIdCard * {
+        visibility: visible;
+    }
+
+    #printableIdCard {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 350px;
         border: 2px solid black !important;
         -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
 
@@ -425,11 +553,31 @@ html[dir="rtl"] .record-item:hover {
 /* ========================================= */
 
 /* 1. Force Gray Text to be Visible in Dark Mode */
-.dark-mode .text-gray-500 { color: #9ca3af !important; } /* Equivalent to gray-400 */
-.dark-mode .text-gray-600 { color: #d1d5db !important; } /* Equivalent to gray-300 */
-.dark-mode .text-gray-700 { color: #e5e7eb !important; } /* Equivalent to gray-200 */
-.dark-mode .text-gray-800 { color: #f3f4f6 !important; } /* Equivalent to gray-100 */
-.dark-mode .text-gray-900 { color: #ffffff !important; } /* Pure White */
+.dark-mode .text-gray-500 {
+    color: #9ca3af !important;
+}
+
+/* Equivalent to gray-400 */
+.dark-mode .text-gray-600 {
+    color: #d1d5db !important;
+}
+
+/* Equivalent to gray-300 */
+.dark-mode .text-gray-700 {
+    color: #e5e7eb !important;
+}
+
+/* Equivalent to gray-200 */
+.dark-mode .text-gray-800 {
+    color: #f3f4f6 !important;
+}
+
+/* Equivalent to gray-100 */
+.dark-mode .text-gray-900 {
+    color: #ffffff !important;
+}
+
+/* Pure White */
 
 /* 2. Input Fields & Placeholders */
 .dark-mode .input-field {
@@ -439,16 +587,19 @@ html[dir="rtl"] .record-item:hover {
 }
 
 .dark-mode .input-field::placeholder {
-    color: #9ca3af !important; /* Make placeholders clearly visible */
+    color: #9ca3af !important;
+    /* Make placeholders clearly visible */
     opacity: 1;
 }
 
 .dark-mode select:not(.appearance-none) {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
-    background-position: left 0.5rem center; /* مكان السهم لليسار لأننا RTL */
+    background-position: left 0.5rem center;
+    /* مكان السهم لليسار لأننا RTL */
     background-size: 1.5em;
-    padding-left: 2rem !important; /* مساحة للسهم */
+    padding-left: 2rem !important;
+    /* مساحة للسهم */
 }
 
 /* 2. القائمة العلوية (Group Select) */
@@ -459,7 +610,7 @@ html[dir="rtl"] .record-item:hover {
 }
 
 /* 3. Dropdowns inside tables */
-.dark-mode .att-select, 
+.dark-mode .att-select,
 .dark-mode .grade-input {
     background-color: #2d2d2d !important;
     color: #ffffff !important;
@@ -490,6 +641,7 @@ html[dir="rtl"] .record-item:hover {
     background-color: #333 !important;
     color: var(--primary) !important;
 }
+
 /* ============================================================ */
 /* FORCE ID CARD TO STAY LIGHT IN DARK MODE (FIX FOR SCREENSHOT) */
 /* ============================================================ */
@@ -502,16 +654,18 @@ html[dir="rtl"] .record-item:hover {
 }
 
 /* 2. إجبار النصوص الأساسية تكون سوداء */
-.dark-mode #printableIdCard h2, 
+.dark-mode #printableIdCard h2,
 .dark-mode #printableIdCard #idStudentName {
-    color: #111827 !important; /* أسود غامق */
+    color: #111827 !important;
+    /* أسود غامق */
 }
 
 /* 3. النصوص الفرعية تكون رصاصي (مش أبيض) */
 .dark-mode #printableIdCard h4,
 .dark-mode #printableIdCard p,
 .dark-mode #printableIdCard span {
-    color: #4b5563 !important; /* رصاصي متوسط */
+    color: #4b5563 !important;
+    /* رصاصي متوسط */
 }
 
 /* 4. إصلاح خلفية مربع اللوجو ومربع اسم المعلم */
@@ -519,8 +673,10 @@ html[dir="rtl"] .record-item:hover {
     background-color: #ffffff !important;
     border-color: #f3f4f6 !important;
 }
+
 .dark-mode #printableIdCard .bg-gray-50 {
-    background-color: #f9fafb !important; /* خلفية فاتحة جداً */
+    background-color: #f9fafb !important;
+    /* خلفية فاتحة جداً */
     color: #374151 !important;
 }
 
@@ -530,10 +686,11 @@ html[dir="rtl"] .record-item:hover {
 }
 
 /* 6. التأكد إن الـ QR Code خلفيته بيضاء */
-.dark-mode #idQrcode, 
+.dark-mode #idQrcode,
 .dark-mode #idQrcode img {
     background-color: #ffffff !important;
 }
+
 /* ========================================= */
 /* FIX DOUBLE ARROWS IN DARK MODE            */
 /* ========================================= */
@@ -548,21 +705,26 @@ html[dir="rtl"] .record-item:hover {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
     background-repeat: no-repeat !important;
     background-position: left 0.5rem center !important;
-    padding-left: 2.5rem !important; /* وسعنا المسافة شوية عشان الكلام ميدخلش في السهم */
+    padding-left: 2.5rem !important;
+    /* وسعنا المسافة شوية عشان الكلام ميدخلش في السهم */
 }
+
 /* ========================================= */
 /* FIX PLACEHOLDER COLORS                    */
 /* ========================================= */
 
 /* لون الـ Placeholder في الوضع الفاتح (رمادي واضح) */
 .input-field::placeholder {
-    color: #6B7280 !important; /* لون رمادي متوسط */
-    opacity: 1; /* لضمان الظهور في فايرفوكس */
+    color: #6B7280 !important;
+    /* لون رمادي متوسط */
+    opacity: 1;
+    /* لضمان الظهور في فايرفوكس */
 }
 
 /* لون الـ Placeholder في الوضع المظلم (رمادي فاتح عشان يبان ع الخلفية السوداء) */
 .dark-mode .input-field::placeholder {
-    color: #9CA3AF !important; /* لون رمادي فاتح */
+    color: #9CA3AF !important;
+    /* لون رمادي فاتح */
     opacity: 1;
 }
 
@@ -571,14 +733,16 @@ select.input-field:invalid,
 .dark-mode select.input-field:invalid {
     color: #9CA3AF !important;
 }
+
 /* الوضع الطبيعي (للكل): بدون عكس */
-#reader video, video {
+#reader video,
+video {
     transform: scaleX(1) !important;
     -webkit-transform: scaleX(1) !important;
 }
 
 /* ✅ يطبق العكس فقط لو الجافاسكريبت قال إن ده ديسك توب */
-body.desktop-device #reader video, 
+body.desktop-device #reader video,
 body.desktop-device video {
     transform: scaleX(-1) !important;
     -webkit-transform: scaleX(-1) !important;
@@ -586,19 +750,39 @@ body.desktop-device video {
 
 /* في ملف style.css لو مش موجود */
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .5;
+    }
 }
+
 .animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    75% {
+        transform: translateX(5px);
+    }
 }
+
 .shake-anim {
-  animation: shake 0.3s ease-in-out;
-  border-color: #ef4444 !important; /* لون أحمر */
+    animation: shake 0.3s ease-in-out;
+    border-color: #ef4444 !important;
+    /* لون أحمر */
 }

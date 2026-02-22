@@ -278,7 +278,7 @@ const translations = {
         saveRecurringScheduleButton: "إضافة للجدول",
         mySchedulesLabel: "مواعيدي",
         modifySingleClassTitle: "تعديل طارئ",
-        modifyClassPrompt: "تغيير أو إلغاء حصة محددة.",
+        modifyClassPrompt: "تغيير أو إلغاء حصة محددة (سيتم إرسال إشعار فوري لأولياء الأمور).",
         classDateLabel: "تاريخ الحصة",
         newTimeLabel: "الموعد الجديد",
         updateClassButton: "تحديث",
@@ -368,7 +368,8 @@ const translations = {
         copyInviteBtn: "نسخ رسالة الدعوة",
         inviteCopied: "تم نسخ رسالة الدعوة! ابعتها للطلاب فوراً 🚀",
         inviteCopyFail: "فشل النسخ",
-        addNewStudentSectionTitle: "إضافة طالب جديد"
+        addNewStudentSectionTitle: "إضافة طالب جديد",
+        studentFollowUp: "لوحة متابعة الطالب {name}"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -434,7 +435,7 @@ const translations = {
         saveRecurringScheduleButton: "Add to Schedule",
         mySchedulesLabel: "My Schedules",
         modifySingleClassTitle: "Emergency Edit",
-        modifyClassPrompt: "Change or cancel specific class.",
+        modifyClassPrompt: "Change or cancel a specific class (Parents will be notified immediately).",
         classDateLabel: "Class Date",
         newTimeLabel: "New Time",
         updateClassButton: "Update",
@@ -527,8 +528,8 @@ const translations = {
         copyInviteBtn: "Copy Invite Message",
         inviteCopied: "Invite message copied! Send it to students 🚀",
         inviteCopyFail: "Copy failed",
-        addNewStudentSectionTitle: "Add New Student"
-
+        addNewStudentSectionTitle: "Add New Student",
+        studentFollowUp: "Student Dashboard: {name}"
     }
 };
 
@@ -746,10 +747,10 @@ function setupListeners() {
 
     document.getElementById('scanPaymentsBtn').addEventListener('click', () => startScanner('payments'));
     document.getElementById('paymentMonthInput').addEventListener('change', renderPaymentsList);
-    document.getElementById('savePaymentsBtn').addEventListener('click', savePayments);
+
     document.getElementById('addNewExamBtn').addEventListener('click', addNewExam);
     document.getElementById('examSelect').addEventListener('change', renderExamGrades);
-    document.getElementById('saveExamGradesBtn').addEventListener('click', saveExamGrades);
+
 
     document.getElementById('closeScannerModal').addEventListener('click', stopScanner);
     document.getElementById('closeQrModal').addEventListener('click', () => document.getElementById('qrCodeModal').classList.add('hidden'));
@@ -1316,13 +1317,19 @@ async function renderDailyList() {
         row.dataset.sid = s.id;
 
         // تنسيق الصف حسب الحالة
-        row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 ${status === 'present'
+        row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 cursor-pointer ${status === 'present'
             ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
             : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
             }`;
 
+        row.onclick = (e) => {
+            if (!e.target.closest('select') && !e.target.closest('input')) {
+                openStudentProfile(s.id);
+            }
+        };
+
         let html = `
-            <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300">${s.name}</div>
+            <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300"> ${s.name}</div>
             <div class="${attColSpan} flex justify-center transition-all duration-300">
                 <select class="att-select bg-gray-50 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded text-xs py-1 px-1 outline-none cursor-pointer">
                     <option value="present" ${status === 'present' ? 'selected' : ''}>${translations[currentLang].present}</option>
@@ -1415,8 +1422,8 @@ async function saveDailyData(isSilent = false) {
         }
         const date = dateInput.value;
         if (!date) {
-             if (!isSilent) showToast("يرجى اختيار التاريخ", "error");
-             return;
+            if (!isSilent) showToast("يرجى اختيار التاريخ", "error");
+            return;
         }
 
         // 3. تغيير شكل الزرار (فقط لو الزرار موجود ومش صامت)
@@ -1427,11 +1434,11 @@ async function saveDailyData(isSilent = false) {
         }
 
         const promises = [];
-        
+
         // --- تجميع بيانات الحضور ---
         const records = [];
         const studentRows = document.querySelectorAll('#dailyStudentsList > div');
-        
+
         // لو مفيش طلاب، مفيش داعي نكمل (إلا لو لسه بنحمل)
         if (studentRows.length > 0) {
             studentRows.forEach(div => {
@@ -1441,17 +1448,17 @@ async function saveDailyData(isSilent = false) {
                 }
             });
 
-            const attendanceData = { 
-                id: `${SELECTED_GROUP_ID}_${date}`, 
-                date: date, 
-                records: records 
+            const attendanceData = {
+                id: `${SELECTED_GROUP_ID}_${date}`,
+                date: date,
+                records: records
             };
 
             promises.push(putToDB('attendance', attendanceData));
-            promises.push(addToSyncQueue({ 
-                type: 'set', 
-                path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`, 
-                data: attendanceData 
+            promises.push(addToSyncQueue({
+                type: 'set',
+                path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
+                data: attendanceData
             }));
         }
 
@@ -1460,32 +1467,32 @@ async function saveDailyData(isSilent = false) {
         if (typeof hasHomeworkToday !== 'undefined' && hasHomeworkToday) {
             const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
             const scores = {};
-            
+
             if (studentRows.length > 0) {
                 studentRows.forEach(div => {
                     const chk = div.querySelector('.hw-check');
                     if (chk) {
-                        scores[div.dataset.sid] = { 
-                            submitted: chk.checked, 
-                            score: null 
+                        scores[div.dataset.sid] = {
+                            submitted: chk.checked,
+                            score: null
                         };
                     }
                 });
 
-                const hwData = { 
-                    id: hwId, 
-                    groupId: SELECTED_GROUP_ID, 
-                    name: `واجب ${date}`, 
-                    date: date, 
-                    scores: scores, 
-                    type: 'daily' 
+                const hwData = {
+                    id: hwId,
+                    groupId: SELECTED_GROUP_ID,
+                    name: `واجب ${date}`,
+                    date: date,
+                    scores: scores,
+                    type: 'daily'
                 };
 
                 promises.push(putToDB('assignments', hwData));
-                promises.push(addToSyncQueue({ 
-                    type: 'set', 
-                    path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`, 
-                    data: hwData 
+                promises.push(addToSyncQueue({
+                    type: 'set',
+                    path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`,
+                    data: hwData
                 }));
             }
         }
@@ -1924,10 +1931,13 @@ function renderStudents(filter = "") {
         const fullDirectLink = `${DOMAIN_URL}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
 
         const div = document.createElement('div');
-        div.className = "record-item";
+        div.className = "record-item cursor-pointer";
+        div.onclick = (e) => {
+            if (!e.target.closest('button')) openStudentProfile(s.id);
+        };
         div.innerHTML = `
-            <div>
-                <p class="font-bold text-gray-800 dark:text-white">${s.name}</p>
+            <div class="flex-1">
+                <p class="font-bold text-gray-800 dark:text-white"> ${s.name}</p>
                 <p class="text-xs text-gray-500">${s.parentPhoneNumber || ''}</p>
             </div>
             <div class="flex gap-2">
@@ -2158,8 +2168,10 @@ async function renderPaymentsList() {
         div.dataset.sid = s.id;
 
         div.innerHTML = `
-            <span class="font-bold text-gray-700 dark:text-gray-200 w-1/3 truncate">${s.name}</span>
-            <div class="flex items-center gap-3 justify-end w-2/3">
+<span onclick="openStudentProfile('${s.id}')" 
+      class="font-bold text-gray-700 dark:text-gray-200 w-1/3 truncate cursor-pointer hover:text-[#F2CE5A] transition-colors">
+    ${s.name}
+</span>            <div class="flex items-center gap-3 justify-end w-2/3">
                 <input type="number"
                        class="payment-input input-field h-9 w-24 text-center text-sm ${isPaid ? 'text-green-600 font-bold' : 'text-gray-400'}"
                        placeholder="0" value="${amount || ''}" min="0">
@@ -2170,11 +2182,21 @@ async function renderPaymentsList() {
         const checkbox = div.querySelector('.payment-check');
         const input = div.querySelector('.payment-input');
 
-        // ---- تفاعل الـ Checkbox ----
+        input.addEventListener('change', () => {
+            const newVal = parseInt(input.value) || 0;
+            if (checkbox.checked) {
+                currentGroupTotal = (currentGroupTotal - oldVal) + newVal;
+                groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
+                calculateOverallIncome(currentGroupTotal);
+            }
+            oldVal = newVal;
+            // Auto-save payments
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(savePayments, 1000);
+        });
+
         checkbox.addEventListener('change', (e) => {
             const defaultVal = defaultAmountInput.value;
-
-            // تحقق من وجود مبلغ
             if (e.target.checked && !defaultVal) {
                 e.target.checked = false;
                 showToast("⚠️ يرجى إدخال مبلغ التحصيل أولاً", "error");
@@ -2186,37 +2208,19 @@ async function renderPaymentsList() {
                 if (!input.value || input.value == 0) input.value = defaultVal;
                 div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.add('text-green-600', 'font-bold');
-
-                // ➕ تزويد المجموع
                 currentGroupTotal += parseInt(input.value || 0);
             } else {
-                // ➖ تنقيص المجموع
                 currentGroupTotal -= parseInt(input.value || 0);
-
                 input.value = '';
                 div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.remove('text-green-600', 'font-bold');
             }
-
-            // تحديث الشاشة
             groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
-            calculateOverallIncome(currentGroupTotal); // ✅ تحديث الكلي فوراً
-        });
+            calculateOverallIncome(currentGroupTotal);
 
-        // ---- تفاعل تغيير الرقم يدوياً ----
-        let oldVal = 0;
-        input.addEventListener('focus', () => oldVal = parseInt(input.value) || 0);
-
-        input.addEventListener('change', () => {
-            const newVal = parseInt(input.value) || 0;
-            if (checkbox.checked) {
-                // معادلة التحديث: (المجموع القديم - القيمة القديمة) + القيمة الجديدة
-                currentGroupTotal = (currentGroupTotal - oldVal) + newVal;
-
-                groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
-                calculateOverallIncome(currentGroupTotal); // ✅ تحديث الكلي فوراً
-            }
-            oldVal = newVal;
+            // Auto-save payments
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(savePayments, 1000);
         });
 
         container.appendChild(div);
@@ -2234,7 +2238,6 @@ async function savePayments() {
     });
     await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${month}`, month, records });
     await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, data: { month, records } });
-    showToast(translations[currentLang].saved);
 }
 
 // --- Exams, Schedules & Settings ---
@@ -2250,6 +2253,7 @@ async function loadExams() {
 }
 async function addNewExam() {
     const name = document.getElementById('newExamName').value;
+    const totalMark = document.getElementById('newExamTotalMark').value || 30;
     if (!name) return;
 
     // 1. إنشاء الـ ID وحفظه
@@ -2259,6 +2263,7 @@ async function addNewExam() {
         id,
         groupId: SELECTED_GROUP_ID,
         name,
+        totalMark: parseInt(totalMark),
         type: 'exam',
         scores: {},
         date: new Date().toISOString().slice(0, 10)
@@ -2268,6 +2273,7 @@ async function addNewExam() {
     await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`, id, data });
 
     document.getElementById('newExamName').value = '';
+    document.getElementById('newExamTotalMark').value = '';
 
     // 2. إعادة تحميل قائمة الامتحانات
     await loadExams();
@@ -2284,28 +2290,70 @@ async function addNewExam() {
 async function renderExamGrades() {
     const examId = document.getElementById('examSelect').value;
     const container = document.getElementById('examGradesList');
+    const totalMarkInput = document.getElementById('examTotalMarkInput');
     container.innerHTML = '';
     if (!examId) return;
+
     const exam = await getFromDB('assignments', examId);
     const scores = exam.scores || {};
+    const totalMark = exam.totalMark || 30;
+
+    totalMarkInput.value = totalMark;
+
+    // تفعيل الحفظ التلقائي للدرجة النهائية
+    totalMarkInput.onchange = () => {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveExamGrades, 1000);
+    };
+
     allStudents.forEach(s => {
         const val = scores[s.id]?.score || '';
         const div = document.createElement('div');
-        div.className = "flex items-center gap-2 p-2 bg-white dark:bg-darkSurface border dark:border-gray-700 rounded-lg";
-        div.innerHTML = `<label class="text-sm font-bold w-1/2 truncate dark:text-white">${s.name}</label><input type="number" class="exam-score-input input-field w-1/2 h-10" data-sid="${s.id}" value="${val}" placeholder="${translations[currentLang].gradePlaceholder}">`;
+        div.className = "flex items-center gap-2 p-2 bg-white dark:bg-darkSurface border dark:border-gray-700 rounded-lg cursor-pointer hover:border-brand transition-colors";
+        div.onclick = (e) => {
+            if (!e.target.closest('input')) openStudentProfile(s.id);
+        };
+        div.innerHTML = `<label class="text-sm font-bold w-1/2 truncate dark:text-white"> ${s.name}</label>
+                         <div class="relative w-1/2">
+                            <input type="number" class="exam-score-input input-field w-full h-10 text-center font-bold" 
+                                   data-sid="${s.id}" value="${val}" placeholder="0">
+                            <span class="absolute left-3 top-2 text-[10px] text-gray-400">/${totalMark}</span>
+                         </div>`;
+
+        const inp = div.querySelector('input');
+        inp.addEventListener('input', (e) => {
+            const currentTotal = parseInt(totalMarkInput.value) || 0;
+            if (parseInt(e.target.value) > currentTotal) {
+                e.target.value = currentTotal;
+                showToast(`الدرجة لا يمكن أن تزيد عن ${currentTotal}`, 'error');
+            }
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(saveExamGrades, 1500);
+        });
+
         container.appendChild(div);
     });
 }
 async function saveExamGrades() {
     const examId = document.getElementById('examSelect').value;
+    const totalMark = document.getElementById('examTotalMarkInput').value;
     if (!examId) return;
+
     const scores = {};
-    document.querySelectorAll('.exam-score-input').forEach(inp => { if (inp.value !== '') scores[inp.dataset.sid] = { score: inp.value }; });
+    document.querySelectorAll('.exam-score-input').forEach(inp => {
+        if (inp.value !== '') scores[inp.dataset.sid] = { score: inp.value };
+    });
+
     const existing = await getFromDB('assignments', examId);
     existing.scores = scores;
+    existing.totalMark = parseInt(totalMark) || 30;
+
     await putToDB('assignments', existing);
-    await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${examId}`, data: { scores } });
-    showToast(translations[currentLang].saved);
+    await addToSyncQueue({
+        type: 'set',
+        path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${examId}`,
+        data: { scores, totalMark: existing.totalMark }
+    });
 }
 
 function saveProfile() {
@@ -3321,7 +3369,7 @@ function setupAbsenceModalListeners() {
     const sendBtn = document.getElementById('sendAbsenceBtn');
     const confirmBtn = document.getElementById('confirmSendAbsenceBtn');
     const overlay = document.getElementById('absenceModalOverlay');
-    
+
     // 1. فتح النافذة (نتأكد إن الزرار موجود الأول)
     if (sendBtn) {
         sendBtn.onclick = () => {
@@ -3341,7 +3389,7 @@ function setupAbsenceModalListeners() {
     }
 
     // 2. إغلاق النافذة
-    window.closeAbsenceModal = function() {
+    window.closeAbsenceModal = function () {
         const modal = document.getElementById('absenceModal');
         const overlay = document.getElementById('absenceModalOverlay');
         const content = document.getElementById('absenceModalContent');
@@ -3360,13 +3408,13 @@ function setupAbsenceModalListeners() {
     if (confirmBtn) {
         confirmBtn.onclick = async () => {
             const originalText = confirmBtn.innerText;
-            
+
             confirmBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري الإرسال...';
             confirmBtn.disabled = true;
 
             try {
                 const dateInput = document.getElementById('dailyDateInput');
-                
+
                 // تحقق مزدوج من البيانات قبل الإرسال
                 if (!dateInput || !dateInput.value) {
                     showToast("يرجى اختيار التاريخ", "error");
@@ -3379,7 +3427,7 @@ function setupAbsenceModalListeners() {
                 }
 
                 const sendAbsenceFn = firebase.functions().httpsCallable('sendAbsenceNotifications');
-                
+
                 // ✅ التعديل هنا: إرسال teacherId يدوياً
                 const result = await sendAbsenceFn({
                     groupId: SELECTED_GROUP_ID,
@@ -3414,3 +3462,208 @@ function setupAbsenceModalListeners() {
 
 // تشغيل الدالة بعد تحميل الصفحة
 document.addEventListener('DOMContentLoaded', setupAbsenceModalListeners);
+
+// ==========================================
+// 👤 منطق بروفايل الطالب (Student Profile)
+// ==========================================
+
+let currentProfileId = null;
+let attendanceChartInstance = null;
+
+// 1. فتح البروفايل عند الضغط على اسم الطالب
+async function openStudentProfile(studentId) {
+    currentProfileId = studentId;
+    const student = allStudents.find(s => s.id === studentId);
+    if (!student) return;
+
+    // إظهار الصفحة
+    document.getElementById('studentProfilePage').classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // منع السكرول في الخلفية
+
+    // تعبئة البيانات الأساسية
+    document.getElementById('profileHeaderTitle').innerText = translations[currentLang].studentFollowUp?.replace('{name}', student.name) || `لوحة متابعة الطالب ${student.name}`;
+    document.getElementById('profileName').value = student.name;
+    document.getElementById('profileParentPhone').value = student.parentPhoneNumber || '';
+
+    // Avatar
+    const avatarEl = document.getElementById('profileAvatar');
+    avatarEl.innerText = student.name.charAt(0).toUpperCase();
+
+    // إلغاء وضع التعديل (لو كان مفتوح)
+    cancelEditMode();
+
+    // تحميل إحصائيات الحضور
+    await loadStudentStats(studentId);
+}
+
+// 2. إغلاق البروفايل
+function closeStudentProfile() {
+    document.getElementById('studentProfilePage').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// 3. تفعيل وضع التعديل
+function enableEditMode() {
+    const inputs = ['profileName', 'profileParentPhone'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        el.disabled = false;
+        el.classList.add('bg-white', 'dark:bg-darkSurface', 'ring-2', 'ring-brand/30', 'border-brand/50');
+    });
+    document.getElementById('saveProfileBtn').classList.remove('hidden');
+    document.getElementById('profileName').focus();
+}
+
+// 4. إلغاء التعديل
+function cancelEditMode() {
+    const inputs = ['profileName', 'profileParentPhone'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        el.disabled = true;
+        el.classList.remove('bg-white', 'dark:bg-darkSurface', 'ring-2', 'ring-brand/30', 'border-brand/50');
+    });
+    document.getElementById('saveProfileBtn').classList.add('hidden');
+}
+
+// 5. حفظ التعديلات في الفايربيس
+async function saveStudentChanges() {
+    if (!currentProfileId || !TEACHER_ID || !SELECTED_GROUP_ID) return;
+
+    const newName = document.getElementById('profileName').value;
+    const newParentPhone = document.getElementById('profileParentPhone').value;
+
+    const btn = document.querySelector('#saveProfileBtn button:last-child');
+    const oldText = btn.innerText;
+    btn.innerText = 'جاري الحفظ...';
+    btn.disabled = true;
+
+    try {
+        const studentRef = `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${currentProfileId}`;
+
+        await addToSyncQueue({
+            type: 'update',
+            path: studentRef,
+            data: {
+                name: newName,
+                parentPhoneNumber: newParentPhone
+            }
+        });
+
+        // تحديث الداتا محلياً فوراً
+        const sIndex = allStudents.findIndex(s => s.id === currentProfileId);
+        if (sIndex !== -1) {
+            allStudents[sIndex].name = newName;
+            allStudents[sIndex].parentPhoneNumber = newParentPhone;
+        }
+
+        showToast("تم تحديث البيانات بنجاح ✅");
+        cancelEditMode();
+        renderDailyList(); // تحديث القائمة الرئيسية لو الاسم اتغير
+
+    } catch (error) {
+        console.error(error);
+        showToast("فشل الحفظ", "error");
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+// 6. تحميل الإحصائيات ورسم الشارت
+async function loadStudentStats(studentId) {
+    if (!SELECTED_GROUP_ID) return;
+
+    // جلب كل ملفات الحضور لهذه المجموعة (ممكن نحتاج نعمل كاشنج للكلام ده بعدين لتحسين الأداء)
+    // هنا هنفترض إننا بنجيب البيانات من الداتابيز المحلية (IndexedDB) أو بنعمل كويري سريع
+    // للتبسيط: هنعدي على كل ملفات الحضور اللي حملناها قبل كده لو متاحة، أو نطلبها
+
+    // حل سريع: جلب آخر 30 يوم من الحضور
+    let present = 0;
+    let absent = 0;
+    let examCount = 0;
+    let historyHTML = '';
+
+    try {
+        // 1. جلب الحضور
+        const attCollection = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
+            .orderBy('date', 'desc')
+            .limit(20) // آخر 20 حصة
+            .get();
+
+        attCollection.forEach(doc => {
+            const data = doc.data();
+            const record = (data.records || []).find(r => r.studentId === studentId);
+
+            if (record) {
+                const statusColor = record.status === 'present' ? 'text-green-500' : 'text-red-500';
+                const statusText = record.status === 'present' ? translations[currentLang].present : translations[currentLang].absent;
+
+                if (record.status === 'present') present++;
+                else absent++;
+
+                historyHTML += `
+                    <tr class="hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-gray-800">
+                        <td class="p-4">${data.date}</td>
+                        <td class="p-4 ${statusColor} font-bold">${statusText}</td>
+                        <td class="p-4 text-gray-400 text-xs">${data.homework ? 'تم المراجعة' : '-'}</td>
+                    </tr>
+                `;
+            }
+        });
+
+        // 2. جلب عدد الامتحانات (من الداتا المحلية للسرعة)
+        const assignments = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
+        assignments.forEach(asm => {
+            if (asm.scores && asm.scores[studentId]) {
+                examCount++;
+            }
+        });
+
+        document.getElementById('profileAttendanceHistory').innerHTML = historyHTML || '<tr><td colspan="3" class="p-4 text-center text-gray-500">لا يوجد سجل حضور</td></tr>';
+
+        document.getElementById('statPresent').innerText = present;
+        document.getElementById('statAbsent').innerText = absent;
+        document.getElementById('statExams').innerText = examCount;
+
+        // رسم الشارت
+        renderAttendanceChart(present, absent);
+
+    } catch (e) {
+        console.error("Error loading stats:", e);
+    }
+}
+
+// 7. رسم الدونات شارت (Chart.js)
+function renderAttendanceChart(present, absent) {
+    const ctx = document.getElementById('attendanceDoughnutChart').getContext('2d');
+    const total = present + absent;
+    const percentage = total === 0 ? 0 : Math.round((present / total) * 100);
+
+    document.getElementById('attendancePercentage').innerText = `${percentage}%`;
+
+    if (attendanceChartInstance) {
+        attendanceChartInstance.destroy();
+    }
+
+    attendanceChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['حضور', 'غياب'],
+            datasets: [{
+                data: [present, absent],
+                backgroundColor: ['#10B981', '#EF4444'], // أخضر وأحمر
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            cutout: '80%', // سمك الدونات
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
+        }
+    });
+}
