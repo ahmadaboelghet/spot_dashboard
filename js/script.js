@@ -369,7 +369,9 @@ const translations = {
         inviteCopied: "تم نسخ رسالة الدعوة! ابعتها للطلاب فوراً 🚀",
         inviteCopyFail: "فشل النسخ",
         addNewStudentSectionTitle: "إضافة طالب جديد",
-        studentFollowUp: "متابعة الطالب {name}"
+        studentFollowUp: "متابعة الطالب {name}",
+        deleteGroupConfirm: "هل أنت متأكد من حذف هذه المجموعة نهائياً؟ سيتم حذف جميع الطلاب والبيانات المرتبطة بها!",
+        deleteGroupSuccess: "تم حذف المجموعة بنجاح"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -448,6 +450,8 @@ const translations = {
         no: "No",
         printBtn: "Print",
         closeBtn: "Close",
+        deleteGroupConfirm: "Are you sure you want to delete this group permanently? All students and related data will be deleted!",
+        deleteGroupSuccess: "Group deleted successfully",
         saved: "Saved Successfully!",
         error: "Error Occurred!",
         studentAdded: "Student Added",
@@ -727,6 +731,7 @@ function setupListeners() {
             }
         }, 100); // 100 مللي ثانية كافية جداً
     });
+    document.getElementById('deleteGroupButton').addEventListener('click', deleteCurrentGroup);
 
     document.getElementById('startSmartScanBtn').addEventListener('click', () => startScanner('daily'));
     document.getElementById('homeworkToggle').addEventListener('change', (e) => {
@@ -1140,6 +1145,44 @@ async function createGroup() {
     await loadGroupData(); // تفعيل أزرار الإضافة (عشان لو عايز يضيف طلاب علطول)
     document.getElementById('defaultAmountInput').value = '';
     showToast(translations[currentLang].groupCreatedSuccess);
+}
+
+async function deleteCurrentGroup() {
+    if (!SELECTED_GROUP_ID) {
+        showToast(translations[currentLang].selectGroupFirst, 'error');
+        return;
+    }
+
+    if (!confirm(translations[currentLang].deleteGroupConfirm)) return;
+
+    try {
+        const idToDelete = SELECTED_GROUP_ID;
+
+        // 1. حذف من الداتابيز المحلية
+        await deleteFromDB('groups', idToDelete);
+
+        // 2. إرسال أمر الحذف للسيرفر
+        await addToSyncQueue({
+            type: 'delete',
+            path: `teachers/${TEACHER_ID}/groups/${idToDelete}`
+        });
+
+        showToast(translations[currentLang].deleteGroupSuccess);
+
+        // 3. تصفير الحالة والعودة للبداية
+        SELECTED_GROUP_ID = null;
+        document.getElementById('groupSelect').value = "";
+
+        // إعادة تحميل المجموعات
+        await loadGroups();
+
+        // إخفاء الأيقونات والتابات المفتوحة (لأن مفيش مجموعة مختارة)
+        switchTab('profile');
+
+    } catch (e) {
+        console.error("Error deleting group:", e);
+        showToast("Error during delete", 'error');
+    }
 }
 
 // ------------------------------------------------------------------
@@ -3581,6 +3624,15 @@ async function loadStudentStats(studentId) {
     const monthlyStats = {}; // { '2023-10': { present: 0, absent: 0 } }
 
     try {
+        // 0. جلب كل الامتحانات والواجبات مسبقاً للربط
+        const assignments = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
+        const hwMapByDate = {}; // للوصول السريع لحالة الواجب في الحصص
+        assignments.forEach(asm => {
+            if (asm.type === 'daily') {
+                hwMapByDate[asm.date] = asm.scores ? asm.scores[studentId] : null;
+            }
+        });
+
         // 1. جلب الحضور (آخر 50 حصة للحساب الدقيق)
         const attCollection = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
             .orderBy('date', 'desc')
@@ -3607,23 +3659,31 @@ async function loadStudentStats(studentId) {
                 }
 
                 if (attCollection.docs.indexOf(doc) < 20) {
+                    // الربط مع حالة الواجب الحقيقية من الـ assignments
+                    const hwStatus = hwMapByDate[data.date];
+                    const isSubmitted = hwStatus && hwStatus.submitted;
+
                     historyHTML += `
                         <tr class="hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-gray-800">
                             <td class="p-4 font-bold text-gray-700 dark:text-gray-300">${data.date}</td>
                             <td class="p-4 ${statusColor} font-black">${statusText}</td>
-                            <td class="p-4 text-gray-400 dark:text-gray-500 text-xs font-bold">${data.homework ? '✅ تم التسليم' : '❌ لم يسلم'}</td>
+                            <td class="p-4 text-gray-400 dark:text-gray-500 text-xs font-bold">
+                                ${isSubmitted ? '<span class="text-green-500">✅ تم التسليم</span>' : '<span class="text-red-500">❌ لم يسلم</span>'}
+                            </td>
                         </tr>
                     `;
                 }
             }
         });
 
-        // 2. جلب الدرجات التفصيلية
+        // 2. جلب الدرجات التفصيلية (للامتحانات الحقيقية فقط)
         let examsHTML = '';
-        const assignments = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
         assignments.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         assignments.forEach(asm => {
+            // تجاهل الواجبات من قائمة "الامتحانات"
+            if (asm.type === 'daily' || (asm.name && asm.name.includes('واجب'))) return;
+
             const scoreData = asm.scores ? asm.scores[studentId] : null;
             if (scoreData) {
                 examCount++;
@@ -3639,7 +3699,7 @@ async function loadStudentStats(studentId) {
                         </div>
                         <div class="text-right">
                             <span class="text-lg font-black ${colorClass}">${scoreData.score}</span>
-                            <span class="text-[10px] text-gray-500 dark:text-gray-400">/${total}</span>
+                            <!-- مؤقتاً تم إخفاء الدرجة النهائية للتبسيط -->
                         </div>
                     </div>
                 `;
