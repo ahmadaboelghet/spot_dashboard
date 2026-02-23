@@ -1166,158 +1166,178 @@
         class="fixed inset-0 z-[60] bg-gray-50 dark:bg-darkBg hidden overflow-y-auto custom-scrollbar profile-grid-bg transition-colors duration-500">
 
         <!-- Premium Navbar for Profile -->
-        <div
-            class="sticky top-0 z-20 bg-white/70 dark:bg-darkBg/70 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 p-4 transition-all duration-300">
-            <div class="max-w-4xl mx-auto flex items-center justify-between">
-                <button onclick="closeStudentProfile()"
-                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-brand hover:text-black transition-all">
-                    <i class="ri-arrow-right-line text-xl"></i>
-                </button>
-                <div class="flex flex-col items-center">
-                    <span class="text-[10px] uppercase tracking-[0.2em] font-black text-brand mb-0.5">لوحة
-                        المتابعة</span>
-                    <h2 class="text-xl font-black text-gray-900 dark:text-white" id="profileHeaderTitle">اسم الطالب</h2>
-                </div>
-                <button onclick="enableEditMode()"
-                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-50 dark:bg-yellow-900/20 text-brand hover:bg-brand hover:text-black transition-all shadow-sm">
-                    <i class="ri-edit-2-line text-xl"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="p-6 max-w-4xl mx-auto space-y-8 animate-fade-in-up">
-
-            <!-- Student Essential Card -->
-            <div class="glass-card p-10 relative overflow-hidden group border-t-4 border-t-brand">
-                <div class="flex flex-col md:flex-row gap-10 items-center">
-                    <div class="relative shrink-0">
+        <div class="sticky top-0 z-50 p-4 transition-all duration-300">
+            <nav
+                class="max-w-6xl mx-auto rounded-2xl bg-white/90 dark:bg-darkSurface/90 backdrop-blur-xl shadow-lg px-6 py-3 flex justify-between items-center border border-gray-200 dark:border-gray-800 transition-all duration-300 animate-fade-down">
+                <!-- Right: Logo & Identity -->
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <img src="assets/images/learnaria_logo.png" alt="Logo"
+                            class="h-10 w-10 rounded-xl shadow-sm border border-brand p-1 bg-white dark:bg-darkBg">
                         <div
-                            class="w-32 h-32 rounded-3xl bg-gradient-to-br from-brand to-yellow-600 p-[3px] shadow-2xl rotate-3 group-hover:rotate-0 transition-all duration-500">
-                            <div
-                                class="w-full h-full rounded-[21px] bg-white dark:bg-darkSurface flex items-center justify-center overflow-hidden">
-                                <span id="profileAvatar" class="text-5xl font-black text-brand"></span>
-                            </div>
-                        </div>
-                        <div
-                            class="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg bg-green-500 border-4 border-white dark:border-darkSurface">
+                            class="absolute -bottom-1 -right-1 bg-green-500 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-darkSurface">
                         </div>
                     </div>
-
-                    <div class="flex-1 space-y-8 w-full text-center md:text-right">
-                        <div class="space-y-1">
-                            <label class="text-[10px] uppercase tracking-widest font-black text-gray-400">اسم الطالب
-                                الكامل</label>
-                            <input type="text" id="profileName" disabled
-                                class="w-full bg-transparent text-4xl font-black text-gray-900 dark:text-white outline-none disabled:cursor-default px-2 py-1 rounded-xl transition-all border-2 border-transparent focus:border-brand/30">
-                        </div>
-
-                        <div class="max-w-md ml-auto">
-                            <div class="space-y-1">
-                                <label class="text-[10px] uppercase tracking-widest font-black text-gray-400">رقم
-                                    التواصل (ولي الأمر)</label>
-                                <div class="relative group/input">
-                                    <i
-                                        class="ri-whatsapp-line absolute top-3 right-4 text-gray-400 group-focus-within/input:text-brand"></i>
-                                    <input type="tel" id="profileParentPhone" disabled
-                                        class="w-full bg-gray-100 dark:bg-black/40 rounded-2xl text-gray-700 dark:text-gray-200 font-bold pr-12 pl-4 py-4 outline-none border-2 border-transparent focus:border-brand/30 transition-all disabled:opacity-70 text-lg">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <h1 class="text-2xl font-black text-gray-900 dark:text-white font-inter tracking-tight">
+                        Spot<span class="text-brand">.</span></h1>
                 </div>
 
-                <div id="saveProfileBtn"
-                    class="hidden mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
-                    <button onclick="cancelEditMode()"
-                        class="px-6 py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">إلغاء</button>
-                    <button onclick="saveStudentChanges()"
-                        class="px-8 py-3 rounded-xl bg-brand text-black font-black hover:shadow-lg hover:shadow-brand/20 transition-all">
-                        حفظ التغييرات
+                <!-- Left: Control Actions (Buttons) -->
+                <div class="flex items-center gap-2">
+                    <button onclick="closeStudentProfile()"
+                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm group"
+                        title="إغلاق">
+                        <i class="ri-logout-box-r-line text-xl transition-transform group-hover:-translate-x-1"></i>
+                    </button>
+                    <button onclick="toggleDarkMode()"
+                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-brand hover:text-black transition-all shadow-sm"
+                        title="تبديل الوضع">
+                        <i class="ri-sun-line dark:hidden text-xl"></i>
+                        <i class="ri-moon-line hidden dark:block text-xl"></i>
+                    </button>
+                    <button onclick="enableEditMode()"
+                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-brand hover:text-black transition-all shadow-sm"
+                        title="تعديل">
+                        <i class="ri-edit-2-line text-xl"></i>
                     </button>
                 </div>
-            </div>
+            </nav>
+        </div>
 
-            <!-- Stats Overview -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <!-- Attendance Circle -->
-                <div
-                    class="glass-card p-6 flex flex-col items-center justify-center relative col-span-1 border-b-4 border-b-blue-500">
-                    <span class="absolute top-4 left-4 text-blue-500/20 text-4xl font-black italic">ATT</span>
-                    <h3 class="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-4">التزام الحضور</h3>
-                    <div class="relative w-28 h-28">
-                        <canvas id="attendanceDoughnutChart"></canvas>
-                        <div class="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                            <span id="attendancePercentage"
-                                class="text-2xl font-black text-gray-900 dark:text-white">0%</span>
+        <div class="max-w-4xl mx-auto px-6 text-center space-y-1 animate-fade-in-up">
+            <span class="text-[11px] uppercase tracking-[0.2em] font-black text-gray-500 dark:text-gray-400">لوحة
+                المتابعة</span>
+            <h2 class="text-3xl font-black text-gray-900 dark:text-white" id="profileHeaderTitle">الطالب <span
+                    class="text-brand">اسم الطالب</span></h2>
+        </div>
+
+        <div class="p-6 max-w-5xl mx-auto space-y-8 animate-fade-in-up pb-20">
+
+            <!-- Student Summary Header Card -->
+            <div class="glass-card p-8 border-l-4 border-l-brand relative overflow-hidden">
+                <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                    <!-- Avatar (Resized smaller as requested) -->
+                    <div class="relative shrink-0">
+                        <div
+                            class="w-16 h-16 rounded-xl bg-brand/10 border-2 border-brand/20 flex items-center justify-center text-2xl font-black text-brand shadow-inner">
+                            <span id="profileAvatar"></span>
                         </div>
                     </div>
-                </div>
 
-                <div class="md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div
-                        class="glass-card p-6 flex flex-col justify-center items-center border-b-4 border-b-green-500 group">
-                        <div
-                            class="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center text-green-500 mb-3 group-hover:scale-110 transition-transform">
-                            <i class="ri-checkbox-circle-fill text-2xl"></i>
+                    <!-- Info -->
+                    <div class="flex-1 text-center md:text-right">
+                        <div class="space-y-0.5 mb-4">
+                            <label
+                                class="text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">بيانات
+                                الطالب</label>
+                            <input type="text" id="profileName" disabled
+                                class="w-full bg-transparent text-3xl font-black text-gray-900 dark:text-white outline-none border-0 p-0 text-center md:text-right">
                         </div>
-                        <span class="text-3xl font-black text-gray-900 dark:text-white" id="statPresent">0</span>
-                        <span class="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">أيام
+                        <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                            <div
+                                class="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800">
+                                <i class="ri-whatsapp-line text-green-500"></i>
+                                <input type="tel" id="profileParentPhone" disabled
+                                    class="bg-transparent text-sm font-bold text-gray-600 dark:text-gray-300 w-32 outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Metric (Attendance %) -->
+                    <div
+                        class="px-8 py-4 bg-brand rounded-2xl text-black shadow-xl shadow-brand/20 text-center min-w-[140px]">
+                        <span class="block text-[10px] font-black uppercase tracking-tighter opacity-70">نسبة
                             الحضور</span>
+                        <span id="attendancePercentage" class="text-4xl font-black">0%</span>
                     </div>
+                </div>
 
-                    <div
-                        class="glass-card p-6 flex flex-col justify-center items-center border-b-4 border-b-red-500 group">
-                        <div
-                            class="w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center text-red-500 mb-3 group-hover:scale-110 transition-transform">
-                            <i class="ri-close-circle-fill text-2xl"></i>
-                        </div>
-                        <span class="text-3xl font-black text-gray-900 dark:text-white" id="statAbsent">0</span>
-                        <span class="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">أيام
-                            الغياب</span>
-                    </div>
+                <!-- Subtle Background Accent -->
+                <i
+                    class="ri-user-star-line absolute -bottom-4 -left-4 text-9xl text-brand/5 -rotate-12 pointer-events-none"></i>
 
-                    <div
-                        class="glass-card p-6 flex flex-col justify-center items-center border-b-4 border-b-purple-500 group">
-                        <div
-                            class="w-12 h-12 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex items-center justify-center text-purple-500 mb-3 group-hover:scale-110 transition-transform">
-                            <i class="ri-medal-fill text-2xl"></i>
-                        </div>
-                        <span class="text-3xl font-black text-gray-900 dark:text-white" id="statExams">0</span>
-                        <span
-                            class="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-1">الامتحانات</span>
-                    </div>
+                <!-- Edit Options (Hidden by default) -->
+                <div id="saveProfileBtn"
+                    class="hidden mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
+                    <button onclick="cancelEditMode()"
+                        class="px-6 py-2 text-sm font-bold text-gray-500 hover:text-red-500 transition-colors">إلغاء</button>
+                    <button onclick="saveStudentChanges()"
+                        class="px-6 py-2 bg-brand text-black text-sm font-black rounded-xl shadow-md">حفظ
+                        التغييرات</button>
                 </div>
             </div>
 
-            <!-- Detailed History -->
-            <div class="glass-card overflow-hidden">
-                <div class="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                    <h3 class="text-gray-900 dark:text-white font-black flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
-                            <i class="ri-calendar-todo-line"></i>
+            <!-- Content Grid: Exams, Attendance, Payments -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- Section 1: Exams Grades -->
+                <div class="glass-card flex flex-col">
+                    <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                        <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2">
+                            <i class="ri-medal-fill text-purple-500"></i> درجات الامتحانات
+                        </h3>
+                        <span id="statExams"
+                            class="bg-purple-50 dark:bg-purple-900/20 text-purple-600 px-3 py-1 rounded-full text-xs font-black">0</span>
+                    </div>
+                    <div id="profileExamGradesList"
+                        class="p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar flex-1">
+                        <!-- Exam items will be injected here -->
+                        <div class="text-center py-10 text-gray-400 dark:text-gray-500 flex flex-col items-center">
+                            <i class="ri-inbox-line text-4xl block mb-2 opacity-50"></i>
+                            <p class="text-sm font-bold uppercase tracking-widest">لا يوجد امتحانات حالياً</p>
                         </div>
-                        سجل الحضور والغياب المفضل
+                    </div>
+                </div>
+
+                <!-- Section 2: Monthly Attendance -->
+                <div class="glass-card flex flex-col">
+                    <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                        <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2">
+                            <i class="ri-calendar-check-fill text-blue-500"></i> سجل الحضور الشهري
+                        </h3>
+                    </div>
+                    <div id="profileMonthlyAttendance"
+                        class="p-4 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar flex-1">
+                        <!-- Monthly attendance items will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Section 3: Payments Status -->
+                <div class="glass-card flex flex-col">
+                    <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                        <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2">
+                            <i class="ri-bank-card-fill text-green-500"></i> حالة المصروفات
+                        </h3>
+                    </div>
+                    <div id="profilePaymentsStatus"
+                        class="p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar flex-1">
+                        <!-- Payment items will be injected here -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Detailed Log (Last Sessions) -->
+            <div class="glass-card overflow-hidden">
+                <div class="p-5 bg-gray-50/50 dark:bg-black/20 border-b border-gray-100 dark:border-gray-800">
+                    <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2 text-sm">
+                        <i class="ri-history-line text-brand"></i> سجل آخر 20 حصة
                     </h3>
-                    <span class="text-xs font-bold text-gray-400">آخر 20 حصة</span>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-right">
-                        <thead class="bg-gray-50/50 dark:bg-black/20 text-gray-400">
+                    <table class="w-full text-right text-sm">
+                        <thead class="bg-gray-50/50 dark:bg-black/40 text-gray-500 dark:text-gray-300">
                             <tr>
-                                <th class="p-4 font-black uppercase tracking-widest text-[10px]">التاريخ</th>
-                                <th class="p-4 font-black uppercase tracking-widest text-[10px]">الحالة</th>
-                                <th class="p-4 font-black uppercase tracking-widest text-[10px]">ملاحظات</th>
+                                <th class="p-4 font-black">التاريخ</th>
+                                <th class="p-4 font-black">الحالة</th>
+                                <th class="p-4 font-black">الواجب</th>
                             </tr>
                         </thead>
-                        <tbody id="profileAttendanceHistory"
-                            class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
-                            <!-- JS content -->
-                        </tbody>
+                        <tbody id="profileAttendanceHistory"></tbody>
                     </table>
                 </div>
             </div>
         </div>
-    </div>
 </body>
 
 </html>

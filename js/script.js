@@ -369,7 +369,7 @@ const translations = {
         inviteCopied: "تم نسخ رسالة الدعوة! ابعتها للطلاب فوراً 🚀",
         inviteCopyFail: "فشل النسخ",
         addNewStudentSectionTitle: "إضافة طالب جديد",
-        studentFollowUp: "لوحة متابعة الطالب {name}"
+        studentFollowUp: "متابعة الطالب {name}"
     },
     en: {
         pageTitle: "Spot - Smart Teacher",
@@ -3481,7 +3481,8 @@ async function openStudentProfile(studentId) {
     document.body.style.overflow = 'hidden'; // منع السكرول في الخلفية
 
     // تعبئة البيانات الأساسية
-    document.getElementById('profileHeaderTitle').innerText = translations[currentLang].studentFollowUp?.replace('{name}', student.name) || `لوحة متابعة الطالب ${student.name}`;
+    const followUpText = translations[currentLang].studentFollowUp || "لوحة متابعة الطالب {name}";
+    document.getElementById('profileHeaderTitle').innerHTML = followUpText.replace('{name}', `<span class="text-brand">${student.name}</span>`);
     document.getElementById('profileName').value = student.name;
     document.getElementById('profileParentPhone').value = student.parentPhoneNumber || '';
 
@@ -3569,64 +3570,152 @@ async function saveStudentChanges() {
     }
 }
 
-// 6. تحميل الإحصائيات ورسم الشارت
+// 6. تحميل الإحصائيات الشاملة للطالب
 async function loadStudentStats(studentId) {
     if (!SELECTED_GROUP_ID) return;
 
-    // جلب كل ملفات الحضور لهذه المجموعة (ممكن نحتاج نعمل كاشنج للكلام ده بعدين لتحسين الأداء)
-    // هنا هنفترض إننا بنجيب البيانات من الداتابيز المحلية (IndexedDB) أو بنعمل كويري سريع
-    // للتبسيط: هنعدي على كل ملفات الحضور اللي حملناها قبل كده لو متاحة، أو نطلبها
-
-    // حل سريع: جلب آخر 30 يوم من الحضور
-    let present = 0;
-    let absent = 0;
+    let presentTotal = 0;
+    let absentTotal = 0;
     let examCount = 0;
     let historyHTML = '';
+    const monthlyStats = {}; // { '2023-10': { present: 0, absent: 0 } }
 
     try {
-        // 1. جلب الحضور
+        // 1. جلب الحضور (آخر 50 حصة للحساب الدقيق)
         const attCollection = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
             .orderBy('date', 'desc')
-            .limit(20) // آخر 20 حصة
+            .limit(50)
             .get();
 
         attCollection.forEach(doc => {
             const data = doc.data();
             const record = (data.records || []).find(r => r.studentId === studentId);
+            const monthKey = data.date.substring(0, 7); // YYYY-MM
+
+            if (!monthlyStats[monthKey]) monthlyStats[monthKey] = { present: 0, absent: 0 };
 
             if (record) {
                 const statusColor = record.status === 'present' ? 'text-green-500' : 'text-red-500';
                 const statusText = record.status === 'present' ? translations[currentLang].present : translations[currentLang].absent;
 
-                if (record.status === 'present') present++;
-                else absent++;
+                if (record.status === 'present') {
+                    presentTotal++;
+                    monthlyStats[monthKey].present++;
+                } else {
+                    absentTotal++;
+                    monthlyStats[monthKey].absent++;
+                }
 
-                historyHTML += `
-                    <tr class="hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-gray-800">
-                        <td class="p-4">${data.date}</td>
-                        <td class="p-4 ${statusColor} font-bold">${statusText}</td>
-                        <td class="p-4 text-gray-400 text-xs">${data.homework ? 'تم المراجعة' : '-'}</td>
-                    </tr>
+                if (attCollection.docs.indexOf(doc) < 20) {
+                    historyHTML += `
+                        <tr class="hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-gray-800">
+                            <td class="p-4 font-bold text-gray-700 dark:text-gray-300">${data.date}</td>
+                            <td class="p-4 ${statusColor} font-black">${statusText}</td>
+                            <td class="p-4 text-gray-400 dark:text-gray-500 text-xs font-bold">${data.homework ? '✅ تم التسليم' : '❌ لم يسلم'}</td>
+                        </tr>
+                    `;
+                }
+            }
+        });
+
+        // 2. جلب الدرجات التفصيلية
+        let examsHTML = '';
+        const assignments = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
+        assignments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        assignments.forEach(asm => {
+            const scoreData = asm.scores ? asm.scores[studentId] : null;
+            if (scoreData) {
+                examCount++;
+                const total = asm.totalMark || 30;
+                const percent = Math.round((scoreData.score / total) * 100);
+                const colorClass = percent >= 50 ? 'text-green-500' : 'text-red-500';
+
+                examsHTML += `
+                    <div class="p-3 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800 flex justify-between items-center group">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-gray-700 dark:text-gray-200">${asm.name}</span>
+                            <span class="text-[11px] text-gray-600 dark:text-gray-300 font-black tracking-tighter">${asm.date || ''}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-black ${colorClass}">${scoreData.score}</span>
+                            <span class="text-[10px] text-gray-500 dark:text-gray-400">/${total}</span>
+                        </div>
+                    </div>
                 `;
             }
         });
 
-        // 2. جلب عدد الامتحانات (من الداتا المحلية للسرعة)
-        const assignments = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
-        assignments.forEach(asm => {
-            if (asm.scores && asm.scores[studentId]) {
-                examCount++;
-            }
+        // 3. جلب حالة المدفوعات (آخر 6 شهور)
+        let paymentsHTML = '';
+        const currentYear = new Date().getFullYear();
+        const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+        const currentMonthIdx = new Date().getMonth();
+
+        // عرض آخر 5 شهور
+        for (let i = 0; i < 5; i++) {
+            let mIdx = currentMonthIdx - i;
+            let year = currentYear;
+            if (mIdx < 0) { mIdx += 12; year--; }
+            const monthStr = `${year}-${months[mIdx]}`;
+
+            const payId = `${SELECTED_GROUP_ID}_PAY_${monthStr}`;
+            const payDoc = await getFromDB('payments', payId);
+            const record = payDoc?.records?.find(r => r.studentId === studentId);
+            const isPaid = record && record.amount > 0;
+
+            paymentsHTML += `
+                <div class="p-3 rounded-xl border flex justify-between items-center ${isPaid ? 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-800' : 'bg-red-50/50 border-red-200 dark:bg-red-900/10 dark:border-red-800'}">
+                    <span class="font-black text-gray-700 dark:text-gray-300">${monthStr}</span>
+                    <span class="text-xs font-black ${isPaid ? 'text-green-600' : 'text-red-500'}">
+                        ${isPaid ? `✅ مدفوع (${record.amount})` : '❌ غير مدفوع'}
+                    </span>
+                </div>
+            `;
+        }
+
+        // 4. بناء سجل الحضور الشهري
+        let monthlyHTML = '';
+        Object.keys(monthlyStats).sort().reverse().forEach(month => {
+            const stats = monthlyStats[month];
+            const total = stats.present + stats.absent;
+            const percent = total > 0 ? Math.round((stats.present / total) * 100) : 0;
+
+            monthlyHTML += `
+                <div class="p-4 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-black text-gray-800 dark:text-gray-200 uppercase tracking-tighter">${month}</span>
+                        <span class="text-xs font-black px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-md">${percent}%</span>
+                    </div>
+                    <div class="flex gap-1 h-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+                        <div class="bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]" style="width: ${percent}%"></div>
+                        <div class="bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]" style="width: ${100 - percent}%"></div>
+                    </div>
+                    <div class="flex justify-between mt-3 px-1 text-xs font-black">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                            <span class="text-green-600 dark:text-green-400">حضر: ${stats.present}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                            <span class="text-red-600 dark:text-red-400">غاب: ${stats.absent}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         });
 
-        document.getElementById('profileAttendanceHistory').innerHTML = historyHTML || '<tr><td colspan="3" class="p-4 text-center text-gray-500">لا يوجد سجل حضور</td></tr>';
+        // تحديث الواجهة
+        document.getElementById('profileAttendanceHistory').innerHTML = historyHTML || '<tr><td colspan="3" class="p-4 text-center text-gray-400 font-bold">لا يوجد سجل حضور حالياً</td></tr>';
+        document.getElementById('profileExamGradesList').innerHTML = examsHTML || '<div class="text-center py-10 text-gray-400 dark:text-gray-500 font-black uppercase tracking-widest text-[11px]"><i class="ri-inbox-line text-4xl block mb-2 opacity-20"></i>لا يوجد امتحانات</div>';
+        document.getElementById('profileMonthlyAttendance').innerHTML = monthlyHTML || '<div class="text-center py-10 text-gray-400 dark:text-gray-500 font-black uppercase tracking-widest text-[11px]">لا يوجد حضر شهري</div>';
+        document.getElementById('profilePaymentsStatus').innerHTML = paymentsHTML || '<div class="text-center py-10 text-gray-400 dark:text-gray-500 font-black uppercase tracking-widest text-[11px]">لا يوجد سجل مدفوعات</div>';
 
-        document.getElementById('statPresent').innerText = present;
-        document.getElementById('statAbsent').innerText = absent;
         document.getElementById('statExams').innerText = examCount;
 
-        // رسم الشارت
-        renderAttendanceChart(present, absent);
+        const totalSessions = presentTotal + absentTotal;
+        const overallPercent = totalSessions > 0 ? Math.round((presentTotal / totalSessions) * 100) : 0;
+        document.getElementById('attendancePercentage').innerText = overallPercent + '%';
 
     } catch (e) {
         console.error("Error loading stats:", e);
