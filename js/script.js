@@ -551,7 +551,19 @@ function isValidEgyptianPhoneNumber(p) {
 function formatPhoneNumber(p) {
     if (!p) return null;
     const clean = p.replace(/\s+/g, '').replace(/[^\d]/g, '');
+    // نعيد الرقم بصيغة +20 الدولية لأنها الصيغة اللي فيها الداتا التاريخية
     return isValidEgyptianPhoneNumber(clean) ? `+20${clean.substring(1)}` : null;
+}
+
+// ✅ دالة لإصلاح المعرف المخزن لو كان بالصيغة القديمة (بدون +20)
+function migrateTeacherID() {
+    let tid = localStorage.getItem('learnaria-tid');
+    if (tid && tid.startsWith('01')) {
+        const migrated = `+20${tid.substring(1)}`;
+        console.log(`🔄 Migrating Teacher ID in localStorage: ${tid} -> ${migrated}`);
+        localStorage.setItem('learnaria-tid', migrated);
+        TEACHER_ID = migrated;
+    }
 }
 
 // ✅ كشف نوع الجهاز لضبط المراية
@@ -2575,6 +2587,7 @@ async function loadPreferences() {
     }
 
     // 2. استرجاع بيانات المعلم (تسجيل الدخول التلقائي)
+    migrateTeacherID(); // ✨ إصلاح المعرف لو كان بالصيغة القديمة
     const storedID = localStorage.getItem('learnaria-tid');
 
     if (storedID) {
@@ -3964,4 +3977,67 @@ function renderAttendanceChart(present, absent) {
             }
         }
     });
+}
+// ==========================================
+// 🚨 EMERGENCY RESTORE SYSTEM 🚨
+// ==========================================
+async function emergencyRestore() {
+    if (!confirm("⚠️ هل أنت متأكد؟ هذا الخيار سيرفع كل البيانات المخزنة على هذا الموال إلى السيرفر فوراً. استخدمه فقط إذا كنت المدرس وتستخدم الموبايل الذي يحتوي على البيانات.")) return;
+
+    const btn = document.getElementById('restoreBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري استعادة البيانات...';
+
+    try {
+        await openDB();
+        const stores = ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions'];
+        let totalUploaded = 0;
+
+        for (const store of stores) {
+            const data = await getAllFromDB(store);
+            console.log(`📦 Restore: Processing ${data.length} items from ${store}`);
+            
+            for (const item of data) {
+                let path = "";
+                const id = item.id;
+                
+                // تحديد المسار الصحيح بناءً على نوع الداتا
+                if (store === 'teachers') path = `teachers/${id}`;
+                else if (store === 'groups') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${id}`;
+                else if (store === 'students') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${item.groupId}/students/${id}`;
+                else if (store === 'assignments') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${item.groupId}/assignments/${id}`;
+                else if (store === 'attendance') {
+                    // attendance ID format usually: groupID_date
+                    const parts = id.split('_');
+                    const gid = parts[0];
+                    const date = parts[1];
+                    path = `teachers/${item.teacherId || TEACHER_ID}/groups/${gid || item.groupId}/dailyAttendance/${date}`;
+                }
+                else if (store === 'payments') {
+                     const parts = id.split('_'); // format: GroupID_PAY_YYYY-MM
+                     const gid = parts[0];
+                     const month = id.split('_PAY_')[1];
+                     path = `teachers/${item.teacherId || TEACHER_ID}/groups/${gid}/payments/${month}`;
+                }
+                else if (store === 'schedules') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${item.groupId}/recurringSchedules/${id}`;
+                else if (store === 'scheduleExceptions') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${item.groupId}/scheduleExceptions/${id}`;
+
+                if (path) {
+                    await firestoreDB.doc(path).set(item, { merge: true });
+                    totalUploaded++;
+                }
+            }
+        }
+
+        alert(`✅ تم بنجاح! تم استعادة ${totalUploaded} سجل إلى السيرفر. يمكنك الآن تحديث الصفحة.`);
+        location.reload();
+
+    } catch (e) {
+        console.error("Restore Error:", e);
+        alert("❌ حدث خطأ أثناء الاستعادة: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }
