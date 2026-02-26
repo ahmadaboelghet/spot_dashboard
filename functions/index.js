@@ -1258,7 +1258,7 @@ exports.notifyOnPresence = onDocumentWritten(
 );
 
 // ===================================================================
-// 6. الإرسال التلقائي للغياب (بعد ساعة من بداية الحصة)
+// 6. الإرسال التلقائي للغياب (تحسين: بعد ساعة من البداية + ربع ساعة ركود)
 // ===================================================================
 exports.autoAbsenceReminder = onSchedule({
   schedule: "*/15 * * * *", // تشتغل كل 15 دقيقة
@@ -1270,22 +1270,38 @@ exports.autoAbsenceReminder = onSchedule({
   const todayStr = formatDate(cairoDate);
 
   try {
-    // 1. بنجيب كل ملفات الحضور بتاعة النهاردة بس (بحث سريع جداً)
+    // 1. جلب ملفات الحضور بتاعة النهاردة
     const dailyAttSnap = await admin.firestore()
       .collectionGroup("dailyAttendance")
       .where("date", "==", todayStr)
       .get();
 
-    if (dailyAttSnap.empty) return; // مفيش أي حصص بدأت النهاردة
+    if (dailyAttSnap.empty) return;
 
     for (const attDoc of dailyAttSnap.docs) {
-      // 2. نحسب الوقت اللي عدى من أول Scan (وقت إنشاء الملف)
-      const createTime = attDoc.createTime.toDate();
-      const diffMinutes = (now.getTime() - createTime.getTime()) / (1000 * 60);
+      const attendanceData = attDoc.data();
 
-      // لو عدى 60 دقيقة (ساعة) أو أكتر
-      if (diffMinutes >= 60) {
-        // استخراج teacherId و groupId من مسار الملف
+      // 2. حساب وقت وقت الإنشاء ووقت آخر تحديث
+      const createTime = attDoc.createTime.toDate();
+      const updateTime = attDoc.updateTime.toDate();
+
+      const minutesSinceStart = (now.getTime() - createTime.getTime()) / (1000 * 60);
+      const minutesSinceLastUpdate = (now.getTime() - updateTime.getTime()) / (1000 * 60);
+
+      // --- الشروط الجديدة للأمان ---
+      // أ- عدى ساعة على الأقل من بداية الحصة
+      // ب- المدرس ملمسش القائمة بقاله 20 دقيقة (يعني خلص رصد)
+      // ج- فيه على الأقل طالب واحد "حضور" (عشان نتأكد إن دي حصة بجد مش ملف اتعمل غلط)
+
+      const presentStudentIds = new Set(
+        (attendanceData.records || [])
+          .filter((r) => r.status === "present")
+          .map((r) => r.studentId)
+      );
+
+      if (minutesSinceStart >= 60 && minutesSinceLastUpdate >= 20 && presentStudentIds.size > 0) {
+
+        // استخراج المسار
         const pathSegments = attDoc.ref.path.split('/');
         if (pathSegments.length < 5) continue;
 
@@ -1293,25 +1309,15 @@ exports.autoAbsenceReminder = onSchedule({
         const groupId = pathSegments[3];
         const groupRef = admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}`);
 
-        // 3. نتأكد إن الغياب متبعتش قبل كده (سواء المدرس بعته أو السيستم)
+        // 3. التأكد إن الغياب متبعتش
         const metaRef = groupRef.collection("attendanceMeta").doc(todayStr);
         const metaDoc = await metaRef.get();
 
-        if (metaDoc.exists && metaDoc.data().absenceSent === true) {
-          continue; // الغياب اتبعت خلاص، هندخل على المجموعة اللي بعدها
-        }
+        if (metaDoc.exists && metaDoc.data().absenceSent === true) continue;
 
-        // 4. جلب اسم المادة
         const subjectName = await getTeacherSubject(teacherId);
 
-        // 5. فلترة الغائبين وإرسال الإشعارات
-        const attendanceData = attDoc.data();
-        const presentStudentIds = new Set(
-          (attendanceData.records || [])
-            .filter((r) => r.status === "present")
-            .map((r) => r.studentId)
-        );
-
+        // 4. جلب كل الطلاب والبدء في الإرسال
         const studentsSnap = await groupRef.collection("students").get();
         const promises = [];
         let sentCount = 0;
@@ -1339,7 +1345,7 @@ exports.autoAbsenceReminder = onSchedule({
 
         await Promise.all(promises);
 
-        // 6. توثيق إن الغياب اتبعت عشان ميتكررش
+        // 5. توثيق الإرسال
         await metaRef.set({ absenceSent: true, sentAt: now, auto: true }, { merge: true });
         console.log(`✅ Auto Absence Sent for ${teacherId}/${groupId}, count: ${sentCount}`);
       }
