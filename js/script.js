@@ -211,7 +211,7 @@ async function deleteFromDB(store, key) {
 let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = 'ar';
 let isSyncing = false;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
-let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null;
+let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
 
 const translations = {
     ar: {
@@ -541,8 +541,18 @@ const translations = {
 // 4. UTILS
 // ==========================================
 function generateUniqueId() { return `off_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; }
-function isValidEgyptianPhoneNumber(p) { return /^01[0125]\d{8}$/.test(p?.trim()); }
-function formatPhoneNumber(p) { return isValidEgyptianPhoneNumber(p) ? `+20${p.trim().substring(1)}` : null; }
+// ✅ تحسين: تنظيف الرقم من المسافات قبل الفحص
+function isValidEgyptianPhoneNumber(p) {
+    if (!p) return false;
+    const clean = p.replace(/\s+/g, '').replace(/[^\d]/g, ''); // شيل أي مسافة أو علامة
+    return /^01[0125]\d{8}$/.test(clean);
+}
+
+function formatPhoneNumber(p) {
+    if (!p) return null;
+    const clean = p.replace(/\s+/g, '').replace(/[^\d]/g, '');
+    return isValidEgyptianPhoneNumber(clean) ? `+20${clean.substring(1)}` : null;
+}
 
 // ✅ كشف نوع الجهاز لضبط المراية
 document.addEventListener('DOMContentLoaded', function () {
@@ -638,7 +648,7 @@ async function processSyncQueue() {
             for (let i = 0; i < items.length; i++) {
                 const { type, path, data, id, options } = items[i];
                 try {
-                    if (type === 'set') await firestoreDB.doc(path).set(data, options || { merge: true });
+                    if (type === 'set' || type === 'update') await firestoreDB.doc(path).set(data, options || { merge: true });
                     else if (type === 'add') await firestoreDB.collection(path).doc(id).set(data, { merge: true });
                     else if (type === 'delete') await firestoreDB.doc(path).delete();
                     await deleteFromDB('syncQueue', keys[i]);
@@ -1256,6 +1266,7 @@ function refreshCurrentTab() {
         }
         else if (!document.getElementById('tab-daily').classList.contains('hidden')) {
             if (typeof renderDailyList === 'function') renderDailyList();
+            updateGroupAnalyticsChart();
         }
     } catch (e) { console.error("Render error:", e); }
 }
@@ -1266,7 +1277,10 @@ function switchTab(tabId) {
     document.getElementById(`tab-${tabId}`).classList.remove('hidden');
     document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
 
-    if (tabId === 'daily') renderDailyList();
+    if (tabId === 'daily') {
+        renderDailyList();
+        updateGroupAnalyticsChart();
+    }
     if (tabId === 'students') renderStudents();
     if (tabId === 'payments') {
         const pm = document.getElementById('paymentMonthInput');
@@ -1443,6 +1457,122 @@ async function renderDailyList() {
     }
 
     updateAttendanceCount(); // تشغيل العداد أول مرة
+}
+
+// 📈 دالة الرسوم البيانية للمجموعة (جديد)
+async function updateGroupAnalyticsChart() {
+    const attCtx = document.getElementById('groupAttendanceChart');
+    const hwCtx = document.getElementById('groupHomeworkChart');
+
+    if (!attCtx || !hwCtx || !SELECTED_GROUP_ID || !TEACHER_ID) return;
+
+    try {
+        console.log("📊 Fetching analytics for Group:", SELECTED_GROUP_ID);
+
+        // 1. جلب البيانات (تبسيط البحث لتقليل مشاكل الـ Index)
+        const [attSnap, hwSnap] = await Promise.all([
+            firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
+                .orderBy('date', 'desc').limit(7).get().catch(e => { console.error("Att Query Fail:", e); return { empty: true }; }),
+            firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`)
+                .limit(20).get().catch(e => { console.error("HW Query Fail:", e); return { empty: true }; })
+        ]);
+
+        // --- أ. معالجة الحضور ---
+        let attLabels = ["-", "-", "-", "-", "-", "-", "-"];
+        let attData = [0, 0, 0, 0, 0, 0, 0];
+
+        if (!attSnap.empty) {
+            const docs = attSnap.docs.reverse();
+            attLabels = [];
+            attData = [];
+            docs.forEach(doc => {
+                const d = doc.data();
+                const parts = (d.date || "").split('-');
+                const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : (d.date || "??");
+                attLabels.push(label);
+                const records = d.records || [];
+                const percent = records.length > 0 ? Math.round((records.filter(r => r.status === 'present').length / records.length) * 100) : 0;
+                attData.push(percent);
+            });
+        }
+
+        if (window.groupAnalyticsChartInstance) window.groupAnalyticsChartInstance.destroy();
+        window.groupAnalyticsChartInstance = renderBarChart(attCtx, attLabels, attData, 'الحضور %', 'rgba(242, 206, 90, 0.7)', '#F2CE5A');
+
+        // --- ب. معالجة الواجبات (فلترة يدوية لتجنب الـ Index) ---
+        let hwLabels = ["-", "-", "-", "-", "-", "-", "-"];
+        let hwData = [0, 0, 0, 0, 0, 0, 0];
+
+        if (!hwSnap.empty) {
+            const filteredHw = hwSnap.docs
+                .map(d => d.data())
+                .filter(d => d.type === 'daily')
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 7)
+                .reverse();
+
+            if (filteredHw.length > 0) {
+                hwLabels = [];
+                hwData = [];
+                filteredHw.forEach(d => {
+                    const parts = (d.date || "").split('-');
+                    const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : (d.date || "??");
+                    hwLabels.push(label);
+                    const scores = d.scores || {};
+                    const sids = Object.keys(scores);
+                    const percent = sids.length > 0 ? Math.round((sids.filter(sid => scores[sid].submitted).length / sids.length) * 100) : 0;
+                    hwData.push(percent);
+                });
+            }
+        }
+
+        if (window.groupHomeworkChartInstance) window.groupHomeworkChartInstance.destroy();
+        window.groupHomeworkChartInstance = renderBarChart(hwCtx, hwLabels, hwData, 'الواجب %', 'rgba(59, 130, 246, 0.7)', '#3B82F6');
+
+    } catch (e) { console.error("Analytics Critical Error:", e); }
+}
+
+// دالة مساعدة لرسم التشارت الموحد
+function renderBarChart(ctx, labels, data, label, bgColor, borderColor) {
+    return new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: data,
+                backgroundColor: bgColor,
+                borderColor: borderColor,
+                borderWidth: 1,
+                borderRadius: 6,
+                barThickness: context => {
+                    const width = context.chart.width;
+                    return width < 400 ? 15 : 25;
+                }
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1E1E1E',
+                    titleFont: { family: 'Cairo', size: 11 },
+                    bodyFont: { family: 'Cairo', size: 13, weight: 'bold' },
+                    callbacks: { label: (c) => `${c.label}: ${c.raw}%` }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true, max: 100,
+                    grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false },
+                    ticks: { font: { family: 'Cairo', size: 10 }, callback: v => v + '%' }
+                },
+                x: { grid: { display: false }, ticks: { font: { family: 'Cairo', size: 10 } } }
+            }
+        }
+    });
 }
 
 async function saveDailyData(isSilent = false) {
@@ -2225,8 +2355,12 @@ async function renderPaymentsList() {
         const checkbox = div.querySelector('.payment-check');
         const input = div.querySelector('.payment-input');
 
-        input.addEventListener('change', () => {
-            const newVal = parseInt(input.value) || 0;
+        input.addEventListener('focus', (e) => {
+            oldVal = parseInt(e.target.value) || 0; // حفظ القيمة قبل التعديل
+        });
+
+        input.addEventListener('change', (e) => {
+            const newVal = parseInt(e.target.value) || 0;
             if (checkbox.checked) {
                 currentGroupTotal = (currentGroupTotal - oldVal) + newVal;
                 groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
@@ -2343,8 +2477,20 @@ async function renderExamGrades() {
 
     totalMarkInput.value = totalMark;
 
-    // تفعيل الحفظ التلقائي للدرجة النهائية
-    totalMarkInput.onchange = () => {
+    // تفعيل الحفظ التلقائي للدرجة النهائية (مع التحقق من الدرجات الحالية)
+    totalMarkInput.onchange = (e) => {
+        const newTotal = parseInt(e.target.value) || 0;
+        // التحقق لو فيه درجات أكبر من النهاية العظمى الجديدة
+        let hasError = false;
+        document.querySelectorAll('.exam-score-input').forEach(inp => {
+            if (parseInt(inp.value) > newTotal) {
+                inp.value = newTotal;
+                inp.classList.add('border-red-500');
+                hasError = true;
+            }
+        });
+        if (hasError) showToast("تم تعديل بعض الدرجات لتناسب المجموع الجديد", "warning");
+
         if (saveTimeout) clearTimeout(saveTimeout);
         saveTimeout = setTimeout(saveExamGrades, 1000);
     };
@@ -2487,6 +2633,9 @@ function toggleLang() {
 
     loadGroups();
     renderDayCheckboxes();
+    if (SELECTED_GROUP_ID && !document.getElementById('tab-schedule').classList.contains('hidden')) {
+        fetchRecurringSchedules(); // لتحديث أيام الأسبوع في الجدول
+    }
     updateOnlineStatus();
 }
 
@@ -2804,8 +2953,8 @@ async function loadBotFiles() {
 
             div.innerHTML = `
                 <div class="flex items-center gap-3 overflow-hidden">
-                    <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
-                        <i class="ri-file-pdf-2-fill text-xl"></i>
+                    <div class="w-10 h-10 rounded-lg ${bgClass} ${iconClass.split(' ')[1]} flex items-center justify-center flex-shrink-0">
+                        <i class="${iconClass} text-xl"></i>
                     </div>
                     <div class="truncate">
                         <p class="font-bold text-sm text-gray-800 dark:text-gray-200 truncate">${itemRef.name}</p>
@@ -3790,11 +3939,11 @@ function renderAttendanceChart(present, absent) {
 
     document.getElementById('attendancePercentage').innerText = `${percentage}%`;
 
-    if (attendanceChartInstance) {
-        attendanceChartInstance.destroy();
+    if (window.attendanceChartInstance) {
+        window.attendanceChartInstance.destroy();
     }
 
-    attendanceChartInstance = new Chart(ctx, {
+    window.attendanceChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['حضور', 'غياب'],

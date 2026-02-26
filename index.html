@@ -409,6 +409,42 @@
                         <div id="dailyStudentsList"
                             class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar p-1"></div>
                     </section>
+
+                    <section class="card-container glass-panel p-6 lg:col-span-3 overflow-hidden">
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <!-- Attendance Chart -->
+                            <div>
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3
+                                        class="font-bold text-lg flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                                        <i class="ri-bar-chart-2-line text-brand"></i>
+                                        <span>إحصائيات الحضور</span>
+                                    </h3>
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">آخر 7
+                                        حصص</span>
+                                </div>
+                                <div class="h-[200px] w-full relative">
+                                    <canvas id="groupAttendanceChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Homework Chart -->
+                            <div class="border-r border-gray-100 dark:border-gray-800 pr-0 md:pr-8">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3
+                                        class="font-bold text-lg flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                                        <i class="ri-book-open-line text-blue-500"></i>
+                                        <span>نسبة تسليم الواجب</span>
+                                    </h3>
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">آخر 7
+                                        حصص</span>
+                                </div>
+                                <div class="h-[200px] w-full relative">
+                                    <canvas id="groupHomeworkChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
 
