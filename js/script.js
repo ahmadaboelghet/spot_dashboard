@@ -3979,63 +3979,89 @@ function renderAttendanceChart(present, absent) {
     });
 }
 // ==========================================
-// 🚨 EMERGENCY RESTORE SYSTEM 🚨
+// 🚨 EMERGENCY RESTORE SYSTEM (V2 - SMARTER) 🚨
 // ==========================================
 async function emergencyRestore() {
-    if (!confirm("⚠️ هل أنت متأكد؟ هذا الخيار سيرفع كل البيانات المخزنة على هذا الموال إلى السيرفر فوراً. استخدمه فقط إذا كنت المدرس وتستخدم الموبايل الذي يحتوي على البيانات.")) return;
+    if (!confirm("⚠️ تنبيه هام: هل أنت متأكد؟ هذا الخيار سيقوم بسحب كل البيانات من ذاكرة هذا الموبايل ورفعها للسيرفر. استخدمه فقط من الجهاز الذي يحتوي على البيانات (موبايل المدرس).")) return;
 
     const btn = document.getElementById('restoreBtn');
     const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري استعادة البيانات...';
+    btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري التحليل...';
 
     try {
         await openDB();
-        const stores = ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions'];
         let totalUploaded = 0;
+        const log = (msg) => console.log(`[Restore] ${msg}`);
 
-        for (const store of stores) {
-            const data = await getAllFromDB(store);
-            console.log(`📦 Restore: Processing ${data.length} items from ${store}`);
-            
-            for (const item of data) {
-                let path = "";
-                const id = item.id;
-                
-                // تحديد المسار الصحيح بناءً على نوع الداتا
-                if (store === 'teachers') path = `teachers/${id}`;
-                else if (store === 'groups') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${id}`;
-                else if (store === 'students') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${item.groupId}/students/${id}`;
-                else if (store === 'assignments') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${item.groupId}/assignments/${id}`;
-                else if (store === 'attendance') {
-                    // attendance ID format usually: groupID_date
+        // 1. استعادة المدرسين أولاً (المفتاح الأساسي لكل شيء)
+        const teachers = await getAllFromDB('teachers');
+        log(`Found ${teachers.length} teachers locally.`);
+        for (const t of teachers) {
+            await firestoreDB.collection('teachers').doc(t.id).set(t, { merge: true });
+            totalUploaded++;
+        }
+
+        // 2. استعادة المجموعات وبناء خريطة (Map) لربط المجموعات بالمدرسين
+        const groups = await getAllFromDB('groups');
+        const groupToTeacherMap = {}; // { groupId: teacherId }
+        log(`Found ${groups.length} groups locally.`);
+
+        for (const g of groups) {
+            const tId = g.teacherId || (teachers.length === 1 ? teachers[0].id : null);
+            if (tId) {
+                groupToTeacherMap[g.id] = tId;
+                await firestoreDB.doc(`teachers/${tId}/groups/${g.id}`).set(g, { merge: true });
+                totalUploaded++;
+            }
+        }
+
+        // 3. استعادة باقي البيانات باستخدام الخريطة
+        const subStores = [
+            { name: 'students', path: (tid, gid, id) => `teachers/${tid}/groups/${gid}/students/${id}` },
+            { name: 'assignments', path: (tid, gid, id) => `teachers/${tid}/groups/${gid}/assignments/${id}` },
+            {
+                name: 'attendance', path: (tid, gid, id) => {
                     const parts = id.split('_');
-                    const gid = parts[0];
-                    const date = parts[1];
-                    path = `teachers/${item.teacherId || TEACHER_ID}/groups/${gid || item.groupId}/dailyAttendance/${date}`;
+                    return `teachers/${tid}/groups/${parts[0] || gid}/dailyAttendance/${parts[1]}`;
                 }
-                else if (store === 'payments') {
-                     const parts = id.split('_'); // format: GroupID_PAY_YYYY-MM
-                     const gid = parts[0];
-                     const month = id.split('_PAY_')[1];
-                     path = `teachers/${item.teacherId || TEACHER_ID}/groups/${gid}/payments/${month}`;
+            },
+            {
+                name: 'payments', path: (tid, gid, id) => {
+                    const parts = id.split('_PAY_');
+                    return `teachers/${tid}/groups/${parts[0]}/payments/${parts[1]}`;
                 }
-                else if (store === 'schedules') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${item.groupId}/recurringSchedules/${id}`;
-                else if (store === 'scheduleExceptions') path = `teachers/${item.teacherId || TEACHER_ID}/groups/${item.groupId}/scheduleExceptions/${id}`;
+            },
+            { name: 'schedules', path: (tid, gid, id) => `teachers/${tid}/groups/${gid}/recurringSchedules/${id}` },
+            { name: 'scheduleExceptions', path: (tid, gid, id) => `teachers/${tid}/groups/${gid}/scheduleExceptions/${id}` }
+        ];
 
-                if (path) {
-                    await firestoreDB.doc(path).set(item, { merge: true });
+        for (const store of subStores) {
+            const items = await getAllFromDB(store.name);
+            log(`Processing ${items.length} items from ${store.name}...`);
+
+            for (const item of items) {
+                const gid = item.groupId || (item.id.includes('_') ? item.id.split('_')[0] : null);
+                const tid = item.teacherId || groupToTeacherMap[gid] || (teachers.length === 1 ? teachers[0].id : null);
+
+                if (tid && gid) {
+                    const finalPath = store.path(tid, gid, item.id);
+                    await firestoreDB.doc(finalPath).set(item, { merge: true });
                     totalUploaded++;
+                } else if (tid && store.name === 'teachers') {
+                    // handled above
+                } else {
+                    log(`⚠️ Skipped item ${item.id} in ${store.name} (Missing Tid/Gid)`);
                 }
             }
         }
 
-        alert(`✅ تم بنجاح! تم استعادة ${totalUploaded} سجل إلى السيرفر. يمكنك الآن تحديث الصفحة.`);
+        alert(`✅ مبروك! تم استعادة ${totalUploaded} سجل بنجاح إلى السيرفر. قم بتحديث الصفحة الآن.`);
         location.reload();
 
     } catch (e) {
         console.error("Restore Error:", e);
-        alert("❌ حدث خطأ أثناء الاستعادة: " + e.message);
+        alert("❌ حدث خطأ: " + e.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
