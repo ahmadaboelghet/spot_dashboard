@@ -3979,7 +3979,7 @@ function renderAttendanceChart(present, absent) {
     });
 }
 // ==========================================
-// 🚨 EMERGENCY RESTORE SYSTEM (V3 - ULTIMATE) 🚨
+// 🚨 EMERGENCY RESTORE SYSTEM (V4 - PATH FIX) 🚨
 // ==========================================
 async function emergencyRestore() {
     try {
@@ -3987,46 +3987,34 @@ async function emergencyRestore() {
         const stats = {};
         const stores = ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions'];
 
-        // 1. جرد سريع للبيانات الموجودة في الموبايل
         for (const s of stores) {
             const data = await getAllFromDB(s);
             stats[s] = data.length;
         }
 
-        const statsMsg = `📊 تقرير البيانات المكتشفة في هذا الجهاز:\n` +
-            `- المدرسين: ${stats.teachers}\n` +
-            `- المجموعات: ${stats.groups}\n` +
+        const statsMsg = `📊 تقرير الجرد (V4):\n` +
+            `- سجلات الحضور: ${stats.attendance}\n` +
             `- الطلاب: ${stats.students}\n` +
-            `- الحضور: ${stats.attendance}\n` +
-            `- الامتحانات/الواجبات: ${stats.assignments}\n` +
+            `- المجموعات: ${stats.groups}\n` +
             `- المصاريف: ${stats.payments}\n\n` +
-            `هل تريد البدء في رفع هذه البيانات للسيرفر؟`;
-
-        if (stats.students === 0 && stats.groups === 0 && stats.teachers === 0) {
-            alert("⚠️ لا توجد بيانات محفوظة على هذا الجهاز. تأكد أنك تفتح الموقع من الموبايل الصحيح.");
-            return;
-        }
+            `⚠️ النسخة دي بتصلح مشكلة سجلات الحضور. هل تريد البدء؟`;
 
         if (!confirm(statsMsg)) return;
 
         const btn = document.getElementById('restoreBtn');
-        const originalText = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري الرفع...';
+        btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري استعادة سجلات الحضور...';
 
         let totalUploaded = 0;
-        const log = (msg) => console.log(`[V3 Restore] ${msg}`);
-
-        // 2. رفع المدرسين والمجموعات لبناء الخريطة
         const teachers = await getAllFromDB('teachers');
         const groups = await getAllFromDB('groups');
         const groupToTeacherMap = {};
 
+        // 1. استعادة المدرسين والمجموعات
         for (const t of teachers) {
             await firestoreDB.collection('teachers').doc(t.id).set(t, { merge: true });
             totalUploaded++;
         }
-
         for (const g of groups) {
             const tid = g.teacherId || (teachers.length > 0 ? teachers[0].id : null);
             if (tid) {
@@ -4036,26 +4024,30 @@ async function emergencyRestore() {
             }
         }
 
-        // 3. رفع الطلاب
+        // 2. استعادة سجلات الحضور (Fix: Handling multiple underscores)
+        const attendance = await getAllFromDB('attendance');
+        for (const att of attendance) {
+            const id = att.id;
+            const lastIdx = id.lastIndexOf('_'); // التاريخ هو آخر جزء بعد آخر _
+            if (lastIdx !== -1) {
+                const gid = id.substring(0, lastIdx);
+                const date = id.substring(lastIdx + 1);
+                const tid = att.teacherId || groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+
+                if (tid && gid && date) {
+                    await firestoreDB.doc(`teachers/${tid}/groups/${gid}/dailyAttendance/${date}`).set(att, { merge: true });
+                    totalUploaded++;
+                }
+            }
+        }
+
+        // 3. استعادة الطلاب والواجبات
         const students = await getAllFromDB('students');
         for (const s of students) {
             const gid = s.groupId;
             const tid = s.teacherId || groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
             if (tid && gid) {
                 await firestoreDB.doc(`teachers/${tid}/groups/${gid}/students/${s.id}`).set(s, { merge: true });
-                totalUploaded++;
-            }
-        }
-
-        // 4. رفع الحضور والامتحانات
-        const attendance = await getAllFromDB('attendance');
-        for (const att of attendance) {
-            const parts = att.id.split('_');
-            const gid = parts[0];
-            const date = parts[1];
-            const tid = att.teacherId || groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
-            if (tid && gid && date) {
-                await firestoreDB.doc(`teachers/${tid}/groups/${gid}/dailyAttendance/${date}`).set(att, { merge: true });
                 totalUploaded++;
             }
         }
@@ -4070,24 +4062,28 @@ async function emergencyRestore() {
             }
         }
 
-        // 5. رفع المصاريف والجدول
+        // 4. استعادة المصاريف
         const payments = await getAllFromDB('payments');
         for (const p of payments) {
-            const gid = p.id.split('_PAY_')[0];
-            const month = p.id.split('_PAY_')[1];
-            const tid = groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
-            if (tid && gid && month) {
-                await firestoreDB.doc(`teachers/${tid}/groups/${gid}/payments/${month}`).set(p, { merge: true });
-                totalUploaded++;
+            const id = p.id;
+            const splitIdx = id.indexOf('_PAY_');
+            if (splitIdx !== -1) {
+                const gid = id.substring(0, splitIdx);
+                const month = id.substring(splitIdx + 5);
+                const tid = groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+                if (tid && gid && month) {
+                    await firestoreDB.doc(`teachers/${tid}/groups/${gid}/payments/${month}`).set(p, { merge: true });
+                    totalUploaded++;
+                }
             }
         }
 
-        alert(`✅ تم استعادة ${totalUploaded} سجل بنجاح! السيرفر الآن يحتوي على كافة بياناتك القديمة. يمكنك تحديث الصفحة.`);
+        alert(`✅ مبروك! تم استعادة ${totalUploaded} سجل بنجاح.`);
         location.reload();
 
     } catch (e) {
-        console.error("Restore V3 Error:", e);
-        alert("❌ فشل الاستعادة: " + e.message);
+        console.error("Restore V4 Error:", e);
+        alert("❌ فشل الاستعادة V4: " + e.message);
     } finally {
         const btn = document.getElementById('restoreBtn');
         if (btn) {
