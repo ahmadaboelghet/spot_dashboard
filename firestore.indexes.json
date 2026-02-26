@@ -1,20 +1,19 @@
 {
-  "indexes": [
+  "indexes": [],
+  "fieldOverrides": [
     {
-      "collectionGroup": "students",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
+      "collectionGroup": "dailyAttendance",
+      "fieldPath": "date",
+      "indexes": [
         {
-          "fieldPath": "parentPhoneNumber",
-          "order": "ASCENDING"
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
         },
         {
-          "fieldPath": "parentPhoneNumber",
-          "order": "ASCENDING"
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION_GROUP"
         }
-      ],
-      "density": "SPARSE_ALL"
+      ]
     }
-  ],
-  "fieldOverrides": []
+  ]
 }

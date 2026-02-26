@@ -71,7 +71,7 @@ function formatTime12Hour(timeString) {
  * @param {string} studentId - معرف الطالب
  * @return {Promise<void>} - وعد يكتمل عند انتهاء المحاولة
  */
-async function sendNotificationToParent(studentData, payload, context, studentId) {
+async function sendNotificationToParent(studentData, payload, context, studentId, teacherId = null, groupId = null) {
   let tokenToSend = null;
 
   // 1. المحاولة الأولى: البحث عن التوكن داخل بيانات الطالب مباشرة (الأسرع)
@@ -80,10 +80,8 @@ async function sendNotificationToParent(studentData, payload, context, studentId
   }
 
   // 2. المحاولة الثانية (الحل السحري): البحث في سجل الآباء العام برقم التليفون
-  // دي اللي هتحل مشكلة تعدد المدرسين لو التوكن متنسخش لكل الطلاب
   if (!tokenToSend && studentData.parentPhoneNumber) {
     try {
-      // تنظيف رقم الهاتف لضمان التطابق (إزالة المسافات)
       const cleanPhone = studentData.parentPhoneNumber.replace(/\s+/g, "").trim();
       const parentDoc = await admin.firestore().collection("parents").doc(cleanPhone).get();
 
@@ -127,8 +125,17 @@ async function sendNotificationToParent(studentData, payload, context, studentId
   }
 
   // ---------------------------------------------------------
-  // تنفيذ الإرسال النهائي
+  // تنفيذ الإرسال النهائي + حفظ السجل
   // ---------------------------------------------------------
+  const notificationRecord = {
+    title: payload.notification.title,
+    body: payload.notification.body,
+    data: payload.data || {},
+    sentAt: admin.firestore.FieldValue.serverTimestamp(),
+    context: context,
+    status: "failed", // القيمة الافتراضية
+  };
+
   if (tokenToSend) {
     const message = {
       notification: payload.notification,
@@ -137,13 +144,28 @@ async function sendNotificationToParent(studentData, payload, context, studentId
     };
     try {
       await admin.messaging().send(message);
+      notificationRecord.status = "sent";
       console.log(`${context}: ✅ Notification sent successfully.`);
     } catch (error) {
       console.error(`${context}: ❌ Failed to send notification:`, error);
-      // لو التوكن منتهي، ممكن هنا نمسحه من الداتابيز مستقبلاً
+      notificationRecord.status = "error";
+      notificationRecord.error = error.message;
     }
   } else {
-    console.log(`${context}: ⚠️ No token found for student ${studentId} (Parent: ${studentData.parentPhoneNumber})`);
+    console.log(`${context}: ⚠️ No token found for student ${studentId}`);
+    notificationRecord.status = "no_token";
+  }
+
+  // حفظ في الداتابيز حتى لو متبعتش عشان نعرف تاريخ المحاولات
+  if (studentId && teacherId && groupId) {
+    try {
+      await admin.firestore()
+        .doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`)
+        .collection("notificationHistory")
+        .add(notificationRecord);
+    } catch (dbError) {
+      console.error(`${context}: Error saving notification history:`, dbError);
+    }
   }
 }
 
@@ -253,7 +275,7 @@ exports.sendAbsenceNotifications = onCall({ cors: true }, async (request) => {
         };
 
         promises.push(
-          sendNotificationToParent(student, payload, "ManualAbsence", doc.id)
+          sendNotificationToParent(student, payload, "ManualAbsence", doc.id, teacherId, groupId)
             .then(() => sentCount++),
         );
       }
@@ -315,7 +337,7 @@ exports.notifyOnNewGrades = onDocumentWritten(
                   },
                   data: { "screen": "grades", "assignmentId": assignmentId },
                 };
-                await sendNotificationToParent(sData, payload, "notifyOnNewGrades", studentId);
+                await sendNotificationToParent(sData, payload, "notifyOnNewGrades", studentId, teacherId, groupId);
               }
             }
           };
@@ -374,7 +396,7 @@ exports.notifyOnScheduleException = onDocumentWritten(
           notification: { title, body },
           data: { "screen": "schedule" },
         };
-        return sendNotificationToParent(studentData, payload, "notifyOnScheduleException", doc.id);
+        return sendNotificationToParent(studentData, payload, "notifyOnScheduleException", doc.id, teacherId, groupId);
       }
     });
 
@@ -434,7 +456,7 @@ exports.classReminder = onSchedule({
                 },
                 data: { "screen": "schedule" },
               };
-              return sendNotificationToParent(studentData, payload, "classReminder", studentDoc.id);
+              return sendNotificationToParent(studentData, payload, "classReminder", studentDoc.id, teacherDoc.id, groupDoc.id);
             });
             await Promise.all(notifications);
           }
@@ -522,7 +544,7 @@ exports.paymentReminder = onSchedule({
             },
             data: { "screen": "payments" },
           };
-          return sendNotificationToParent(studentData, payload, "paymentReminder", studentDoc.id);
+          return sendNotificationToParent(studentData, payload, "paymentReminder", studentDoc.id, teacherDoc.id, groupDoc.id);
         }
       });
       await Promise.all(notifications);
@@ -781,7 +803,7 @@ exports.notifyOnPayment = onDocumentWritten(
           };
 
           // eslint-disable-next-line no-await-in-loop
-          await sendNotificationToParent(sData, payload, "notifyOnPayment", studentId);
+          await sendNotificationToParent(sData, payload, "notifyOnPayment", studentId, teacherId, groupId);
         }
       }
     }
@@ -806,7 +828,7 @@ exports.sendCustomMessage = onCall(async (request) => {
       data: { screen: "profile", studentId: studentId },
     };
 
-    await sendNotificationToParent(studentData, payload, "sendCustomMessage", studentId);
+    await sendNotificationToParent(studentData, payload, "sendCustomMessage", studentId, teacherId, groupId);
 
     return { success: true };
   } catch (error) {
@@ -1186,6 +1208,11 @@ exports.notifyOnPresence = onDocumentWritten(
 
     if (newlyPresentStudents.length === 0) return;
 
+    // ✅ حفظ وقت أول "سكان" لو مش موجود (عشان نحسب الساعة بالضبط من أول واحد)
+    if (!afterData.firstScanAt) {
+      await snapAfter.ref.update({ firstScanAt: admin.firestore.FieldValue.serverTimestamp() });
+    }
+
     const teacherId = event.params.teacherId;
     const groupId = event.params.groupId;
     const date = event.params.date;
@@ -1250,7 +1277,7 @@ exports.notifyOnPresence = onDocumentWritten(
       };
 
       // استخدام الدالة المساعدة الموجودة في ملفك لإرسال الإشعار
-      return sendNotificationToParent(sData, payload, "notifyOnPresence", studentId);
+      return sendNotificationToParent(sData, payload, "notifyOnPresence", studentId, teacherId, groupId);
     });
 
     await Promise.all(notifications);
@@ -1265,15 +1292,18 @@ exports.autoAbsenceReminder = onSchedule({
   timeZone: "Africa/Cairo",
 }, async (event) => {
   const now = new Date();
-  const cairoTimeStr = now.toLocaleString("en-US", { timeZone: "Africa/Cairo" });
-  const cairoDate = new Date(cairoTimeStr);
-  const todayStr = formatDate(cairoDate);
+
+  // 1. حساب تاريخ "النهاردة" و "امبارح" في القاهرة لضمان التقاط الحصص المتأخرة
+  const dateOptions = { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" };
+  const todayStr = new Intl.DateTimeFormat("en-CA", dateOptions).format(now);
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayStr = new Intl.DateTimeFormat("en-CA", dateOptions).format(yesterday);
 
   try {
-    // 1. جلب ملفات الحضور بتاعة النهاردة
+    // 2. جلب ملفات الحضور النشطة (امبارح والنهاردة)
     const dailyAttSnap = await admin.firestore()
       .collectionGroup("dailyAttendance")
-      .where("date", "==", todayStr)
+      .where("date", "in", [todayStr, yesterdayStr])
       .get();
 
     if (dailyAttSnap.empty) return;
@@ -1281,43 +1311,44 @@ exports.autoAbsenceReminder = onSchedule({
     for (const attDoc of dailyAttSnap.docs) {
       const attendanceData = attDoc.data();
 
-      // 2. حساب وقت وقت الإنشاء ووقت آخر تحديث
+      // 3. تحديد "وقت البداية" (أول سكان أفضل، لو مش موجود نستخدم وقت الإنشاء)
       const createTime = attDoc.createTime.toDate();
+      const firstScanAt = attendanceData.firstScanAt ? (attendanceData.firstScanAt.toDate ? attendanceData.firstScanAt.toDate() : new Date(attendanceData.firstScanAt)) : createTime;
       const updateTime = attDoc.updateTime.toDate();
 
-      const minutesSinceStart = (now.getTime() - createTime.getTime()) / (1000 * 60);
+      const minutesSinceStart = (now.getTime() - firstScanAt.getTime()) / (1000 * 60);
       const minutesSinceLastUpdate = (now.getTime() - updateTime.getTime()) / (1000 * 60);
-
-      // --- الشروط الجديدة للأمان ---
-      // أ- عدى ساعة على الأقل من بداية الحصة
-      // ب- المدرس ملمسش القائمة بقاله 20 دقيقة (يعني خلص رصد)
-      // ج- فيه على الأقل طالب واحد "حضور" (عشان نتأكد إن دي حصة بجد مش ملف اتعمل غلط)
 
       const presentStudentIds = new Set(
         (attendanceData.records || [])
           .filter((r) => r.status === "present")
-          .map((r) => r.studentId)
+          .map((r) => r.studentId),
       );
 
+      // --- الشروط الرسمية (الإنتاج) ---
+      // أ- عدى 60 دقيقة على الأقل من أول سكان
+      // ب- المدرس ملمسش القائمة بقاله 20 دقيقة (خلص رصد)
       if (minutesSinceStart >= 60 && minutesSinceLastUpdate >= 20 && presentStudentIds.size > 0) {
-
         // استخراج المسار
-        const pathSegments = attDoc.ref.path.split('/');
+        const pathSegments = attDoc.ref.path.split("/");
         if (pathSegments.length < 5) continue;
 
         const teacherId = pathSegments[1];
         const groupId = pathSegments[3];
         const groupRef = admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}`);
 
-        // 3. التأكد إن الغياب متبعتش
-        const metaRef = groupRef.collection("attendanceMeta").doc(todayStr);
+        // 4. التأكد إن الغياب متبعتش (باستخدام تاريخ الملف نفسه مش "النهاردة")
+        const docDate = attendanceData.date || pathSegments[5];
+        const metaRef = groupRef.collection("attendanceMeta").doc(docDate);
         const metaDoc = await metaRef.get();
 
-        if (metaDoc.exists && metaDoc.data().absenceSent === true) continue;
+        if (metaDoc.exists && metaDoc.data().absenceSent === true) {
+          continue;
+        }
 
         const subjectName = await getTeacherSubject(teacherId);
 
-        // 4. جلب كل الطلاب والبدء في الإرسال
+        // 5. جلب كل الطلاب والبدء في الإرسال
         const studentsSnap = await groupRef.collection("students").get();
         const promises = [];
         let sentCount = 0;
@@ -1328,16 +1359,16 @@ exports.autoAbsenceReminder = onSchedule({
             const payload = {
               notification: {
                 title: "تنبيه غياب ❌",
-                body: `نحيطكم علماً بأن الطالب ${student.name} تغيب عن حصة اليوم (${todayStr}) في مادة ${subjectName}.`,
+                body: `نحيطكم علماً بأن الطالب ${student.name} تغيب عن حصة اليوم (${docDate}) في مادة ${subjectName}.`,
               },
               data: {
                 type: "absence_alert",
                 studentId: studentDoc.id,
-                date: todayStr,
+                date: docDate,
               },
             };
             promises.push(
-              sendNotificationToParent(student, payload, "AutoAbsence", studentDoc.id)
+              sendNotificationToParent(student, payload, "AutoAbsence", studentDoc.id, teacherId, groupId),
             );
             sentCount++;
           }
@@ -1345,9 +1376,9 @@ exports.autoAbsenceReminder = onSchedule({
 
         await Promise.all(promises);
 
-        // 5. توثيق الإرسال
+        // 6. توثيق الإرسال لمنع التكرار
         await metaRef.set({ absenceSent: true, sentAt: now, auto: true }, { merge: true });
-        console.log(`✅ Auto Absence Sent for ${teacherId}/${groupId}, count: ${sentCount}`);
+        console.log(`✅ Auto Absence Sent for ${teacherId}/${groupId}, count: ${sentCount}, date: ${docDate}`);
       }
     }
   } catch (error) {
