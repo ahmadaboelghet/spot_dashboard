@@ -3979,91 +3979,120 @@ function renderAttendanceChart(present, absent) {
     });
 }
 // ==========================================
-// 🚨 EMERGENCY RESTORE SYSTEM (V2 - SMARTER) 🚨
+// 🚨 EMERGENCY RESTORE SYSTEM (V3 - ULTIMATE) 🚨
 // ==========================================
 async function emergencyRestore() {
-    if (!confirm("⚠️ تنبيه هام: هل أنت متأكد؟ هذا الخيار سيقوم بسحب كل البيانات من ذاكرة هذا الموبايل ورفعها للسيرفر. استخدمه فقط من الجهاز الذي يحتوي على البيانات (موبايل المدرس).")) return;
-
-    const btn = document.getElementById('restoreBtn');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري التحليل...';
-
     try {
         await openDB();
-        let totalUploaded = 0;
-        const log = (msg) => console.log(`[Restore] ${msg}`);
+        const stats = {};
+        const stores = ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions'];
 
-        // 1. استعادة المدرسين أولاً (المفتاح الأساسي لكل شيء)
+        // 1. جرد سريع للبيانات الموجودة في الموبايل
+        for (const s of stores) {
+            const data = await getAllFromDB(s);
+            stats[s] = data.length;
+        }
+
+        const statsMsg = `📊 تقرير البيانات المكتشفة في هذا الجهاز:\n` +
+            `- المدرسين: ${stats.teachers}\n` +
+            `- المجموعات: ${stats.groups}\n` +
+            `- الطلاب: ${stats.students}\n` +
+            `- الحضور: ${stats.attendance}\n` +
+            `- الامتحانات/الواجبات: ${stats.assignments}\n` +
+            `- المصاريف: ${stats.payments}\n\n` +
+            `هل تريد البدء في رفع هذه البيانات للسيرفر؟`;
+
+        if (stats.students === 0 && stats.groups === 0 && stats.teachers === 0) {
+            alert("⚠️ لا توجد بيانات محفوظة على هذا الجهاز. تأكد أنك تفتح الموقع من الموبايل الصحيح.");
+            return;
+        }
+
+        if (!confirm(statsMsg)) return;
+
+        const btn = document.getElementById('restoreBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري الرفع...';
+
+        let totalUploaded = 0;
+        const log = (msg) => console.log(`[V3 Restore] ${msg}`);
+
+        // 2. رفع المدرسين والمجموعات لبناء الخريطة
         const teachers = await getAllFromDB('teachers');
-        log(`Found ${teachers.length} teachers locally.`);
+        const groups = await getAllFromDB('groups');
+        const groupToTeacherMap = {};
+
         for (const t of teachers) {
             await firestoreDB.collection('teachers').doc(t.id).set(t, { merge: true });
             totalUploaded++;
         }
 
-        // 2. استعادة المجموعات وبناء خريطة (Map) لربط المجموعات بالمدرسين
-        const groups = await getAllFromDB('groups');
-        const groupToTeacherMap = {}; // { groupId: teacherId }
-        log(`Found ${groups.length} groups locally.`);
-
         for (const g of groups) {
-            const tId = g.teacherId || (teachers.length === 1 ? teachers[0].id : null);
-            if (tId) {
-                groupToTeacherMap[g.id] = tId;
-                await firestoreDB.doc(`teachers/${tId}/groups/${g.id}`).set(g, { merge: true });
+            const tid = g.teacherId || (teachers.length > 0 ? teachers[0].id : null);
+            if (tid) {
+                groupToTeacherMap[g.id] = tid;
+                await firestoreDB.doc(`teachers/${tid}/groups/${g.id}`).set(g, { merge: true });
                 totalUploaded++;
             }
         }
 
-        // 3. استعادة باقي البيانات باستخدام الخريطة
-        const subStores = [
-            { name: 'students', path: (tid, gid, id) => `teachers/${tid}/groups/${gid}/students/${id}` },
-            { name: 'assignments', path: (tid, gid, id) => `teachers/${tid}/groups/${gid}/assignments/${id}` },
-            {
-                name: 'attendance', path: (tid, gid, id) => {
-                    const parts = id.split('_');
-                    return `teachers/${tid}/groups/${parts[0] || gid}/dailyAttendance/${parts[1]}`;
-                }
-            },
-            {
-                name: 'payments', path: (tid, gid, id) => {
-                    const parts = id.split('_PAY_');
-                    return `teachers/${tid}/groups/${parts[0]}/payments/${parts[1]}`;
-                }
-            },
-            { name: 'schedules', path: (tid, gid, id) => `teachers/${tid}/groups/${gid}/recurringSchedules/${id}` },
-            { name: 'scheduleExceptions', path: (tid, gid, id) => `teachers/${tid}/groups/${gid}/scheduleExceptions/${id}` }
-        ];
-
-        for (const store of subStores) {
-            const items = await getAllFromDB(store.name);
-            log(`Processing ${items.length} items from ${store.name}...`);
-
-            for (const item of items) {
-                const gid = item.groupId || (item.id.includes('_') ? item.id.split('_')[0] : null);
-                const tid = item.teacherId || groupToTeacherMap[gid] || (teachers.length === 1 ? teachers[0].id : null);
-
-                if (tid && gid) {
-                    const finalPath = store.path(tid, gid, item.id);
-                    await firestoreDB.doc(finalPath).set(item, { merge: true });
-                    totalUploaded++;
-                } else if (tid && store.name === 'teachers') {
-                    // handled above
-                } else {
-                    log(`⚠️ Skipped item ${item.id} in ${store.name} (Missing Tid/Gid)`);
-                }
+        // 3. رفع الطلاب
+        const students = await getAllFromDB('students');
+        for (const s of students) {
+            const gid = s.groupId;
+            const tid = s.teacherId || groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+            if (tid && gid) {
+                await firestoreDB.doc(`teachers/${tid}/groups/${gid}/students/${s.id}`).set(s, { merge: true });
+                totalUploaded++;
             }
         }
 
-        alert(`✅ مبروك! تم استعادة ${totalUploaded} سجل بنجاح إلى السيرفر. قم بتحديث الصفحة الآن.`);
+        // 4. رفع الحضور والامتحانات
+        const attendance = await getAllFromDB('attendance');
+        for (const att of attendance) {
+            const parts = att.id.split('_');
+            const gid = parts[0];
+            const date = parts[1];
+            const tid = att.teacherId || groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+            if (tid && gid && date) {
+                await firestoreDB.doc(`teachers/${tid}/groups/${gid}/dailyAttendance/${date}`).set(att, { merge: true });
+                totalUploaded++;
+            }
+        }
+
+        const assignments = await getAllFromDB('assignments');
+        for (const ass of assignments) {
+            const gid = ass.groupId;
+            const tid = ass.teacherId || groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+            if (tid && gid) {
+                await firestoreDB.doc(`teachers/${tid}/groups/${gid}/assignments/${ass.id}`).set(ass, { merge: true });
+                totalUploaded++;
+            }
+        }
+
+        // 5. رفع المصاريف والجدول
+        const payments = await getAllFromDB('payments');
+        for (const p of payments) {
+            const gid = p.id.split('_PAY_')[0];
+            const month = p.id.split('_PAY_')[1];
+            const tid = groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+            if (tid && gid && month) {
+                await firestoreDB.doc(`teachers/${tid}/groups/${gid}/payments/${month}`).set(p, { merge: true });
+                totalUploaded++;
+            }
+        }
+
+        alert(`✅ تم استعادة ${totalUploaded} سجل بنجاح! السيرفر الآن يحتوي على كافة بياناتك القديمة. يمكنك تحديث الصفحة.`);
         location.reload();
 
     } catch (e) {
-        console.error("Restore Error:", e);
-        alert("❌ حدث خطأ: " + e.message);
+        console.error("Restore V3 Error:", e);
+        alert("❌ فشل الاستعادة: " + e.message);
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        const btn = document.getElementById('restoreBtn');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ri-error-warning-fill"></i> زرار طوارئ: استعادة البيانات من الجهاز للسيرفر';
+        }
     }
 }
