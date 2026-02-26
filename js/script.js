@@ -3979,111 +3979,112 @@ function renderAttendanceChart(present, absent) {
     });
 }
 // ==========================================
-// 🚨 EMERGENCY RESTORE SYSTEM (V4 - PATH FIX) 🚨
+// 🚨 EMERGENCY RESTORE SYSTEM (V5 - FINAL SHIELD) 🚨
 // ==========================================
-async function emergencyRestore() {
+async function emergencyRestore(mode = 'upload') {
     try {
         await openDB();
         const stats = {};
+        const fullData = {};
         const stores = ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions'];
 
         for (const s of stores) {
             const data = await getAllFromDB(s);
             stats[s] = data.length;
+            fullData[s] = data;
         }
 
-        const statsMsg = `📊 تقرير الجرد (V4):\n` +
-            `- سجلات الحضور: ${stats.attendance}\n` +
-            `- الطلاب: ${stats.students}\n` +
-            `- المجموعات: ${stats.groups}\n` +
-            `- المصاريف: ${stats.payments}\n\n` +
-            `⚠️ النسخة دي بتصلح مشكلة سجلات الحضور. هل تريد البدء؟`;
+        if (mode === 'download') {
+            const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SPOT_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            alert("✅ تم تحميل نسخة احتياطية من كل بيانات الموبايل بنجاح. احتفظ بهذا الملف!");
+            return;
+        }
+
+        const statsMsg = `📊 تقرير الجرد (V5):\n` +
+            `- الحضور: ${stats.attendance} سجل\n` +
+            `- الطلاب والمجموعات: ${stats.students + stats.groups} سجل\n` +
+            `- المصاريف والواجبات: ${stats.payments + stats.assignments} سجل\n\n` +
+            `⚠️ النسخة دي بتستعيد الحضور بدقة أعلى. هل تريد البدء؟`;
 
         if (!confirm(statsMsg)) return;
 
         const btn = document.getElementById('restoreBtn');
         btn.disabled = true;
-        btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري استعادة سجلات الحضور...';
+        btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري استعادة الحضور...';
 
-        let totalUploaded = 0;
-        const teachers = await getAllFromDB('teachers');
-        const groups = await getAllFromDB('groups');
+        let uploaded = 0;
         const groupToTeacherMap = {};
 
-        // 1. استعادة المدرسين والمجموعات
-        for (const t of teachers) {
+        for (const t of fullData.teachers) {
             await firestoreDB.collection('teachers').doc(t.id).set(t, { merge: true });
-            totalUploaded++;
+            uploaded++;
         }
-        for (const g of groups) {
-            const tid = g.teacherId || (teachers.length > 0 ? teachers[0].id : null);
+        for (const g of fullData.groups) {
+            const tid = g.teacherId || (fullData.teachers.length > 0 ? fullData.teachers[0].id : null);
             if (tid) {
                 groupToTeacherMap[g.id] = tid;
                 await firestoreDB.doc(`teachers/${tid}/groups/${g.id}`).set(g, { merge: true });
-                totalUploaded++;
+                uploaded++;
             }
         }
 
-        // 2. استعادة سجلات الحضور (Fix: Handling multiple underscores)
-        const attendance = await getAllFromDB('attendance');
-        for (const att of attendance) {
-            const id = att.id;
-            const lastIdx = id.lastIndexOf('_'); // التاريخ هو آخر جزء بعد آخر _
-            if (lastIdx !== -1) {
-                const gid = id.substring(0, lastIdx);
-                const date = id.substring(lastIdx + 1);
-                const tid = att.teacherId || groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+        for (const att of fullData.attendance) {
+            try {
+                const id = att.id;
+                // التاريخ YYYY-MM-DD دائماً 10 حروف
+                const date = att.date || (id.length >= 10 ? id.substring(id.length - 10) : null);
+                const gid = att.groupId || (id.length > 11 ? id.substring(0, id.length - 11) : null);
+                const tid = att.teacherId || groupToTeacherMap[gid] || (fullData.teachers.length > 0 ? fullData.teachers[0].id : null);
 
-                if (tid && gid && date) {
+                if (tid && gid && date && date.includes('-')) {
                     await firestoreDB.doc(`teachers/${tid}/groups/${gid}/dailyAttendance/${date}`).set(att, { merge: true });
-                    totalUploaded++;
+                    uploaded++;
                 }
-            }
+            } catch (err) { console.error("Skip Att:", err); }
         }
 
-        // 3. استعادة الطلاب والواجبات
-        const students = await getAllFromDB('students');
-        for (const s of students) {
+        for (const s of fullData.students) {
             const gid = s.groupId;
-            const tid = s.teacherId || groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+            const tid = s.teacherId || groupToTeacherMap[gid] || (fullData.teachers.length > 0 ? fullData.teachers[0].id : null);
             if (tid && gid) {
                 await firestoreDB.doc(`teachers/${tid}/groups/${gid}/students/${s.id}`).set(s, { merge: true });
-                totalUploaded++;
+                uploaded++;
             }
         }
 
-        const assignments = await getAllFromDB('assignments');
-        for (const ass of assignments) {
+        for (const ass of fullData.assignments) {
             const gid = ass.groupId;
-            const tid = ass.teacherId || groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+            const tid = ass.teacherId || groupToTeacherMap[gid] || (fullData.teachers.length > 0 ? fullData.teachers[0].id : null);
             if (tid && gid) {
                 await firestoreDB.doc(`teachers/${tid}/groups/${gid}/assignments/${ass.id}`).set(ass, { merge: true });
-                totalUploaded++;
+                uploaded++;
             }
         }
 
-        // 4. استعادة المصاريف
-        const payments = await getAllFromDB('payments');
-        for (const p of payments) {
+        for (const p of fullData.payments) {
             const id = p.id;
             const splitIdx = id.indexOf('_PAY_');
             if (splitIdx !== -1) {
                 const gid = id.substring(0, splitIdx);
                 const month = id.substring(splitIdx + 5);
-                const tid = groupToTeacherMap[gid] || (teachers.length > 0 ? teachers[0].id : null);
+                const tid = groupToTeacherMap[gid] || (fullData.teachers.length > 0 ? fullData.teachers[0].id : null);
                 if (tid && gid && month) {
                     await firestoreDB.doc(`teachers/${tid}/groups/${gid}/payments/${month}`).set(p, { merge: true });
-                    totalUploaded++;
+                    uploaded++;
                 }
             }
         }
 
-        alert(`✅ مبروك! تم استعادة ${totalUploaded} سجل بنجاح.`);
+        alert(`✅ مبروك! تم استعادة ${uploaded} سجل بنجاح.`);
         location.reload();
 
     } catch (e) {
-        console.error("Restore V4 Error:", e);
-        alert("❌ فشل الاستعادة V4: " + e.message);
+        alert("❌ فشل الاستعادة V5: " + e.message);
     } finally {
         const btn = document.getElementById('restoreBtn');
         if (btn) {
