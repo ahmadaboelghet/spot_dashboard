@@ -597,10 +597,29 @@ function showToast(msg, type = 'success') {
     setTimeout(() => div.remove(), 3000);
 }
 
-// --- SYNC ---
+// --- SYNC (Robust Queue with Retry Metadata) ---
+const MAX_SYNC_RETRIES = 5;
+
 async function addToSyncQueue(action) {
-    await putToDB('syncQueue', action);
-    updateOnlineStatus();
+    const enriched = {
+        ...action,
+        createdAt: action.createdAt || Date.now(),
+        attempts: action.attempts || 0,
+        lastError: action.lastError || null,
+        failed: action.failed || false,
+    };
+
+    try {
+        await putToDB('syncQueue', enriched);
+        updateOnlineStatus();
+    } catch (e) {
+        console.error("❌ Failed to enqueue sync action:", {
+            action,
+            error: e && e.message ? e.message : e
+        });
+        // ملاحظة مهمة: حتى لو فشل الحفظ في syncQueue، بيانات IndexedDB الأصلية (attendance, assignments, ...etc)
+        // تظل كما هي ولم يتم حذفها في أي مكان.
+    }
 }
 
 function updateOnlineStatus() {
@@ -644,32 +663,237 @@ async function updateSyncUI() {
     }
 }
 
+async function getAllSyncQueueItemsWithKeys() {
+    await openDB();
+    return new Promise((resolve, reject) => {
+        try {
+            const tx = localDB.transaction('syncQueue', 'readonly');
+            const store = tx.objectStore('syncQueue');
+
+            const reqItems = store.getAll();
+            const reqKeys = store.getAllKeys();
+
+            const result = { items: null, keys: null };
+
+            reqItems.onsuccess = () => {
+                result.items = reqItems.result || [];
+                if (result.keys !== null) resolve(result);
+            };
+            reqItems.onerror = (e) => {
+                reject(e.target.error || new Error("Failed to read syncQueue items"));
+            };
+
+            reqKeys.onsuccess = () => {
+                result.keys = reqKeys.result || [];
+                if (result.items !== null) resolve(result);
+            };
+            reqKeys.onerror = (e) => {
+                reject(e.target.error || new Error("Failed to read syncQueue keys"));
+            };
+
+            tx.onerror = (e) => {
+                reject(tx.error || e.target.error || new Error("Transaction error reading syncQueue"));
+            };
+        } catch (e) {
+            reject(e);
+        }
+    });
+}
+
 async function processSyncQueue() {
-    if (!navigator.onLine || isSyncing) return;
+    if (isSyncing) return;
+
+    if (!navigator.onLine) {
+        console.warn("🌐 processSyncQueue aborted: navigator reports offline.");
+        return;
+    }
+
     isSyncing = true;
     try {
-        if (!localDB) await openDB();
-        const tx = localDB.transaction('syncQueue', 'readwrite');
-        const store = tx.objectStore('syncQueue');
-        const req = store.getAll();
+        const { items, keys } = await getAllSyncQueueItemsWithKeys();
 
-        req.onsuccess = async () => {
-            const items = req.result;
-            const keys = await new Promise(r => { const k = store.getAllKeys(); k.onsuccess = () => r(k.result); });
-
-            for (let i = 0; i < items.length; i++) {
-                const { type, path, data, id, options } = items[i];
-                try {
-                    if (type === 'set' || type === 'update') await firestoreDB.doc(path).set(data, options || { merge: true });
-                    else if (type === 'add') await firestoreDB.collection(path).doc(id).set(data, { merge: true });
-                    else if (type === 'delete') await firestoreDB.doc(path).delete();
-                    await deleteFromDB('syncQueue', keys[i]);
-                } catch (e) { console.error(e); }
-            }
+        if (!items || items.length === 0) {
             isSyncing = false;
-            updateSyncUI();
-        };
-    } catch (e) { isSyncing = false; }
+            await updateSyncUI();
+            return;
+        }
+
+        console.log(`🚀 Starting sync of ${items.length} queued actions (raw)...`);
+
+        // نبني قائمة entries فيها action + key + index عشان نقدر نحل التعارضات
+        const entries = items.map((action, idx) => ({
+            action,
+            key: keys[idx],
+            index: idx
+        }));
+
+        // 1️⃣ تجميع حسب الـ path
+        const groupedByPath = new Map();
+        for (const entry of entries) {
+            const { action } = entry;
+            const pathKey = action.path || action.collectionPath || '';
+            if (!pathKey) continue;
+            if (!groupedByPath.has(pathKey)) groupedByPath.set(pathKey, []);
+            groupedByPath.get(pathKey).push(entry);
+        }
+
+        const supersededKeys = new Set();
+        const filteredEntries = [];
+
+        // 2️⃣ حل التعارضات (مثلاً set + delete لنفس dailyAttendance)
+        groupedByPath.forEach((list, pathKey) => {
+            const hasSetOrUpdate = list.some(e => e.action.type === 'set' || e.action.type === 'update');
+            const isDailyAttendanceDoc = pathKey.includes('/dailyAttendance/');
+
+            if (hasSetOrUpdate) {
+                // احتفظ بآخر set/update فقط
+                let lastSetEntry = null;
+                for (const e of list) {
+                    if (e.action.type === 'set' || e.action.type === 'update') {
+                        if (!lastSetEntry || e.index > lastSetEntry.index) {
+                            lastSetEntry = e;
+                        }
+                    }
+                }
+
+                if (lastSetEntry) {
+                    filteredEntries.push(lastSetEntry);
+                }
+
+                for (const e of list) {
+                    if (lastSetEntry && e.key === lastSetEntry.key) continue;
+
+                    // لو فيه delete لنفس dailyAttendance مع وجود set -> نرميه من الـ Queue من غير ما ننفذه
+                    if (e.action.type === 'delete' && isDailyAttendanceDoc) {
+                        console.warn("🚫 Dropping conflicting DELETE for dailyAttendance (SET exists):", {
+                            path: pathKey,
+                            queueKey: e.key
+                        });
+                    }
+
+                    supersededKeys.add(e.key);
+                }
+            } else {
+                // مفيش set/update لنفس الـ path
+                // لو كله Deletes لنفس الـ doc، نخلي آخر واحدة بس
+                const deletes = list.filter(e => e.action.type === 'delete');
+                const others = list.filter(e => e.action.type !== 'delete');
+
+                if (deletes.length > 1) {
+                    let lastDelete = deletes[0];
+                    for (const d of deletes) {
+                        if (d.index > lastDelete.index) lastDelete = d;
+                    }
+                    filteredEntries.push(lastDelete);
+                    for (const d of deletes) {
+                        if (d.key !== lastDelete.key) supersededKeys.add(d.key);
+                    }
+                } else if (deletes.length === 1) {
+                    filteredEntries.push(deletes[0]);
+                }
+
+                // أي Actions تانية (add مثلا) نضيفها زي ما هي
+                for (const e of others) {
+                    filteredEntries.push(e);
+                }
+            }
+        });
+
+        // مسح العناصر المتجاوزة من الـ Queue (اللي اتستبدلت بإصدارات أحدث لنفس الـ path)
+        for (const key of supersededKeys) {
+            try {
+                await deleteFromDB('syncQueue', key);
+                console.log("🧹 Removed superseded queue item:", { key });
+            } catch (cleanupErr) {
+                console.error("⚠️ Failed to remove superseded queue item:", { key, error: cleanupErr });
+            }
+        }
+
+        console.log(`✅ After conflict resolution: ${filteredEntries.length} actions will be sent to Firestore.`);
+
+        // 3️⃣ تنفيذ الـ Actions بعد حل التعارضات
+        for (const entry of filteredEntries) {
+            const action = entry.action;
+            const key = entry.key;
+
+            const attempts = action.attempts || 0;
+            if (action.failed || attempts >= MAX_SYNC_RETRIES) {
+                console.warn("⏭️ Skipping permanently failed sync item:", {
+                    type: action.type,
+                    path: action.path,
+                    attempts,
+                    lastError: action.lastError
+                });
+                continue;
+            }
+
+            if (!navigator.onLine) {
+                console.warn("🌐 Went offline mid-sync. Stopping further processing.");
+                break;
+            }
+
+            const { type, path, data, id, options } = action;
+
+            try {
+                console.log("📡 Syncing action:", { type, path, attempts });
+
+                if (type === 'set' || type === 'update') {
+                    console.log("➡️ FIRESTORE SET (doc):", {
+                        path,
+                        options: options || { merge: true },
+                        payloadPreview: data && typeof data === 'object'
+                            ? { keys: Object.keys(data), date: data.date }
+                            : data
+                    });
+                    await firestoreDB.doc(path).set(data, options || { merge: true });
+                } else if (type === 'add') {
+                    console.log("➡️ FIRESTORE SET (add to collection):", {
+                        collectionPath: path,
+                        docId: id,
+                        payloadPreview: data && typeof data === 'object'
+                            ? { keys: Object.keys(data), date: data.date }
+                            : data
+                    });
+                    await firestoreDB.collection(path).doc(id).set(data, { merge: true });
+                } else if (type === 'delete') {
+                    console.log("🗑️ FIRESTORE DELETE:", { path });
+                    await firestoreDB.doc(path).delete();
+                } else {
+                    console.warn("⚠️ Unknown syncQueue action type. Skipping:", action);
+                    continue;
+                }
+
+                await deleteFromDB('syncQueue', key);
+                console.log("✅ Sync success, removed from queue:", { type, path });
+            } catch (err) {
+                const message = err && err.message ? err.message : String(err);
+                console.error("❌ Sync error for item:", {
+                    type,
+                    path,
+                    attempts,
+                    error: message
+                });
+
+                const updated = {
+                    ...action,
+                    attempts: attempts + 1,
+                    lastError: message,
+                    failed: attempts + 1 >= MAX_SYNC_RETRIES
+                };
+
+                try {
+                    await putToDB('syncQueue', updated);
+                } catch (metaErr) {
+                    console.error("⚠️ Failed to update retry metadata for sync item:", metaErr);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("🔥 Fatal error in processSyncQueue:", e);
+    } finally {
+        isSyncing = false;
+        await updateSyncUI();
+    }
 }
 
 // ==========================================
@@ -1211,6 +1435,10 @@ async function deleteCurrentGroup() {
 // ✅✅ NEW LOAD GROUP DATA WITH SAFE SYNC & FAIL-SAFE LOGIC ✅✅
 // ------------------------------------------------------------------
 async function loadGroupData() {
+    allStudents = []; // 🔄 إعادة تعيين القائمة فوراً لمنع التداخل
+    if (window.groupAnalyticsChartInstance) { window.groupAnalyticsChartInstance.destroy(); window.groupAnalyticsChartInstance = null; }
+    if (window.groupHomeworkChartInstance) { window.groupHomeworkChartInstance.destroy(); window.groupHomeworkChartInstance = null; }
+
     const scanBtn = document.getElementById('startSmartScanBtn');
     const goldBtn = document.getElementById('openGoldenSettingsBtn');
 
@@ -1242,23 +1470,36 @@ async function loadGroupData() {
     // 2. جلب البيانات من السيرفر (Sync)
     if (navigator.onLine) {
         try {
-            const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get();
-            const remoteStudents = snap.docs.map(d => ({
-                id: d.id,
-                groupId: SELECTED_GROUP_ID,
-                ...d.data()
-            }));
-
+            // أ. الطلاب
+            const sSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get();
+            const remoteStudents = sSnap.docs.map(d => ({ id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() }));
             allStudents = remoteStudents;
-            refreshCurrentTab();
             saveStudentsToLocalDB(remoteStudents);
 
+            // ب. الحضور الأخير (للتخزين المحلي) - زيادة الليمت لضمان مزامنة التاريخ بالكامل
+            const aSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get();
+            for (const d of aSnap.docs) {
+                await putToDB('attendance', { id: `${SELECTED_GROUP_ID}_${d.id}`, groupId: SELECTED_GROUP_ID, ...d.data() });
+            }
+
+            // ج. التكاليف/الواجبات (للتخزين المحلي)
+            const asSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`).limit(60).get();
+            for (const d of asSnap.docs) {
+                await putToDB('assignments', { id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() });
+            }
+
+            // د. المدفوعات (للتخزين المحلي)
+            const pSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments`).limit(24).get();
+            for (const d of pSnap.docs) {
+                await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${d.id}`, month: d.id, ...d.data() });
+            }
+
+            refreshCurrentTab();
         } catch (e) {
             console.error("Sync error:", e);
         }
     }
 
-    // تحديث مبدئي إذا لم يكن هناك تبويب نشط
     if (!document.querySelector('.tab-button.active')) switchTab('daily');
 }
 
@@ -1481,12 +1722,12 @@ async function updateGroupAnalyticsChart() {
     try {
         console.log("📊 Fetching analytics for Group:", SELECTED_GROUP_ID);
 
-        // 1. جلب البيانات (تبسيط البحث لتقليل مشاكل الـ Index)
+        // 1. جلب البيانات (تجنب الـ Index عن طريق الجلب بدون ترتيب والترتيب يدوياً)
         const [attSnap, hwSnap] = await Promise.all([
             firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
-                .orderBy('date', 'desc').limit(7).get().catch(e => { console.error("Att Query Fail:", e); return { empty: true }; }),
+                .limit(100).get().catch(e => { console.error("Att Query Fail:", e); return { empty: true }; }),
             firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`)
-                .limit(20).get().catch(e => { console.error("HW Query Fail:", e); return { empty: true }; })
+                .limit(100).get().catch(e => { console.error("HW Query Fail:", e); return { empty: true }; })
         ]);
 
         // --- أ. معالجة الحضور ---
@@ -1494,18 +1735,25 @@ async function updateGroupAnalyticsChart() {
         let attData = [0, 0, 0, 0, 0, 0, 0];
 
         if (!attSnap.empty) {
-            const docs = attSnap.docs.reverse();
-            attLabels = [];
-            attData = [];
-            docs.forEach(doc => {
-                const d = doc.data();
-                const parts = (d.date || "").split('-');
-                const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : (d.date || "??");
-                attLabels.push(label);
-                const records = d.records || [];
-                const percent = records.length > 0 ? Math.round((records.filter(r => r.status === 'present').length / records.length) * 100) : 0;
-                attData.push(percent);
-            });
+            const filteredAtt = attSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(d => d.date)
+                .sort((a, b) => new Date(b.date) - new Date(a.date)) // descending
+                .slice(0, 7) // newest 7
+                .reverse(); // reverse for chart
+
+            if (filteredAtt.length > 0) {
+                attLabels = [];
+                attData = [];
+                filteredAtt.forEach(d => {
+                    const parts = (d.date || "").split('-');
+                    const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : (d.date || "??");
+                    attLabels.push(label);
+                    const records = d.records || [];
+                    const percent = records.length > 0 ? Math.round((records.filter(r => r.status === 'present').length / records.length) * 100) : 0;
+                    attData.push(percent);
+                });
+            }
         }
 
         if (window.groupAnalyticsChartInstance) window.groupAnalyticsChartInstance.destroy();
@@ -1588,18 +1836,15 @@ function renderBarChart(ctx, labels, data, label, bgColor, borderColor) {
 }
 
 async function saveDailyData(isSilent = false) {
-    // تعريف الزرار خارج الـ try عشان نقدر نرجعه لأصله في finally
     const saveBtn = document.getElementById('saveDailyBtn');
     let oldText = "";
 
     try {
-        // 1. (تم إلغاء فحص Auth) - التحقق فقط من وجود بيانات المدرس والمجموعة
         if (!TEACHER_ID || !SELECTED_GROUP_ID) {
             if (!isSilent) console.warn("⚠️ لا يوجد معرف مدرس أو مجموعة. تم إلغاء الحفظ.");
             return;
         }
 
-        // 2. التحقق من وجود حقل التاريخ
         const dateInput = document.getElementById('dailyDateInput');
         if (!dateInput) {
             console.warn("⚠️ Save aborted: Date input not found in DOM.");
@@ -1611,7 +1856,6 @@ async function saveDailyData(isSilent = false) {
             return;
         }
 
-        // 3. تغيير شكل الزرار (فقط لو الزرار موجود ومش صامت)
         if (!isSilent && saveBtn) {
             oldText = saveBtn.innerText;
             saveBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
@@ -1619,41 +1863,59 @@ async function saveDailyData(isSilent = false) {
         }
 
         const promises = [];
-
-        // --- تجميع بيانات الحضور ---
-        const records = [];
         const studentRows = document.querySelectorAll('#dailyStudentsList > div');
 
-        // لو مفيش طلاب، مفيش داعي نكمل (إلا لو لسه بنحمل)
-        if (studentRows.length > 0) {
+        if (studentRows.length === 0) {
+            if (!isSilent) {
+                console.warn("ℹ️ No student rows found for daily save; skipping.");
+            }
+        } else {
+            // --- Attendance ---
+            const attendanceRecords = [];
             studentRows.forEach(div => {
                 const attSelect = div.querySelector('.att-select');
                 if (attSelect) {
-                    records.push({ studentId: div.dataset.sid, status: attSelect.value });
+                    attendanceRecords.push({
+                        studentId: div.dataset.sid,
+                        status: attSelect.value
+                    });
                 }
             });
 
-            const attendanceData = {
-                id: `${SELECTED_GROUP_ID}_${date}`,
-                date: date,
-                records: records
-            };
+            if (attendanceRecords.length > 0) {
+                const attendanceId = `${SELECTED_GROUP_ID}_${date}`;
+                const attendanceData = {
+                    id: attendanceId,
+                    teacherId: TEACHER_ID,
+                    groupId: SELECTED_GROUP_ID,
+                    date,
+                    records: attendanceRecords
+                };
 
-            promises.push(putToDB('attendance', attendanceData));
-            promises.push(addToSyncQueue({
-                type: 'set',
-                path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
-                data: attendanceData
-            }));
-        }
+                console.log("📝 Queuing attendance save:", {
+                    path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
+                    localId: attendanceId,
+                    recordsCount: attendanceRecords.length
+                });
 
-        // --- تجميع بيانات الواجب ---
-        // نتأكد إن المتغير hasHomeworkToday متعرف أصلاً
-        if (typeof hasHomeworkToday !== 'undefined' && hasHomeworkToday) {
-            const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
-            const scores = {};
+                promises.push(putToDB('attendance', attendanceData));
+                promises.push(
+                    addToSyncQueue({
+                        type: 'set',
+                        path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
+                        data: {
+                            date,
+                            records: attendanceRecords
+                        }
+                    })
+                );
+            }
 
-            if (studentRows.length > 0) {
+            // --- Homework (daily) ---
+            if (typeof hasHomeworkToday !== 'undefined' && hasHomeworkToday) {
+                const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
+                const scores = {};
+
                 studentRows.forEach(div => {
                     const chk = div.querySelector('.hw-check');
                     if (chk) {
@@ -1666,23 +1928,31 @@ async function saveDailyData(isSilent = false) {
 
                 const hwData = {
                     id: hwId,
+                    teacherId: TEACHER_ID,
                     groupId: SELECTED_GROUP_ID,
                     name: `واجب ${date}`,
-                    date: date,
-                    scores: scores,
+                    date,
+                    scores,
                     type: 'daily'
                 };
 
-                promises.push(putToDB('assignments', hwData));
-                promises.push(addToSyncQueue({
-                    type: 'set',
+                console.log("📝 Queuing homework save:", {
                     path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`,
-                    data: hwData
-                }));
+                    localId: hwId,
+                    studentsCount: Object.keys(scores).length
+                });
+
+                promises.push(putToDB('assignments', hwData));
+                promises.push(
+                    addToSyncQueue({
+                        type: 'set',
+                        path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`,
+                        data: hwData
+                    })
+                );
             }
         }
 
-        // تنفيذ الحفظ
         if (promises.length > 0) {
             await Promise.all(promises);
 
@@ -1691,14 +1961,14 @@ async function saveDailyData(isSilent = false) {
             } else {
                 console.log("✅ Auto-saved successfully (Background)");
             }
+        } else if (!isSilent) {
+            showToast("لا يوجد بيانات للحفظ حالياً", "info");
         }
 
     } catch (error) {
-        // 🔥 هنا يتم اصطياد أي خطأ غير متوقع ومنع توقف البرنامج
-        console.error("❌ Save Error Handled:", error);
+        console.error("❌ Save Error (saveDailyData):", error);
         if (!isSilent) showToast("حدث خطأ أثناء الحفظ", "error");
     } finally {
-        // 4. إرجاع الزرار لأصله دائماً
         if (!isSilent && saveBtn) {
             saveBtn.innerText = oldText || "حفظ الكل";
             saveBtn.disabled = false;
@@ -3795,16 +4065,20 @@ async function loadStudentStats(studentId) {
             }
         });
 
-        // 1. جلب الحضور (آخر 50 حصة للحساب الدقيق)
-        const attCollection = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
-            .orderBy('date', 'desc')
-            .limit(50)
+        // 1. جلب الحضور (جلب آخر 50 بدون orderBy لتجنب الـ Index)
+        const attSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
+            .limit(100)
             .get();
 
-        attCollection.forEach(doc => {
-            const data = doc.data();
+        const sortedAttDocs = attSnap.docs
+            .map(d => d.data())
+            .sort((a, b) => new Date(b.date) - new Date(a.date)) // تنازلي (الأحدث أولاً)
+            .slice(0, 50);
+
+        sortedAttDocs.forEach(data => {
             const record = (data.records || []).find(r => r.studentId === studentId);
-            const monthKey = data.date.substring(0, 7); // YYYY-MM
+            const monthKey = (data.date || "").substring(0, 7); // YYYY-MM
+            if (!monthKey) return;
 
             if (!monthlyStats[monthKey]) monthlyStats[monthKey] = { present: 0, absent: 0 };
 
@@ -3820,7 +4094,7 @@ async function loadStudentStats(studentId) {
                     monthlyStats[monthKey].absent++;
                 }
 
-                if (attCollection.docs.indexOf(doc) < 20) {
+                if (sortedAttDocs.indexOf(data) < 20) {
                     // الربط مع حالة الواجب الحقيقية من الـ assignments
                     const hwStatus = hwMapByDate[data.date];
                     const isSubmitted = hwStatus && hwStatus.submitted;
