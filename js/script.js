@@ -3348,6 +3348,7 @@ window.sendSpotMessage = async function () {
     // 2. عرض رسالة المستخدم
     addMessageToUI(msg, 'user');
     input.value = '';
+    input.style.height = '48px'; // إعادة الارتفاع للأصلي
 
     // 3. إظهار مؤشر الكتابة
     document.getElementById('typingIndicator').classList.remove('hidden');
@@ -3436,7 +3437,7 @@ function addMessageToUI(text, sender) {
         // رسالة المستخدم
         div.innerHTML = `
             <div class="flex justify-end items-end gap-2">
-                <div class="bg-gradient-to-tr from-yellow-500 to-yellow-600 text-black px-5 py-3 rounded-2xl rounded-tr-none font-bold text-sm shadow-md max-w-[85%]">
+                <div class="bg-gradient-to-tr from-yellow-500 to-yellow-600 text-black px-5 py-3 rounded-2xl rounded-tr-none font-bold text-sm shadow-md max-w-[85%] break-words whitespace-pre-wrap">
                     ${text}
                 </div>
             </div>`;
@@ -3462,30 +3463,42 @@ function addMessageToUI(text, sender) {
             </div>`;
     }
     else {
-        // 🤖 رسالة الشرح العادية (زرار حفظ المذكرة PDF)
-
-        // تشفير النص عشان نقدر نبعته للدالة من غير مشاكل
-        const safeText = encodeURIComponent(text);
-
+        // 🤖 رد البوت العادي
         div.innerHTML = `
-            <div class="flex gap-3 justify-start items-start group">
-                 <div class="w-8 h-8 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 border border-gray-100 shadow-sm">
+            <div class="flex gap-3 justify-start items-start w-full group">
+                <div class="w-8 h-8 bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 text-gray-600 dark:text-gray-300 text-xs shadow-sm">
                     <i class="ri-robot-2-fill"></i>
                 </div>
-                <div class="flex flex-col gap-2 max-w-[90%]">
-                    <div class="bg-white dark:bg-zinc-900 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-800 text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                <div class="flex flex-col gap-2 max-w-[85%]">
+                    <div class="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-700 text-sm text-gray-700 dark:text-gray-200 leading-relaxed break-words whitespace-pre-wrap">
                         ${text}
                     </div>
-                    
-                    <button onclick="printStudyNote(decodeURIComponent('${safeText}'))" 
-                            class="self-start text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 border cursor-pointer
-                                   bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100
-                                   dark:bg-zinc-800 dark:text-gray-200 dark:border-zinc-700 dark:hover:bg-zinc-700">
-                        <i class="ri-file-pdf-2-line text-red-500"></i>
-                        <span>حفظ كـ مذكرة (PDF)</span>
-                    </button>
                 </div>
             </div>`;
+
+        // إذا كان النص يحتوي على رابط PDF (الذي يولده الباك إند)، نظهر زرار تحميل واضح
+        if (text.includes("https://storage.googleapis.com") || text.includes("firebasestorage")) {
+            const urlMatch = text.match(/https?:\/\/[^\s\n]+/);
+            if (urlMatch) {
+                const pdfUrl = urlMatch[0];
+                const btnDiv = div.querySelector('.flex.flex-col.gap-2');
+                const downloadBtn = document.createElement('a');
+                downloadBtn.href = pdfUrl;
+                downloadBtn.target = "_blank";
+                downloadBtn.className = "self-start bg-zinc-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md mt-1";
+                downloadBtn.innerHTML = `<i class="ri-file-download-fill text-yellow-500"></i> حفظ وتحميل الـ PDF`;
+                btnDiv.appendChild(downloadBtn);
+            }
+        } else {
+            // للمذكرات العادية التي ليس لها ملف مرفوع بعد، نظهر زر الطباعة/الحفظ المحلي
+            const safeText = encodeURIComponent(text);
+            const btnDiv = div.querySelector('.flex.flex-col.gap-2');
+            const printBtn = document.createElement('button');
+            printBtn.onclick = () => window.printStudyNote(decodeURIComponent(safeText));
+            printBtn.className = "self-start bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all hover:bg-gray-100 dark:hover:bg-zinc-700 mt-1";
+            printBtn.innerHTML = `<i class="ri-printer-line text-blue-500"></i> طباعة / حفظ كـ PDF`;
+            btnDiv.appendChild(printBtn);
+        }
     }
 
     container.appendChild(div);

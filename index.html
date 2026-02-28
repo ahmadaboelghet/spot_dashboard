@@ -1160,9 +1160,11 @@
         <div class="p-4 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800">
             <div
                 class="relative flex items-center bg-gray-100 dark:bg-zinc-800/50 rounded-xl transition-all border border-transparent focus-within:border-yellow-500/50 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:shadow-sm">
-                <input type="text" id="chatInput" placeholder="اكتب طلبك هنا..."
-                    class="w-full bg-transparent text-gray-800 dark:text-white text-sm px-4 py-3.5 focus:outline-none placeholder-gray-400"
-                    onkeypress="if(event.key === 'Enter') sendSpotMessage()">
+                <textarea id="chatInput" placeholder="اكتب طلبك هنا..."
+                    class="w-full bg-transparent text-gray-800 dark:text-white text-sm px-4 py-3.5 focus:outline-none placeholder-gray-400 resize-none overflow-hidden h-12"
+                    rows="1"
+                    onkeypress="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendSpotMessage(); }"
+                    oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
 
                 <button onclick="sendSpotMessage()"
                     class="absolute left-2 p-2 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black rounded-lg shadow-sm hover:shadow-md transition-all active:scale-95 hover:brightness-110">

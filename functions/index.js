@@ -859,6 +859,12 @@ const { GoogleAIFileManager } = require("@google/generative-ai/server");
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
+const PDFDocument = require("pdfkit");
+const arabicReshaper = require("arabic-reshaper");
+const bidiFactory = require("bidi-js");
+const bidi = bidiFactory();
+const axios = require("axios");
+const SVGtoPDF = require("svg-to-pdfkit");
 
 initializeApp();
 
@@ -867,13 +873,13 @@ initializeApp();
 // ==========================================
 const accountSid = "ACff17306c0ec58f2075e96940ea289bea";
 const authToken = "b530f2fbe1d6267edbeabf3a9be1ffca";
-const geminiApiKey = "AIzaSyBwTtYPXeDuOfDYbiPJn1nSqpjqKiBIXSk";
+const geminiApiKey = "AIzaSyAR7jUsJ7CR_CvJW-aZxe5Cr9tDn9mK6kY";
 const client = twilio(accountSid, authToken);
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 const fileManager = new GoogleAIFileManager(geminiApiKey);
 const db = getFirestore();
 
-// نستخدم موديل مستقر (2.5 Pro ممتاز للملفات)
+// نستخدم موديل مستقر (1.5 Flash ممتاز للسرعة والملفات)
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 /**
@@ -1084,12 +1090,13 @@ exports.chatWithSpot = onCall({
   timeoutSeconds: 300, // ⏳ وقت كافي للتفكير
   memory: "1GiB"
 }, async (request) => {
-
-  // 1. استلام البيانات
-  const { message, teacherId, role, image } = request.data;
-
   try {
-    // 2. إعدادات الأمان (عشان الامتحانات تعدي)
+
+    // 1. استلام البيانات
+    const { message, teacherId, role, image } = request.data;
+    let modelInstance;
+    let result;
+    let promptParts = [];
     const safetySettings = [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
       { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
@@ -1097,30 +1104,31 @@ exports.chatWithSpot = onCall({
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
     ];
 
-    let promptParts = [];
+    try {
+      // 2. إعدادات الأمان (عشان الامتحانات تعدي)
 
-    // 3. جلب "ذاكرة" المدرس (الملفات المرفقة)
-    if (teacherId) {
-      const teacherDoc = await db.collection("teachers").doc(teacherId).get();
-      if (teacherDoc.exists && teacherDoc.data().knowledgeBase) {
-        const knowledgeItems = teacherDoc.data().knowledgeBase;
-        promptParts = knowledgeItems.map(item => ({
-          fileData: { mimeType: item.mimeType || "application/pdf", fileUri: item.uri || item }
-        }));
+      // 3. جلب "ذاكرة" المدرس (الملفات المرفقة)
+      if (teacherId) {
+        const teacherDoc = await db.collection("teachers").doc(teacherId).get();
+        if (teacherDoc.exists && teacherDoc.data().knowledgeBase) {
+          const knowledgeItems = teacherDoc.data().knowledgeBase;
+          promptParts = knowledgeItems.map(item => ({
+            fileData: { mimeType: item.mimeType || "application/pdf", fileUri: item.uri || item }
+          }));
+        }
       }
-    }
 
-    // 4. لو فيه صورة (للتصحيح)
-    if (image) {
-      promptParts.push({ inlineData: { mimeType: "image/jpeg", data: image } });
-    }
+      // 4. لو فيه صورة (للتصحيح)
+      if (image) {
+        promptParts.push({ inlineData: { mimeType: "image/jpeg", data: image } });
+      }
 
-    // 5. 🔥 "التعويذة" (System Instruction)
-    // دي أهم حتة.. بنقوله لو طلب امتحان، رد بـ JSON بس
-    let systemInstructionText = "";
+      // 5. 🔥 "التعويذة" (System Instruction)
+      // دي أهم حتة.. بنقوله لو طلب امتحان، رد بـ JSON بس
+      let systemInstructionText = "";
 
-    if (role === "teacher") {
-      systemInstructionText = `
+      if (role === "teacher") {
+        systemInstructionText = `
             أنت "Spot"، مساعد ذكي للمعلمين.
             
             🛑 تعليمات الامتحانات (STRICT JSON & LATEX & SVG MODE):
@@ -1167,26 +1175,207 @@ exports.chatWithSpot = onCall({
                  * الملاحظات الهامة اكتب قبلها "ملاحظة هامة:".
                  * اكتب المعادلات بصيغة LaTeX بين علامات الدولار ($).
             `;
-    } else {
-      systemInstructionText = `أنت معلم خصوصي. اشرح للطالب من الملفات المرفقة فقط.`;
+      } else {
+        systemInstructionText = `أنت معلم خصوصي. اشرح للطالب من الملفات المرفقة فقط.`;
+      }
+
+      promptParts.push({ text: systemInstructionText });
+      if (message) promptParts.push({ text: `السؤال: ${message}` });
+
+      // 6. الإرسال للموديل السريع (1.5 Flash)
+      modelInstance = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      result = await modelInstance.generateContent({
+        contents: [{ role: "user", parts: promptParts }],
+        safetySettings: safetySettings,
+      });
+    } catch (e) {
+      // 🚨 معالجة خطأ الصلاحيات (403) - غالباً بسبب تغيير الـ Key
+      if (e.message.includes("403") || e.message.includes("permission") || e.message.includes("not exist")) {
+        console.warn("⚠️ File API Error (Old URIs). Retrying without files...");
+        // فلترة الأجزاء النصية فقط
+        const textParts = promptParts.filter(p => p.text);
+        result = await modelInstance.generateContent({
+          contents: [{ role: "user", parts: textParts }],
+          safetySettings: safetySettings,
+        });
+      } else {
+        throw e;
+      }
     }
 
-    promptParts.push({ text: systemInstructionText });
-    if (message) promptParts.push({ text: `السؤال: ${message}` });
+    let aiResponse = result.response.text();
 
-    // 6. الإرسال للموديل السريع (1.5 Flash)
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: promptParts }],
-      safetySettings: safetySettings
-    });
+    // 7. هل الطلب يخص إنشاء PDF؟ (امتحان أو مذكرة)
+    if (aiResponse.includes("\"isExam\": true") || aiResponse.includes("## ")) {
+      try {
+        // محاولة استخراج الـ JSON بشكل آمن حتى لو الموديل أضاف Markdown
+        let contentToProcess = aiResponse;
+        if (aiResponse.includes("```json")) {
+          contentToProcess = aiResponse.split("```json")[1].split("```")[0].trim();
+        } else if (aiResponse.includes("```")) {
+          contentToProcess = aiResponse.split("```")[1].split("```")[0].trim();
+        }
 
-    return { response: result.response.text() };
+        const pdfUrl = await generateAndUploadPDF(contentToProcess, teacherId);
+        if (pdfUrl) {
+          const isExam = aiResponse.includes("\"isExam\": true");
+          const actionText = isExam ? "جاهزة للطباعة والتوزيع" : "مذكرة جاهزة للحفظ والتحميل";
+          aiResponse += `\n\n📄 تم توليد نسخة PDF ${actionText}:\n${pdfUrl}`;
+
+          // إذا كان الرد عبارة عن JSON فقط (امتحان)، يفضل تنظيف النص المعروض ليكون أجمل
+          if (aiResponse.trim().startsWith("{") || aiResponse.trim().startsWith("```json")) {
+            try {
+              const exam = JSON.parse(contentToProcess);
+              aiResponse = `✅ تم إنشاء امتحان بعنوان: *${exam.title}*\nعدد الأسئلة: ${exam.questions?.length}\n\n📄 رابط تحميل الـ PDF للطباعة:\n${pdfUrl}`;
+            } catch (e) { /* استمر بالرد الأصلي لو فشل التجميل */ }
+          }
+        }
+      } catch (pdfErr) {
+        console.error("PDF Generation Error:", pdfErr);
+      }
+    }
+
+    return { response: aiResponse };
 
   } catch (error) {
     console.error("Chat Error:", error);
     return { response: "معلش، حصل خطأ بسيط في السيرفر. جرب تاني!" };
   }
 });
+
+/**
+ * دالة مساعدة لتوليد PDF ورفعه لـ Storage
+ */
+async function generateAndUploadPDF(content, teacherId) {
+  // 0. جلب بيانات المدرس للاسم
+  let teacherName = "Spot AI Assistant";
+  try {
+    const tDoc = await getFirestore().collection("teachers").doc(teacherId).get();
+    if (tDoc.exists && tDoc.data().fullName) teacherName = tDoc.data().fullName;
+  } catch (e) {
+    console.error("Fetch teacher name error:", e);
+  }
+
+  // 1. إعداد الخط العربي (تحميله لو مش موجود)
+  const fontPath = path.join(os.tmpdir(), "Almarai-Regular.ttf");
+  if (!fs.existsSync(fontPath)) {
+    try {
+      console.log("📥 Downloading Arabic font...");
+      const response = await axios.get("https://github.com/google/fonts/raw/main/ofl/almarai/Almarai-Regular.ttf", { responseType: "arraybuffer" });
+      fs.writeFileSync(fontPath, Buffer.from(response.data));
+    } catch (e) {
+      console.error("Font Download Error:", e);
+    }
+  }
+
+  // 1.5 دالة مساعدة لتنسيق العربي والرياضيات
+  const fixMath = (text) => {
+    if (!text) return "";
+    let t = text;
+    // تحويل الـ LaTeX الأساسي لرموز Unicode مفهومة
+    t = t.replace(/\\\\sqrt\{([^}]+)\}/g, "√$1"); // جذر
+    t = t.replace(/\\\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, "($2)√$1"); // جذر تكعيبي مثلاً
+    t = t.replace(/\^\{?([-0-9a-zA-Z]+)\}?/g, (match, p1) => {
+      const supers = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "+": "⁺", "-": "⁻" };
+      return p1.split("").map(c => supers[c] || "^" + c).join("");
+    });
+    t = t.replace(/\\\\frac\{([^}]+)\}\{([^}]+)\}/g, "($1/$2)"); // كسر
+    t = t.replace(/\\\\circ/g, "°"); // درجة
+    t = t.replace(/\\\\times/g, "×"); // ضرب
+    t = t.replace(/\\\\div/g, "÷"); // قسمة
+    t = t.replace(/\\\\pm/g, "±"); // موجب أو سالب
+    t = t.replace(/\$/g, ""); // حذف علامات الدولار
+    return t;
+  };
+
+  const fixArabic = (text) => {
+    if (!text) return "";
+    const mathFixed = fixMath(text);
+    const reshaped = arabicReshaper.reshape(mathFixed);
+    return bidi.getReorderedText(reshaped);
+  };
+
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50, size: "A4" });
+      const fileName = `generated_${Date.now()}.pdf`;
+      const bucket = getStorage().bucket();
+      const file = bucket.file(`teachers/${teacherId}/generated/${fileName}`);
+
+      const stream = file.createWriteStream({
+        metadata: { contentType: "application/pdf" },
+      });
+
+      doc.pipe(stream);
+
+      // استخدام الخط لو اتحمل
+      if (fs.existsSync(fontPath)) {
+        doc.font(fontPath);
+      }
+
+      doc.fontSize(22).text(fixArabic("Spot AI - مستند مولد"), { align: "center" });
+      doc.moveDown();
+
+      if (content.includes("\"isExam\": true")) {
+        try {
+          const cleanJson = content.replace(/```json/g, "").replace(/```/g, "").trim();
+          const exam = JSON.parse(cleanJson);
+          doc.fontSize(18).text(fixArabic(exam.title || "امتحان"), { align: "right" });
+          doc.moveDown();
+
+          exam.questions.forEach((q, i) => {
+            doc.fontSize(14).text(fixArabic(`${i + 1}. ${q.q}`), { align: "right" });
+
+            // 🏷️ إضافة الرسم الهندسي لو موجود
+            if (q.diagram) {
+              try {
+                SVGtoPDF(doc, q.diagram, 50, doc.y, { width: 150, preserveAspectRatio: "xMinYMin meet" });
+                doc.moveDown(5); // مسافة بعد الرسمة
+              } catch (svgErr) {
+                console.error("SVG Rendering Error:", svgErr);
+              }
+            }
+
+            if (q.options) {
+              q.options.forEach((opt, j) => {
+                doc.fontSize(12).text(fixArabic(`   [ ] ${opt}`), { align: "right" });
+              });
+            }
+            doc.moveDown();
+          });
+        } catch (e) {
+          doc.fontSize(12).text(fixArabic(content), { align: "right" });
+        }
+      } else {
+        doc.fontSize(12).text(fixArabic(content), { align: "right" });
+      }
+
+      // 👣 إضافة الفوتر (اسم المدرس)
+      doc.moveDown(2);
+      doc.fontSize(10).fillColor("#777777");
+      doc.text("--------------------------------------------------", { align: "center" });
+      doc.text(fixArabic(`مقدم من: ${teacherName}`), { align: "center" });
+      doc.text("Generated by Spot AI ✨ Enjoy 🤓", { align: "center" });
+
+      doc.end();
+
+      stream.on("finish", async () => {
+        try {
+          await file.makePublic();
+          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+          resolve(publicUrl);
+        } catch (e) {
+          console.error("Make Public Error:", e);
+          resolve(`https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(file.name)}?alt=media`);
+        }
+      });
+
+      stream.on("error", (err) => reject(err));
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
 
 // ============================================================
 // 🌟 دالة إشعار الحضور (مع فحص الواجب تلقائياً)
