@@ -137,10 +137,21 @@ async function sendNotificationToParent(studentData, payload, context, studentId
   };
 
   if (tokenToSend) {
+    const cleanPhone = studentData.parentPhoneNumber ? studentData.parentPhoneNumber.replace(/\s+/g, "").trim() : "";
+    const parentAppLink = `https://ahmadaboelghet.github.io/spot_dashboard/parent.html?p=${cleanPhone}`;
+
     const message = {
       notification: payload.notification,
       data: payload.data,
       token: tokenToSend,
+      webpush: {
+        fcm_options: {
+          link: parentAppLink,
+        },
+      },
+      android: {
+        priority: "high",
+      },
     };
     try {
       await admin.messaging().send(message);

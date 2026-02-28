@@ -29,3 +29,29 @@ const messaging = firebase.messaging();
 //   // };
 //   // self.registration.showNotification(notificationTitle, notificationOptions);
 // });
+
+// التعامل مع الضغط على الإشعار
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+
+  // الرابط المستهدف (من الداتا المرسلة من السيرفر)
+  const urlToOpen = event.notification.data?.FCM_MSG?.notification?.click_action ||
+    event.notification.data?.link ||
+    'https://ahmadaboelghet.github.io/spot_dashboard/parent.html';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
+      // إذا كان التطبيق مفتوحاً بالفعل، قم بالتركيز عليه
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // إذا لم يكن مفتوحاً، افتحه في نافذة جديدة
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

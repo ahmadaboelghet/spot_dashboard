@@ -9,18 +9,16 @@ service cloud.firestore {
 
     // 2. القواعد التفصيلية للمدرسين والجروبات
     match /teachers/{teacherId}/groups/{groupId} {
-      match /dailyAttendance/{docId} { allow read, write: if true; }
-      match /assignments/{docId} { allow read, write: if true; }
-      match /recurringSchedules/{docId} { allow read, write: if true; }
-      match /exceptions/{docId} { allow read, write: if true; }
-      match /payments/{docId} { allow read, write: if true; }
-      // قاعدة الطلاب العادية (احتياطي)
-      match /students/{studentId} { allow read, write: if true; }
+      allow read, write: if true;
+      
+      // السماح بالوصول لكل المجموعات الفرعية (الحضور، الواجبات، الطلاب، إلخ) بشكل تلقائي
+      match /{allSubcollections=**} {
+        allow read, write: if true;
+      }
     }
 
     // 3. باقي القواعد
     match /parents/{phoneNumber} { allow read, write: if true; }
     match /teachers/{teacherId} { allow read, write: if true; }
-    match /teachers/{teacherId}/groups/{groupId} { allow read, write: if true; }
   }
 }
