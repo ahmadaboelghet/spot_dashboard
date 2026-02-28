@@ -787,11 +787,11 @@
             document.getElementById('todayScheduleContainer').classList.add('hidden');
 
             const [attSnap, assSnap, paySnap, schedSnap, notifSnap] = await Promise.all([
-                db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).orderBy('date', 'desc').limit(20).get(),
-                db.collection(`teachers/${tId}/groups/${gId}/assignments`).orderBy('date', 'desc').limit(30).get(),
-                db.collection(`teachers/${tId}/groups/${gId}/payments`).limit(12).get(),
+                db.collection(`teachers/${tId}/groups/${gId}/dailyAttendance`).get(),
+                db.collection(`teachers/${tId}/groups/${gId}/assignments`).get(),
+                db.collection(`teachers/${tId}/groups/${gId}/payments`).get(),
                 db.collection(`teachers/${tId}/groups/${gId}/recurringSchedules`).get(),
-                db.collection(`teachers/${tId}/groups/${gId}/students/${sId}/notificationHistory`).orderBy('sentAt', 'desc').limit(20).get()
+                db.collection(`teachers/${tId}/groups/${gId}/students/${sId}/notificationHistory`).get()
             ]);
 
             // 1. الجدول
@@ -810,26 +810,36 @@
                 document.getElementById('todayClassTime').innerText = `${h12}:${m} ${ampm}`;
             }
 
-            // 2. الحضور
+            // 2. الحضور (Sorting in-memory)
             let attHtml = '', total = 0, present = 0;
-            attSnap.forEach(d => {
-                const r = d.data().records?.find(x => x.studentId === sId);
+            const sortedAtt = attSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(d => d.date)
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 20);
+
+            sortedAtt.forEach(d => {
+                const r = d.records?.find(x => x.studentId === sId);
                 if (r) {
                     total++; if (r.status === 'present') present++;
                     let col = r.status === 'present' ? 'bg-green-500' : (r.status === 'absent' ? 'bg-red-500' : 'bg-yellow-500');
                     let txt = r.status === 'present' ? 'حاضر' : (r.status === 'absent' ? 'غائب' : 'تأخير');
                     let txtCol = r.status === 'present' ? 'text-green-500' : (r.status === 'absent' ? 'text-red-500' : 'text-yellow-500');
-                    attHtml += `<div class="relative pl-6 pb-8 last:pb-0 border-l-2 border-gray-200 dark:border-white/10 last:border-0"><div class="absolute -right-[7px] top-0 w-3.5 h-3.5 rounded-full ${col} ring-4 ring-white dark:ring-darkBg z-10"></div><div class="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5"><span class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.data().date}</span><span class="text-xs font-bold px-2 py-0.5 rounded bg-black/5 dark:bg-white/10 ${txtCol}">${txt}</span></div></div>`;
+                    attHtml += `<div class="relative pl-6 pb-8 last:pb-0 border-l-2 border-gray-200 dark:border-white/10 last:border-0"><div class="absolute -right-[7px] top-0 w-3.5 h-3.5 rounded-full ${col} ring-4 ring-white dark:ring-darkBg z-10"></div><div class="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5"><span class="text-sm font-bold text-gray-800 dark:text-gray-200">${d.date}</span><span class="text-xs font-bold px-2 py-0.5 rounded bg-black/5 dark:bg-white/10 ${txtCol}">${txt}</span></div></div>`;
                 }
             });
             document.getElementById('modalAttendanceList').innerHTML = attHtml || '<p class="text-center text-gray-500 text-xs">لا يوجد سجل</p>';
             document.getElementById('modalAttPerc').innerText = total > 0 ? Math.round((present / total) * 100) + '%' : '0%';
 
-            // 3. المنطق الجديد: فصل الواجبات عن الامتحانات بالاسم والنوع
+            // 3. المنطق الجديد: فصل الواجبات عن الامتحانات بالاسم والنوع (Sorting in-memory)
             let gradesHtml = '', homeworkHtml = '', lastG = '--';
+            const sortedAss = assSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(d => d.date)
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 30);
 
-            assSnap.forEach(doc => {
-                const d = doc.data();
+            sortedAss.forEach(d => {
                 const s = d.scores?.[sId];
                 const name = d.name || "";
                 const type = d.type || "";
@@ -889,10 +899,15 @@
             document.getElementById('modalPaymentsList').innerHTML = payHtml;
             document.getElementById('paymentStatusBanner').className = `spot-card p-6 flex items-center justify-between border-r-4 ${currSt.includes('الدفع') ? 'border-green-500' : 'border-red-500'}`;
 
-            // 5. التنبيهات
+            // 5. التنبيهات (Sorting in-memory)
             let notifHtml = '';
-            notifSnap.forEach(d => {
-                const n = d.data();
+            const sortedNotifs = notifSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => (b.sentAt?.seconds || 0) - (a.sentAt?.seconds || 0))
+                .slice(0, 20);
+
+            sortedNotifs.forEach(d => {
+                const n = d; // d is already the data object due to map
                 const iconMap = {
                     'notifyOnPresence': 'ri-checkbox-circle-fill text-green-500',
                     'AutoAbsence': 'ri-error-warning-fill text-red-500',
