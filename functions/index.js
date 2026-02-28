@@ -898,7 +898,7 @@ initializeApp();
 // ==========================================
 const accountSid = "ACff17306c0ec58f2075e96940ea289bea";
 const authToken = "b530f2fbe1d6267edbeabf3a9be1ffca";
-const geminiApiKey = "AIzaSyAR7jUsJ7CR_CvJW-aZxe5Cr9tDn9mK6kY";
+const geminiApiKey = process.env.GEMINI_API_KEY;
 const client = twilio(accountSid, authToken);
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 const fileManager = new GoogleAIFileManager(geminiApiKey);
