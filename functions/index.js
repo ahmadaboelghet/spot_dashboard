@@ -161,6 +161,31 @@ async function sendNotificationToParent(studentData, payload, context, studentId
       console.error(`${context}: ❌ Failed to send notification:`, error);
       notificationRecord.status = "error";
       notificationRecord.error = error.message;
+
+      // 🔥 تنظيف التوكنات القديمة (Dead Tokens Cleanup)
+      if (error.code === 'messaging/registration-token-not-registered' ||
+        error.message?.includes('not-registered')) {
+        console.log(`${context}: 🧹 Cleaning up invalid token...`);
+
+        // 1. مسحه من سجل الآباء العام
+        if (studentData.parentPhoneNumber) {
+          const cleanPhone = studentData.parentPhoneNumber.replace(/\s+/g, "").trim();
+          await admin.firestore().collection("parents").doc(cleanPhone).update({
+            fcmToken: admin.firestore.FieldValue.delete(),
+            lastTokenError: "not-registered",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }).catch(() => { });
+        }
+
+        // 2. مسحه من بيانات الطالب (لو موجود هناك)
+        if (studentId && teacherId && groupId) {
+          await admin.firestore()
+            .doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`)
+            .update({
+              parentFcmToken: admin.firestore.FieldValue.delete()
+            }).catch(() => { });
+        }
+      }
     }
   } else {
     console.log(`${context}: ⚠️ No token found for student ${studentId}`);
