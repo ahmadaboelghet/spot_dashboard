@@ -502,6 +502,11 @@
                         <div class="section-header mb-0"><i class="ri-user-add-line text-brand"></i>
                             <h3 data-key="manageStudentsTitle">الطلاب</h3>
                         </div>
+                        <button id="showNotificationStatusBtn" onclick="openNotificationStatusModal()"
+                            class="btn-icon bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-800 shadow-sm"
+                            title="حالة الإشعارات">
+                            <i class="ri-notification-3-line text-xl"></i>
+                        </button>
                     </div>
 
                     <div class="relative mb-4">
@@ -1394,6 +1399,86 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Notification Status Modal (Simple Glass Redesign) -->
+    <div id="notificationStatusModal" class="fixed inset-0 z-[2000] hidden items-center justify-center p-4">
+        <div class="absolute inset-0 bg-white/20 dark:bg-black/40 backdrop-blur-md"
+            onclick="closeNotificationStatusModal()"></div>
+
+        <div class="relative w-full max-w-2xl bg-white/80 dark:bg-darkSurface/80 backdrop-blur-xl rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300 border border-white/50 dark:border-white/10"
+            id="notificationStatusModalContent">
+
+            <!-- Subtle Grid Pattern Background -->
+            <div
+                class="absolute inset-0 -z-10 opacity-30 pointer-events-none bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:20px_20px]">
+            </div>
+
+            <div
+                class="p-6 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
+                        <i class="ri-notification-3-line text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-gray-900 dark:text-white">حالة الإشعارات</h3>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">System Report</p>
+                    </div>
+                </div>
+                <button onclick="closeNotificationStatusModal()"
+                    class="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-white/5 text-gray-400 hover:text-red-500 transition-colors">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div
+                        class="p-5 bg-white/40 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-2xl text-center shadow-sm">
+                        <p
+                            class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mb-1">
+                            تم التفعيل</p>
+                        <h4 id="activatedCount" class="text-3xl font-black text-green-600 dark:text-green-400">0</h4>
+                    </div>
+                    <div
+                        class="p-5 bg-white/40 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-2xl text-center shadow-sm">
+                        <p
+                            class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest mb-1">
+                            لم يتم التفعيل</p>
+                        <h4 id="notActivatedCount" class="text-3xl font-black text-red-600 dark:text-red-400">0</h4>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <h4
+                            class="font-black text-gray-800 dark:text-white mb-3 flex items-center gap-2 text-sm opacity-70">
+                            <i class="ri-checkbox-circle-fill text-green-500"></i>
+                            الطلاب المفعلين
+                        </h4>
+                        <div id="activatedStudentsList" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+                    </div>
+
+                    <div class="h-[1px] bg-gray-100 dark:bg-white/5"></div>
+
+                    <div>
+                        <h4
+                            class="font-black text-gray-800 dark:text-white mb-3 flex items-center gap-2 text-sm opacity-70">
+                            <i class="ri-error-warning-fill text-red-500"></i>
+                            أجهزة لم تفعل الإشعارات
+                        </h4>
+                        <div id="notActivatedStudentsList" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-white/50 dark:bg-white/5 border-t border-gray-100 dark:border-white/5 text-center">
+                <p class="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em]">تحديث تلقائي من السحابة الذكية
+                </p>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

@@ -597,6 +597,89 @@ function showToast(msg, type = 'success') {
     setTimeout(() => div.remove(), 3000);
 }
 
+// ✅ NOTIFICATION STATUS MODAL FUNCTIONS
+function openNotificationStatusModal() {
+    console.log("🔔 Opening Notification Modal. Total students:", typeof allStudents !== 'undefined' ? allStudents.length : 'undefined');
+    const modal = document.getElementById('notificationStatusModal');
+    const content = document.getElementById('notificationStatusModalContent');
+
+    if (!modal || !content) {
+        console.error("❌ Notification Modal elements not found!");
+        return;
+    }
+
+    // Reset lists
+    document.getElementById('activatedStudentsList').innerHTML = '';
+    document.getElementById('notActivatedStudentsList').innerHTML = '';
+
+    const activated = [];
+    const notActivated = [];
+
+    if (Array.isArray(allStudents)) {
+        allStudents.forEach(s => {
+            if (s.parentFcmToken) activated.push(s);
+            else notActivated.push(s);
+        });
+    }
+
+    document.getElementById('activatedCount').innerText = activated.length;
+    document.getElementById('notActivatedCount').innerText = notActivated.length;
+
+    renderNotificationSubList(activated, 'activatedStudentsList', true);
+    renderNotificationSubList(notActivated, 'notActivatedStudentsList', false);
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    setTimeout(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+    }, 10);
+}
+
+function closeNotificationStatusModal() {
+    const modal = document.getElementById('notificationStatusModal');
+    const content = document.getElementById('notificationStatusModalContent');
+    if (!modal || !content) return;
+
+    content.classList.remove('scale-100', 'opacity-100');
+    content.classList.add('scale-95', 'opacity-0');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 300);
+}
+
+function renderNotificationSubList(list, containerId, isActivated) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (list.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full py-6 px-4 border border-dashed border-gray-200 dark:border-white/10 rounded-2xl text-center">
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">لا يوجد طلاب</p>
+            </div>
+        `;
+        return;
+    }
+
+    list.forEach(s => {
+        const div = document.createElement('div');
+        div.className = `group p-3 rounded-2xl border transition-all flex items-center justify-between bg-white/30 dark:bg-white/5 border-white/50 dark:border-white/10 hover:border-brand/30`;
+
+        div.innerHTML = `
+            <div class="text-right">
+                <h5 class="text-sm font-bold text-gray-800 dark:text-gray-200">${s.name || 'مجهول'}</h5>
+                <p class="text-[10px] text-gray-400 font-medium">${s.parentPhoneNumber || '---'}</p>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm border border-gray-100 dark:border-zinc-800">
+                <i class="${isActivated ? 'ri-checkbox-circle-fill text-green-500' : 'ri-error-warning-fill text-red-400'} text-lg"></i>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
 // --- SYNC (Robust Queue with Retry Metadata) ---
 const MAX_SYNC_RETRIES = 5;
 
@@ -2392,7 +2475,10 @@ function renderStudents(filter = "") {
         };
         div.innerHTML = `
             <div class="flex-1">
-                <p class="font-bold text-gray-800 dark:text-white"> ${s.name}</p>
+                <div class="flex items-center gap-2">
+                    <p class="font-bold text-gray-800 dark:text-white"> ${s.name}</p>
+                    <i class="ri-notification-3-fill ${s.parentFcmToken ? 'text-green-500' : 'text-gray-300 dark:text-gray-700'}" title="${s.parentFcmToken ? 'الإشعارات مفعلة' : 'الإشعارات غير مفعلة'}"></i>
+                </div>
                 <p class="text-xs text-gray-500">${s.parentPhoneNumber || ''}</p>
             </div>
             <div class="flex gap-2">
