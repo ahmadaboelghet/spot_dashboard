@@ -665,15 +665,15 @@ function renderNotificationSubList(list, containerId, isActivated) {
 
     list.forEach(s => {
         const div = document.createElement('div');
-        div.className = `group p-3 rounded-2xl border transition-all flex items-center justify-between bg-white/30 dark:bg-white/5 border-white/50 dark:border-white/10 hover:border-brand/30`;
+        div.className = `group p-4 rounded-[1.2rem] border transition-all flex items-center justify-between bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-brand/40 shadow-sm hover:shadow-md`;
 
         div.innerHTML = `
             <div class="text-right">
-                <h5 class="text-sm font-bold text-gray-800 dark:text-gray-200">${s.name || 'مجهول'}</h5>
-                <p class="text-[10px] text-gray-400 font-medium">${s.parentPhoneNumber || '---'}</p>
+                <h5 class="text-sm font-black text-gray-800 dark:text-gray-200 group-hover:text-brand transition-colors tracking-tight">${s.name || 'مجهول'}</h5>
+                <p class="text-[10px] text-gray-400 font-bold mt-0.5">${s.parentPhoneNumber || '---'}</p>
             </div>
-            <div class="w-8 h-8 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm border border-gray-100 dark:border-zinc-800">
-                <i class="${isActivated ? 'ri-checkbox-circle-fill text-green-500' : 'ri-error-warning-fill text-red-400'} text-lg"></i>
+            <div class="w-10 h-10 rounded-xl ${isActivated ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-400'} dark:bg-zinc-800 flex items-center justify-center border border-gray-100 dark:border-zinc-800">
+                <i class="${isActivated ? 'ri-checkbox-circle-fill' : 'ri-error-warning-fill'} text-xl"></i>
             </div>
         `;
         container.appendChild(div);
