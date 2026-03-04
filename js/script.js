@@ -2477,7 +2477,7 @@ function renderStudents(filter = "") {
             <div class="flex-1">
                 <div class="flex items-center gap-2">
                     <p class="font-bold text-gray-800 dark:text-white"> ${s.name}</p>
-                    <i class="ri-notification-3-fill ${s.parentFcmToken ? 'text-green-500' : 'text-gray-300 dark:text-gray-700'}" title="${s.parentFcmToken ? 'الإشعارات مفعلة' : 'الإشعارات غير مفعلة'}"></i>
+                    <i class="ri-notification-3-fill ${s.parentFcmToken ? 'text-green-500' : 'text-red-500'}" title="${s.parentFcmToken ? 'الإشعارات مفعلة' : 'الإشعارات لسه مش مفعلة'}"></i>
                 </div>
                 <p class="text-xs text-gray-500">${s.parentPhoneNumber || ''}</p>
             </div>
