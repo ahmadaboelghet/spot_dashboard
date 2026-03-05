@@ -260,6 +260,9 @@ const translations = {
         sendMsgBtn: "إرسال",
         sendingMsg: "جاري الإرسال...",
         cancelBtn: "إلغاء",
+        editGroupNameTitle: "تعديل اسم المجموعة",
+        enterNewGroupName: "أدخل الاسم الجديد للمجموعة:",
+        groupUpdatedSuccess: "تم تحديث اسم المجموعة بنجاح",
         examsTitle: "الامتحانات والدرجات",
         newAssignmentNameLabel: "اسم الامتحان / الواجب",
         addNewAssignmentButton: "إنشاء",
@@ -419,6 +422,9 @@ const translations = {
         sendMsgBtn: "Send",
         sendingMsg: "Sending...",
         cancelBtn: "Cancel",
+        editGroupNameTitle: "Edit Group Name",
+        enterNewGroupName: "Enter new group name:",
+        groupUpdatedSuccess: "Group name updated successfully",
         examsTitle: "Exams & Grades",
         newAssignmentNameLabel: "Exam / Assignment Name",
         addNewAssignmentButton: "Create",
@@ -595,6 +601,73 @@ function showToast(msg, type = 'success') {
     div.innerHTML = type === 'error' ? `<i class="ri-error-warning-line"></i> ${msg}` : `<i class="ri-checkbox-circle-line"></i> ${msg}`;
     document.body.appendChild(div);
     setTimeout(() => div.remove(), 3000);
+}
+
+// ✅ CUSTOM PREMIUM PROMPT & CONFIRM (REPLACES BROWSER DIALOGS)
+function showCustomPrompt(title, desc, defaultValue = '', icon = 'ri-edit-line', isConfirm = false) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('customInputModal');
+        const content = document.getElementById('customInputContent');
+        const overlay = document.getElementById('customInputOverlay');
+        const inputContainer = document.getElementById('customInputContainer');
+        const input = document.getElementById('customInputField');
+        const titleEl = document.getElementById('customInputTitle');
+        const descEl = document.getElementById('customInputDesc');
+        const iconEl = document.getElementById('customInputIcon');
+        const confirmBtn = document.getElementById('customInputConfirmBtn');
+        const cancelBtn = document.getElementById('customInputCancelBtn');
+
+        titleEl.innerText = title;
+        descEl.innerText = desc;
+        input.value = defaultValue;
+        iconEl.className = `${icon} text-brand text-2xl`;
+
+        if (isConfirm) {
+            inputContainer.classList.add('hidden');
+            confirmBtn.innerText = translations[currentLang].yes || 'نعم';
+        } else {
+            inputContainer.classList.remove('hidden');
+            confirmBtn.innerText = translations[currentLang].saveProfileButton || 'حفظ';
+        }
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+            if (!isConfirm) {
+                input.focus();
+                input.select();
+            }
+        }, 10);
+
+        const close = (value) => {
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                resolve(value);
+            }, 300);
+
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+            overlay.onclick = null;
+            input.onkeydown = null;
+        };
+
+        confirmBtn.onclick = () => close(isConfirm ? true : input.value);
+        cancelBtn.onclick = () => close(isConfirm ? false : null);
+        overlay.onclick = () => close(isConfirm ? false : null);
+        input.onkeydown = (e) => {
+            if (!isConfirm) {
+                if (e.key === 'Enter') close(input.value);
+                if (e.key === 'Escape') close(null);
+            }
+        };
+    });
+}
+
+async function showCustomConfirm(title, desc, icon = 'ri-question-line') {
+    return await showCustomPrompt(title, desc, '', icon, true);
 }
 
 // ✅ NOTIFICATION STATUS MODAL FUNCTIONS
@@ -1061,6 +1134,7 @@ function setupListeners() {
         }, 100); // 100 مللي ثانية كافية جداً
     });
     document.getElementById('deleteGroupButton').addEventListener('click', deleteCurrentGroup);
+    document.getElementById('editGroupButton').addEventListener('click', editCurrentGroupName);
 
     document.getElementById('startSmartScanBtn').addEventListener('click', () => startScanner('daily'));
     document.getElementById('homeworkToggle').addEventListener('change', (e) => {
@@ -1482,7 +1556,8 @@ async function deleteCurrentGroup() {
         return;
     }
 
-    if (!confirm(translations[currentLang].deleteGroupConfirm)) return;
+    const confirmed = await showCustomConfirm(translations[currentLang].deleteGroupConfirm, '', 'ri-delete-bin-line');
+    if (!confirmed) return;
 
     try {
         const idToDelete = SELECTED_GROUP_ID;
@@ -1511,6 +1586,51 @@ async function deleteCurrentGroup() {
     } catch (e) {
         console.error("Error deleting group:", e);
         showToast("Error during delete", 'error');
+    }
+}
+
+async function editCurrentGroupName() {
+    if (!SELECTED_GROUP_ID) {
+        showToast(translations[currentLang].selectGroupFirst, 'error');
+        return;
+    }
+
+    // جلب الاسم الحالي
+    const currentGroup = await getFromDB('groups', SELECTED_GROUP_ID);
+    if (!currentGroup) return;
+
+    const newName = await showCustomPrompt(
+        translations[currentLang].editGroupNameTitle,
+        translations[currentLang].enterNewGroupName,
+        currentGroup.name,
+        'ri-group-line'
+    );
+
+    if (newName && newName.trim() !== "" && newName !== currentGroup.name) {
+        try {
+            const updatedName = newName.trim();
+
+            // 1. تحديث في الداتابيز المحلية
+            currentGroup.name = updatedName;
+            await putToDB('groups', currentGroup);
+
+            // 2. إرسال التحديث للسيرفر
+            await addToSyncQueue({
+                type: 'update',
+                path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}`,
+                id: SELECTED_GROUP_ID,
+                data: { name: updatedName }
+            });
+
+            // 3. تحديث الواجهة
+            await loadGroups(); // عشان الدروب داون يتحدث بالاسم الجديد
+            document.getElementById('groupSelect').value = SELECTED_GROUP_ID;
+
+            showToast(translations[currentLang].groupUpdatedSuccess);
+        } catch (e) {
+            console.error("Error updating group name:", e);
+            showToast("Error updating name", 'error');
+        }
     }
 }
 
@@ -2663,7 +2783,8 @@ async function addNewStudent() {
 }
 
 async function deleteStudent(id) {
-    if (!confirm(translations[currentLang].confirmDelete)) return;
+    const confirmed = await showCustomConfirm(translations[currentLang].confirmDelete, '', 'ri-user-unfollow-line');
+    if (!confirmed) return;
     await deleteFromDB('students', id);
     await addToSyncQueue({ type: 'delete', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${id}` });
     allStudents = allStudents.filter(s => s.id !== id);

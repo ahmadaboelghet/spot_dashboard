@@ -289,6 +289,9 @@
                 <button id="addNewGroupButton"
                     class="btn-icon bg-white dark:bg-black border border-yellow-300 text-brand hover:bg-yellow-50"
                     title="Add Group"><i class="ri-add-line text-xl"></i></button>
+                <button id="editGroupButton"
+                    class="btn-icon bg-white dark:bg-black border border-blue-300 text-blue-500 hover:bg-blue-50"
+                    title="Edit Group Name"><i class="ri-edit-line text-xl"></i></button>
                 <button id="deleteGroupButton"
                     class="btn-icon bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 text-red-500 hover:bg-red-500 hover:text-white transition-all"
                     title="Delete Group"><i class="ri-delete-bin-line text-xl"></i></button>
@@ -1180,6 +1183,33 @@
             <p class="text-[10px] text-center text-gray-400 mt-2">Powered by Gemini AI ✨</p>
         </div>
     </div>
+    <div id="customInputModal" class="fixed inset-0 z-[1000] hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" id="customInputOverlay"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 py-6">
+            <div class="relative bg-white dark:bg-darkSurface rounded-3xl shadow-2xl w-full max-w-md transform transition-all border border-gray-100 dark:border-white/5 overflow-hidden scale-95 opacity-0"
+                id="customInputContent">
+                <div class="p-6 pb-0">
+                    <div class="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center mb-4">
+                        <i id="customInputIcon" class="ri-edit-line text-brand text-2xl"></i>
+                    </div>
+                    <h3 id="customInputTitle" class="text-2xl font-black text-gray-900 dark:text-white leading-tight">
+                        العنوان</h3>
+                    <p id="customInputDesc" class="text-sm text-gray-500 dark:text-gray-400 mt-2">الوصف</p>
+                </div>
+                <div class="p-6" id="customInputContainer">
+                    <input type="text" id="customInputField"
+                        class="input-field w-full py-4 px-5 bg-gray-50 dark:bg-black/40 border border-gray-100 dark:border-white/5 rounded-2xl outline-none focus:border-brand transition-all font-bold text-gray-800 dark:text-white text-lg">
+                </div>
+                <div class="p-6 pt-0 flex gap-3">
+                    <button id="customInputConfirmBtn"
+                        class="flex-1 bg-brand hover:bg-brandHover text-black font-black py-4 rounded-2xl shadow-lg shadow-brand/20 transition-all active:scale-95">حفظ</button>
+                    <button id="customInputCancelBtn"
+                        class="px-6 py-4 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold rounded-2xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="absenceModal" class="fixed inset-0 z-[999] hidden" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity opacity-0"
             id="absenceModalOverlay"></div>
