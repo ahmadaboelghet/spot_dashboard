@@ -74,7 +74,7 @@ try {
 // 2. LOCAL DATABASE (IndexedDB) - FIXED
 // ==========================================
 const DB_NAME = 'LearnariaDB';
-const DB_VERSION = 6;
+const DB_VERSION = 8;
 let localDB = null;
 const motivationQuotes = [
     "بطل اليوم.. عالم الغد! 🚀",
@@ -97,10 +97,19 @@ function openDB() {
         req.onupgradeneeded = e => {
             const db = e.target.result;
             ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions', 'syncQueue'].forEach(store => {
+                let s;
                 if (!db.objectStoreNames.contains(store)) {
                     const params = store === 'syncQueue' ? { autoIncrement: true } : { keyPath: 'id' };
-                    const s = db.createObjectStore(store, params);
-                    if (['groups', 'students', 'assignments', 'schedules'].includes(store)) s.createIndex(store === 'groups' ? 'teacherId' : 'groupId', store === 'groups' ? 'teacherId' : 'groupId', { unique: false });
+                    s = db.createObjectStore(store, params);
+                } else {
+                    s = e.target.transaction.objectStore(store);
+                }
+
+                if (['groups', 'students', 'assignments', 'schedules', 'attendance', 'payments'].includes(store)) {
+                    const indexKey = (store === 'groups') ? 'teacherId' : 'groupId';
+                    if (!s.indexNames.contains(indexKey)) {
+                        s.createIndex(indexKey, indexKey, { unique: false });
+                    }
                 }
             });
         };
@@ -230,11 +239,13 @@ const translations = {
         groupNamePlaceholder: "اسم المجموعة",
         addBtn: "إضافة",
         tabProfile: "الملف",
+        tabOverview: "المتابعة الذكية",
         tabDaily: "الحصة اليومية",
         tabStudents: "الطلاب",
         tabGrades: "الامتحانات",
         tabPayments: "التحصيل",
         tabSchedule: "الجدول",
+        tabBot: "المساعد الذكي",
         dailyClassTitle: "إدارة الحصة",
         selectDateLabel: "تاريخ اليوم",
         homeworkToggleLabel: "يوجد واجب؟",
@@ -263,6 +274,8 @@ const translations = {
         editGroupNameTitle: "تعديل اسم المجموعة",
         enterNewGroupName: "أدخل الاسم الجديد للمجموعة:",
         groupUpdatedSuccess: "تم تحديث اسم المجموعة بنجاح",
+        yes: "نعم",
+        no: "لا",
         examsTitle: "الامتحانات والدرجات",
         newAssignmentNameLabel: "اسم الامتحان / الواجب",
         addNewAssignmentButton: "إنشاء",
@@ -392,11 +405,13 @@ const translations = {
         groupNamePlaceholder: "Group Name",
         addBtn: "Add",
         tabProfile: "Profile",
+        tabOverview: "Smart Overview",
         tabDaily: "Daily Class",
         tabStudents: "Students",
         tabGrades: "Exams",
         tabPayments: "Payments",
         tabSchedule: "Schedule",
+        tabBot: "AI Assistant",
         dailyClassTitle: "Class Manager",
         selectDateLabel: "Today's Date",
         homeworkToggleLabel: "Homework?",
@@ -425,6 +440,8 @@ const translations = {
         editGroupNameTitle: "Edit Group Name",
         enterNewGroupName: "Enter new group name:",
         groupUpdatedSuccess: "Group name updated successfully",
+        yes: "Yes",
+        no: "No",
         examsTitle: "Exams & Grades",
         newAssignmentNameLabel: "Exam / Assignment Name",
         addNewAssignmentButton: "Create",
@@ -1107,7 +1124,7 @@ function setupListeners() {
             amountInput.value = savedAmount || '';
         }
 
-        switchTab('daily');
+        switchTab('overview');
         await loadGroupData();
     });
 
@@ -1478,7 +1495,7 @@ async function loginTeacher() {
         }
 
         await loadGroups();
-        switchTab('daily');
+        switchTab('overview');
 
     } catch (error) {
         if (error.message !== "Offline first login") {
@@ -1543,8 +1560,8 @@ async function createGroup() {
     SELECTED_GROUP_ID = id; // تحديث المتغير العام
     document.getElementById('groupSelect').value = id; // تحديث شكل القائمة (Dropdown)
 
-    // 4. الانتقال لتابة الحصة وتحميل بيانات المجموعة الفارغة
-    switchTab('daily');
+    // 4. الانتقال لتابة المتابعة الذكية وتحميل البيانات
+    switchTab('overview');
     await loadGroupData(); // تفعيل أزرار الإضافة (عشان لو عايز يضيف طلاب علطول)
     document.getElementById('defaultAmountInput').value = '';
     showToast(translations[currentLang].groupCreatedSuccess);
@@ -1679,16 +1696,28 @@ async function loadGroupData() {
             allStudents = remoteStudents;
             saveStudentsToLocalDB(remoteStudents);
 
-            // ب. الحضور الأخير (للتخزين المحلي) - زيادة الليمت لضمان مزامنة التاريخ بالكامل
+            // ب. الحضور الأخير (للتخزين المحلي)
             const aSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get();
             for (const d of aSnap.docs) {
-                await putToDB('attendance', { id: `${SELECTED_GROUP_ID}_${d.id}`, groupId: SELECTED_GROUP_ID, ...d.data() });
+                const data = d.data();
+                await putToDB('attendance', {
+                    id: `${SELECTED_GROUP_ID}_${d.id}`,
+                    groupId: SELECTED_GROUP_ID,
+                    date: data.date || d.id,
+                    ...data
+                });
             }
 
             // ج. التكاليف/الواجبات (للتخزين المحلي)
             const asSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`).limit(60).get();
             for (const d of asSnap.docs) {
-                await putToDB('assignments', { id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() });
+                const data = d.data();
+                await putToDB('assignments', {
+                    id: d.id,
+                    groupId: SELECTED_GROUP_ID,
+                    date: data.date || d.id.split('_').pop(), // Backup date if missing
+                    ...data
+                });
             }
 
             // د. المدفوعات (للتخزين المحلي)
@@ -1696,14 +1725,13 @@ async function loadGroupData() {
             for (const d of pSnap.docs) {
                 await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${d.id}`, month: d.id, ...d.data() });
             }
-
             refreshCurrentTab();
         } catch (e) {
             console.error("Sync error:", e);
         }
     }
 
-    if (!document.querySelector('.tab-button.active')) switchTab('daily');
+    renderOverview();
 }
 
 // ✅ دالة حفظ الطلاب للـ Cache في الخلفية
@@ -1711,6 +1739,248 @@ async function saveStudentsToLocalDB(students) {
     try {
         for (const s of students) await putToDB('students', s);
     } catch (e) { console.error("Cache update failed", e); }
+}
+
+// ✅ RENDER OVERVIEW (COMMAND CENTER)
+async function renderOverview() {
+    if (!SELECTED_GROUP_ID) return;
+
+    // Show Skeletons
+    const topList = document.getElementById('topPerformersList');
+    const riskList = document.getElementById('atRiskStudentsList');
+    if (topList) topList.innerHTML = '<div class="skeleton-row h-12 w-full"></div><div class="skeleton-row h-12 w-full"></div><div class="skeleton-row h-12 w-full"></div>';
+    if (riskList) riskList.innerHTML = '<div class="skeleton-row h-12 w-full"></div><div class="skeleton-row h-12 w-full"></div>';
+
+    try {
+        // 1. Top Performers (from last real exam)
+        const allAssignments = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
+        if (allAssignments && allAssignments.length > 0) {
+            // Filter only EXAMS (not daily homework or anything starting with "واجب")
+            const exams = allAssignments.filter(e =>
+                (e.type === 'exam' || !e.type) &&
+                !e.name.includes("واجب") &&
+                e.scores && Object.keys(e.scores).length > 0
+            ).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+            if (exams.length > 0) {
+                const lastExam = exams[0]; // Get the LATEST one
+                const scores = lastExam.scores || {};
+
+                // Map scores to student names
+                const studentScores = Object.entries(scores).map(([sid, val]) => {
+                    const student = allStudents.find(s => s.id === sid);
+                    const markValue = (val && typeof val === 'object') ? (val.score || 0) : val;
+                    return { name: student ? student.name : 'طالب محذوف', mark: parseInt(markValue) || 0 };
+                });
+
+                if (studentScores.length > 0) {
+                    const sortedGrades = studentScores.sort((a, b) => b.mark - a.mark).slice(0, 3);
+                    topList.innerHTML = sortedGrades.map((g, idx) => `
+                        <div class="flex items-center gap-3 p-3 bg-white dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800 animate-fade-in" style="animation-delay: ${idx * 0.1}s">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center font-black ${idx === 0 ? 'bg-yellow-400 text-black' : (idx === 1 ? 'bg-gray-200 text-gray-700' : 'bg-orange-200 text-orange-800 font-bold')}">
+                                ${idx + 1}
+                            </div>
+                            <div class="flex-1 text-right truncate">
+                                <p class="text-sm font-black text-gray-800 dark:text-white truncate">${g.name}</p>
+                                <p class="text-[10px] text-gray-500 font-bold">${lastExam.name}</p>
+                            </div>
+                            <div class="text-left">
+                                <span class="text-sm font-black text-brand">${g.mark}</span>
+                                <span class="text-[10px] text-gray-400">/${lastExam.totalMark || 30}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    topList.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-bold">لم تُرصد درجات لآخر امتحان</p>';
+                }
+            } else {
+                topList.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-bold">لم يتم إنشاء امتحانات بعد</p>';
+            }
+        } else {
+            topList.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-bold tracking-widest uppercase">لا توجد بيانات</p>';
+        }
+
+        // 2. Students at Risk (Absence Trend) & 3. Attendance Rate
+        const attendance = await getAllFromDB('attendance', 'groupId', SELECTED_GROUP_ID);
+        if (attendance && attendance.length > 0) {
+            // Get last 3 session dates
+            const sortedAttendance = attendance.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
+            const riskStudents = [];
+
+            let totalChecked = 0;
+            let totalPresent = 0;
+
+            allStudents.forEach(student => {
+                let absentCount = 0;
+                let studentSessionCount = 0;
+
+                sortedAttendance.forEach(session => {
+                    const record = session.records?.find(r => r.studentId === student.id);
+                    if (record) {
+                        studentSessionCount++;
+                        if (record.status === 'absent') absentCount++;
+                        if (record.status === 'present') totalPresent++;
+                        totalChecked++;
+                    }
+                });
+
+                if (studentSessionCount >= 2 && absentCount >= studentSessionCount / 2) {
+                    riskStudents.push({ name: student.name, count: absentCount });
+                }
+            });
+
+            if (riskStudents.length > 0) {
+                riskList.innerHTML = riskStudents.sort((a, b) => b.count - a.count).slice(0, 5).map((s, idx) => `
+                    <div class="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 animate-fade-in" style="animation-delay: ${idx * 0.1}s">
+                        <p class="text-sm font-black text-gray-800 dark:text-white truncate max-w-[150px] text-right">${s.name}</p>
+                        <span class="text-[10px] font-black bg-red-500 text-white px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
+                            غاب ${s.count} حصص
+                        </span>
+                    </div>
+                `).join('');
+            } else {
+                riskList.innerHTML = '<div class="text-center py-6"><i class="ri-checkbox-circle-fill text-green-500 text-2xl"></i><p class="text-xs text-green-600 font-bold mt-1">الكل ملتزم بالحضور!</p></div>';
+            }
+
+            const rate = totalChecked > 0 ? Math.round((totalPresent / totalChecked) * 100) : 0;
+            const rateEl = document.getElementById('avgAttendanceRate');
+            if (rateEl) {
+                rateEl.innerText = rate + '%';
+                // تلوين النسبة حسب القيمة
+                rateEl.className = "text-5xl font-black tracking-tighter " + (rate < 50 ? 'text-red-500' : (rate < 80 ? 'text-yellow-500' : 'text-green-500'));
+            }
+        }
+
+        // 4. Monthly Collection Summary
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        const monthPayments = await getFromDB('payments', `${SELECTED_GROUP_ID}_PAY_${currentMonth}`);
+        const paidStatus = monthPayments?.paid || {};
+        const paidCount = Object.values(paidStatus).filter(v => v === true).length;
+        const unpaidCount = Math.max(0, allStudents.length - paidCount);
+
+        const paidCountEl = document.getElementById('paidCountOverview');
+        const unpaidCountEl = document.getElementById('unpaidCountOverview');
+        if (paidCountEl) paidCountEl.innerText = paidCount;
+        if (unpaidCountEl) unpaidCountEl.innerText = unpaidCount;
+
+        // 5. Group Performance Chart (Progress over time)
+        const chartContainer = document.getElementById('groupPerformanceChartContainer');
+        if (allAssignments && allAssignments.length > 0) {
+            const chartExams = allAssignments.filter(e =>
+                (e.type === 'exam' || !e.type) &&
+                !e.name.includes("واجب") &&
+                e.scores && Object.keys(e.scores).length > 0
+            ).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (chartExams.length > 0) {
+                if (chartContainer) {
+                    chartContainer.innerHTML = '<canvas id="groupPerformanceGlobalChart"></canvas>';
+                }
+                const labels = chartExams.map(e => e.name);
+                const dataPoints = chartExams.map(e => {
+                    const scores = Object.values(e.scores || {});
+                    if (scores.length === 0) return 0;
+                    const sum = scores.reduce((a, b) => a + (typeof b === 'object' ? (b.score || 0) : (b || 0)), 0);
+                    return Math.round((sum / (scores.length * (e.totalMark || 30))) * 100);
+                });
+                renderGroupPerformanceChart(labels, dataPoints);
+            } else {
+                if (chartContainer) {
+                    chartContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> لا توجد امتحانات كافية للتحليل</div>';
+                }
+            }
+        } else {
+            if (chartContainer) {
+                chartContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> لا توجد بيانات مسجلة</div>';
+            }
+        }
+
+    } catch (e) { console.error("Overview error:", e); }
+}
+
+let groupPerfChartInstance = null;
+function renderGroupPerformanceChart(labels, data) {
+    const ctx = document.getElementById('groupPerformanceGlobalChart');
+    if (!ctx) return;
+
+    if (groupPerfChartInstance) groupPerfChartInstance.destroy();
+
+    const isDark = document.body.classList.contains('dark-mode');
+    const color = isDark ? '#9ca3af' : '#6b7280';
+    const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+    groupPerfChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'متوسط الأداء %',
+                data: data,
+                borderColor: '#F2CE5A',
+                backgroundColor: 'rgba(242, 206, 90, 0.1)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#F2CE5A'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                    titleColor: isDark ? '#ffffff' : '#111827',
+                    bodyColor: isDark ? '#d1d5db' : '#374151',
+                    borderColor: '#F2CE5A',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function (context) {
+                            return 'متوسط المستوى: ' + context.parsed.y + '%';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    ticks: { color: color, callback: v => v + '%' },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: color },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+// ✅ CELEBRATION LOGIC (Fireworks for Full Marks)
+function showCelebration() {
+    const overlay = document.getElementById('celebrationOverlay');
+    const container = document.getElementById('lottieContainer');
+    if (!overlay || !container || typeof lottie === 'undefined') return;
+
+    overlay.classList.remove('hidden');
+    container.innerHTML = '';
+
+    const anim = lottie.loadAnimation({
+        container: container,
+        renderer: 'svg',
+        loop: false,
+        autoplay: true,
+        path: 'https://assets5.lottiefiles.com/packages/lf20_myejioos.json'
+    });
+
+    anim.onComplete = () => {
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            anim.destroy();
+        }, 500);
+    };
 }
 
 // ✅ دالة تحديث الشاشة حسب التبويب المفتوح (تم تصحيح الشرط)
@@ -1732,6 +2002,8 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${tabId}`).classList.remove('hidden');
     document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
+
+    if (tabId === 'overview') renderOverview();
 
     if (tabId === 'daily') {
         renderDailyList();
@@ -2580,7 +2852,13 @@ function renderStudents(filter = "") {
     const filtered = allStudents.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
 
     if (filtered.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500">${translations[currentLang].noStudentsInGroup}</p>`;
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-10 opacity-40 animate-fade-in text-center">
+                <i class="ri-user-search-line text-6xl mb-2 text-gray-400"></i>
+                <p class="font-black text-gray-500 tracking-widest uppercase text-xs">لم يتم العثور على طلاب</p>
+                <p class="text-[10px] text-gray-400 mt-1">ابدأ بإضافة أول بطل لمجموعتك من الأسفل ✨</p>
+            </div>
+        `;
         return;
     }
     const DOMAIN_URL = "https://ahmadaboelghet.github.io/spot_dashboard/";
@@ -3005,6 +3283,9 @@ async function renderExamGrades() {
                 e.target.value = currentTotal;
                 showToast(`الدرجة لا يمكن أن تزيد عن ${currentTotal}`, 'error');
             }
+            if (parseInt(e.target.value) === currentTotal && currentTotal > 0) {
+                showCelebration();
+            }
             if (saveTimeout) clearTimeout(saveTimeout);
             saveTimeout = setTimeout(saveExamGrades, 1500);
         });
@@ -3087,9 +3368,9 @@ async function loadPreferences() {
         document.getElementById('mainContent').classList.remove('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
 
-        // تحميل المجموعات والذهاب للحصة اليومية
+        // تحميل المجموعات والذهاب للمتابعة الذكية
         await loadGroups();
-        switchTab('daily');
+        switchTab('overview');
 
         if (SELECTED_GROUP_ID) {
             const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);

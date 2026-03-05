@@ -302,7 +302,9 @@
             <div id="tabs-nav" class="flex md:justify-center gap-3 min-w-max px-1">
                 <button class="tab-button" data-tab="profile"><i class="ri-user-settings-line"></i> <span
                         data-key="tabProfile">الملف</span></button>
-                <button class="tab-button active" data-tab="daily" disabled><i class="ri-qr-scan-2-line"></i> <span
+                <button class="tab-button active" data-tab="overview" disabled><i class="ri-dashboard-3-line"></i> <span
+                        data-key="tabOverview">المتابعة الذكية</span></button>
+                <button class="tab-button" data-tab="daily" disabled><i class="ri-qr-scan-2-line"></i> <span
                         data-key="tabDaily">الحصة اليومية</span></button>
                 <button class="tab-button" data-tab="students" disabled><i class="ri-group-line"></i> <span
                         data-key="tabStudents">الطلاب</span></button>
@@ -321,7 +323,124 @@
 
         <div id="tabs-content" class="relative">
 
-            <div id="tab-daily" class="tab-content">
+            <div id="tab-overview" class="tab-content transition-all duration-500 animate-fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Top Performers Card -->
+                    <div class="glass-card p-6 border-t-4 border-t-yellow-400 relative overflow-hidden group">
+                        <i
+                            class="ri-medal-fill absolute -bottom-4 -left-4 text-7xl text-yellow-500/10 -rotate-12 transition-transform group-hover:scale-110"></i>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4
+                                    class="text-[11px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-400">
+                                    لوحة الشرف</h4>
+                                <p class="text-xl font-black text-gray-900 dark:text-white">أوائل المجموعة</p>
+                            </div>
+                            <div
+                                class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center text-yellow-600">
+                                <i class="ri-trophy-line text-xl"></i>
+                            </div>
+                        </div>
+                        <div id="topPerformersList" class="space-y-3 min-h-[120px]">
+                            <!-- Skeleton Loader -->
+                            <div class="skeleton-row h-12 w-full"></div>
+                            <div class="skeleton-row h-12 w-full"></div>
+                            <div class="skeleton-row h-12 w-full"></div>
+                        </div>
+                    </div>
+
+                    <!-- Students at Risk Card -->
+                    <div class="glass-card p-6 border-t-4 border-t-red-500 relative overflow-hidden group">
+                        <i
+                            class="ri-alarm-warning-fill absolute -bottom-4 -left-4 text-7xl text-red-500/10 -rotate-12 transition-transform group-hover:scale-110"></i>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4
+                                    class="text-[11px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">
+                                    تنبيه الغياب المتكرر</h4>
+                                <p class="text-xl font-black text-gray-900 dark:text-white">طلاب في خطر</p>
+                            </div>
+                            <div
+                                class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center text-red-600 animate-pulse">
+                                <i class="ri-error-warning-line text-xl"></i>
+                            </div>
+                        </div>
+                        <div id="atRiskStudentsList" class="space-y-3 min-h-[120px]">
+                            <!-- Skeleton Loader -->
+                            <div class="skeleton-row h-12 w-full"></div>
+                            <div class="skeleton-row h-12 w-full"></div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Rate Card -->
+                    <div class="glass-card p-6 border-t-4 border-t-brand relative overflow-hidden group">
+                        <i
+                            class="ri-bar-chart-fill absolute -bottom-4 -left-4 text-7xl text-brand/10 -rotate-12 transition-transform group-hover:scale-110"></i>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="text-[11px] font-black uppercase tracking-widest text-brand">الملخص الأسبوعي
+                                </h4>
+                                <p class="text-xl font-black text-gray-900 dark:text-white">نسبة الحضور</p>
+                            </div>
+                            <div class="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand">
+                                <i class="ri-user-follow-line text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="text-center py-4">
+                            <h5 id="avgAttendanceRate"
+                                class="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">0%</h5>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-bold">متوسط الحضور لآخر 3 حصص
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-card p-6 min-h-[350px]">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-black text-lg flex items-center gap-2 text-gray-800 dark:text-white">
+                                <i class="ri-line-chart-line text-brand"></i>
+                                <span>منحنى مستوى المجموعة</span>
+                            </h3>
+                        </div>
+                        <div id="groupPerformanceChartContainer" class="h-[250px] w-full">
+                            <canvas id="groupPerformanceGlobalChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-card p-6 min-h-[350px]">
+                        <h3 class="font-black text-lg flex items-center gap-2 text-gray-800 dark:text-white">
+                            <i class="ri-money-dollar-circle-line text-green-500"></i>
+                            <span>حالة التحصيل (الشهر الحالي)</span>
+                        </h3>
+                        <div id="monthlyCollectionSummary" class="space-y-6">
+                            <div class="flex flex-col items-center justify-center py-4">
+                                <i class="ri-pie-chart-2-line text-6xl text-gray-200 dark:text-zinc-800 mb-2"></i>
+                                <p class="text-xs font-bold text-gray-400">إحصائيات الدفع لهذا الشهر</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div
+                                    class="p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-900/30 text-center">
+                                    <p
+                                        class="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest mb-1">
+                                        سددوا</p>
+                                    <p id="paidCountOverview" class="text-3xl font-black text-gray-900 dark:text-white">
+                                        0</p>
+                                </div>
+                                <div
+                                    class="p-4 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/30 text-center">
+                                    <p
+                                        class="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-1">
+                                        متبقي</p>
+                                    <p id="unpaidCountOverview"
+                                        class="text-3xl font-black text-gray-900 dark:text-white">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-daily" class="tab-content hidden">
                 <div class="grid lg:grid-cols-3 gap-6">
                     <section class="card-container glass-panel p-6 h-fit lg:col-span-1">
                         <div class="section-header">
@@ -1533,6 +1652,13 @@
             </div>
         </div>
     </div>
+    <div id="celebrationOverlay"
+        class="fixed inset-0 z-[2000] pointer-events-none hidden flex items-center justify-center">
+        <div id="lottieContainer" class="w-[500px] h-[500px]"></div>
+    </div>
+
+    <!-- Lottie Script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 </body>
 
 </html>
