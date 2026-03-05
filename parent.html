@@ -24,6 +24,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
     <script>
         tailwind.config = {
@@ -288,8 +289,41 @@
                     <h3 class="font-black text-xl text-gray-900 dark:text-white font-cairo mb-1">تفعيل التنبيهات</h3>
                     <p class="text-sm font-bold text-gray-500 dark:text-gray-400">اضغط هنا ليصلك إشعار الغياب والدرجات
                         فوراً</p>
-                </div>
             </button>
+
+            <!-- General Overview Section -->
+            <div id="overviewSection" class="hidden animate-fade-up">
+                <div class="spot-card p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-xl font-black text-gray-900 dark:text-white font-cairo text-right">نظرة عامة
+                                على الأداء</h3>
+                            <p class="text-[10px] text-gray-500 font-bold text-right">مقارنة المستوى بين جميع المواد</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                            <i class="ri-pie-chart-2-fill text-primary text-2xl"></i>
+                        </div>
+                    </div>
+
+                    <div id="mainOverviewChart" class="min-h-[250px] w-full"></div>
+
+                    <div class="grid grid-cols-3 gap-3 mt-4">
+                        <div class="bg-gray-50 dark:bg-white/5 p-3 rounded-2xl text-center">
+                            <p class="text-[9px] text-gray-400 font-bold mb-1">متوسط الحضور</p>
+                            <h4 id="avgAttendance" class="text-lg font-black text-gray-900 dark:text-white">--%</h4>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-white/5 p-3 rounded-2xl text-center">
+                            <p class="text-[9px] text-gray-400 font-bold mb-1">أفضل مادة</p>
+                            <h4 id="bestSubject" class="text-[11px] font-black text-green-500 leading-tight">...</h4>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-white/5 p-3 rounded-2xl text-center">
+                            <p class="text-[9px] text-gray-400 font-bold mb-1">التقييم العام</p>
+                            <h4 id="generalRating" class="text-lg font-black text-primary">...</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div>
                 <h3
                     class="font-bold text-lg mb-5 flex items-center gap-2 px-1 text-gray-900 dark:text-white font-cairo">
@@ -358,16 +392,47 @@
                                 اليوم</span>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="spot-card p-5 text-center">
-                                <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2">نسبة الحضور</p>
-                                <h3 id="modalAttPerc" class="text-3xl font-black text-gray-900 dark:text-white">--%</h3>
+                        <!-- Performance Charts Section -->
+                        <div class="grid grid-cols-1 gap-6">
+                            <!-- Principal Performance Chart -->
+                            <div class="spot-card p-6 overflow-hidden">
+                                <div class="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h3 class="text-lg font-black text-gray-900 dark:text-white font-cairo">منحنى
+                                            الأداء</h3>
+                                        <p class="text-[10px] text-gray-500 font-bold">تطور الدرجات في الامتحانات
+                                            الأخيرة</p>
+                                    </div>
+                                    <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                        <i class="ri-line-chart-line text-primary text-xl"></i>
+                                    </div>
+                                </div>
+                                <div id="performanceChart" class="min-h-[200px] w-full"></div>
                             </div>
-                            <div class="spot-card p-5 text-center">
-                                <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2">آخر امتحان</p>
-                                <h3 id="modalLastGrade" class="text-3xl font-black text-primary">--</h3>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <!-- Attendance Circular Chart -->
+                                <div class="spot-card p-4 flex flex-col items-center justify-center text-center">
+                                    <div id="attendanceCircleChart" class="w-full"></div>
+                                    <p class="text-[10px] text-gray-500 font-bold mt-[-10px]">نسبة الحضور</p>
+                                </div>
+
+                                <!-- Quick Stats -->
+                                <div class="space-y-4">
+                                    <div
+                                        class="spot-card p-4 flex flex-col justify-center bg-primary/5 border-l-4 border-primary">
+                                        <p class="text-[10px] text-gray-500 font-bold mb-1">آخر درجة</p>
+                                        <h3 id="modalLastGrade" class="text-2xl font-black text-primary">--</h3>
+                                    </div>
+                                    <div
+                                        class="spot-card p-4 flex flex-col justify-center bg-green-500/5 border-l-4 border-green-500">
+                                        <p class="text-[10px] text-gray-500 font-bold mb-1">الرتبة التقديرية</p>
+                                        <h3 id="performanceRank" class="text-xl font-black text-green-500">متاز</h3>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
                         <div>
                             <h3 class="text-xs font-bold text-gray-400 mb-4 flex items-center gap-2"><i
                                     class="ri-history-line text-primary"></i> السجل اليومي</h3>
@@ -427,6 +492,13 @@
 
         let currentParentPhone = "";
         let unsubscribeStudents = null;
+        let activeCharts = {
+            performance: null,
+            attendance: null,
+            overview: null
+        };
+        let lastOverviewData = null;
+        let lastPerformanceData = null;
 
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage))) {
             document.documentElement.classList.add('dark-mode');
@@ -522,6 +594,14 @@
                 localStorage.setItem('theme', 'dark');
                 document.getElementById('themeIcon').className = 'ri-sun-line text-lg';
             }
+
+            // تحديث الرسوم البيانية لو موجودة
+            if (activeCharts.overview && lastOverviewData) {
+                renderOverviewChart(lastOverviewData);
+            }
+            if (activeCharts.performance && lastPerformanceData) {
+                renderPerformanceCharts(lastPerformanceData.att, lastPerformanceData.trend);
+            }
         }
 
         function switchTab(tab) {
@@ -564,11 +644,20 @@
                             gId: path[3],
                             name: sData.name
                         };
-                        return await createStudentCardHTML(studentObj);
+
+                        // جلب البيانات الإضافية للتقرير العام
+                        const cardData = await getStudentSummaryData(studentObj);
+                        return { html: await createStudentCardHTML(studentObj, cardData), data: cardData };
                     });
 
-                    const cardsHTML = await Promise.all(renderPromises);
-                    coursesContainer.innerHTML = cardsHTML.join('');
+                    const results = await Promise.all(renderPromises);
+                    coursesContainer.innerHTML = results.map(r => r.html).join('');
+
+                    // تحديث التقرير العام
+                    if (results.length > 0) {
+                        document.getElementById('overviewSection').classList.remove('hidden');
+                        renderOverviewChart(results.map(r => r.data));
+                    }
 
                     if (studentNames.size > 0) document.getElementById('headerGuardianText').innerHTML = `ولي أمر الطالب <span class="text-primary">${Array.from(studentNames).join('، ')}</span>`;
 
@@ -683,53 +772,22 @@
 
         window.addEventListener('load', detectAndPromptIOS);
 
-        async function createStudentCardHTML(student) {
-            // ✅ البحث الدقيق عن حالة دفع الشهر الحالي
+        async function createStudentCardHTML(student, preloadedData) {
+            const { subject: subName, attendance: attPerc, grade: lastGrade } = preloadedData;
             const date = new Date();
             const currentMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
-            const payQueryPromise = db.collection(`teachers/${student.tId}/groups/${student.gId}/payments`)
-                .where('month', '==', currentMonth)
-                .limit(1)
-                .get();
-
-            const [tDoc, attSnap, assSnap, payQuerySnap] = await Promise.all([
+            const [tDoc, payQuerySnap] = await Promise.all([
                 db.collection('teachers').doc(student.tId).get(),
-                db.collection(`teachers/${student.tId}/groups/${student.gId}/dailyAttendance`).limit(30).get(),
-                db.collection(`teachers/${student.tId}/groups/${student.gId}/assignments`).limit(15).get(),
-                payQueryPromise
+                db.collection(`teachers/${student.tId}/groups/${student.gId}/payments`)
+                    .where('month', '==', currentMonth)
+                    .limit(1)
+                    .get()
             ]);
 
-            let tName = "مدرس", subName = "مادة";
-            if (tDoc.exists) { tName = tDoc.data().name; subName = tDoc.data().subject || "عام"; }
+            let tName = "مدرس";
+            if (tDoc.exists) { tName = tDoc.data().name; }
 
-            let totalDays = 0, presentDays = 0;
-            attSnap.forEach(d => {
-                const r = d.data().records?.find(x => x.studentId === student.sId);
-                if (r) { totalDays++; if (r.status === 'present') presentDays++; }
-            });
-            const attPerc = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
-
-            // ✅ منطق آخر امتحان (ليس واجب)
-            let lastGrade = '--';
-            if (!assSnap.empty) {
-                for (const doc of assSnap.docs) {
-                    const d = doc.data();
-                    const sc = d.scores?.[student.sId];
-                    const name = d.name || "";
-                    const type = d.type || "";
-
-                    // استبعاد الواجبات (بالاسم أو النوع)
-                    const isHomework = type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
-
-                    if (!isHomework && sc && sc.score !== null && sc.score !== undefined && sc.score !== "") {
-                        lastGrade = sc.score;
-                        break;
-                    }
-                }
-            }
-
-            // ✅ حالة الدفع من الـ Query
             let isPaid = false;
             if (!payQuerySnap.empty) {
                 const payDoc = payQuerySnap.docs[0];
@@ -757,7 +815,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3 mt-2 border-t border-gray-100 dark:border-white/5 pt-3">
                     <div><p class="text-[10px] text-gray-400 font-bold">نسبة الحضور</p><p class="text-lg font-black ${attPerc > 85 ? 'text-green-500' : 'text-primary'}">${attPerc}%</p></div>
-                    <div><p class="text-[10px] text-gray-400 font-bold">آخر امتحان</p><p class="text-lg font-black text-gray-900 dark:text-white">${lastGrade}</p></div>
+                    <div><p class="text-[10px] text-gray-400 font-bold">آخر امتحان</p><p class="text-lg font-black text-gray-900 dark:text-white">${lastGrade > 0 ? lastGrade : '--'}</p></div>
                 </div>
             </div>`;
         }
@@ -830,7 +888,7 @@
                     }
                 });
                 document.getElementById('modalAttendanceList').innerHTML = attHtml || '<p class="text-center text-gray-500 text-xs">لا يوجد سجل</p>';
-                document.getElementById('modalAttPerc').innerText = total > 0 ? Math.round((present / total) * 100) + '%' : '0%';
+                // تم استبادل modalAttPerc بشارت الدائرة
 
                 // 3. المنطق الجديد: فصل الواجبات عن الامتحانات بالاسم والنوع (Sorting in-memory)
                 let gradesHtml = '', homeworkHtml = '', lastG = '--';
@@ -876,6 +934,24 @@
                 document.getElementById('modalGradesList').innerHTML = gradesHtml || '<p class="text-center text-gray-500 text-xs py-4">لا توجد امتحانات</p>';
                 document.getElementById('modalHomeworkList').innerHTML = homeworkHtml || '<p class="text-center text-gray-500 text-xs py-4">لا توجد واجبات</p>';
                 document.getElementById('modalLastGrade').innerText = lastG;
+
+                // تحديث الرسوم البيانية
+                const attendancePerc = total > 0 ? Math.round((present / total) * 100) : 0;
+                const gradesTrend = sortedAss
+                    .filter(d => {
+                        const name = d.name || "";
+                        const type = d.type || "";
+                        const isHomework = type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
+                        return !isHomework && d.scores?.[sId] && d.scores[sId].score !== null && d.scores[sId].score !== undefined && d.scores[sId].score !== "";
+                    })
+                    .map(d => ({
+                        date: d.date,
+                        score: parseFloat(d.scores[sId].score) || 0
+                    }))
+                    .reverse(); // من الأقدم للأحدث
+
+                lastPerformanceData = { att: attendancePerc, trend: gradesTrend };
+                renderPerformanceCharts(attendancePerc, gradesTrend);
 
                 // 4. المدفوعات
                 let payHtml = '';
@@ -941,6 +1017,204 @@
                 console.error("Error loading details:", error);
                 attList.innerHTML = '<p class="text-center text-red-500 text-xs py-4">فشل تحميل البيانات. يرجى إعادة المحاولة.</p>';
             }
+        }
+
+        function renderPerformanceCharts(attPerc, gradesTrend) {
+            const isDark = document.documentElement.classList.contains('dark-mode');
+            const textColor = isDark ? '#9CA3AF' : '#6B7280';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+
+            // 1. Attendance Circle Chart
+            const attOptions = {
+                series: [attPerc],
+                chart: {
+                    height: 180,
+                    type: 'radialBar',
+                    sparkline: { enabled: true }
+                },
+                plotOptions: {
+                    radialBar: {
+                        hollow: { size: '65%' },
+                        dataLabels: {
+                            name: { show: false },
+                            value: {
+                                offsetY: 10,
+                                fontSize: '22px',
+                                fontWeight: '900',
+                                color: isDark ? '#FFFFFF' : '#111827',
+                                formatter: val => val + '%'
+                            }
+                        },
+                        track: { background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
+                    }
+                },
+                colors: [attPerc > 80 ? '#10B981' : (attPerc > 60 ? '#F2CE5A' : '#EF4444')],
+                stroke: { lineCap: 'round' }
+            };
+
+            if (activeCharts.attendance) activeCharts.attendance.destroy();
+            activeCharts.attendance = new ApexCharts(document.querySelector("#attendanceCircleChart"), attOptions);
+            activeCharts.attendance.render();
+
+            // 2. Performance Line Chart
+            const performanceOptions = {
+                series: [{
+                    name: 'الدرجة',
+                    data: gradesTrend.map(g => g.score)
+                }],
+                chart: {
+                    height: 200,
+                    type: 'area',
+                    toolbar: { show: false },
+                    zoom: { enabled: false },
+                    fontFamily: 'Cairo, sans-serif'
+                },
+                colors: ['#F2CE5A'],
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.45,
+                        opacityTo: 0.05,
+                        stops: [20, 100]
+                    }
+                },
+                dataLabels: { enabled: false },
+                stroke: { curve: 'smooth', width: 3 },
+                grid: {
+                    borderColor: gridColor,
+                    strokeDashArray: 4,
+                    yaxis: { lines: { show: true } }
+                },
+                xaxis: {
+                    categories: gradesTrend.map(g => g.date),
+                    labels: {
+                        show: false,
+                        style: { colors: textColor }
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: textColor, fontWeight: 'bold' },
+                        formatter: val => Math.round(val)
+                    }
+                },
+                tooltip: {
+                    theme: isDark ? 'dark' : 'light',
+                    x: { show: true }
+                }
+            };
+
+            if (activeCharts.performance) activeCharts.performance.destroy();
+            activeCharts.performance = new ApexCharts(document.querySelector("#performanceChart"), performanceOptions);
+            activeCharts.performance.render();
+
+            // Update Rank
+            const rankEl = document.getElementById('performanceRank');
+            let avg = gradesTrend.length > 0 ? gradesTrend.reduce((a, b) => a + b.score, 0) / gradesTrend.length : 0;
+            if (avg >= 90) { rankEl.innerText = 'ممتاز'; rankEl.className = 'text-xl font-black text-green-500'; }
+            else if (avg >= 75) { rankEl.innerText = 'جيد جداً'; rankEl.className = 'text-xl font-black text-blue-500'; }
+            else if (avg >= 50) { rankEl.innerText = 'مقبول'; rankEl.className = 'text-xl font-black text-yellow-500'; }
+            else { rankEl.innerText = 'ضعيف'; rankEl.className = 'text-xl font-black text-red-500'; }
+        }
+
+        async function getStudentSummaryData(student) {
+            const [tDoc, attSnap, assSnap] = await Promise.all([
+                db.collection('teachers').doc(student.tId).get(),
+                db.collection(`teachers/${student.tId}/groups/${student.gId}/dailyAttendance`).limit(20).get(),
+                db.collection(`teachers/${student.tId}/groups/${student.gId}/assignments`).limit(10).get()
+            ]);
+
+            const subName = tDoc.exists ? (tDoc.data().subject || "عام") : "مادة";
+
+            let totalDays = 0, presentDays = 0;
+            attSnap.forEach(d => {
+                const r = d.data().records?.find(x => x.studentId === student.sId);
+                if (r) { totalDays++; if (r.status === 'present') presentDays++; }
+            });
+
+            let lastGrade = 0, count = 0;
+            if (!assSnap.empty) {
+                for (const doc of assSnap.docs) {
+                    const d = doc.data();
+                    const sc = d.scores?.[student.sId];
+                    if (sc && sc.score !== null && sc.score !== undefined && sc.score !== "" && !isNaN(sc.score)) {
+                        lastGrade = parseFloat(sc.score);
+                        break;
+                    }
+                }
+            }
+
+            return {
+                subject: subName,
+                attendance: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
+                grade: lastGrade
+            };
+        }
+
+        function renderOverviewChart(data) {
+            const isDark = document.documentElement.classList.contains('dark-mode');
+            const textColor = isDark ? '#9CA3AF' : '#6B7280';
+
+            const options = {
+                series: [
+                    { name: 'الحضور (%)', data: data.map(d => d.attendance) },
+                    { name: 'آخر درجة', data: data.map(d => d.grade) }
+                ],
+                chart: {
+                    type: 'bar',
+                    height: 250,
+                    stacked: false,
+                    toolbar: { show: false },
+                    fontFamily: 'Cairo, sans-serif'
+                },
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '55%',
+                        borderRadius: 6
+                    }
+                },
+                dataLabels: { enabled: false },
+                stroke: { show: true, width: 2, colors: ['transparent'] },
+                xaxis: {
+                    categories: data.map(d => d.subject),
+                    labels: { style: { colors: textColor, fontWeight: 'bold' } }
+                },
+                yaxis: {
+                    labels: { style: { colors: textColor } }
+                },
+                colors: ['#34D399', '#F2CE5A'],
+                fill: { opacity: 1 },
+                tooltip: {
+                    theme: isDark ? 'dark' : 'light',
+                    y: { formatter: val => val }
+                },
+                legend: {
+                    position: 'top',
+                    horizontalAlign: 'right',
+                    labels: { colors: textColor }
+                }
+            };
+
+            if (activeCharts.overview) activeCharts.overview.destroy();
+            activeCharts.overview = new ApexCharts(document.querySelector("#mainOverviewChart"), options);
+            activeCharts.overview.render();
+            lastOverviewData = data;
+
+            // تحديث الإحصائيات السريعة
+            const avgAttendance = Math.round(data.reduce((a, b) => a + b.attendance, 0) / data.length);
+            const best = data.reduce((prev, current) => (prev.grade > current.grade) ? prev : current);
+
+            document.getElementById('avgAttendance').innerText = avgAttendance + '%';
+            document.getElementById('bestSubject').innerText = best.subject;
+
+            const ratingEl = document.getElementById('generalRating');
+            if (avgAttendance >= 85) { ratingEl.innerText = 'ممتاز'; ratingEl.className = 'text-lg font-black text-green-500'; }
+            else if (avgAttendance >= 70) { ratingEl.innerText = 'جيد جداً'; ratingEl.className = 'text-lg font-black text-blue-500'; }
+            else { ratingEl.innerText = 'مقبول'; ratingEl.className = 'text-lg font-black text-yellow-500'; }
         }
 
         function formatNotifDate(date) {
