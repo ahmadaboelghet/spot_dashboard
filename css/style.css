@@ -782,32 +782,29 @@ body.desktop-device video {
 }
 
 
-@keyframes shimmer {
-    0% {
-        background-position: -468px 0;
+/* التعديل هنا: استبدلنا الـ shimmer الـ "مزعجة" بـ pulse هادي وأشيك */
+@keyframes skeleton-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
     }
 
-    100% {
-        background-position: 468px 0;
+    50% {
+        opacity: 0.5;
     }
 }
 
 .skeleton-row {
-    background: #f6f7f8;
-    background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
-    background-repeat: no-repeat;
-    background-size: 800px 104px;
-    animation-duration: 1s;
-    animation-fill-mode: forwards;
-    animation-iteration-count: infinite;
-    animation-name: shimmer;
-    animation-timing-function: linear;
+    background-color: #f1f5f9;
+    /* رمادي فاتح هادي */
+    animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     border-radius: 12px;
 }
 
 .dark-mode .skeleton-row {
-    background: #1a1a1a;
-    background-image: linear-gradient(to right, #1a1a1a 0%, #2a2a2a 20%, #1a1a1a 40%, #1a1a1a 100%);
+    background-color: #1e293b;
+    /* رمادي غامق للهوية الليلية */
 }
 
 @keyframes fadeIn {
