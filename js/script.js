@@ -3720,27 +3720,27 @@ async function loadBotFiles() {
                 bgClass = "bg-purple-50";
             }
             const div = document.createElement('div');
-            div.className = 'flex items-center justify-between p-3 bg-white dark:bg-darkSurface border border-gray-100 dark:border-gray-700 rounded-xl transition-all hover:border-brand';
+            div.className = 'flex items-center justify-between p-3 bg-white dark:bg-darkSurface border border-gray-100 dark:border-gray-700 rounded-xl transition-all hover:border-brand shadow-sm';
 
             div.innerHTML = `
                 <div class="flex items-center gap-3 overflow-hidden">
-                    <div class="w-10 h-10 rounded-lg ${bgClass} ${iconClass.split(' ')[1]} flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-lg ${bgClass} flex items-center justify-center flex-shrink-0 shadow-sm">
                         <i class="${iconClass} text-xl"></i>
                     </div>
                     <div class="truncate">
-                        <p class="font-bold text-sm text-gray-800 dark:text-gray-200 truncate">${itemRef.name}</p>
-                        <p class="text-[10px] text-green-600 font-bold flex items-center gap-1">
-                            <i class="ri-check-double-line"></i> جاهز للاستخدام
-                        </p>
+                        <p class="font-bold text-sm text-gray-800 dark:text-gray-200 truncate mb-1">${itemRef.name}</p>
+                        <div class="flex gap-2">
+                             <button onclick="openExamModal('${itemRef.name}')" class="text-[10px] bg-yellow-400 text-black px-3 py-1 rounded-md font-black hover:bg-yellow-500 transition-all shadow-sm">إنشاء امتحان ذكي ✨</button>
+                        </div>
                     </div>
                 </div>
-                <button class="btn-icon w-8 h-8 bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 dark:bg-white/5 dark:hover:bg-red-900/20 transition-colors" title="حذف">
+                <button class="btn-delete-file w-8 h-8 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:bg-white/5 rounded-lg transition-colors" title="حذف">
                     <i class="ri-delete-bin-line"></i>
                 </button>
             `;
 
             // زرار الحذف
-            div.querySelector('button').onclick = async () => {
+            div.querySelector('.btn-delete-file').onclick = async () => {
                 if (confirm("هل أنت متأكد من حذف هذا الملف من ذاكرة البوت؟")) {
                     try {
                         await itemRef.delete();
@@ -3801,6 +3801,80 @@ https://wa.me/${botNumber.replace('+', '')}?text=join%20off-drive
 // ==========================================
 let isChatOpen = false;
 
+// 🏆 نظام إعدادات الامتحان المتطور (Exam Advanced System)
+let currentExamFile = "";
+let currentExamDifficulty = "سهل";
+
+window.openExamModal = function (fileName) {
+    currentExamFile = fileName;
+    document.getElementById('examFileNameDisplay').innerText = fileName;
+    document.getElementById('examSettingsModal').classList.remove('hidden');
+    // Reset inputs
+    document.getElementById('examScopeInput').value = "";
+};
+
+window.closeExamModal = function () {
+    document.getElementById('examSettingsModal').classList.add('hidden');
+};
+
+window.setExamDifficulty = function (val) {
+    currentExamDifficulty = val;
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+        if (btn.getAttribute('data-val') === val) {
+            btn.classList.add('bg-gray-50', 'dark:bg-black', 'border-brand');
+        } else {
+            btn.classList.remove('bg-gray-50', 'dark:bg-black', 'border-brand');
+        }
+    });
+};
+
+window.confirmGenerateExam = function () {
+    const scope = document.getElementById('examScopeInput').value.trim();
+    const count = document.getElementById('examCountInput').value;
+    const lang = document.querySelector('input[name="examLang"]:checked').value;
+    const langText = lang === 'ar' ? 'باللغة العربية (الأرقام والرموز س، ص...)' : 'in English (xyz, 123...)';
+
+    let prompt = `من فضلك اعمل لي امتحان احترافي جداً لملف (${currentExamFile}) بالمواصفات دي:
+- المستوى: ${currentExamDifficulty}
+- عدد الأسئلة: ${count}
+- اللغة والتنسيق: ${langText}
+- النطاق المطلوب: ${scope ? scope : 'كامل المحتوى المتاح في الملف'}`;
+
+    closeExamModal();
+    if (!isChatOpen) toggleSpotChat();
+    const input = document.getElementById('chatInput');
+    input.value = prompt;
+    sendSpotMessage();
+};
+
+// 🛠️ دالة إنشاء من ملف (مستدعية من المكتبة - نسخة مبسطة لغرض التوافق)
+window.generateFromMaterial = function (fileName, type) {
+    if (type === 'امتحان') {
+        window.openExamModal(fileName);
+    } else {
+        if (!isChatOpen) toggleSpotChat();
+        const input = document.getElementById('chatInput');
+        input.value = `من فضلك اعمل لي ${type} احترافي جداً من ملف (${fileName})`;
+        sendSpotMessage();
+    }
+};
+
+// دالة السكرول الأسفل (آمنة)
+function scrollToBottom() {
+    try {
+        const container = document.getElementById('chatMessages');
+        if (container) {
+            container.scrollTo({
+                top: container.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    } catch (e) {
+        console.warn("Scroll error:", e);
+    }
+}
+window.scrollToBottom = scrollToBottom; // جعلها عالمية للآمان
+
 // دالة فتح وقفل الشات (مربوطة بـ window عشان HTML يشوفها)
 window.toggleSpotChat = function () {
     const windowEl = document.getElementById('spotChatWindow');
@@ -3825,312 +3899,315 @@ window.sendSpotMessage = async function () {
     const msg = input.value.trim();
     if (!msg) return;
 
-    // 1. التأكد من تسجيل الدخول
     const currentTeacherId = localStorage.getItem('learnaria-tid');
-
     if (!currentTeacherId) {
-        addMessageToUI("⚠️ لازم تكون مسجل دخول عشان أقدر أساعدك!", 'bot');
+        addMessageToUI("⚠️ لازم تكون مسجل دخول عشان أقدر أساعدك!", 'bot', 'chat');
         return;
     }
 
-    // 2. عرض رسالة المستخدم
-    addMessageToUI(msg, 'user');
+    addMessageToUI(msg, 'user', 'chat');
     input.value = '';
-    input.style.height = '48px'; // إعادة الارتفاع للأصلي
+    input.style.height = '48px';
 
-    // 3. إظهار مؤشر الكتابة
     document.getElementById('typingIndicator').classList.remove('hidden');
     scrollToBottom();
 
     try {
-        // 4. استدعاء الـ Function (بالطريقة القديمة المتوافقة مع كودك) 👇👇
-        // بدل httpsCallable(functions, ...)
         const chatFn = firebase.functions().httpsCallable('chatWithSpot');
-
         const result = await chatFn({
             message: msg,
             teacherId: currentTeacherId,
             role: 'teacher'
         });
 
-        // 5. إخفاء المؤشر وعرض الرد
         document.getElementById('typingIndicator').classList.add('hidden');
-
-        // تنسيق الرد
-        const cleanResponse = result.data.response.replace(/\n/g, '<br>');
-        addMessageToUI(cleanResponse, 'bot');
+        const responseData = result.data || {};
+        const responseText = responseData.response || '';
+        const responseType = responseData.type || 'chat';
+        if (responseData.teacherName) window.lastTeacherName = responseData.teacherName;
+        
+        if (!responseText) {
+            addMessageToUI("❌ لم يتم استلام رد، من فضلك حاول مرة تانية.", 'bot', 'chat');
+            return;
+        }
+        addMessageToUI(responseText, 'bot', responseType);
 
     } catch (error) {
         document.getElementById('typingIndicator').classList.add('hidden');
-        addMessageToUI("❌ حصل خطأ في الاتصال، حاول تاني.", 'bot');
+        addMessageToUI("❌ حصل خطأ في الاتصال، حاول تاني.", 'bot', 'chat');
         console.error("Spot Chat Error:", error);
     }
 };
 
-// 🧹 دالة التنظيف (الإصدار "العبقري" لإصلاح كل أخطاء الباك سلاش)
+// دالة تنظيف وبارسة JSON (نسختين آمنتين)
 function cleanJSON(text) {
     if (!text) return null;
 
-    // 1. تنظيف الـ HTML والماركداون
-    let clean = text.replace(/<br\s*\/?>/gi, ' ')
+    let clean = text
+        .replace(/<br\s*\/?>/gi, ' ')
         .replace(/```json/gi, '')
         .replace(/```/g, '')
         .trim();
 
-    // 2. 🔥 الإصلاح الذكي (Smart Fix for Bad Escapes)
-    // بيمشي على أي (\) ويشوف الحرف اللي وراها
-    clean = clean.replace(/\\(.)/g, function (match, char) {
-        // دي الحروف الوحيدة المسموح يجي قبلها شرطة في الـ JSON
-        const validEscapes = ["\"", "\\", "/", "b", "f", "n", "r", "t", "u"];
-
-        if (validEscapes.includes(char)) {
-            return match; // لو الحرف مسموح (زي \n أو \\)، سيبه زي ما هو
-        } else {
-            return "\\\\" + char; // لو مش مسموح (زي \d أو \p)، زود شرطة كمان (\\d)
-        }
-    });
-
-    // 3. استخراج الـ JSON
     const startIndex = clean.indexOf('{');
     const endIndex = clean.lastIndexOf('}');
+    if (startIndex === -1 || endIndex === -1) return null;
 
-    if (startIndex !== -1 && endIndex !== -1) {
-        return clean.substring(startIndex, endIndex + 1);
-    }
+    const jsonStr = clean.substring(startIndex, endIndex + 1);
+
+    // Pass 1: Try parsing as-is
+    try { JSON.parse(jsonStr); return jsonStr; } catch (_) {}
+
+    // Pass 2: Fix bad backslash escaping (\sqrt → \\sqrt)
+    try {
+        const fixed = jsonStr.replace(/\\(.)/g, (match, char) => {
+            const valid = ['"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u'];
+            return valid.includes(char) ? match : '\\\\' + char;
+        });
+        JSON.parse(fixed);
+        return fixed;
+    } catch (_) {}
 
     return null;
 }
 
-// 🎨 دالة العرض (مع التقاط الأخطاء)
-function addMessageToUI(text, sender) {
+// دالة عرض الرسائل (مع Exam Card و Note Card و Chat Bubble)
+function addMessageToUI(text, sender, type) {
     const container = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = "mb-6 animate-fade-in-up w-full";
 
-    let examData = null;
-
-    if (sender === 'bot') {
-        const jsonStr = cleanJSON(text);
-        if (jsonStr) {
-            try {
-                const parsed = JSON.parse(jsonStr);
-                if (parsed.isExam) examData = parsed;
-            } catch (e) {
-                // ليس امتحان، تجاهل الخطأ
-            }
-        }
-    }
-
+    // رسالة المستخدم
     if (sender === 'user') {
-        // رسالة المستخدم
         div.innerHTML = `
             <div class="flex justify-end items-end gap-2">
                 <div class="bg-gradient-to-tr from-yellow-500 to-yellow-600 text-black px-5 py-3 rounded-2xl rounded-tr-none font-bold text-sm shadow-md max-w-[85%] break-words whitespace-pre-wrap">
                     ${text}
                 </div>
             </div>`;
+        container.appendChild(div);
+        scrollToBottom();
+        return;
     }
-    else if (examData) {
-        // 📝 كارت الامتحان (زرار طباعة الامتحان)
+
+    // BOT: Exam Card
+    if (type === 'exam') {
+        const jsonStr = cleanJSON(text);
+        let examData = null;
+        if (jsonStr) { try { examData = JSON.parse(jsonStr); } catch (_) {} }
+
+        if (examData && examData.isExam) {
+            div.innerHTML = `
+                <div class="flex gap-3 justify-start items-start w-full">
+                    <div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-900/30 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 shadow">
+                        <i class="ri-file-list-3-fill text-xl"></i>
+                    </div>
+                    <div class="bg-white dark:bg-zinc-900 border-2 border-yellow-400 rounded-2xl rounded-tl-none w-full md:max-w-[90%] shadow-xl overflow-hidden">
+                        <div class="bg-gradient-to-r from-yellow-500 to-yellow-400 px-5 py-4">
+                            <h3 class="font-black text-xl text-black">${examData.title || 'امتحان'}</h3>
+                            <div class="flex gap-4 mt-1 text-black/70 text-xs font-semibold">
+                                <span><i class="ri-question-line"></i> ${examData.questions?.length || 0} سؤال</span>
+                                ${examData.difficulty ? `<span class="bg-black/20 px-2 py-0.5 rounded uppercase tracking-wider"><i class="ri-pulse-line"></i> ${examData.difficulty}</span>` : ''}
+                                ${examData.totalMarks ? `<span><i class="ri-award-line"></i> ${examData.totalMarks} درجة</span>` : ''}
+                                ${examData.duration ? `<span><i class="ri-time-line"></i> ${examData.duration}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="p-5">
+                            <p class="text-xs text-gray-500 mb-4">تم إنشاء الامتحان بنجاح ✅ اضغط للطباعة وحفظ كـ PDF</p>
+                            <button class="btn-print-exam w-full bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md">
+                                <i class="ri-printer-fill text-yellow-400 text-lg"></i>
+                                طباعة / حفظ كـ PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            div.querySelector('.btn-print-exam').addEventListener('click', () => window.printExam(examData));
+            container.appendChild(div);
+            scrollToBottom();
+            return;
+        }
+    }
+
+    // BOT: Note Card
+    if (type === 'note') {
+        const noteContent = text;
         div.innerHTML = `
             <div class="flex gap-3 justify-start items-start w-full">
-                <div class="w-10 h-10 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 border border-gray-100 shadow-sm">
-                    <i class="ri-file-list-3-line text-xl"></i>
+                <div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 text-blue-600 shadow">
+                    <i class="ri-book-2-fill text-xl"></i>
                 </div>
-                <div class="bg-white dark:bg-zinc-900 border border-yellow-400 rounded-2xl rounded-tl-none overflow-hidden w-full md:w-[85%] shadow-xl">
-                    <div class="p-5">
-                        <h3 class="font-black text-xl text-gray-800 dark:text-white mb-2">${examData.title}</h3>
-                        <p class="text-xs text-gray-500 mb-6">عدد الأسئلة: ${examData.questions.length}</p>
-                        <button onclick='printExam(${JSON.stringify(examData).replace(/'/g, "&apos;")})' 
-                                class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md">
-                            <i class="ri-printer-fill text-lg"></i>
-                            <span>طباعة الامتحان (PDF)</span>
+                <div class="bg-white dark:bg-zinc-900 border-2 border-blue-300 dark:border-blue-700 rounded-2xl rounded-tl-none w-full md:max-w-[90%] shadow-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-4">
+                        <h3 class="font-black text-lg text-white">مذكرة تعليمية احترافية 📚</h3>
+                        <p class="text-blue-100 text-xs mt-1">تم الإنشاء بواسطة Spot AI</p>
+                    </div>
+                    <div class="p-5 flex flex-col gap-3">
+                        <div class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto border border-gray-100 dark:border-zinc-700 rounded-xl p-3 bg-gray-50 dark:bg-zinc-800 font-mono">
+                            ${text.substring(0, 500).replace(/</g, '&lt;')}${text.length > 500 ? '...' : ''}
+                        </div>
+                        <button class="btn-print-note w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md text-sm">
+                            <i class="ri-printer-fill text-white text-lg"></i>
+                            طباعة المذكرة / حفظ كـ PDF
                         </button>
                     </div>
                 </div>
             </div>`;
+        div.querySelector('.btn-print-note').addEventListener('click', () => window.printStudyNote(noteContent));
+        container.appendChild(div);
+        scrollToBottom();
+        return;
     }
-    else {
-        // 🤖 رد البوت العادي
-        div.innerHTML = `
-            <div class="flex gap-3 justify-start items-start w-full group">
-                <div class="w-8 h-8 bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 text-gray-600 dark:text-gray-300 text-xs shadow-sm">
-                    <i class="ri-robot-2-fill"></i>
-                </div>
-                <div class="flex flex-col gap-2 max-w-[85%]">
-                    <div class="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-700 text-sm text-gray-700 dark:text-gray-200 leading-relaxed break-words whitespace-pre-wrap">
-                        ${text}
-                    </div>
-                </div>
-            </div>`;
 
-        // إذا كان النص يحتوي على رابط PDF (الذي يولده الباك إند)، نظهر زرار تحميل واضح
-        if (text.includes("https://storage.googleapis.com") || text.includes("firebasestorage")) {
-            const urlMatch = text.match(/https?:\/\/[^\s\n]+/);
-            if (urlMatch) {
-                const pdfUrl = urlMatch[0];
-                const btnDiv = div.querySelector('.flex.flex-col.gap-2');
-                const downloadBtn = document.createElement('a');
-                downloadBtn.href = pdfUrl;
-                downloadBtn.target = "_blank";
-                downloadBtn.className = "self-start bg-zinc-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md mt-1";
-                downloadBtn.innerHTML = `<i class="ri-file-download-fill text-yellow-500"></i> حفظ وتحميل الـ PDF`;
-                btnDiv.appendChild(downloadBtn);
-            }
-        } else {
-            // للمذكرات العادية التي ليس لها ملف مرفوع بعد، نظهر زر الطباعة/الحفظ المحلي
-            const safeText = encodeURIComponent(text);
-            const btnDiv = div.querySelector('.flex.flex-col.gap-2');
-            const printBtn = document.createElement('button');
-            printBtn.onclick = () => window.printStudyNote(decodeURIComponent(safeText));
-            printBtn.className = "self-start bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all hover:bg-gray-100 dark:hover:bg-zinc-700 mt-1";
-            printBtn.innerHTML = `<i class="ri-printer-line text-blue-500"></i> طباعة / حفظ كـ PDF`;
-            btnDiv.appendChild(printBtn);
-        }
+    // BOT: Chat Bubble (default)
+    // إزالة أي URLs من النص (لنظافة الرد)
+    const cleanText = text
+        .replace(/https?:\/\/[^\s\n<]+/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+    // لو فيه جيسون (exam فشل parseه)، اعرض parse error بشكل clean
+    let displayText = cleanText || text;
+    // لو الرد كان JSON خام (تعذر parseه) صفحه لرسالة error لطيفة
+    if ((type === 'exam') && displayText.includes('{')) {
+        displayText = '❌ تعذّر استخراج بيانات الامتحان. الذكاء رد بصيغة غير صحيحة.';
     }
+
+    div.innerHTML = `
+        <div class="flex gap-3 justify-start items-start w-full">
+            <div class="w-8 h-8 bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 text-gray-600 dark:text-gray-300 text-xs shadow-sm">
+                <i class="ri-robot-2-fill"></i>
+            </div>
+            <div class="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-700 text-sm text-gray-700 dark:text-gray-200 leading-relaxed break-words whitespace-pre-wrap max-w-[85%]">
+                ${displayText}
+            </div>
+        </div>`;
 
     container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-}
-// دالة تحويل الرسالة لـ PDF 🖨️
-window.downloadMessageAsPDF = function (elementId) {
-    const element = document.getElementById(elementId);
-
-    // إعدادات الملف
-    const opt = {
-        margin: [10, 10, 10, 10], // الهوامش
-        filename: `Spot_Exam_${new Date().toLocaleDateString()}.pdf`, // اسم الملف
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true }, // scale 2 عشان الجودة تبقي عالية
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    // بدء التحويل (بيظهر لودينج صغير)
-    showToast("جاري إنشاء ملف الـ PDF... 📄");
-
-    html2pdf().set(opt).from(element).save().then(() => {
-        showToast("تم تحميل الملف بنجاح! ✅");
-    }).catch(err => {
-        console.error(err);
-        showToast("حدث خطأ أثناء التحميل", "error");
-    });
-};
-
-function scrollToBottom() {
-    const container = document.getElementById('chatMessages');
-    container.scrollTop = container.scrollHeight;
+    scrollToBottom();
 }
 
+
+// 🖨️ دالة طباعة الامتحانات (MathJax + Cairo + SVG)
 window.printExam = function (examData) {
     const printWindow = window.open('', '_blank');
+    if (!printWindow) { alert('يرجى السماح بالنوافذ المنبثقة'); return; }
 
-    const toArabicNum = (n) => n.toLocaleString('ar-EG');
-    const getOptionLabel = (i) => ['(أ)', '(ب)', '(ج)', '(د)'][i] || `(${i + 1})`;
+    const getOptionLabel = (i) => ['أ)', 'ب)', 'ج)', 'د)'][i] || `${i + 1})`;
+    const toNum = (n) => String(n + 1);
 
-    const htmlContent = `
-    <!DOCTYPE html>
-    <html dir="rtl" lang="ar">
-    <head>
-        <title>${examData.title}</title>
-        <meta charset="UTF-8">
-        
-        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-        <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-        
-        <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
-        
-        <style>
-            body { font-family: 'IBM Plex Sans Arabic', sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; background: #fff; }
-            mjx-container { font-size: 115% !important; direction: ltr; display: inline-block; }
-            
-            .exam-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 40px; }
-            .exam-title { font-family: 'Amiri', serif; font-size: 28px; font-weight: 900; margin-bottom: 15px; }
-            .student-info { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; font-family: 'Amiri', serif; }
+    const questionsHtml = (examData.questions || []).map((q, i) => `
+        <div class="q-wrap">
+            <div class="q-num">${toNum(i)}</div>
+            <div class="q-body">
+                <div class="q-text">${q.q || ''}</div>
+                ${q.diagram ? `<div class="diagram-box">${q.diagram}</div>` : ''}
+                ${q.type === 'mcq' && q.options ? `
+                    <div class="mcq-grid">
+                        ${q.options.map((opt, j) => `
+                            <div class="opt-row">
+                                <span class="opt-char">${getOptionLabel(j)}</span>
+                                <span>${opt}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : q.type === 'tf' ? `
+                    <div style="display: flex; justify-content: flex-end; gap: 40px; margin-top: 10px; font-weight: bold; border: 1px dashed #eee; padding: 10px; border-radius: 8px;">
+                        <span>(  صح  )</span>
+                        <span>(  خطأ  )</span>
+                    </div>
+                ` : `
+                    <div class="essay-lines">
+                        ${Array.from({ length: q.lines || 3 }).map(() => '<div class="essay-line"></div>').join('')}
+                    </div>
+                `}
+            </div>
+        </div>
+    `).join('');
 
-            .question-container { display: flex; gap: 15px; margin-bottom: 30px; page-break-inside: avoid; align-items: flex-start; }
-            .q-num-box { background-color: #0056b3; color: white; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-top: 5px; flex-shrink: 0; }
-            .q-body { width: 100%; }
-            .q-text { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: #222; }
-
-            /* تنسيق الرسم الهندسي */
-            .diagram-box {
-                margin: 15px 0;
-                display: flex;
-                justify-content: center;
-            }
-            .diagram-box svg {
-                max-width: 250px; /* حجم مناسب للرسمة */
-                height: auto;
-                border: 1px dashed #ccc; /* إطار خفيف عشان تبان */
-                padding: 10px;
-                border-radius: 8px;
-            }
-            /* تنسيق النصوص داخل الرسمة */
-            .diagram-box text { font-family: sans-serif; font-weight: bold; }
-
-            .mcq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px 30px; }
-            .option-row { display: flex; align-items: center; gap: 10px; font-size: 18px; }
-            .opt-char { color: #0056b3; font-weight: 900; font-family: 'Amiri', serif; }
-
-            .footer { position: fixed; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #eee; padding-top: 10px; }
-        </style>
-
-        <script>
-            window.MathJax = {
-                tex: { inlineMath: [['$', '$']] },
-                startup: {
-                    pageReady: () => {
-                        return MathJax.startup.defaultPageReady().then(() => {
-                            setTimeout(() => window.print(), 1000);
-                        });
-                    }
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>${examData.title || 'امتحان'}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: true
+            },
+            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] },
+            startup: {
+                pageReady() {
+                    return MathJax.startup.defaultPageReady().then(() => {
+                        setTimeout(() => window.print(), 1500);
+                    });
                 }
-            };
-        </script>
-    </head>
-    <body>
-        <div class="exam-header">
-            <div class="exam-title">${examData.title}</div>
-            <div class="student-info">
-                <span>اسم الطالب: ...........................................</span>
-                <span>الدرجة: .......... / ${toArabicNum(examData.questions.length)}</span>
-            </div>
+            }
+        };
+    <\/script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
+    <style>
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Cairo', 'Amiri', sans-serif;
+            direction: rtl; text-align: right;
+            padding: 30px 40px; max-width: 900px; margin: 0 auto;
+            background: #fff; color: #111;
+        }
+        mjx-container { direction: ltr !important; display: inline-block !important; }
+        .exam-header { text-align: center; border-bottom: 3px double #1a1a2e; padding-bottom: 20px; margin-bottom: 35px; }
+        .exam-title { font-family: 'Amiri', serif; font-size: 30px; font-weight: 900; color: #1a1a2e; margin-bottom: 8px; }
+        .exam-meta { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #555; flex-wrap: wrap; gap: 5px; }
+        .student-info { display: flex; justify-content: space-between; font-size: 17px; font-weight: 700; margin-top: 15px; }
+        .field-line { border-bottom: 1px solid #333; display: inline-block; min-width: 180px; }
+        .q-wrap { display: flex; gap: 14px; margin-bottom: 28px; page-break-inside: avoid; align-items: flex-start; }
+        .q-num { background: #1a1a2e; color: #fff; min-width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; flex-shrink: 0; margin-top: 4px; }
+        .q-body { flex: 1; }
+        .q-text { font-size: 19px; font-weight: 700; line-height: 1.7; margin-bottom: 12px; }
+        .diagram-box { display: flex; justify-content: center; margin: 12px 0; }
+        .diagram-box svg { max-width: 260px; height: auto; border: 1px dashed #aaa; padding: 8px; border-radius: 8px; }
+        .diagram-box text { font-family: 'Cairo', sans-serif; font-weight: bold; }
+        .mcq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 25px; margin-top: 8px; }
+        .opt-row { display: flex; align-items: center; gap: 10px; font-size: 17px; }
+        .opt-char { font-weight: 900; color: #1a1a2e; min-width: 24px; }
+        .essay-line { border-bottom: 1px dashed #ccc; height: 38px; margin-top: 8px; }
+        .footer { text-align: center; margin-top: 50px; font-size: 12px; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="exam-header">
+        <div class="exam-title">${examData.title || 'امتحان'}</div>
+        <div class="exam-meta">
+            ${examData.subject ? `<span>${examData.subject}</span>` : ''}
+            ${examData.grade ? `<span>${examData.grade}</span>` : ''}
+            ${examData.duration ? `<span>${examData.duration}</span>` : ''}
+            ${examData.totalMarks ? `<span>الدرجة الكاملة: ${examData.totalMarks}</span>` : ''}
         </div>
-
-        ${examData.questions.map((q, i) => `
-            <div class="question-container">
-                <div class="q-num-box">${toArabicNum(i + 1)}</div>
-                <div class="q-body">
-                    <div class="q-text">${q.q}</div>
-                    
-                    ${q.diagram ? `<div class="diagram-box">${q.diagram}</div>` : ''}
-
-                    ${q.type === 'mcq' ? `
-                        <div class="mcq-grid">
-                            ${q.options.map((opt, idx) => `
-                                <div class="option-row">
-                                    <span class="opt-char">${getOptionLabel(idx)}</span>
-                                    <span>${opt}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : `
-                        <div style="border-bottom: 1px dashed #ccc; height: 40px; margin-top:10px;"></div>
-                        <div style="border-bottom: 1px dashed #ccc; height: 40px;"></div>
-                    `}
-                </div>
-            </div>
-        `).join('')}
-
-        <div class="footer">
-            Generated by Spot AI ✨<br>Enjoy 🤓
+        <div class="student-info">
+            <span>اسم الطالب: <span class="field-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></span>
+            <span>الدرجة: <span class="field-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></span>
         </div>
-    </body>
-    </html>`;
+    </div>
+    ${questionsHtml}
+    <div class="footer">
+        <div style="font-size: 18px; color: #1a1a2e; font-weight: 900; margin-bottom: 10px; font-family: 'Amiri', serif;">
+            مع أطيب التمنيات بالتوفيق والنجاح
+        </div>
+        <div style="font-size: 16px; color: #333; font-weight: 700;">
+            ${window.lastTeacherName || document.getElementById('teacherNameInput')?.value ? `مستر/ ${window.lastTeacherName || document.getElementById('teacherNameInput').value}` : 'مع تحيات مستر Spot AI'}
+        </div>
+        <div style="margin-top: 20px; font-size: 10px; color: #aaa;">Generated by Spot AI ✨ | Enjoy 🤓</div>
+    </div>
+</body>
+</html>`;
 
-    printWindow.document.write(htmlContent);
+    printWindow.document.write(html);
     printWindow.document.close();
 };
+
 
 // 🖨️ دالة طباعة المذكرات (نسخة الرياضيات الاحترافية)
 window.printStudyNote = function (content) {

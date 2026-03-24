@@ -1112,16 +1112,15 @@ exports.whatsappWebhook = onRequest(async (req, res) => {
  */
 exports.chatWithSpot = onCall({
   cors: true,
-  timeoutSeconds: 300, // ⏳ وقت كافي للتفكير
-  memory: "1GiB"
+  timeoutSeconds: 300,
+  memory: "1GiB",
 }, async (request) => {
   try {
-
-    // 1. استلام البيانات
     const { message, teacherId, role, image } = request.data;
     let modelInstance;
     let result;
     let promptParts = [];
+
     const safetySettings = [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
       { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
@@ -1129,148 +1128,183 @@ exports.chatWithSpot = onCall({
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
     ];
 
+    // ── 1. Load teacher's knowledge base (uploaded files) ──────────────────
+    if (teacherId) {
+      const teacherDoc = await db.collection("teachers").doc(teacherId).get();
+      if (teacherDoc.exists && teacherDoc.data().knowledgeBase) {
+        promptParts = teacherDoc.data().knowledgeBase.map((item) => ({
+          fileData: { mimeType: item.mimeType || "application/pdf", fileUri: item.uri || item },
+        }));
+      }
+    }
+
+    // ── 2. Attach image if provided (for grading) ──────────────────────────
+    if (image) {
+      promptParts.push({ inlineData: { mimeType: "image/jpeg", data: image } });
+    }
+
+    // ── 3. Detect intent: exam OR note OR chat ─────────────────────────────
+    const msgLower = (message || "").toLowerCase();
+    const isExamRequest =
+      msgLower.includes("امتحان") || msgLower.includes("اختبار") ||
+      msgLower.includes("أسئلة") || msgLower.includes("quiz") || msgLower.includes("exam");
+    const isNoteRequest =
+      msgLower.includes("مذكرة") || msgLower.includes("ملخص") ||
+      msgLower.includes("شرح") || msgLower.includes("note") || msgLower.includes("summary");
+
+    // ── 4. Build the system instruction based on intent ────────────────────
+    let systemInstruction = "";
+
+    if (role === "teacher" && isExamRequest) {
+      systemInstruction = `
+أنت "Spot"، الخبير التعليمي الأذكى في العالم لإنشاء الامتحانات الاحترافية.
+
+🎯 مهاراتك الفائقة:
+1. الفهرسة الدقيقة: اقرأ الملفات المرفقة جيداً. ابحث عن (أرقام الصفحات، عناوين الوحدات، عناوين الدروس).
+2. الالتزام بالنطاق: إذا طلب المدرس (وحدة معينة، أو صفحات محددة)، التزم بها 100% ولا تخرج عنها.
+3. الذكاء البيداغوجي (مستويات الصعوبة):
+   - سهل (Easy): أسئلة تذكر مباشرة وتطبيق بسيط.
+   - متوسط (Medium): أسئلة فهم وتحليل وخطوات حل مركبة.
+   - صعب / للمتفوقين (Hard): أسئلة ربط، تفكير ناقد، وأفكار خارج الصندوق (Out of the box) تتحدى أذكى الطلاب.
+
+🌍 لغة المادة والرياضيات:
+- إذا كان الامتحان باللغة العربية:
+  * استخدم الأرقام العربية المشرقية (١، ٢، ٣، ٤، ٥، ٦، ٧، ٨، ٩، ٠).
+  * استخدم الرموز الرياضية العربية (س، ص، ع، أ، ب، ج) في المعادلات والرسوم.
+- إذا كان الامتحان باللغة الإنجليزية:
+  * استخدم الأرقام الغربية (1, 2, 3...).
+  * استخدم الرموز اللاتينية (x, y, z, a, b, c).
+
+📋 قواعد صارمة للرد (JSON ONLY):
+1. الرد يكون JSON فقط بدون أي نص قبله أو بعده.
+2. الهيكل المطلوب:
+{
+  "isExam": true,
+  "title": "عنوان الامتحان",
+  "subject": "المادة",
+  "grade": "الصف",
+  "difficulty": "سهل/متوسط/صعب",
+  "totalMarks": 30,
+  "duration": "45 دقيقة",
+  "questions": [
+    {
+      "q": "نص السؤال أو الجملة المطلوب تقييمها",
+      "diagram": "SVG code or empty",
+      "type": "mcq | tf | essay",
+      "marks": 2,
+      "options": ["أ", "ب", "ج", "د"], // فقط لو النوع mcq
+      "answer": "أ أو صح أو خطأ"
+    }
+  ]
+}
+
+3. تنويع الأسئلة واستيفاء المحتوى:
+   - في أسئلة (ضع علامة صح أو خطأ): يجب أن يحتوي الحقل "q" على العبارة الفعلية المطلوب تقييمها (مثلاً: "يدور القمر حول الأرض"). ممنوع كتابة التعليمات فقط في "q".
+   - النوع "mcq": اختيارات.
+   - النوع "tf": صح وغلط.
+   - النوع "essay": مقالي/مسائل.
+   - ممنوع تكرار نفس السؤال أو نفس التعليمات في حقل "q" لأكثر من سؤال.
+
+4. قواعد المعادلات (LaTeX):
+   - استخدام $...$ للمعدلات المضمنة و $$...$$ للمستقلة.
+   - استخدام double backslash دائماً: $\\sqrt{x}$ ، $\\frac{a}{b}$ ، $x^{2}$.
+
+5. قواعد الرسم الهندسية (SVG):
+   - استعمل Single Quotes في كود الـ SVG دائماً.
+   - اجعل الرسم واضحاً مع بيانات (labels) واضحة للأطوال والزوايا.
+   - "diagram": "" إذا لم يكن مطلوباً.
+
+اجعل المدرس ينبهر بدقة المحتوى وتنوع الأسئلة. ابدأ الآن!`;
+    } else if (role === "teacher" && isNoteRequest) {
+      systemInstruction = `
+أنت "Spot"، خبير تعليمي متخصص في إنشاء المذكرات والملخصات الاحترافية.
+
+🎯 مهمتك: إنشاء مذكرة شاملة ومنظمة من المحتوى المرفق.
+
+📋 قواعد التنسيق:
+1. ابدأ بعنوان رئيسي: # عنوان المذكرة
+2. استخدم ## للعناوين الرئيسية و ### للعناوين الفرعية
+3. استخدم نقاط bullet للشرح: - نقطة
+4. اكتب المعادلات بـ LaTeX بين علامتي دولار: $المعادلة$
+5. قبل كل قانون اكتب "**📌 قانون:**" ثم القانون بـ LaTeX
+6. قبل كل مثال اكتب "**💡 مثال:**"
+7. قبل كل ملاحظة اكتب "**⚠️ ملاحظة:**"
+8. لا ترسل أي روابط أو URLs في ردك.
+9. الرد بالعربية فقط ما لم تكن رموز علمية.
+      `;
+    } else if (role === "teacher") {
+      systemInstruction = `
+أنت "Spot"، مساعد ذكي للمعلمين. تحدث بأسلوب ودي واحترافي.
+- أجب على أسئلة المعلم من الملفات المرفقة إذا وُجدت.
+- اكتب المعادلات بـ LaTeX بين علامتي دولار: $المعادلة$
+- لا تُرسل روابط أو URLs في ردك.
+      `;
+    } else {
+      systemInstruction = `أنت معلم خصوصي ذكي. ساعد الطالب من الملفات المرفقة إذا وُجدت. اشرح بأسلوب بسيط ومشوق.`;
+    }
+
+    promptParts.push({ text: systemInstruction });
+    if (message) promptParts.push({ text: `طلب المدرس: ${message}` });
+
+    // ── 5. Call Gemini ─────────────────────────────────────────────────────
     try {
-      // 2. إعدادات الأمان (عشان الامتحانات تعدي)
-
-      // 3. جلب "ذاكرة" المدرس (الملفات المرفقة)
-      if (teacherId) {
-        const teacherDoc = await db.collection("teachers").doc(teacherId).get();
-        if (teacherDoc.exists && teacherDoc.data().knowledgeBase) {
-          const knowledgeItems = teacherDoc.data().knowledgeBase;
-          promptParts = knowledgeItems.map(item => ({
-            fileData: { mimeType: item.mimeType || "application/pdf", fileUri: item.uri || item }
-          }));
-        }
-      }
-
-      // 4. لو فيه صورة (للتصحيح)
-      if (image) {
-        promptParts.push({ inlineData: { mimeType: "image/jpeg", data: image } });
-      }
-
-      // 5. 🔥 "التعويذة" (System Instruction)
-      // دي أهم حتة.. بنقوله لو طلب امتحان، رد بـ JSON بس
-      let systemInstructionText = "";
-
-      if (role === "teacher") {
-        systemInstructionText = `
-            أنت "Spot"، مساعد ذكي للمعلمين.
-            
-            🛑 تعليمات الامتحانات (STRICT JSON & LATEX & SVG MODE):
-            
-            1. **الرد يجب أن يكون Raw JSON فقط**. لا تضف أي مقدمات أو خاتمات.
-
-            2. ⚠️ **هام جداً: (تنسيق الرياضيات و LaTeX):**
-               - يجب كتابة **جميع** المعادلات والأرقام والرموز الرياضية بصيغة **LaTeX** محاطة بعلامات الدولار ($).
-               - **قاعدة الهروب (Escaping Rule):** عند كتابة أوامر LaTeX التي تبدأ بـ Backslash (مثل sqrt, frac, circ)، **يجب** استخدام **Double Backslash** (\\\\).
-               - أمثلة صحيحة: "$\\\\sqrt{25}$", "$90^\\\\circ$", "$\\\\frac{1}{2}$".
-
-            3. 🎨 **الرسم الهندسي (Geometry & Diagrams):**
-               - إذا كان السؤال هندسياً ويحتاج رسم توضيحي (مثل: مثلث، دائرة، شبه منحرف)، أضف حقلاً جديداً اسمه "diagram".
-               - القيمة يجب أن تكون كود **SVG** بسيط وصغير.
-               - ⚠️ **هام:** استخدم **Single Quotes (')** حصراً داخل سمات الـ SVG لتجنب كسر الـ JSON (مثال: <svg viewBox='0 0 100 100'>).
-               - استخدم خطوط سوداء وخلفية شفافة (stroke='black' fill='none' stroke-width='2').
-
-            4. **الصيغة المطلوبة (JSON Structure):**
-               {
-                 "isExam": true,
-                 "title": "عنوان الامتحان",
-                 "questions": [
-                   { 
-                     "q": "في الشكل المقابل، أوجد طول الضلع $AC$.", 
-                     "diagram": "<svg viewBox='0 0 200 150'><polygon points='50,130 150,130 150,50' stroke='black' fill='none' stroke-width='2'/><text x='155' y='45' font-size='12'>A</text></svg>",
-                     "type": "mcq", 
-                     "options": ["$5$", "$7$", "$10$", "$12$"], 
-                     "answer": "$5$" 
-                   },
-                   {
-                     "q": "أوجد ناتج $\\\\sqrt{64} + 3^2$",
-                     "type": "mcq",
-                     "options": ["$17$", "$11$"],
-                     "answer": "$17$"
-                   }
-                 ]
-               }
-
-            5. **للدردشة العادية (شرح درس، تلخيص، قوانين):**
-               - الهدف: إنشاء "مذكرة شرح" منسقة رياضياً.
-               - استخدم التنسيق التالي:
-                 * العناوين الرئيسية ابدأها بـ "## ".
-                 * الأمثلة اكتب قبلها "مثال:".
-                 * الملاحظات الهامة اكتب قبلها "ملاحظة هامة:".
-                 * اكتب المعادلات بصيغة LaTeX بين علامات الدولار ($).
-            `;
-      } else {
-        systemInstructionText = `أنت معلم خصوصي. اشرح للطالب من الملفات المرفقة فقط.`;
-      }
-
-      promptParts.push({ text: systemInstructionText });
-      if (message) promptParts.push({ text: `السؤال: ${message}` });
-
-      // 6. الإرسال للموديل السريع (1.5 Flash)
       modelInstance = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       result = await modelInstance.generateContent({
         contents: [{ role: "user", parts: promptParts }],
-        safetySettings: safetySettings,
+        safetySettings,
       });
     } catch (e) {
-      // 🚨 معالجة خطأ الصلاحيات (403) - غالباً بسبب تغيير الـ Key
-      if (e.message.includes("403") || e.message.includes("permission") || e.message.includes("not exist")) {
-        console.warn("⚠️ File API Error (Old URIs). Retrying without files...");
-        // فلترة الأجزاء النصية فقط
-        const textParts = promptParts.filter(p => p.text);
+      if (e.message && (e.message.includes("403") || e.message.includes("permission") || e.message.includes("not exist"))) {
+        console.warn("⚠️ File API Error (stale URIs). Retrying text-only...");
+        const textOnly = promptParts.filter((p) => p.text);
         result = await modelInstance.generateContent({
-          contents: [{ role: "user", parts: textParts }],
-          safetySettings: safetySettings,
+          contents: [{ role: "user", parts: textOnly }],
+          safetySettings,
         });
       } else {
         throw e;
       }
     }
 
-    let aiResponse = result.response.text();
-
-    // 7. هل الطلب يخص إنشاء PDF؟ (امتحان أو مذكرة)
-    if (aiResponse.includes("\"isExam\": true") || aiResponse.includes("## ")) {
+    // ── 6. Detect teacher name ─────────────────────────────────────────────
+    let teacherName = "";
+    if (teacherId) {
       try {
-        // محاولة استخراج الـ JSON بشكل آمن حتى لو الموديل أضاف Markdown
-        let contentToProcess = aiResponse;
-        if (aiResponse.includes("```json")) {
-          contentToProcess = aiResponse.split("```json")[1].split("```")[0].trim();
-        } else if (aiResponse.includes("```")) {
-          contentToProcess = aiResponse.split("```")[1].split("```")[0].trim();
+        const tDoc = await getFirestore().collection("teachers").doc(teacherId).get();
+        if (tDoc.exists) {
+          const tData = tDoc.data();
+          teacherName = tData.name || tData.fullName || "";
         }
-
-        const pdfUrl = await generateAndUploadPDF(contentToProcess, teacherId);
-        if (pdfUrl) {
-          const isExam = aiResponse.includes("\"isExam\": true");
-          const actionText = isExam ? "جاهزة للطباعة والتوزيع" : "مذكرة جاهزة للحفظ والتحميل";
-          aiResponse += `\n\n📄 تم توليد نسخة PDF ${actionText}:\n${pdfUrl}`;
-
-          // إذا كان الرد عبارة عن JSON فقط (امتحان)، يفضل تنظيف النص المعروض ليكون أجمل
-          if (aiResponse.trim().startsWith("{") || aiResponse.trim().startsWith("```json")) {
-            try {
-              const exam = JSON.parse(contentToProcess);
-              aiResponse = `✅ تم إنشاء امتحان بعنوان: *${exam.title}*\nعدد الأسئلة: ${exam.questions?.length}\n\n📄 رابط تحميل الـ PDF للطباعة:\n${pdfUrl}`;
-            } catch (e) { /* استمر بالرد الأصلي لو فشل التجميل */ }
-          }
-        }
-      } catch (pdfErr) {
-        console.error("PDF Generation Error:", pdfErr);
-      }
+      } catch (e) { console.error("Error fetching teacher name:", e); }
     }
 
-    return { response: aiResponse };
+    // ── 7. Return raw response ──────────────────────────────────────────────
+    const aiResponse = result.response.text();
+
+    // Detect response type
+    let responseType = "chat";
+    if (aiResponse.includes('"isExam": true') || aiResponse.includes('"isExam":true')) {
+      responseType = "exam";
+    } else if (aiResponse.includes("## ") || aiResponse.includes("# ")) {
+      responseType = "note";
+    }
+
+    return { response: aiResponse, type: responseType, teacherName: teacherName };
 
   } catch (error) {
     console.error("Chat Error:", error);
-    return { response: "معلش، حصل خطأ بسيط في السيرفر. جرب تاني!" };
+    return { response: "معلش، حصل خطأ بسيط في السيرفر. جرب تاني!", type: "chat" };
   }
 });
 
+
 /**
- * دالة مساعدة لتوليد PDF ورفعه لـ Storage
+ * دالة مساعدة لتوليد PDF ورفعه لـ Storage (محتفظ بها كنسخة احتياطية)
  */
+
+
+
+
 async function generateAndUploadPDF(content, teacherId) {
   // 0. جلب بيانات المدرس للاسم
   let teacherName = "Spot AI Assistant";
