@@ -224,15 +224,16 @@ let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupS
 
 const translations = {
     ar: {
-        pageTitle: "Spot - المعلم الذكي",
-        teacherLoginTitle: "تسجيل دخول المعلم",
-        teacherLoginPrompt: "أدخل رقمك للبدء",
+        pageTitle: "الناظر - لوحة تحكم المعلم",
+        welcomeTeacherGreeting: "أهلاً بك، أ/ ",
+        teacherLoginTitle: "بوابة الناظر التعليمية",
+        teacherLoginPrompt: "سجل دخولك الآن للبدء في إدارة صفوفك الذكية",
         loginButton: "دخول",
         loginVerifying: "جاري التحقق...",
         passwordLabel: "كلمة المرور",
         phonePlaceholder: "01xxxxxxxxx",
         passwordPlaceholder: "كلمة المرور",
-        welcomeTitle: "لوحة تحكم المعلم الذكي",
+        welcomeTitle: "لوحة تحكم المعلم",
         currentGroupLabel: "المجموعة الحالية",
         selectGroupPlaceholder: "اختر مجموعة...",
         addGroupTitle: "مجموعة جديدة",
@@ -341,7 +342,7 @@ const translations = {
         copyFailed: "فشل النسخ ❌",
         landingNewVersion: "🚀 الإصدار الجديد متاح الآن",
         landingHeroTitle: "إدارتك كلها في <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>مكان واحد.</span>",
-        landingHeroSubtitle: "تطبيق <strong>Spot</strong> هو مساعدك الشخصي الذكي. رصد غياب بالـ QR، متابعة درجات، تحصيل مصروفات، وتواصل فوري مع أولياء الأمور.. كل ده وأنت بتشرب قهوتك ☕",
+        landingHeroSubtitle: "تطبيق <strong>الناظر</strong> هو مساعدك الشخصي الذكي. رصد غياب بالـ QR، متابعة درجات، تحصيل مصروفات، وتواصل فوري مع أولياء الأمور.. كل ده وأنت بتشرب قهوتك ☕",
         featureSmartAttendance: "غياب ذكي",
         featureSmartAttendanceSub: "سكانر سريع جداً",
         featureInstantConnect: "تواصل فوري",
@@ -350,7 +351,7 @@ const translations = {
         featureFinanceSub: "متابعة دقيقة",
         featureReports: "تقارير",
         featureReportsSub: "إحصائيات شاملة",
-        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
+        footerText: "© 2026 نظام الناظر. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
         goldenSettingsBtn: "إعدادات التذكرة الذهبية",
         goldenSettingsTitle: "إعدادات التذكرة الذهبية",
         goldenEnable: "تفعيل النظام",
@@ -390,15 +391,16 @@ const translations = {
         deleteGroupSuccess: "تم حذف المجموعة بنجاح"
     },
     en: {
-        pageTitle: "Spot - Smart Teacher",
-        teacherLoginTitle: "Teacher Login",
-        teacherLoginPrompt: "Enter phone to start",
+        pageTitle: "Al-Nazer - Teacher Dashboard",
+        welcomeTeacherGreeting: "Welcome, Mr. ",
+        teacherLoginTitle: "Al-Nazer Portal",
+        teacherLoginPrompt: "Login to start managing your smart classes",
         loginButton: "Login",
         loginVerifying: "Verifying...",
         passwordLabel: "Password",
         phonePlaceholder: "01xxxxxxxxx",
         passwordPlaceholder: "Password",
-        welcomeTitle: "Smart Teacher Dashboard",
+        welcomeTitle: "Teacher Dashboard",
         currentGroupLabel: "Current Group",
         selectGroupPlaceholder: "Select Group...",
         addGroupTitle: "New Group",
@@ -509,7 +511,7 @@ const translations = {
         copyFailed: "Copy failed ❌",
         landingNewVersion: "🚀 New Version Available",
         landingHeroTitle: "Manage Everything in <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>One Place.</span>",
-        landingHeroSubtitle: "<strong>Spot</strong> is your smart personal assistant. QR Attendance, Grade Tracking, Fee Collection, and Instant Parent Communication.. all while you sip your coffee ☕",
+        landingHeroSubtitle: "<strong>Al-Nazer</strong> is your smart personal assistant. QR Attendance, Grade Tracking, Fee Collection, and Instant Parent Communication.. all while you sip your coffee ☕",
         featureSmartAttendance: "Smart Attendance",
         featureSmartAttendanceSub: "Super Fast Scanner",
         featureInstantConnect: "Instant Connect",
@@ -518,7 +520,7 @@ const translations = {
         featureFinanceSub: "Accurate Tracking",
         featureReports: "Reports",
         featureReportsSub: "Full Analytics",
-        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
+        footerText: "© 2026 Al-Nazer System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
         goldenSettingsBtn: "Golden Ticket Settings",
         goldenSettingsTitle: "Golden Ticket Settings",
         goldenEnable: "Enable System",
@@ -533,7 +535,7 @@ const translations = {
         // ... (Old Translations) ...
 
         // 👇👇 Spot AI Additions 👇👇
-        tabBot: "Spot AI",
+        tabBot: "Al-Nazer AI",
         botFeedTitle: "Feed the Bot (Materials)",
         botFeedHint: "Upload PDFs, Images, or Audio here. The bot will study them instantly to answer student questions.",
         botDropArea: "Click to upload or drag file here",
@@ -549,7 +551,7 @@ const translations = {
         loginFirst: "Login required first",
 
         // Invite Card
-        botInviteTitle: "Spot AI Link",
+        botInviteTitle: "Al-Nazer AI Link",
         botInviteDesc: "Share this link and code with your students to start studying.",
         teacherCodeLabel: "Teacher Code",
         copyInviteBtn: "Copy Invite Message",
@@ -1074,6 +1076,7 @@ async function processSyncQueue() {
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     videoElement = document.getElementById('scannerVideo');
+    applyLanguage();
     await openDB();
     setupListeners();
     await loadPreferences();
@@ -1112,20 +1115,29 @@ function setupListeners() {
     document.getElementById('saveProfileButton').addEventListener('click', saveProfile);
     document.getElementById('createNewGroupBtn').addEventListener('click', createGroup);
 
-    document.getElementById('groupSelect').addEventListener('change', async (e) => {
-        SELECTED_GROUP_ID = e.target.value;
+    const handleGroupSelectionChange = async (groupId) => {
+        SELECTED_GROUP_ID = groupId;
+        
+        // Sync the main dropdown element
+        const sel = document.getElementById('groupSelect');
+        if (sel) sel.value = SELECTED_GROUP_ID || "";
 
         // محاولة استرجاع المبلغ المحفوظ لهذه المجموعة
         const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
         const amountInput = document.getElementById('defaultAmountInput');
 
         if (amountInput) {
-            // لو لقينا مبلغ محفوظ نكتبه، لو ملقيناش نسيبها فاضية
             amountInput.value = savedAmount || '';
         }
 
         switchTab('overview');
         await loadGroupData();
+    };
+    
+    window.handleGroupSelectionChange = handleGroupSelectionChange;
+
+    document.getElementById('groupSelect').addEventListener('change', (e) => {
+        handleGroupSelectionChange(e.target.value);
     });
 
     const amountInput = document.getElementById('defaultAmountInput');
@@ -1488,7 +1500,7 @@ async function loginTeacher() {
         document.getElementById('logoutButton').classList.remove('hidden');
 
         if (data) {
-            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${data.name || ''}`;
+            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${data.name || ''}`;
             document.getElementById('teacherNameInput').value = data.name || '';
             document.getElementById('teacherSubjectInput').value = data.subject || '';
             document.getElementById('profilePasswordInput').value = data.password || '';
@@ -1529,8 +1541,10 @@ async function loadGroups() {
 
 function renderGroupsDropdown(groupsList) {
     const sel = document.getElementById('groupSelect');
-    const currentVal = sel.value;
-    sel.innerHTML = `<option value="" disabled ${!currentVal ? 'selected' : ''}>${translations[currentLang].selectGroupPlaceholder}</option>`;
+    const currentVal = SELECTED_GROUP_ID || sel.value;
+    
+    const placeholderText = translations[currentLang].selectGroupPlaceholder;
+    sel.innerHTML = `<option value="" disabled ${!currentVal ? 'selected' : ''}>${placeholderText}</option>`;
 
     groupsList.forEach(g => {
         const opt = document.createElement('option');
@@ -1539,6 +1553,27 @@ function renderGroupsDropdown(groupsList) {
         if (currentVal === g.id) opt.selected = true;
         sel.appendChild(opt);
     });
+
+    // Populate Group Quick-Cards Grid
+    const cardsContainer = document.getElementById('promptGroupCardsGrid');
+    if (cardsContainer) {
+        if (groupsList.length === 0) {
+            cardsContainer.className = "flex flex-col items-center justify-center py-8 border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-3xl w-full col-span-full gap-2 bg-gray-50/50 dark:bg-black/10";
+            cardsContainer.innerHTML = `
+                <i class="ri-folder-open-line text-4xl text-gray-400 dark:text-zinc-600"></i>
+                <p class="text-xs font-bold text-gray-400 dark:text-zinc-500">لا توجد مجموعات مضافة حالياً</p>
+            `;
+        } else {
+            cardsContainer.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4";
+            cardsContainer.innerHTML = groupsList.map((g, idx) => `
+                <div onclick="window.handleGroupSelectionChange('${g.id}')" 
+                     class="group relative p-6 bg-white dark:bg-black/30 hover:bg-brand/5 dark:hover:bg-brand/5 border border-gray-200/50 dark:border-zinc-800 rounded-2xl text-right cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-brand/5 active:scale-95 border-b-4 border-b-gray-200 dark:border-b-zinc-800 hover:border-b-brand dark:hover:border-b-brand">
+                    <h4 class="font-black text-gray-800 dark:text-white text-base group-hover:text-brand transition-colors">${g.name}</h4>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-2 font-bold">اضغط لفتح المجموعة ←</p>
+                </div>
+            `).join('');
+        }
+    }
 }
 
 async function createGroup() {
@@ -1770,7 +1805,7 @@ async function renderOverview() {
                 const studentScores = Object.entries(scores).map(([sid, val]) => {
                     const student = allStudents.find(s => s.id === sid);
                     const markValue = (val && typeof val === 'object') ? (val.score || 0) : val;
-                    return { name: student ? student.name : 'طالب محذوف', mark: parseInt(markValue) || 0 };
+                    return { name: student ? student.name : (allStudents.length === 0 ? 'جاري التحميل...' : 'طالب محذوف'), mark: parseInt(markValue) || 0 };
                 });
 
                 if (studentScores.length > 0) {
@@ -2000,8 +2035,21 @@ function refreshCurrentTab() {
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-    document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-    document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
+    
+    let targetTab = tabId;
+    if (!SELECTED_GROUP_ID && tabId !== 'profile') {
+        targetTab = 'no-group';
+    }
+    
+    const targetEl = document.getElementById(`tab-${targetTab}`);
+    if (targetEl) targetEl.classList.remove('hidden');
+    
+    const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
+    if (btn) btn.classList.add('active');
+
+    if (!SELECTED_GROUP_ID && tabId !== 'profile') {
+        return; // Don't fetch data if no group is selected
+    }
 
     if (tabId === 'overview') renderOverview();
 
@@ -2980,15 +3028,15 @@ async function shareCardAction() {
                 try {
                     await navigator.share({
                         files: [file],
-                        title: 'Spot Student ID',
-                        text: 'بطاقة الطالب الرقمية - Spot System'
+                        title: 'الناظر - بطاقة الطالب',
+                        text: 'بطاقة الطالب الرقمية - منصة الناظر التعليمية'
                     });
                 } catch (err) {
                     if (err.name !== 'AbortError') console.error(err);
                 }
             } else {
                 const link = document.createElement('a');
-                link.download = `Spot_ID_${Date.now()}.png`;
+                link.download = `Nazer_ID_${Date.now()}.png`;
                 link.href = canvas.toDataURL();
                 link.click();
                 showToast("تم تحميل الصورة بنجاح");
@@ -3322,7 +3370,7 @@ function saveProfile() {
     if (!name) return;
     putToDB('teachers', { id: TEACHER_ID, name, subject, password });
     addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}`, data: { name, subject, password } });
-    document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${name}`;
+    document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${name}`;
     showToast(translations[currentLang].saved);
 }
 
@@ -3356,7 +3404,7 @@ async function loadPreferences() {
         try {
             const teacherData = await getFromDB('teachers', TEACHER_ID);
             if (teacherData) {
-                document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${teacherData.name || ''}`;
+                document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''}`;
                 document.getElementById('teacherNameInput').value = teacherData.name || '';
                 document.getElementById('teacherSubjectInput').value = teacherData.subject || '';
                 document.getElementById('profilePasswordInput').value = teacherData.password || '';
@@ -3381,15 +3429,14 @@ async function loadPreferences() {
         }
     }
 }
-function toggleLang() {
-    currentLang = currentLang === 'ar' ? 'en' : 'ar';
+function applyLanguage() {
     document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-    document.getElementById('languageToggleButton').innerText = currentLang === 'ar' ? 'EN' : 'ع';
+    const langBtn = document.getElementById('languageToggleButton');
+    if (langBtn) langBtn.innerText = currentLang === 'ar' ? 'EN' : 'ع';
 
     document.querySelectorAll('[data-key]').forEach(el => {
         const key = el.dataset.key;
         if (translations[currentLang][key]) {
-            // ✅ التعديل الضروري هنا: استخدمنا innerHTML بدل innerText
             el.innerHTML = translations[currentLang][key];
         }
     });
@@ -3398,6 +3445,11 @@ function toggleLang() {
         const key = el.dataset.keyPlaceholder;
         if (translations[currentLang][key]) el.placeholder = translations[currentLang][key];
     });
+}
+
+function toggleLang() {
+    currentLang = currentLang === 'ar' ? 'en' : 'ar';
+    applyLanguage();
 
     if (SELECTED_GROUP_ID && !document.getElementById('tab-daily').classList.contains('hidden')) renderDailyList();
     if (SELECTED_GROUP_ID && !document.getElementById('tab-students').classList.contains('hidden')) renderStudents();
@@ -3777,7 +3829,7 @@ function copyBotInvite() {
     const inviteMsg = `
 👋 أهلاً يا شباب!
 
-أنا فعلت ليكم "المساعد الذكي" (Spot AI) عشان يساعدكم في المذاكرة ويجاوب على أسئلتكم من الملازم بتاعتي طول الـ 24 ساعة! 🤖📚
+أنا فعلت ليكم "المساعد الذكي" (الناظر AI) عشان يساعدكم في المذاكرة ويجاوب على أسئلتكم من الملازم بتاعتي طول الـ 24 ساعة! 🤖📚
 
 1️⃣ ادخلوا كلموا البوت هنا:
 https://wa.me/${botNumber.replace('+', '')}?text=join%20off-drive
@@ -4197,9 +4249,9 @@ window.printExam = function (examData) {
             مع أطيب التمنيات بالتوفيق والنجاح
         </div>
         <div style="font-size: 16px; color: #333; font-weight: 700;">
-            ${window.lastTeacherName || document.getElementById('teacherNameInput')?.value ? `مستر/ ${window.lastTeacherName || document.getElementById('teacherNameInput').value}` : 'مع تحيات مستر Spot AI'}
+            ${window.lastTeacherName || document.getElementById('teacherNameInput')?.value ? `مستر/ ${window.lastTeacherName || document.getElementById('teacherNameInput').value}` : 'مع تحيات منصة الناظر التعليمية'}
         </div>
-        <div style="margin-top: 20px; font-size: 10px; color: #aaa;">Generated by Spot AI ✨ | Enjoy 🤓</div>
+        <div style="margin-top: 20px; font-size: 10px; color: #aaa;">نظام الناظر لإدارة التعليم الذكي ✨</div>
     </div>
 </body>
 </html>`;
@@ -4232,7 +4284,7 @@ window.printStudyNote = function (content) {
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
     <head>
-        <title>ملخص درس - Spot AI</title>
+        <title>ملخص درس - الناظر AI</title>
         <meta charset="UTF-8">
         
         <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
@@ -4350,7 +4402,7 @@ window.printStudyNote = function (content) {
     <body>
         <div class="header">
             <div class="logo-text">مذكرة تعليمية ذكية 📚</div>
-            <div class="sub-header">ملخص الدرس بواسطة المساعد الذكي Spot AI</div>
+            <div class="sub-header">ملخص الدرس بواسطة مساعد الناظر الذكي AI</div>
         </div>
 
         <div class="content">
@@ -4360,8 +4412,7 @@ window.printStudyNote = function (content) {
         <div style="height: 100px;"></div>
 
         <div class="footer">
-            Generated by Spot AI ✨<br>
-            Enjoy 🤓
+            نظام الناظر لإدارة التعليم الذكي ✨
         </div>
     </body>
     </html>`;
@@ -4943,5 +4994,17 @@ async function emergencyRestore(mode = 'upload') {
             btn.disabled = false;
             btn.innerHTML = '<i class="ri-error-warning-fill"></i> زرار طوارئ: استعادة البيانات من الجهاز للسيرفر';
         }
+    }
+}
+
+function togglePasswordVisibility() {
+    const input = document.getElementById('teacherPasswordInput');
+    const icon = document.getElementById('passwordToggleIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'ri-eye-off-line text-xl';
+    } else {
+        input.type = 'password';
+        icon.className = 'ri-eye-line text-xl';
     }
 }

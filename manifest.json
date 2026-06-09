@@ -1,6 +1,6 @@
 {
-  "name": "Spot - المعلم الذكي",
-  "short_name": "Spot",
+  "name": "الناظر - لوحة تحكم المعلم",
+  "short_name": "الناظر",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#fbbf24",
