@@ -1814,6 +1814,7 @@ async function loadGroupData() {
             const remoteStudents = sSnap.docs.map(d => ({ id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() }));
             allStudents = remoteStudents;
             saveStudentsToLocalDB(remoteStudents);
+            refreshCurrentTab();
 
             // ب. الحضور الأخير (للتخزين المحلي)
             const aSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get();
@@ -1847,6 +1848,7 @@ async function loadGroupData() {
             refreshCurrentTab();
         } catch (e) {
             console.error("Sync error:", e);
+            refreshCurrentTab();
         }
     }
 
@@ -2175,154 +2177,172 @@ function switchTab(tabId) {
 // 8. DAILY & SCANNER
 // ==========================================
 async function renderDailyList() {
-    const date = document.getElementById('dailyDateInput').value;
-    const list = document.getElementById('dailyStudentsList');
-    list.innerHTML = '';
+    try {
+        const date = document.getElementById('dailyDateInput').value || new Date().toISOString().slice(0, 10);
+        const list = document.getElementById('dailyStudentsList');
+        list.innerHTML = '';
 
-    // تحديث عناوين الجدول
-    const hStudent = document.getElementById('headerStudent');
-    const hAtt = document.getElementById('headerAttendance');
-    const hHw = document.getElementById('headerHomework');
+        // تحديث عناوين الجدول
+        const hStudent = document.getElementById('headerStudent');
+        const hAtt = document.getElementById('headerAttendance');
+        const hHw = document.getElementById('headerHomework');
 
-    document.getElementById('headerStudent').innerText = translations[currentLang].tableHeaderStudent;
-    document.getElementById('headerAttendance').innerText = translations[currentLang].tableHeaderAttendance;
-    document.getElementById('headerHomework').innerText = translations[currentLang].tableHeaderHomework;
-
-    if (hasHomeworkToday) {
-        hStudent.className = "col-span-6 transition-all duration-300";
-        hAtt.className = "col-span-3 text-center transition-all duration-300";
-        hHw.classList.remove('hidden');
-    } else {
-        hStudent.className = "col-span-8 transition-all duration-300";
-        hAtt.className = "col-span-4 text-center transition-all duration-300";
-        hHw.classList.add('hidden');
-    }
-
-    if (!date || !allStudents.length) {
-        list.innerHTML = `<p class="text-center text-gray-500 py-4">${translations[currentLang].noStudentsInGroup}</p>`;
-        return;
-    }
-
-    // جلب البيانات المخزنة
-    const attId = `${SELECTED_GROUP_ID}_${date}`;
-    const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
-    const [attDoc, hwDoc] = await Promise.all([getFromDB('attendance', attId), getFromDB('assignments', hwId)]);
-
-    const attMap = {};
-    if (attDoc?.records) attDoc.records.forEach(r => attMap[r.studentId] = r.status);
-
-    const hwMap = {};
-    if (hwDoc?.scores) {
-        Object.entries(hwDoc.scores).forEach(([sid, val]) => hwMap[sid] = val.submitted);
-        // تفعيل الواجب تلقائياً لو فيه داتا محفوظة
-        if (!hasHomeworkToday) {
-            hasHomeworkToday = true;
-            document.getElementById('homeworkToggle').checked = true;
-            hStudent.className = "col-span-6 transition-all duration-300";
-            hAtt.className = "col-span-3 text-center transition-all duration-300";
-            hHw.classList.remove('hidden');
-        }
-    }
-
-    let presentCount = 0;
-
-    allStudents.forEach(s => {
-        const status = attMap[s.id] || 'absent'; // الافتراضي غائب لو مفيش تسجيل
-        if (status === 'present') presentCount++;
-
-        const hwSubmitted = hwMap[s.id];
-        const isAbsent = status === 'absent';
-
-        const studentColSpan = hasHomeworkToday ? 'col-span-6' : 'col-span-8';
-        const attColSpan = hasHomeworkToday ? 'col-span-3' : 'col-span-4';
-
-        const row = document.createElement('div');
-        row.dataset.sid = s.id;
-
-        // تنسيق الصف حسب الحالة
-        row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 cursor-pointer ${status === 'present'
-            ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
-            : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
-            }`;
-
-        row.onclick = (e) => {
-            if (!e.target.closest('select') && !e.target.closest('input')) {
-                openStudentProfile(s.id);
-            }
-        };
-
-        let html = `
-            <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300"> ${s.name}</div>
-            <div class="${attColSpan} flex justify-center transition-all duration-300">
-                <select class="att-select bg-gray-50 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded text-xs py-1 px-1 outline-none cursor-pointer">
-                    <option value="present" ${status === 'present' ? 'selected' : ''}>${translations[currentLang].present}</option>
-                    <option value="absent" ${status === 'absent' ? 'selected' : ''}>${translations[currentLang].absent}</option>
-                    </select>
-            </div>
-        `;
+        if (hStudent) hStudent.innerText = translations[currentLang].tableHeaderStudent;
+        if (hAtt) hAtt.innerText = translations[currentLang].tableHeaderAttendance;
+        if (hHw) hHw.innerText = translations[currentLang].tableHeaderHomework;
 
         if (hasHomeworkToday) {
-            html += `
-            <div class="col-span-3 flex justify-center fade-in-up">
-                <input type="checkbox" class="hw-check w-5 h-5 accent-brand rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
-                    ${hwSubmitted ? 'checked' : ''} 
-                    ${isAbsent ? 'disabled' : ''}>
-            </div>`;
+            if (hStudent) hStudent.className = "col-span-6 transition-all duration-300";
+            if (hAtt) hAtt.className = "col-span-3 text-center transition-all duration-300";
+            if (hHw) hHw.classList.remove('hidden');
+        } else {
+            if (hStudent) hStudent.className = "col-span-8 transition-all duration-300";
+            if (hAtt) hAtt.className = "col-span-4 text-center transition-all duration-300";
+            if (hHw) hHw.classList.add('hidden');
         }
 
-        row.innerHTML = html;
+        if (!allStudents || !allStudents.length) {
+            list.innerHTML = `<p class="text-center text-gray-500 py-4">${translations[currentLang].noStudentsInGroup}</p>`;
+            return;
+        }
 
-        // --- Logic: تغيير الحالة يقفل/يفتح الواجب ---
-        const attSelect = row.querySelector('.att-select');
-        const hwCheck = row.querySelector('.hw-check');
+        // جلب البيانات المخزنة بشكل آمن ومحمي
+        let attDoc = null;
+        let hwDoc = null;
+        try {
+            const attId = `${SELECTED_GROUP_ID}_${date}`;
+            const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
+            const results = await Promise.all([
+                getFromDB('attendance', attId).catch(err => { console.warn("Failed fetching att:", err); return null; }),
+                getFromDB('assignments', hwId).catch(err => { console.warn("Failed fetching hw:", err); return null; })
+            ]);
+            attDoc = results[0];
+            hwDoc = results[1];
+        } catch (dbErr) {
+            console.error("Database fetch failed in daily list:", dbErr);
+        }
 
-        attSelect.addEventListener('change', (e) => {
-            const val = e.target.value;
+        const attMap = {};
+        if (attDoc?.records) attDoc.records.forEach(r => { if (r) attMap[r.studentId] = r.status; });
 
-            // 1. تغيير ألوان الصف
-            if (val === 'present') {
-                row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-                row.classList.remove('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+        const hwMap = {};
+        if (hwDoc?.scores) {
+            Object.entries(hwDoc.scores).forEach(([sid, val]) => {
+                hwMap[sid] = (val && typeof val === 'object') ? val.submitted : false;
+            });
+            // تفعيل الواجب تلقائياً لو فيه داتا محفوظة
+            if (!hasHomeworkToday) {
+                hasHomeworkToday = true;
+                const hwToggle = document.getElementById('homeworkToggle');
+                if (hwToggle) hwToggle.checked = true;
+                if (hStudent) hStudent.className = "col-span-6 transition-all duration-300";
+                if (hAtt) hAtt.className = "col-span-3 text-center transition-all duration-300";
+                if (hHw) hHw.classList.remove('hidden');
+            }
+        }
 
-                // ✅ لو حضر: نفتح خانة الواجب
-                if (hwCheck) hwCheck.disabled = false;
+        let presentCount = 0;
 
-            } else { // absent
-                row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-                row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+        allStudents.forEach(s => {
+            const status = attMap[s.id] || 'absent'; // الافتراضي غائب لو مفيش تسجيل
+            if (status === 'present') presentCount++;
 
-                // ✅ لو غاب: نقفل خانة الواجب ونشيل علامة الصح (reset)
-                if (hwCheck) {
-                    hwCheck.checked = false;
-                    hwCheck.disabled = true;
+            const hwSubmitted = hwMap[s.id];
+            const isAbsent = status === 'absent';
+
+            const studentColSpan = hasHomeworkToday ? 'col-span-6' : 'col-span-8';
+            const attColSpan = hasHomeworkToday ? 'col-span-3' : 'col-span-4';
+
+            const row = document.createElement('div');
+            row.dataset.sid = s.id;
+
+            // تنسيق الصف حسب الحالة
+            row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 cursor-pointer ${status === 'present'
+                ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
+                : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
+                }`;
+
+            row.onclick = (e) => {
+                if (!e.target.closest('select') && !e.target.closest('input')) {
+                    openStudentProfile(s.id);
                 }
+            };
+
+            let html = `
+                <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300"> ${s.name}</div>
+                <div class="${attColSpan} flex justify-center transition-all duration-300">
+                    <select class="att-select bg-gray-50 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded text-xs py-1 px-1 outline-none cursor-pointer">
+                        <option value="present" ${status === 'present' ? 'selected' : ''}>${translations[currentLang].present}</option>
+                        <option value="absent" ${status === 'absent' ? 'selected' : ''}>${translations[currentLang].absent}</option>
+                        </select>
+                </div>
+            `;
+
+            if (hasHomeworkToday) {
+                html += `
+                <div class="col-span-3 flex justify-center fade-in-up">
+                    <input type="checkbox" class="hw-check w-5 h-5 accent-brand rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
+                        ${hwSubmitted ? 'checked' : ''} 
+                        ${isAbsent ? 'disabled' : ''}>
+                </div>`;
             }
 
-            // تحديث عداد الحضور المباشر
-            updateAttendanceCount();
-            saveTimeout = setTimeout(() => {
-                silentSave(); // هيحفظ التغيير ده لوحده بعد 3 ثواني
-            }, 3000);
-        });
-        if (hwCheck) {
-            hwCheck.addEventListener('change', () => {
-                // ✅✅ الإضافة السحرية: حفظ تلقائي للواجب اليدوي ✅✅
-                clearTimeout(saveTimeout);
+            row.innerHTML = html;
+
+            // --- Logic: تغيير الحالة يقفل/يفتح الواجب ---
+            const attSelect = row.querySelector('.att-select');
+            const hwCheck = row.querySelector('.hw-check');
+
+            attSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+
+                // 1. تغيير ألوان الصف
+                if (val === 'present') {
+                    row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                    row.classList.remove('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+
+                    // ✅ لو حضر: نفتح خانة الواجب
+                    if (hwCheck) hwCheck.disabled = false;
+
+                } else { // absent
+                    row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                    row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+
+                    // ✅ لو غاب: نقفل خانة الواجب ونشيل علامة الصح (reset)
+                    if (hwCheck) {
+                        hwCheck.checked = false;
+                        hwCheck.disabled = true;
+                    }
+                }
+
+                // تحديث عداد الحضور المباشر
+                updateAttendanceCount();
                 saveTimeout = setTimeout(() => {
-                    silentSave();
+                    silentSave(); // هيحفظ التغيير ده لوحده بعد 3 ثواني
                 }, 3000);
             });
+            if (hwCheck) {
+                hwCheck.addEventListener('change', () => {
+                    // ✅✅ الإضافة السحرية: حفظ تلقائي للواجب اليدوي ✅✅
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => {
+                        silentSave();
+                    }, 3000);
+                });
+            }
+            list.appendChild(row);
+        });
+
+        // دالة صغيرة لتحديث العداد
+        function updateAttendanceCount() {
+            const count = document.querySelectorAll('.att-select option[value="present"]:checked').length;
+            document.getElementById('attendanceCountBadge').innerText = `${count}/${allStudents.length}`;
         }
-        list.appendChild(row);
-    });
 
-    // دالة صغيرة لتحديث العداد
-    function updateAttendanceCount() {
-        const count = document.querySelectorAll('.att-select option[value="present"]:checked').length;
-        document.getElementById('attendanceCountBadge').innerText = `${count}/${allStudents.length}`;
+        updateAttendanceCount(); // تشغيل العداد أول مرة
+    } catch (error) {
+        console.error("Error rendering daily class list:", error);
     }
-
-    updateAttendanceCount(); // تشغيل العداد أول مرة
 }
 
 // 📈 دالة الرسوم البيانية للمجموعة (جديد)
