@@ -225,7 +225,7 @@ let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupS
 const translations = {
     ar: {
         pageTitle: "الناظر - لوحة تحكم المعلم",
-        welcomeTeacherGreeting: "أهلاً بك، أ/ ",
+        welcomeTeacherGreeting: "أهلاً بك، مستر ",
         teacherLoginTitle: "بوابة الناظر التعليمية",
         teacherLoginPrompt: "سجل دخولك الآن للبدء في إدارة صفوفك الذكية",
         loginButton: "دخول",
@@ -388,7 +388,22 @@ const translations = {
         addNewStudentSectionTitle: "إضافة طالب جديد",
         studentFollowUp: "متابعة الطالب {name}",
         deleteGroupConfirm: "هل أنت متأكد من حذف هذه المجموعة نهائياً؟ سيتم حذف جميع الطلاب والبيانات المرتبطة بها!",
-        deleteGroupSuccess: "تم حذف المجموعة بنجاح"
+        deleteGroupSuccess: "تم حذف المجموعة بنجاح",
+        overviewHonorRoll: "لوحة الشرف",
+        overviewTopStudents: "أوائل المجموعة",
+        overviewAbsenceAlert: "تنبيه الغياب المتكرر",
+        overviewStudentsAtRisk: "طلاب في خطر",
+        overviewWeeklySummary: "الملخص الأسبوعي",
+        overviewAttendanceRate: "نسبة الحضور",
+        overviewAvgAttendanceDesc: "متوسط الحضور لآخر 3 حصص",
+        overviewGroupCurve: "منحنى مستوى المجموعة",
+        overviewCollectionStatus: "حالة التحصيل (الشهر الحالي)",
+        overviewPaymentStats: "إحصائيات الدفع لهذا الشهر",
+        overviewPaidCount: "سددوا",
+        overviewUnpaidCount: "متبقي",
+        portalGroupDesc: "من فضلك اختر المجموعة الدراسية التي ترغب في إدارتها الآن للبدء، أو يمكنك إضافة مجموعة جديدة للعمل عليها.",
+        portalGroupsHeader: "المجموعات الدراسية",
+        portalAddGroupBtn: "إضافة مجموعة جديدة"
     },
     en: {
         pageTitle: "Al-Nazer - Teacher Dashboard",
@@ -558,7 +573,22 @@ const translations = {
         inviteCopied: "Invite message copied! Send it to students 🚀",
         inviteCopyFail: "Copy failed",
         addNewStudentSectionTitle: "Add New Student",
-        studentFollowUp: "Student Dashboard: {name}"
+        studentFollowUp: "Student Dashboard: {name}",
+        overviewHonorRoll: "Honor Roll",
+        overviewTopStudents: "Top Performers",
+        overviewAbsenceAlert: "Absence Alert",
+        overviewStudentsAtRisk: "Students at Risk",
+        overviewWeeklySummary: "Weekly Summary",
+        overviewAttendanceRate: "Attendance Rate",
+        overviewAvgAttendanceDesc: "Avg Attendance (Last 3 Classes)",
+        overviewGroupCurve: "Group Performance Curve",
+        overviewCollectionStatus: "Collection Status (Current Month)",
+        overviewPaymentStats: "Payment Stats for this Month",
+        overviewPaidCount: "Paid",
+        overviewUnpaidCount: "Remaining",
+        portalGroupDesc: "Please select the group you wish to manage now to start, or you can add a new group to work on.",
+        portalGroupsHeader: "Study Groups",
+        portalAddGroupBtn: "Add New Group"
     }
 };
 
@@ -579,6 +609,44 @@ function formatPhoneNumber(p) {
     // نعيد الرقم بصيغة +20 الدولية لأنها الصيغة اللي فيها الداتا التاريخية
     return isValidEgyptianPhoneNumber(clean) ? `+20${clean.substring(1)}` : null;
 }
+
+function checkGroupSelectionPortal() {
+    const portal = document.getElementById('groupSelectorPortal');
+    const main = document.getElementById('mainContent');
+    if (!TEACHER_ID) {
+        if (portal) portal.classList.add('hidden');
+        if (main) main.classList.add('hidden');
+        return;
+    }
+    
+    if (!SELECTED_GROUP_ID) {
+        if (portal) portal.classList.remove('hidden');
+        if (main) main.classList.add('hidden');
+    } else {
+        if (portal) portal.classList.add('hidden');
+        if (main) main.classList.remove('hidden');
+    }
+}
+
+window.openAddNewGroupFlow = function() {
+    // 1. Hide portal and show main content
+    const portal = document.getElementById('groupSelectorPortal');
+    const main = document.getElementById('mainContent');
+    if (portal) portal.classList.add('hidden');
+    if (main) main.classList.remove('hidden');
+    
+    // 2. Switch to profile tab
+    switchTab('profile');
+    
+    // 3. Focus and select group name input
+    setTimeout(() => {
+        const inputField = document.getElementById('newGroupName');
+        if (inputField) {
+            inputField.focus();
+            inputField.select();
+        }
+    }, 150);
+};
 
 // ✅ دالة لإصلاح المعرف المخزن لو كان بالصيغة القديمة (بدون +20)
 function migrateTeacherID() {
@@ -1130,6 +1198,7 @@ function setupListeners() {
             amountInput.value = savedAmount || '';
         }
 
+        checkGroupSelectionPortal();
         switchTab('overview');
         await loadGroupData();
     };
@@ -1496,18 +1565,20 @@ async function loginTeacher() {
         localStorage.setItem('learnaria-tid', TEACHER_ID);
 
         document.getElementById('landingSection').classList.add('hidden');
-        document.getElementById('mainContent').classList.remove('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
 
         if (data) {
             document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${data.name || ''}`;
+            const portalWelcome = document.getElementById('portalWelcomeTeacher');
+            if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${data.name || ''} 👋`;
+            
             document.getElementById('teacherNameInput').value = data.name || '';
             document.getElementById('teacherSubjectInput').value = data.subject || '';
             document.getElementById('profilePasswordInput').value = data.password || '';
         }
 
         await loadGroups();
-        switchTab('overview');
+        checkGroupSelectionPortal();
 
     } catch (error) {
         if (error.message !== "Offline first login") {
@@ -1554,24 +1625,38 @@ function renderGroupsDropdown(groupsList) {
         sel.appendChild(opt);
     });
 
-    // Populate Group Quick-Cards Grid
+    // Populate Group Quick-Cards Grid (Launchpad Square Folder Tiles)
     const cardsContainer = document.getElementById('promptGroupCardsGrid');
     if (cardsContainer) {
         if (groupsList.length === 0) {
-            cardsContainer.className = "flex flex-col items-center justify-center py-8 border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-3xl w-full col-span-full gap-2 bg-gray-50/50 dark:bg-black/10";
+            cardsContainer.className = "flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-3xl w-full col-span-full gap-3 bg-gray-50/50 dark:bg-black/10";
+            const noGroupsMsg = currentLang === 'ar' ? 'لا توجد مجموعات مضافة حالياً' : 'No groups added currently';
             cardsContainer.innerHTML = `
                 <i class="ri-folder-open-line text-4xl text-gray-400 dark:text-zinc-600"></i>
-                <p class="text-xs font-bold text-gray-400 dark:text-zinc-500">لا توجد مجموعات مضافة حالياً</p>
+                <p class="text-xs font-bold text-gray-400 dark:text-zinc-500">${noGroupsMsg}</p>
             `;
         } else {
-            cardsContainer.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4";
-            cardsContainer.innerHTML = groupsList.map((g, idx) => `
-                <div onclick="window.handleGroupSelectionChange('${g.id}')" 
-                     class="group relative p-6 bg-white dark:bg-black/30 hover:bg-brand/5 dark:hover:bg-brand/5 border border-gray-200/50 dark:border-zinc-800 rounded-2xl text-right cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-brand/5 active:scale-95 border-b-4 border-b-gray-200 dark:border-b-zinc-800 hover:border-b-brand dark:hover:border-b-brand">
-                    <h4 class="font-black text-gray-800 dark:text-white text-base group-hover:text-brand transition-colors">${g.name}</h4>
-                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-2 font-bold">اضغط لفتح المجموعة ←</p>
-                </div>
-            `).join('');
+            cardsContainer.className = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 w-full col-span-full";
+            
+            cardsContainer.innerHTML = groupsList.map((g, idx) => {
+                const enterGroupMsg = currentLang === 'ar' ? 'دخول المجموعة ←' : 'Enter Group ←';
+                return `
+                    <div onclick="window.handleGroupSelectionChange('${g.id}')" 
+                         class="group aspect-square flex flex-col justify-between p-6 bg-white dark:bg-zinc-800/40 hover:bg-white dark:hover:bg-zinc-800 border border-gray-200/50 dark:border-zinc-800 rounded-3xl cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-black/30 active:scale-95 text-right">
+                        
+                        <!-- Top: Folder Icon in subtle container -->
+                        <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-zinc-700/50 text-gray-400 group-hover:text-brand group-hover:bg-brand/10 flex items-center justify-center transition-colors self-start">
+                            <i class="ri-folder-shared-line text-lg"></i>
+                        </div>
+                        
+                        <!-- Bottom: Group Title & CTA -->
+                        <div>
+                            <h4 class="font-black text-gray-800 dark:text-white text-base group-hover:text-brand transition-colors leading-tight truncate" title="${g.name}">${g.name}</h4>
+                            <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 font-bold">${enterGroupMsg}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
     }
 }
@@ -1632,8 +1717,7 @@ async function deleteCurrentGroup() {
         // إعادة تحميل المجموعات
         await loadGroups();
 
-        // إخفاء الأيقونات والتابات المفتوحة (لأن مفيش مجموعة مختارة)
-        switchTab('profile');
+        checkGroupSelectionPortal();
 
     } catch (e) {
         console.error("Error deleting group:", e);
@@ -1805,7 +1889,9 @@ async function renderOverview() {
                 const studentScores = Object.entries(scores).map(([sid, val]) => {
                     const student = allStudents.find(s => s.id === sid);
                     const markValue = (val && typeof val === 'object') ? (val.score || 0) : val;
-                    return { name: student ? student.name : (allStudents.length === 0 ? 'جاري التحميل...' : 'طالب محذوف'), mark: parseInt(markValue) || 0 };
+                    const defaultLoadingText = currentLang === 'ar' ? 'جاري التحميل...' : 'Loading...';
+                    const defaultDeletedText = currentLang === 'ar' ? 'طالب محذوف' : 'Deleted student';
+                    return { name: student ? student.name : (allStudents.length === 0 ? defaultLoadingText : defaultDeletedText), mark: parseInt(markValue) || 0 };
                 });
 
                 if (studentScores.length > 0) {
@@ -1826,13 +1912,16 @@ async function renderOverview() {
                         </div>
                     `).join('');
                 } else {
-                    topList.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-bold">لم تُرصد درجات لآخر امتحان</p>';
+                    const noGradesMsg = currentLang === 'ar' ? 'لم تُرصد درجات لآخر امتحان' : 'No grades recorded for the latest exam';
+                    topList.innerHTML = `<p class="text-xs text-gray-400 text-center py-6 font-bold">${noGradesMsg}</p>`;
                 }
             } else {
-                topList.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-bold">لم يتم إنشاء امتحانات بعد</p>';
+                const noExamsMsg = currentLang === 'ar' ? 'لم يتم إنشاء امتحانات بعد' : 'No exams created yet';
+                topList.innerHTML = `<p class="text-xs text-gray-400 text-center py-6 font-bold">${noExamsMsg}</p>`;
             }
         } else {
-            topList.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-bold tracking-widest uppercase">لا توجد بيانات</p>';
+            const noDataMsg = currentLang === 'ar' ? 'لا توجد بيانات' : 'No data available';
+            topList.innerHTML = `<p class="text-xs text-gray-400 text-center py-6 font-bold tracking-widest uppercase">${noDataMsg}</p>`;
         }
 
         // 2. Students at Risk (Absence Trend) & 3. Attendance Rate
@@ -1865,16 +1954,20 @@ async function renderOverview() {
             });
 
             if (riskStudents.length > 0) {
-                riskList.innerHTML = riskStudents.sort((a, b) => b.count - a.count).slice(0, 5).map((s, idx) => `
-                    <div class="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 animate-fade-in" style="animation-delay: ${idx * 0.1}s">
-                        <p class="text-sm font-black text-gray-800 dark:text-white truncate max-w-[150px] text-right">${s.name}</p>
-                        <span class="text-[10px] font-black bg-red-500 text-white px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
-                            غاب ${s.count} حصص
-                        </span>
-                    </div>
-                `).join('');
+                riskList.innerHTML = riskStudents.sort((a, b) => b.count - a.count).slice(0, 5).map((s, idx) => {
+                    const absentText = currentLang === 'ar' ? `غاب ${s.count} حصص` : `Absent ${s.count} classes`;
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 animate-fade-in" style="animation-delay: ${idx * 0.1}s">
+                            <p class="text-sm font-black text-gray-800 dark:text-white truncate max-w-[150px] text-right">${s.name}</p>
+                            <span class="text-[10px] font-black bg-red-500 text-white px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
+                                ${absentText}
+                            </span>
+                        </div>
+                    `;
+                }).join('');
             } else {
-                riskList.innerHTML = '<div class="text-center py-6"><i class="ri-checkbox-circle-fill text-green-500 text-2xl"></i><p class="text-xs text-green-600 font-bold mt-1">الكل ملتزم بالحضور!</p></div>';
+                const allCommittedMsg = currentLang === 'ar' ? 'الكل ملتزم بالحضور!' : 'Everyone is committed to attending!';
+                riskList.innerHTML = `<div class="text-center py-6"><i class="ri-checkbox-circle-fill text-green-500 text-2xl"></i><p class="text-xs text-green-600 font-bold mt-1">${allCommittedMsg}</p></div>`;
             }
 
             const rate = totalChecked > 0 ? Math.round((totalPresent / totalChecked) * 100) : 0;
@@ -1921,12 +2014,14 @@ async function renderOverview() {
                 renderGroupPerformanceChart(labels, dataPoints);
             } else {
                 if (chartContainer) {
-                    chartContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> لا توجد امتحانات كافية للتحليل</div>';
+                    const notEnoughExamsMsg = currentLang === 'ar' ? 'لا توجد امتحانات كافية للتحليل' : 'Not enough exams for analysis';
+                    chartContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> ${notEnoughExamsMsg}</div>`;
                 }
             }
         } else {
             if (chartContainer) {
-                chartContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> لا توجد بيانات مسجلة</div>';
+                const noDataRecordedMsg = currentLang === 'ar' ? 'لا توجد بيانات مسجلة' : 'No registered data';
+                chartContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> ${noDataRecordedMsg}</div>`;
             }
         }
 
@@ -1949,7 +2044,7 @@ function renderGroupPerformanceChart(labels, data) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'متوسط الأداء %',
+                label: currentLang === 'ar' ? 'متوسط الأداء %' : 'Average Performance %',
                 data: data,
                 borderColor: '#F2CE5A',
                 backgroundColor: 'rgba(242, 206, 90, 0.1)',
@@ -1972,7 +2067,7 @@ function renderGroupPerformanceChart(labels, data) {
                     borderWidth: 1,
                     callbacks: {
                         label: function (context) {
-                            return 'متوسط المستوى: ' + context.parsed.y + '%';
+                            return (currentLang === 'ar' ? 'متوسط المستوى: ' : 'Average Level: ') + context.parsed.y + '%';
                         }
                     }
                 }
@@ -2036,12 +2131,7 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
     
-    let targetTab = tabId;
-    if (!SELECTED_GROUP_ID && tabId !== 'profile') {
-        targetTab = 'no-group';
-    }
-    
-    const targetEl = document.getElementById(`tab-${targetTab}`);
+    const targetEl = document.getElementById(`tab-${tabId}`);
     if (targetEl) targetEl.classList.remove('hidden');
     
     const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
@@ -3401,8 +3491,9 @@ async function loadPreferences() {
         TEACHER_ID = storedID;
 
         // محاولة جلب بيانات المعلم من الداتابيز المحلية لتعبئة البروفايل
+        let teacherData = null;
         try {
-            const teacherData = await getFromDB('teachers', TEACHER_ID);
+            teacherData = await getFromDB('teachers', TEACHER_ID);
             if (teacherData) {
                 document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''}`;
                 document.getElementById('teacherNameInput').value = teacherData.name || '';
@@ -3413,12 +3504,16 @@ async function loadPreferences() {
 
         // إخفاء شاشة تسجيل الدخول وإظهار المحتوى
         document.getElementById('landingSection').classList.add('hidden');
-        document.getElementById('mainContent').classList.remove('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
+
+        if (teacherData) {
+            const portalWelcome = document.getElementById('portalWelcomeTeacher');
+            if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''} 👋`;
+        }
 
         // تحميل المجموعات والذهاب للمتابعة الذكية
         await loadGroups();
-        switchTab('overview');
+        checkGroupSelectionPortal();
 
         if (SELECTED_GROUP_ID) {
             const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
@@ -3445,12 +3540,24 @@ function applyLanguage() {
         const key = el.dataset.keyPlaceholder;
         if (translations[currentLang][key]) el.placeholder = translations[currentLang][key];
     });
+
+    // Update dynamic welcome greetings with the teacher's name
+    const nameInput = document.getElementById('teacherNameInput');
+    if (nameInput && nameInput.value) {
+        const titleEl = document.getElementById('dashboardTitle');
+        if (titleEl) titleEl.innerText = `${translations[currentLang].welcomeTeacherGreeting}${nameInput.value}`;
+        const portalWelcome = document.getElementById('portalWelcomeTeacher');
+        if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${nameInput.value} 👋`;
+    }
+
+    updateOnlineStatus();
 }
 
 function toggleLang() {
     currentLang = currentLang === 'ar' ? 'en' : 'ar';
     applyLanguage();
 
+    if (SELECTED_GROUP_ID && !document.getElementById('tab-overview').classList.contains('hidden')) renderOverview();
     if (SELECTED_GROUP_ID && !document.getElementById('tab-daily').classList.contains('hidden')) renderDailyList();
     if (SELECTED_GROUP_ID && !document.getElementById('tab-students').classList.contains('hidden')) renderStudents();
 

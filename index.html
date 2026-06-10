@@ -87,7 +87,7 @@
                 class="hidden md:flex items-center gap-3 bg-gray-100 dark:bg-black px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-800">
                 <div id="statusIndicator" class="flex items-center gap-2 text-xs font-bold transition-colors">
                     <span class="status-dot w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-                    <span class="status-text" data-key="offline">...</span>
+                    <span class="status-text">...</span>
                 </div>
                 <div class="h-4 w-[1px] bg-gray-300 dark:bg-gray-700"></div>
                 <div id="syncIndicator"
@@ -259,22 +259,22 @@
 
                     <div class="space-y-5">
                         <div class="relative group">
-                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
+                            <div class="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
                                 <i class="ri-smartphone-line text-xl"></i>
                             </div>
                             <input type="tel" id="teacherPhoneInput"
-                                class="w-full py-4 pr-12 pl-4 bg-gray-50/80 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-2xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal"
+                                class="w-full py-4 ps-12 pe-4 bg-gray-50/80 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-2xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal text-left"
                                 placeholder="01xxxxxxxxx" data-key-placeholder="phonePlaceholder">
                         </div>
 
                         <div class="relative group">
-                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
+                            <div class="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
                                 <i class="ri-lock-2-line text-xl"></i>
                             </div>
                             <input type="password" id="teacherPasswordInput"
-                                class="w-full py-4 pr-12 pl-12 bg-gray-50/80 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-2xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal"
+                                class="w-full py-4 ps-12 pe-12 bg-gray-50/80 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-2xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal text-left"
                                 placeholder="كلمة المرور" data-key-placeholder="passwordPlaceholder">
-                            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 hover:text-brand transition-colors">
+                            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 end-0 pe-4 flex items-center text-gray-400 hover:text-brand transition-colors">
                                 <i id="passwordToggleIcon" class="ri-eye-line text-xl"></i>
                             </button>
                         </div>
@@ -313,6 +313,40 @@
             
             <div class="text-center text-gray-400 text-xs mt-8" data-key="footerText">
                 © 2026 نظام الناظر. Made with <i class="ri-heart-fill text-red-500"></i> for Teachers.
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Group Selector Portal (Immersive Full Screen) -->
+    <div id="groupSelectorPortal" class="container mx-auto px-4 pt-28 pb-10 max-w-4xl hidden animate-fade-in">
+        <div class="glass-panel p-8 md:p-12 border border-gray-200/50 dark:border-gray-800 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md shadow-2xl rounded-3xl relative overflow-hidden">
+            <!-- Glowing background blobs inside portal -->
+            <div class="absolute -top-20 -left-20 w-72 h-72 bg-brand/20 dark:bg-brand/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-20 -right-20 w-72 h-72 bg-blue-500/20 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 text-center mb-10 max-w-xl mx-auto space-y-4">
+                <div class="flex items-center justify-center gap-3 mb-2">
+                    <img src="assets/images/favicon.png" alt="Logo" class="h-12 w-12 rounded-xl shadow-lg border border-brand/30">
+                    <h1 class="text-3xl font-black text-gray-900 dark:text-white font-cairo tracking-tight">الناظر<span class="text-brand">.</span></h1>
+                </div>
+                <h2 id="portalWelcomeTeacher" class="text-2xl font-black text-gray-800 dark:text-white font-cairo">أهلاً بك، مستر 👋</h2>
+                <p data-key="portalGroupDesc" class="text-sm text-gray-500 dark:text-gray-400 font-bold max-w-md mx-auto leading-relaxed">
+                    من فضلك اختر المجموعة الدراسية التي ترغب في إدارتها الآن للبدء، أو يمكنك إضافة مجموعة جديدة للعمل عليها.
+                </p>
+            </div>
+            
+            <div class="relative z-10 space-y-6">
+                <div class="flex items-center justify-between border-b border-gray-200/50 dark:border-gray-800 pb-4 text-right">
+                    <span data-key="portalGroupsHeader" class="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">المجموعات الدراسية</span>
+                    <button onclick="window.openAddNewGroupFlow()" class="bg-brand/10 hover:bg-brand/20 text-brand font-black px-4 py-2 rounded-xl text-xs transition-all active:scale-95 flex items-center gap-1">
+                        <i class="ri-add-line text-sm"></i>
+                        <span data-key="portalAddGroupBtn">إضافة مجموعة جديدة</span>
+                    </button>
+                </div>
+                
+                <div id="promptGroupCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                    <!-- Loaded dynamically via script.js -->
+                </div>
             </div>
         </div>
     </div>
@@ -375,10 +409,10 @@
                             <i class="ri-time-line text-lg"></i>
                             <span data-key="tabSchedule" class="font-bold text-sm">الجدول</span>
                         </button>
-                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="bot" disabled>
+                        <!-- <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="bot" disabled>
                             <i class="ri-robot-2-line text-lg"></i>
                             <span data-key="tabBot" class="font-bold text-sm">المساعد الذكي</span>
-                        </button>
+                        </button> -->
                         <!-- Responsive dividers -->
                         <div class="hidden lg:block h-[1px] w-full bg-gray-200/50 dark:bg-gray-800 my-2"></div>
                         <div class="block lg:hidden w-[1px] h-6 bg-gray-200/50 dark:bg-gray-800 mx-1 align-self-center"></div>
@@ -406,36 +440,6 @@
 
                 <div id="tabs-content" class="relative">
 
-                    <!-- Welcome / Select Group Prompt State -->
-                    <div id="tab-no-group" class="tab-content transition-all duration-500 animate-fade-in">
-                        <div class="relative glass-panel p-8 md:p-12 text-center border border-gray-200/50 dark:border-gray-800 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md shadow-2xl rounded-3xl max-w-3xl mx-auto my-6 overflow-hidden">
-                            <!-- Background Glowing Blobs -->
-                            <div class="absolute -top-12 -left-12 w-40 h-40 bg-brand/15 dark:bg-brand/5 rounded-full blur-3xl pointer-events-none animate-pulse-slow"></div>
-                            <div class="absolute -bottom-12 -right-12 w-40 h-40 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none animate-pulse-slow" style="animation-delay: 1.5s;"></div>
-                            
-                            <div class="relative z-10">
-                                <h3 class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white font-cairo mb-3">مرحباً بك في لوحة تحكم الناظر 👋</h3>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-8 leading-relaxed max-w-md mx-auto">
-                                    للبدء في رصد الغياب والدرجات وإدارة المجموعات، يرجى اختيار إحدى مجموعاتك أدناه أو إضافة مجموعة جديدة.
-                                </p>
-                                
-                                <!-- Dynamic Group Grid -->
-                                <div class="space-y-4 text-right">
-                                    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-                                        <span class="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider">مجموعاتك الدراسية</span>
-                                        <button onclick="document.getElementById('addNewGroupButton').click()" class="text-xs font-black text-brand hover:underline flex items-center gap-1">
-                                            <i class="ri-add-line"></i> إضافة مجموعة جديدة
-                                        </button>
-                                    </div>
-                                    
-                                    <div id="promptGroupCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 min-h-[100px] mt-4">
-                                        <!-- Dynamic cards populated by script.js -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
             <div id="tab-overview" class="tab-content transition-all duration-500 animate-fade-in">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     <!-- Top Performers Card -->
@@ -444,10 +448,10 @@
                             class="ri-medal-fill absolute -bottom-4 -left-4 text-7xl text-yellow-500/10 -rotate-12 transition-transform group-hover:scale-110"></i>
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h4
+                                <h4 data-key="overviewHonorRoll"
                                     class="text-[11px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-400">
                                     لوحة الشرف</h4>
-                                <p class="text-xl font-black text-gray-900 dark:text-white">أوائل المجموعة</p>
+                                <p data-key="overviewTopStudents" class="text-xl font-black text-gray-900 dark:text-white">أوائل المجموعة</p>
                             </div>
                             <div
                                 class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center text-yellow-600">
@@ -468,10 +472,10 @@
                             class="ri-alarm-warning-fill absolute -bottom-4 -left-4 text-7xl text-red-500/10 -rotate-12 transition-transform group-hover:scale-110"></i>
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h4
+                                <h4 data-key="overviewAbsenceAlert"
                                     class="text-[11px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">
                                     تنبيه الغياب المتكرر</h4>
-                                <p class="text-xl font-black text-gray-900 dark:text-white">طلاب في خطر</p>
+                                <p data-key="overviewStudentsAtRisk" class="text-xl font-black text-gray-900 dark:text-white">طلاب في خطر</p>
                             </div>
                             <div
                                 class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center text-red-600 animate-pulse">
@@ -491,9 +495,9 @@
                             class="ri-bar-chart-fill absolute -bottom-4 -left-4 text-7xl text-brand/10 -rotate-12 transition-transform group-hover:scale-110"></i>
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h4 class="text-[11px] font-black uppercase tracking-widest text-brand">الملخص الأسبوعي
+                                <h4 data-key="overviewWeeklySummary" class="text-[11px] font-black uppercase tracking-widest text-brand">الملخص الأسبوعي
                                 </h4>
-                                <p class="text-xl font-black text-gray-900 dark:text-white">نسبة الحضور</p>
+                                <p data-key="overviewAttendanceRate" class="text-xl font-black text-gray-900 dark:text-white">نسبة الحضور</p>
                             </div>
                             <div class="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand">
                                 <i class="ri-user-follow-line text-xl"></i>
@@ -502,7 +506,7 @@
                         <div class="text-center py-4">
                             <h5 id="avgAttendanceRate"
                                 class="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">0%</h5>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-bold">متوسط الحضور لآخر 3 حصص
+                            <p data-key="overviewAvgAttendanceDesc" class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-bold">متوسط الحضور لآخر 3 حصص
                             </p>
                         </div>
                     </div>
@@ -513,7 +517,7 @@
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="font-black text-lg flex items-center gap-2 text-gray-800 dark:text-white">
                                 <i class="ri-line-chart-line text-brand"></i>
-                                <span>منحنى مستوى المجموعة</span>
+                                <span data-key="overviewGroupCurve">منحنى مستوى المجموعة</span>
                             </h3>
                         </div>
                         <div id="groupPerformanceChartContainer" class="h-[250px] w-full">
@@ -523,17 +527,17 @@
                     <div class="glass-card p-6 min-h-[350px]">
                         <h3 class="font-black text-lg flex items-center gap-2 text-gray-800 dark:text-white">
                             <i class="ri-money-dollar-circle-line text-green-500"></i>
-                            <span>حالة التحصيل (الشهر الحالي)</span>
+                            <span data-key="overviewCollectionStatus">حالة التحصيل (الشهر الحالي)</span>
                         </h3>
                         <div id="monthlyCollectionSummary" class="space-y-6">
                             <div class="flex flex-col items-center justify-center py-4">
                                 <i class="ri-pie-chart-2-line text-6xl text-gray-200 dark:text-zinc-800 mb-2"></i>
-                                <p class="text-xs font-bold text-gray-400">إحصائيات الدفع لهذا الشهر</p>
+                                <p data-key="overviewPaymentStats" class="text-xs font-bold text-gray-400">إحصائيات الدفع لهذا الشهر</p>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div
                                     class="p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-900/30 text-center">
-                                    <p
+                                    <p data-key="overviewPaidCount"
                                         class="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest mb-1">
                                         سددوا</p>
                                     <p id="paidCountOverview" class="text-3xl font-black text-gray-900 dark:text-white">
@@ -541,7 +545,7 @@
                                 </div>
                                 <div
                                     class="p-4 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/30 text-center">
-                                    <p
+                                    <p data-key="overviewUnpaidCount"
                                         class="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-1">
                                         متبقي</p>
                                     <p id="unpaidCountOverview"
@@ -935,7 +939,7 @@
                 </div>
             </div>
 
-            <div id="tab-bot" class="tab-content hidden">
+            <!-- <div id="tab-bot" class="tab-content hidden">
 
                 <div class="grid lg:grid-cols-2 gap-6">
 
@@ -995,7 +999,7 @@
                         </div>
                     </section>
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
 
@@ -1321,7 +1325,7 @@
             transform: scaleX(-1);
         }
     </style>
-    <div class="fixed bottom-8 left-8 z-[9999] group">
+    <!-- <div class="fixed bottom-8 left-8 z-[9999] group">
         <div
             class="absolute bottom-full left-0 mb-4 w-48 bg-white dark:bg-zinc-800 p-3 rounded-2xl rounded-bl-none shadow-xl border border-gray-100 dark:border-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none transform translate-y-2 group-hover:translate-y-0">
             <p class="text-xs text-gray-600 dark:text-gray-300 font-bold">محتار في سؤال؟ 🤔<br><span
@@ -1414,7 +1418,7 @@
             </div>
             <p class="text-[10px] text-center text-gray-400 mt-2">Powered by Gemini AI ✨</p>
         </div>
-    </div>
+    </div> -->
     <div id="customInputModal" class="fixed inset-0 z-[1000] hidden overflow-y-auto" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" id="customInputOverlay"></div>
         <div class="flex items-center justify-center min-h-screen px-4 py-6">
