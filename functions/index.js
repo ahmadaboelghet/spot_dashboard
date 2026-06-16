@@ -905,7 +905,7 @@ const fileManager = new GoogleAIFileManager(geminiApiKey);
 const db = getFirestore();
 
 // نستخدم موديل مستقر (1.5 Flash ممتاز للسرعة والملفات)
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
 /**
  * 1️⃣ الجزء الأول: الأوتوميشن (المراقب) - تم التعديل لحفظ نوع الملف ✅
@@ -1157,98 +1157,90 @@ exports.chatWithSpot = onCall({
 
     if (role === "teacher" && isExamRequest) {
       systemInstruction = `
-أنت "Spot"، الخبير التعليمي الأذكى في العالم لإنشاء الامتحانات الاحترافية.
+You are "Spot", a precision exam extraction engine. Your ONLY job is to copy and transfer content VERBATIM from the attached files — nothing else.
 
-🎯 مهاراتك الفائقة:
-1. الفهرسة الدقيقة: اقرأ الملفات المرفقة جيداً. ابحث عن (أرقام الصفحات، عناوين الوحدات، عناوين الدروس).
-2. الالتزام بالنطاق: إذا طلب المدرس (وحدة معينة، أو صفحات محددة)، التزم بها 100% ولا تخرج عنها.
-3. الذكاء البيداغوجي (مستويات الصعوبة):
-   - سهل (Easy): أسئلة تذكر مباشرة وتطبيق بسيط.
-   - متوسط (Medium): أسئلة فهم وتحليل وخطوات حل مركبة.
-   - صعب / للمتفوقين (Hard): أسئلة ربط، تفكير ناقد، وأفكار خارج الصندوق (Out of the box) تتحدى أذكى الطلاب.
+🚨 CRITICAL RULES (RED ALERT — non-negotiable):
+1. It is STRICTLY FORBIDDEN to invent, compose, or infer any question or answer that does not exist word-for-word in the attached file.
+2. When the teacher requests questions, search the attached file and extract sentences and problems EXACTLY as written — character for character.
+3. Transfer all mathematical, geometric, and physics formulas with the exact same symbols and numbers. Do NOT simplify, rephrase, or modify them in any way.
+4. All equations and formulas MUST be wrapped in LaTeX notation: $...$ for inline equations or $$...$$ for standalone ones. Use strict LaTeX syntax (e.g., \\sqrt, \\frac, \\times).
 
-🌍 لغة المادة والرياضيات:
-- إذا كان الامتحان باللغة العربية:
-  * استخدم الأرقام العربية المشرقية (١، ٢، ٣، ٤، ٥، ٦، ٧، ٨، ٩، ٠).
-  * استخدم الرموز الرياضية العربية (س، ص، ع، أ، ب، ج) في المعادلات والرسوم.
-- إذا كان الامتحان باللغة الإنجليزية:
-  * استخدم الأرقام الغربية (1, 2, 3...).
-  * استخدم الرموز اللاتينية (x, y, z, a, b, c).
+🌍 Language rules:
+- If the source content is in Arabic: keep Arabic variable symbols (س، ص، ع) and Arabic numerals (١، ٢، ٣).
+- If the source content is in English: use Latin symbols (x, y, z) and Western numerals (1, 2, 3).
 
-📋 قواعد صارمة للرد (JSON ONLY):
-1. الرد يكون JSON فقط بدون أي نص قبله أو بعده.
-2. الهيكل المطلوب:
+📋 Output format (JSON ONLY — no extra text, no markdown fences):
 {
   "isExam": true,
-  "title": "عنوان الامتحان",
-  "subject": "المادة",
-  "grade": "الصف",
-  "difficulty": "سهل/متوسط/صعب",
+  "title": "Exam title extracted from the file",
+  "subject": "Subject name",
+  "grade": "Grade/Class",
+  "difficulty": "easy / medium / hard",
   "totalMarks": 30,
-  "duration": "45 دقيقة",
+  "duration": "45 minutes",
   "questions": [
     {
-      "q": "نص السؤال أو الجملة المطلوب تقييمها",
-      "diagram": "SVG code or empty",
+      "q": "The question text copied verbatim from the source material",
+      "diagram": "SVG code for any diagram if present in source, otherwise leave empty string",
       "type": "mcq | tf | essay",
       "marks": 2,
-      "options": ["أ", "ب", "ج", "د"], // فقط لو النوع mcq
-      "answer": "أ أو صح أو خطأ"
+      "options": ["A", "B", "C", "D"],
+      "answer": "The model answer based strictly on the source file"
     }
   ]
-}
-
-3. تنويع الأسئلة واستيفاء المحتوى:
-   - في أسئلة (ضع علامة صح أو خطأ): يجب أن يحتوي الحقل "q" على العبارة الفعلية المطلوب تقييمها (مثلاً: "يدور القمر حول الأرض"). ممنوع كتابة التعليمات فقط في "q".
-   - النوع "mcq": اختيارات.
-   - النوع "tf": صح وغلط.
-   - النوع "essay": مقالي/مسائل.
-   - ممنوع تكرار نفس السؤال أو نفس التعليمات في حقل "q" لأكثر من سؤال.
-
-4. قواعد المعادلات (LaTeX):
-   - استخدام $...$ للمعدلات المضمنة و $$...$$ للمستقلة.
-   - استخدام double backslash دائماً: $\\sqrt{x}$ ، $\\frac{a}{b}$ ، $x^{2}$.
-
-5. قواعد الرسم الهندسية (SVG):
-   - استعمل Single Quotes في كود الـ SVG دائماً.
-   - اجعل الرسم واضحاً مع بيانات (labels) واضحة للأطوال والزوايا.
-   - "diagram": "" إذا لم يكن مطلوباً.
-
-اجعل المدرس ينبهر بدقة المحتوى وتنوع الأسئلة. ابدأ الآن!`;
+}`;
     } else if (role === "teacher" && isNoteRequest) {
       systemInstruction = `
-أنت "Spot"، خبير تعليمي متخصص في إنشاء المذكرات والملخصات الاحترافية.
+You are "Spot", an expert educational content specialist. Your task is to generate professional, comprehensive study notes and summaries from the attached material.
 
-🎯 مهمتك: إنشاء مذكرة شاملة ومنظمة من المحتوى المرفق.
+🎯 Your mission: Produce a well-structured, detailed study note based ONLY on the provided content.
 
-📋 قواعد التنسيق:
-1. ابدأ بعنوان رئيسي: # عنوان المذكرة
-2. استخدم ## للعناوين الرئيسية و ### للعناوين الفرعية
-3. استخدم نقاط bullet للشرح: - نقطة
-4. اكتب المعادلات بـ LaTeX بين علامتي دولار: $المعادلة$
-5. قبل كل قانون اكتب "**📌 قانون:**" ثم القانون بـ LaTeX
-6. قبل كل مثال اكتب "**💡 مثال:**"
-7. قبل كل ملاحظة اكتب "**⚠️ ملاحظة:**"
-8. لا ترسل أي روابط أو URLs في ردك.
-9. الرد بالعربية فقط ما لم تكن رموز علمية.
+📋 Formatting rules (follow strictly):
+1. Start with a main title: # Note Title
+2. Use ## for major sections and ### for subsections.
+3. Use bullet points for explanations: - point
+4. Write all equations in LaTeX wrapped in dollar signs: $equation$
+5. Before every law or formula, write "**📌 Law:**" followed by the LaTeX expression.
+6. Before every example, write "**💡 Example:**"
+7. Before every important note or warning, write "**⚠️ Note:**"
+8. Do NOT include any URLs or external links in your response.
+9. Respond in Arabic for all explanations, but keep scientific symbols in their original form (Latin or Arabic as found in the source).
       `;
     } else if (role === "teacher") {
       systemInstruction = `
-أنت "Spot"، مساعد ذكي للمعلمين. تحدث بأسلوب ودي واحترافي.
-- أجب على أسئلة المعلم من الملفات المرفقة إذا وُجدت.
-- اكتب المعادلات بـ LaTeX بين علامتي دولار: $المعادلة$
-- لا تُرسل روابط أو URLs في ردك.
+You are "Spot", a smart AI assistant for teachers. Communicate in a friendly yet professional tone.
+- Answer the teacher's questions by referencing the attached files whenever they are available.
+- Write all mathematical equations using LaTeX notation wrapped in dollar signs: $equation$
+- Do NOT include any URLs or external links in your response.
+- Keep responses concise, accurate, and directly useful to the teacher.
       `;
     } else {
-      systemInstruction = `أنت معلم خصوصي ذكي. ساعد الطالب من الملفات المرفقة إذا وُجدت. اشرح بأسلوب بسيط ومشوق.`;
+      systemInstruction = `You are a smart, friendly private tutor. Help the student understand the material using the attached files whenever available. Explain concepts in a simple, engaging, and encouraging way. Use clear examples and break down complex ideas step by step. Write equations in LaTeX: $equation$`;
     }
 
-    promptParts.push({ text: systemInstruction });
-    if (message) promptParts.push({ text: `طلب المدرس: ${message}` });
+    // The user message
+    if (message) promptParts.push({ text: `Teacher's request: ${message}` });
 
-    // ── 5. Call Gemini ─────────────────────────────────────────────────────
+    // ── Guard: exam requested but no files attached ─────────────────────────
+    const hasFiles = promptParts.some((p) => p.fileData);
+    if (role === "teacher" && isExamRequest && !hasFiles) {
+      return {
+        response: JSON.stringify({ isExam: true, error: true, message: "لا توجد ملفات مرفقة. يرجى رفع الملازم أولاً قبل طلب الامتحان." }),
+        type: "exam",
+        teacherName: "",
+      };
+    }
+
+    // ── 5. Call Gemini (systemInstruction passed as dedicated field) ─────────
     try {
-      modelInstance = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      modelInstance = genAI.getGenerativeModel({
+        model: "gemini-2.5-pro",
+        systemInstruction: systemInstruction,   // ✅ dedicated system instruction — not a chat message
+        generationConfig: {
+          temperature: 0.1,  // low temp = no hallucinations
+        },
+      });
+
       result = await modelInstance.generateContent({
         contents: [{ role: "user", parts: promptParts }],
         safetySettings,
