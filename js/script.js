@@ -224,15 +224,16 @@ let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupS
 
 const translations = {
     ar: {
-        pageTitle: "Spot - المعلم الذكي",
-        teacherLoginTitle: "تسجيل دخول المعلم",
-        teacherLoginPrompt: "أدخل رقمك للبدء",
+        pageTitle: "الناظر - لوحة تحكم المعلم",
+        welcomeTeacherGreeting: "أهلاً بك، مستر ",
+        teacherLoginTitle: "بوابة الناظر التعليمية",
+        teacherLoginPrompt: "سجل دخولك الآن للبدء في إدارة صفوفك الذكية",
         loginButton: "دخول",
         loginVerifying: "جاري التحقق...",
         passwordLabel: "كلمة المرور",
         phonePlaceholder: "01xxxxxxxxx",
         passwordPlaceholder: "كلمة المرور",
-        welcomeTitle: "لوحة تحكم المعلم الذكي",
+        welcomeTitle: "لوحة تحكم المعلم",
         currentGroupLabel: "المجموعة الحالية",
         selectGroupPlaceholder: "اختر مجموعة...",
         addGroupTitle: "مجموعة جديدة",
@@ -341,7 +342,7 @@ const translations = {
         copyFailed: "فشل النسخ ❌",
         landingNewVersion: "🚀 الإصدار الجديد متاح الآن",
         landingHeroTitle: "إدارتك كلها في <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>مكان واحد.</span>",
-        landingHeroSubtitle: "تطبيق <strong>Spot</strong> هو مساعدك الشخصي الذكي. رصد غياب بالـ QR، متابعة درجات، تحصيل مصروفات، وتواصل فوري مع أولياء الأمور.. كل ده وأنت بتشرب قهوتك ☕",
+        landingHeroSubtitle: "تطبيق <strong>الناظر</strong> هو مساعدك الشخصي الذكي. رصد غياب بالـ QR، متابعة درجات، تحصيل مصروفات، وتواصل فوري مع أولياء الأمور.. كل ده وأنت بتشرب قهوتك ☕",
         featureSmartAttendance: "غياب ذكي",
         featureSmartAttendanceSub: "سكانر سريع جداً",
         featureInstantConnect: "تواصل فوري",
@@ -350,7 +351,7 @@ const translations = {
         featureFinanceSub: "متابعة دقيقة",
         featureReports: "تقارير",
         featureReportsSub: "إحصائيات شاملة",
-        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
+        footerText: "© 2026 نظام الناظر. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
         goldenSettingsBtn: "إعدادات التذكرة الذهبية",
         goldenSettingsTitle: "إعدادات التذكرة الذهبية",
         goldenEnable: "تفعيل النظام",
@@ -387,18 +388,34 @@ const translations = {
         addNewStudentSectionTitle: "إضافة طالب جديد",
         studentFollowUp: "متابعة الطالب {name}",
         deleteGroupConfirm: "هل أنت متأكد من حذف هذه المجموعة نهائياً؟ سيتم حذف جميع الطلاب والبيانات المرتبطة بها!",
-        deleteGroupSuccess: "تم حذف المجموعة بنجاح"
+        deleteGroupSuccess: "تم حذف المجموعة بنجاح",
+        overviewHonorRoll: "لوحة الشرف",
+        overviewTopStudents: "أوائل المجموعة",
+        overviewAbsenceAlert: "تنبيه الغياب المتكرر",
+        overviewStudentsAtRisk: "طلاب في خطر",
+        overviewWeeklySummary: "الملخص الأسبوعي",
+        overviewAttendanceRate: "نسبة الحضور",
+        overviewAvgAttendanceDesc: "متوسط الحضور لآخر 3 حصص",
+        overviewGroupCurve: "منحنى مستوى المجموعة",
+        overviewCollectionStatus: "حالة التحصيل (الشهر الحالي)",
+        overviewPaymentStats: "إحصائيات الدفع لهذا الشهر",
+        overviewPaidCount: "سددوا",
+        overviewUnpaidCount: "متبقي",
+        portalGroupDesc: "من فضلك اختر المجموعة الدراسية التي ترغب في إدارتها الآن للبدء، أو يمكنك إضافة مجموعة جديدة للعمل عليها.",
+        portalGroupsHeader: "المجموعات الدراسية",
+        portalAddGroupBtn: "إضافة مجموعة جديدة"
     },
     en: {
-        pageTitle: "Spot - Smart Teacher",
-        teacherLoginTitle: "Teacher Login",
-        teacherLoginPrompt: "Enter phone to start",
+        pageTitle: "Al-Nazer - Teacher Dashboard",
+        welcomeTeacherGreeting: "Welcome, Mr. ",
+        teacherLoginTitle: "Al-Nazer Portal",
+        teacherLoginPrompt: "Login to start managing your smart classes",
         loginButton: "Login",
         loginVerifying: "Verifying...",
         passwordLabel: "Password",
         phonePlaceholder: "01xxxxxxxxx",
         passwordPlaceholder: "Password",
-        welcomeTitle: "Smart Teacher Dashboard",
+        welcomeTitle: "Teacher Dashboard",
         currentGroupLabel: "Current Group",
         selectGroupPlaceholder: "Select Group...",
         addGroupTitle: "New Group",
@@ -509,7 +526,7 @@ const translations = {
         copyFailed: "Copy failed ❌",
         landingNewVersion: "🚀 New Version Available",
         landingHeroTitle: "Manage Everything in <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>One Place.</span>",
-        landingHeroSubtitle: "<strong>Spot</strong> is your smart personal assistant. QR Attendance, Grade Tracking, Fee Collection, and Instant Parent Communication.. all while you sip your coffee ☕",
+        landingHeroSubtitle: "<strong>Al-Nazer</strong> is your smart personal assistant. QR Attendance, Grade Tracking, Fee Collection, and Instant Parent Communication.. all while you sip your coffee ☕",
         featureSmartAttendance: "Smart Attendance",
         featureSmartAttendanceSub: "Super Fast Scanner",
         featureInstantConnect: "Instant Connect",
@@ -518,7 +535,7 @@ const translations = {
         featureFinanceSub: "Accurate Tracking",
         featureReports: "Reports",
         featureReportsSub: "Full Analytics",
-        footerText: "© 2026 Spot System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
+        footerText: "© 2026 Al-Nazer System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
         goldenSettingsBtn: "Golden Ticket Settings",
         goldenSettingsTitle: "Golden Ticket Settings",
         goldenEnable: "Enable System",
@@ -533,7 +550,7 @@ const translations = {
         // ... (Old Translations) ...
 
         // 👇👇 Spot AI Additions 👇👇
-        tabBot: "Spot AI",
+        tabBot: "Al-Nazer AI",
         botFeedTitle: "Feed the Bot (Materials)",
         botFeedHint: "Upload PDFs, Images, or Audio here. The bot will study them instantly to answer student questions.",
         botDropArea: "Click to upload or drag file here",
@@ -549,14 +566,29 @@ const translations = {
         loginFirst: "Login required first",
 
         // Invite Card
-        botInviteTitle: "Spot AI Link",
+        botInviteTitle: "Al-Nazer AI Link",
         botInviteDesc: "Share this link and code with your students to start studying.",
         teacherCodeLabel: "Teacher Code",
         copyInviteBtn: "Copy Invite Message",
         inviteCopied: "Invite message copied! Send it to students 🚀",
         inviteCopyFail: "Copy failed",
         addNewStudentSectionTitle: "Add New Student",
-        studentFollowUp: "Student Dashboard: {name}"
+        studentFollowUp: "Student Dashboard: {name}",
+        overviewHonorRoll: "Honor Roll",
+        overviewTopStudents: "Top Performers",
+        overviewAbsenceAlert: "Absence Alert",
+        overviewStudentsAtRisk: "Students at Risk",
+        overviewWeeklySummary: "Weekly Summary",
+        overviewAttendanceRate: "Attendance Rate",
+        overviewAvgAttendanceDesc: "Avg Attendance (Last 3 Classes)",
+        overviewGroupCurve: "Group Performance Curve",
+        overviewCollectionStatus: "Collection Status (Current Month)",
+        overviewPaymentStats: "Payment Stats for this Month",
+        overviewPaidCount: "Paid",
+        overviewUnpaidCount: "Remaining",
+        portalGroupDesc: "Please select the group you wish to manage now to start, or you can add a new group to work on.",
+        portalGroupsHeader: "Study Groups",
+        portalAddGroupBtn: "Add New Group"
     }
 };
 
@@ -577,6 +609,44 @@ function formatPhoneNumber(p) {
     // نعيد الرقم بصيغة +20 الدولية لأنها الصيغة اللي فيها الداتا التاريخية
     return isValidEgyptianPhoneNumber(clean) ? `+20${clean.substring(1)}` : null;
 }
+
+function checkGroupSelectionPortal() {
+    const portal = document.getElementById('groupSelectorPortal');
+    const main = document.getElementById('mainContent');
+    if (!TEACHER_ID) {
+        if (portal) portal.classList.add('hidden');
+        if (main) main.classList.add('hidden');
+        return;
+    }
+    
+    if (!SELECTED_GROUP_ID) {
+        if (portal) portal.classList.remove('hidden');
+        if (main) main.classList.add('hidden');
+    } else {
+        if (portal) portal.classList.add('hidden');
+        if (main) main.classList.remove('hidden');
+    }
+}
+
+window.openAddNewGroupFlow = function() {
+    // 1. Hide portal and show main content
+    const portal = document.getElementById('groupSelectorPortal');
+    const main = document.getElementById('mainContent');
+    if (portal) portal.classList.add('hidden');
+    if (main) main.classList.remove('hidden');
+    
+    // 2. Switch to profile tab
+    switchTab('profile');
+    
+    // 3. Focus and select group name input
+    setTimeout(() => {
+        const inputField = document.getElementById('newGroupName');
+        if (inputField) {
+            inputField.focus();
+            inputField.select();
+        }
+    }, 150);
+};
 
 // ✅ دالة لإصلاح المعرف المخزن لو كان بالصيغة القديمة (بدون +20)
 function migrateTeacherID() {
@@ -1074,6 +1144,7 @@ async function processSyncQueue() {
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     videoElement = document.getElementById('scannerVideo');
+    applyLanguage();
     await openDB();
     setupListeners();
     await loadPreferences();
@@ -1112,20 +1183,30 @@ function setupListeners() {
     document.getElementById('saveProfileButton').addEventListener('click', saveProfile);
     document.getElementById('createNewGroupBtn').addEventListener('click', createGroup);
 
-    document.getElementById('groupSelect').addEventListener('change', async (e) => {
-        SELECTED_GROUP_ID = e.target.value;
+    const handleGroupSelectionChange = async (groupId) => {
+        SELECTED_GROUP_ID = groupId;
+        
+        // Sync the main dropdown element
+        const sel = document.getElementById('groupSelect');
+        if (sel) sel.value = SELECTED_GROUP_ID || "";
 
         // محاولة استرجاع المبلغ المحفوظ لهذه المجموعة
         const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
         const amountInput = document.getElementById('defaultAmountInput');
 
         if (amountInput) {
-            // لو لقينا مبلغ محفوظ نكتبه، لو ملقيناش نسيبها فاضية
             amountInput.value = savedAmount || '';
         }
 
+        checkGroupSelectionPortal();
         switchTab('overview');
         await loadGroupData();
+    };
+    
+    window.handleGroupSelectionChange = handleGroupSelectionChange;
+
+    document.getElementById('groupSelect').addEventListener('change', (e) => {
+        handleGroupSelectionChange(e.target.value);
     });
 
     const amountInput = document.getElementById('defaultAmountInput');
@@ -1484,18 +1565,20 @@ async function loginTeacher() {
         localStorage.setItem('learnaria-tid', TEACHER_ID);
 
         document.getElementById('landingSection').classList.add('hidden');
-        document.getElementById('mainContent').classList.remove('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
 
         if (data) {
-            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${data.name || ''}`;
+            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${data.name || ''}`;
+            const portalWelcome = document.getElementById('portalWelcomeTeacher');
+            if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${data.name || ''} 👋`;
+            
             document.getElementById('teacherNameInput').value = data.name || '';
             document.getElementById('teacherSubjectInput').value = data.subject || '';
             document.getElementById('profilePasswordInput').value = data.password || '';
         }
 
         await loadGroups();
-        switchTab('overview');
+        checkGroupSelectionPortal();
 
     } catch (error) {
         if (error.message !== "Offline first login") {
@@ -1529,8 +1612,10 @@ async function loadGroups() {
 
 function renderGroupsDropdown(groupsList) {
     const sel = document.getElementById('groupSelect');
-    const currentVal = sel.value;
-    sel.innerHTML = `<option value="" disabled ${!currentVal ? 'selected' : ''}>${translations[currentLang].selectGroupPlaceholder}</option>`;
+    const currentVal = SELECTED_GROUP_ID || sel.value;
+    
+    const placeholderText = translations[currentLang].selectGroupPlaceholder;
+    sel.innerHTML = `<option value="" disabled ${!currentVal ? 'selected' : ''}>${placeholderText}</option>`;
 
     groupsList.forEach(g => {
         const opt = document.createElement('option');
@@ -1539,6 +1624,41 @@ function renderGroupsDropdown(groupsList) {
         if (currentVal === g.id) opt.selected = true;
         sel.appendChild(opt);
     });
+
+    // Populate Group Quick-Cards Grid (Launchpad Square Folder Tiles)
+    const cardsContainer = document.getElementById('promptGroupCardsGrid');
+    if (cardsContainer) {
+        if (groupsList.length === 0) {
+            cardsContainer.className = "flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-3xl w-full col-span-full gap-3 bg-gray-50/50 dark:bg-black/10";
+            const noGroupsMsg = currentLang === 'ar' ? 'لا توجد مجموعات مضافة حالياً' : 'No groups added currently';
+            cardsContainer.innerHTML = `
+                <i class="ri-folder-open-line text-4xl text-gray-400 dark:text-zinc-600"></i>
+                <p class="text-xs font-bold text-gray-400 dark:text-zinc-500">${noGroupsMsg}</p>
+            `;
+        } else {
+            cardsContainer.className = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 w-full col-span-full";
+            
+            cardsContainer.innerHTML = groupsList.map((g, idx) => {
+                const enterGroupMsg = currentLang === 'ar' ? 'دخول المجموعة ←' : 'Enter Group ←';
+                return `
+                    <div onclick="window.handleGroupSelectionChange('${g.id}')" 
+                         class="group aspect-square flex flex-col justify-between p-6 bg-white dark:bg-zinc-800/40 hover:bg-white dark:hover:bg-zinc-800 border border-gray-200/50 dark:border-zinc-800 rounded-3xl cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-black/30 active:scale-95 text-right">
+                        
+                        <!-- Top: Folder Icon in subtle container -->
+                        <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-zinc-700/50 text-gray-400 group-hover:text-brand group-hover:bg-brand/10 flex items-center justify-center transition-colors self-start">
+                            <i class="ri-folder-shared-line text-lg"></i>
+                        </div>
+                        
+                        <!-- Bottom: Group Title & CTA -->
+                        <div>
+                            <h4 class="font-black text-gray-800 dark:text-white text-base group-hover:text-brand transition-colors leading-tight truncate" title="${g.name}">${g.name}</h4>
+                            <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 font-bold">${enterGroupMsg}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
 }
 
 async function createGroup() {
@@ -1597,8 +1717,7 @@ async function deleteCurrentGroup() {
         // إعادة تحميل المجموعات
         await loadGroups();
 
-        // إخفاء الأيقونات والتابات المفتوحة (لأن مفيش مجموعة مختارة)
-        switchTab('profile');
+        checkGroupSelectionPortal();
 
     } catch (e) {
         console.error("Error deleting group:", e);
@@ -1695,6 +1814,7 @@ async function loadGroupData() {
             const remoteStudents = sSnap.docs.map(d => ({ id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() }));
             allStudents = remoteStudents;
             saveStudentsToLocalDB(remoteStudents);
+            refreshCurrentTab();
 
             // ب. الحضور الأخير (للتخزين المحلي)
             const aSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get();
@@ -1728,6 +1848,7 @@ async function loadGroupData() {
             refreshCurrentTab();
         } catch (e) {
             console.error("Sync error:", e);
+            refreshCurrentTab();
         }
     }
 
@@ -1770,7 +1891,9 @@ async function renderOverview() {
                 const studentScores = Object.entries(scores).map(([sid, val]) => {
                     const student = allStudents.find(s => s.id === sid);
                     const markValue = (val && typeof val === 'object') ? (val.score || 0) : val;
-                    return { name: student ? student.name : 'طالب محذوف', mark: parseInt(markValue) || 0 };
+                    const defaultLoadingText = currentLang === 'ar' ? 'جاري التحميل...' : 'Loading...';
+                    const defaultDeletedText = currentLang === 'ar' ? 'طالب محذوف' : 'Deleted student';
+                    return { name: student ? student.name : (allStudents.length === 0 ? defaultLoadingText : defaultDeletedText), mark: parseInt(markValue) || 0 };
                 });
 
                 if (studentScores.length > 0) {
@@ -1791,13 +1914,16 @@ async function renderOverview() {
                         </div>
                     `).join('');
                 } else {
-                    topList.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-bold">لم تُرصد درجات لآخر امتحان</p>';
+                    const noGradesMsg = currentLang === 'ar' ? 'لم تُرصد درجات لآخر امتحان' : 'No grades recorded for the latest exam';
+                    topList.innerHTML = `<p class="text-xs text-gray-400 text-center py-6 font-bold">${noGradesMsg}</p>`;
                 }
             } else {
-                topList.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-bold">لم يتم إنشاء امتحانات بعد</p>';
+                const noExamsMsg = currentLang === 'ar' ? 'لم يتم إنشاء امتحانات بعد' : 'No exams created yet';
+                topList.innerHTML = `<p class="text-xs text-gray-400 text-center py-6 font-bold">${noExamsMsg}</p>`;
             }
         } else {
-            topList.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-bold tracking-widest uppercase">لا توجد بيانات</p>';
+            const noDataMsg = currentLang === 'ar' ? 'لا توجد بيانات' : 'No data available';
+            topList.innerHTML = `<p class="text-xs text-gray-400 text-center py-6 font-bold tracking-widest uppercase">${noDataMsg}</p>`;
         }
 
         // 2. Students at Risk (Absence Trend) & 3. Attendance Rate
@@ -1830,16 +1956,20 @@ async function renderOverview() {
             });
 
             if (riskStudents.length > 0) {
-                riskList.innerHTML = riskStudents.sort((a, b) => b.count - a.count).slice(0, 5).map((s, idx) => `
-                    <div class="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 animate-fade-in" style="animation-delay: ${idx * 0.1}s">
-                        <p class="text-sm font-black text-gray-800 dark:text-white truncate max-w-[150px] text-right">${s.name}</p>
-                        <span class="text-[10px] font-black bg-red-500 text-white px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
-                            غاب ${s.count} حصص
-                        </span>
-                    </div>
-                `).join('');
+                riskList.innerHTML = riskStudents.sort((a, b) => b.count - a.count).slice(0, 5).map((s, idx) => {
+                    const absentText = currentLang === 'ar' ? `غاب ${s.count} حصص` : `Absent ${s.count} classes`;
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 animate-fade-in" style="animation-delay: ${idx * 0.1}s">
+                            <p class="text-sm font-black text-gray-800 dark:text-white truncate max-w-[150px] text-right">${s.name}</p>
+                            <span class="text-[10px] font-black bg-red-500 text-white px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
+                                ${absentText}
+                            </span>
+                        </div>
+                    `;
+                }).join('');
             } else {
-                riskList.innerHTML = '<div class="text-center py-6"><i class="ri-checkbox-circle-fill text-green-500 text-2xl"></i><p class="text-xs text-green-600 font-bold mt-1">الكل ملتزم بالحضور!</p></div>';
+                const allCommittedMsg = currentLang === 'ar' ? 'الكل ملتزم بالحضور!' : 'Everyone is committed to attending!';
+                riskList.innerHTML = `<div class="text-center py-6"><i class="ri-checkbox-circle-fill text-green-500 text-2xl"></i><p class="text-xs text-green-600 font-bold mt-1">${allCommittedMsg}</p></div>`;
             }
 
             const rate = totalChecked > 0 ? Math.round((totalPresent / totalChecked) * 100) : 0;
@@ -1886,12 +2016,14 @@ async function renderOverview() {
                 renderGroupPerformanceChart(labels, dataPoints);
             } else {
                 if (chartContainer) {
-                    chartContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> لا توجد امتحانات كافية للتحليل</div>';
+                    const notEnoughExamsMsg = currentLang === 'ar' ? 'لا توجد امتحانات كافية للتحليل' : 'Not enough exams for analysis';
+                    chartContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> ${notEnoughExamsMsg}</div>`;
                 }
             }
         } else {
             if (chartContainer) {
-                chartContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> لا توجد بيانات مسجلة</div>';
+                const noDataRecordedMsg = currentLang === 'ar' ? 'لا توجد بيانات مسجلة' : 'No registered data';
+                chartContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> ${noDataRecordedMsg}</div>`;
             }
         }
 
@@ -1914,7 +2046,7 @@ function renderGroupPerformanceChart(labels, data) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'متوسط الأداء %',
+                label: currentLang === 'ar' ? 'متوسط الأداء %' : 'Average Performance %',
                 data: data,
                 borderColor: '#F2CE5A',
                 backgroundColor: 'rgba(242, 206, 90, 0.1)',
@@ -1937,7 +2069,7 @@ function renderGroupPerformanceChart(labels, data) {
                     borderWidth: 1,
                     callbacks: {
                         label: function (context) {
-                            return 'متوسط المستوى: ' + context.parsed.y + '%';
+                            return (currentLang === 'ar' ? 'متوسط المستوى: ' : 'Average Level: ') + context.parsed.y + '%';
                         }
                     }
                 }
@@ -2000,8 +2132,16 @@ function refreshCurrentTab() {
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-    document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-    document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
+    
+    const targetEl = document.getElementById(`tab-${tabId}`);
+    if (targetEl) targetEl.classList.remove('hidden');
+    
+    const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
+    if (btn) btn.classList.add('active');
+
+    if (!SELECTED_GROUP_ID && tabId !== 'profile') {
+        return; // Don't fetch data if no group is selected
+    }
 
     if (tabId === 'overview') renderOverview();
 
@@ -2037,154 +2177,172 @@ function switchTab(tabId) {
 // 8. DAILY & SCANNER
 // ==========================================
 async function renderDailyList() {
-    const date = document.getElementById('dailyDateInput').value;
-    const list = document.getElementById('dailyStudentsList');
-    list.innerHTML = '';
+    try {
+        const date = document.getElementById('dailyDateInput').value || new Date().toISOString().slice(0, 10);
+        const list = document.getElementById('dailyStudentsList');
+        list.innerHTML = '';
 
-    // تحديث عناوين الجدول
-    const hStudent = document.getElementById('headerStudent');
-    const hAtt = document.getElementById('headerAttendance');
-    const hHw = document.getElementById('headerHomework');
+        // تحديث عناوين الجدول
+        const hStudent = document.getElementById('headerStudent');
+        const hAtt = document.getElementById('headerAttendance');
+        const hHw = document.getElementById('headerHomework');
 
-    document.getElementById('headerStudent').innerText = translations[currentLang].tableHeaderStudent;
-    document.getElementById('headerAttendance').innerText = translations[currentLang].tableHeaderAttendance;
-    document.getElementById('headerHomework').innerText = translations[currentLang].tableHeaderHomework;
-
-    if (hasHomeworkToday) {
-        hStudent.className = "col-span-6 transition-all duration-300";
-        hAtt.className = "col-span-3 text-center transition-all duration-300";
-        hHw.classList.remove('hidden');
-    } else {
-        hStudent.className = "col-span-8 transition-all duration-300";
-        hAtt.className = "col-span-4 text-center transition-all duration-300";
-        hHw.classList.add('hidden');
-    }
-
-    if (!date || !allStudents.length) {
-        list.innerHTML = `<p class="text-center text-gray-500 py-4">${translations[currentLang].noStudentsInGroup}</p>`;
-        return;
-    }
-
-    // جلب البيانات المخزنة
-    const attId = `${SELECTED_GROUP_ID}_${date}`;
-    const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
-    const [attDoc, hwDoc] = await Promise.all([getFromDB('attendance', attId), getFromDB('assignments', hwId)]);
-
-    const attMap = {};
-    if (attDoc?.records) attDoc.records.forEach(r => attMap[r.studentId] = r.status);
-
-    const hwMap = {};
-    if (hwDoc?.scores) {
-        Object.entries(hwDoc.scores).forEach(([sid, val]) => hwMap[sid] = val.submitted);
-        // تفعيل الواجب تلقائياً لو فيه داتا محفوظة
-        if (!hasHomeworkToday) {
-            hasHomeworkToday = true;
-            document.getElementById('homeworkToggle').checked = true;
-            hStudent.className = "col-span-6 transition-all duration-300";
-            hAtt.className = "col-span-3 text-center transition-all duration-300";
-            hHw.classList.remove('hidden');
-        }
-    }
-
-    let presentCount = 0;
-
-    allStudents.forEach(s => {
-        const status = attMap[s.id] || 'absent'; // الافتراضي غائب لو مفيش تسجيل
-        if (status === 'present') presentCount++;
-
-        const hwSubmitted = hwMap[s.id];
-        const isAbsent = status === 'absent';
-
-        const studentColSpan = hasHomeworkToday ? 'col-span-6' : 'col-span-8';
-        const attColSpan = hasHomeworkToday ? 'col-span-3' : 'col-span-4';
-
-        const row = document.createElement('div');
-        row.dataset.sid = s.id;
-
-        // تنسيق الصف حسب الحالة
-        row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 cursor-pointer ${status === 'present'
-            ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
-            : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
-            }`;
-
-        row.onclick = (e) => {
-            if (!e.target.closest('select') && !e.target.closest('input')) {
-                openStudentProfile(s.id);
-            }
-        };
-
-        let html = `
-            <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300"> ${s.name}</div>
-            <div class="${attColSpan} flex justify-center transition-all duration-300">
-                <select class="att-select bg-gray-50 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded text-xs py-1 px-1 outline-none cursor-pointer">
-                    <option value="present" ${status === 'present' ? 'selected' : ''}>${translations[currentLang].present}</option>
-                    <option value="absent" ${status === 'absent' ? 'selected' : ''}>${translations[currentLang].absent}</option>
-                    </select>
-            </div>
-        `;
+        if (hStudent) hStudent.innerText = translations[currentLang].tableHeaderStudent;
+        if (hAtt) hAtt.innerText = translations[currentLang].tableHeaderAttendance;
+        if (hHw) hHw.innerText = translations[currentLang].tableHeaderHomework;
 
         if (hasHomeworkToday) {
-            html += `
-            <div class="col-span-3 flex justify-center fade-in-up">
-                <input type="checkbox" class="hw-check w-5 h-5 accent-brand rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
-                    ${hwSubmitted ? 'checked' : ''} 
-                    ${isAbsent ? 'disabled' : ''}>
-            </div>`;
+            if (hStudent) hStudent.className = "col-span-6 transition-all duration-300";
+            if (hAtt) hAtt.className = "col-span-3 text-center transition-all duration-300";
+            if (hHw) hHw.classList.remove('hidden');
+        } else {
+            if (hStudent) hStudent.className = "col-span-8 transition-all duration-300";
+            if (hAtt) hAtt.className = "col-span-4 text-center transition-all duration-300";
+            if (hHw) hHw.classList.add('hidden');
         }
 
-        row.innerHTML = html;
+        if (!allStudents || !allStudents.length) {
+            list.innerHTML = `<p class="text-center text-gray-500 py-4">${translations[currentLang].noStudentsInGroup}</p>`;
+            return;
+        }
 
-        // --- Logic: تغيير الحالة يقفل/يفتح الواجب ---
-        const attSelect = row.querySelector('.att-select');
-        const hwCheck = row.querySelector('.hw-check');
+        // جلب البيانات المخزنة بشكل آمن ومحمي
+        let attDoc = null;
+        let hwDoc = null;
+        try {
+            const attId = `${SELECTED_GROUP_ID}_${date}`;
+            const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
+            const results = await Promise.all([
+                getFromDB('attendance', attId).catch(err => { console.warn("Failed fetching att:", err); return null; }),
+                getFromDB('assignments', hwId).catch(err => { console.warn("Failed fetching hw:", err); return null; })
+            ]);
+            attDoc = results[0];
+            hwDoc = results[1];
+        } catch (dbErr) {
+            console.error("Database fetch failed in daily list:", dbErr);
+        }
 
-        attSelect.addEventListener('change', (e) => {
-            const val = e.target.value;
+        const attMap = {};
+        if (attDoc?.records) attDoc.records.forEach(r => { if (r) attMap[r.studentId] = r.status; });
 
-            // 1. تغيير ألوان الصف
-            if (val === 'present') {
-                row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-                row.classList.remove('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+        const hwMap = {};
+        if (hwDoc?.scores) {
+            Object.entries(hwDoc.scores).forEach(([sid, val]) => {
+                hwMap[sid] = (val && typeof val === 'object') ? val.submitted : false;
+            });
+            // تفعيل الواجب تلقائياً لو فيه داتا محفوظة
+            if (!hasHomeworkToday) {
+                hasHomeworkToday = true;
+                const hwToggle = document.getElementById('homeworkToggle');
+                if (hwToggle) hwToggle.checked = true;
+                if (hStudent) hStudent.className = "col-span-6 transition-all duration-300";
+                if (hAtt) hAtt.className = "col-span-3 text-center transition-all duration-300";
+                if (hHw) hHw.classList.remove('hidden');
+            }
+        }
 
-                // ✅ لو حضر: نفتح خانة الواجب
-                if (hwCheck) hwCheck.disabled = false;
+        let presentCount = 0;
 
-            } else { // absent
-                row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-                row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+        allStudents.forEach(s => {
+            const status = attMap[s.id] || 'absent'; // الافتراضي غائب لو مفيش تسجيل
+            if (status === 'present') presentCount++;
 
-                // ✅ لو غاب: نقفل خانة الواجب ونشيل علامة الصح (reset)
-                if (hwCheck) {
-                    hwCheck.checked = false;
-                    hwCheck.disabled = true;
+            const hwSubmitted = hwMap[s.id];
+            const isAbsent = status === 'absent';
+
+            const studentColSpan = hasHomeworkToday ? 'col-span-6' : 'col-span-8';
+            const attColSpan = hasHomeworkToday ? 'col-span-3' : 'col-span-4';
+
+            const row = document.createElement('div');
+            row.dataset.sid = s.id;
+
+            // تنسيق الصف حسب الحالة
+            row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 cursor-pointer ${status === 'present'
+                ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
+                : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
+                }`;
+
+            row.onclick = (e) => {
+                if (!e.target.closest('select') && !e.target.closest('input')) {
+                    openStudentProfile(s.id);
                 }
+            };
+
+            let html = `
+                <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300"> ${s.name}</div>
+                <div class="${attColSpan} flex justify-center transition-all duration-300">
+                    <select class="att-select bg-gray-50 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded text-xs py-1 px-1 outline-none cursor-pointer">
+                        <option value="present" ${status === 'present' ? 'selected' : ''}>${translations[currentLang].present}</option>
+                        <option value="absent" ${status === 'absent' ? 'selected' : ''}>${translations[currentLang].absent}</option>
+                        </select>
+                </div>
+            `;
+
+            if (hasHomeworkToday) {
+                html += `
+                <div class="col-span-3 flex justify-center fade-in-up">
+                    <input type="checkbox" class="hw-check w-5 h-5 accent-brand rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
+                        ${hwSubmitted ? 'checked' : ''} 
+                        ${isAbsent ? 'disabled' : ''}>
+                </div>`;
             }
 
-            // تحديث عداد الحضور المباشر
-            updateAttendanceCount();
-            saveTimeout = setTimeout(() => {
-                silentSave(); // هيحفظ التغيير ده لوحده بعد 3 ثواني
-            }, 3000);
-        });
-        if (hwCheck) {
-            hwCheck.addEventListener('change', () => {
-                // ✅✅ الإضافة السحرية: حفظ تلقائي للواجب اليدوي ✅✅
-                clearTimeout(saveTimeout);
+            row.innerHTML = html;
+
+            // --- Logic: تغيير الحالة يقفل/يفتح الواجب ---
+            const attSelect = row.querySelector('.att-select');
+            const hwCheck = row.querySelector('.hw-check');
+
+            attSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+
+                // 1. تغيير ألوان الصف
+                if (val === 'present') {
+                    row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                    row.classList.remove('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+
+                    // ✅ لو حضر: نفتح خانة الواجب
+                    if (hwCheck) hwCheck.disabled = false;
+
+                } else { // absent
+                    row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                    row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+
+                    // ✅ لو غاب: نقفل خانة الواجب ونشيل علامة الصح (reset)
+                    if (hwCheck) {
+                        hwCheck.checked = false;
+                        hwCheck.disabled = true;
+                    }
+                }
+
+                // تحديث عداد الحضور المباشر
+                updateAttendanceCount();
                 saveTimeout = setTimeout(() => {
-                    silentSave();
+                    silentSave(); // هيحفظ التغيير ده لوحده بعد 3 ثواني
                 }, 3000);
             });
+            if (hwCheck) {
+                hwCheck.addEventListener('change', () => {
+                    // ✅✅ الإضافة السحرية: حفظ تلقائي للواجب اليدوي ✅✅
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => {
+                        silentSave();
+                    }, 3000);
+                });
+            }
+            list.appendChild(row);
+        });
+
+        // دالة صغيرة لتحديث العداد
+        function updateAttendanceCount() {
+            const count = document.querySelectorAll('.att-select option[value="present"]:checked').length;
+            document.getElementById('attendanceCountBadge').innerText = `${count}/${allStudents.length}`;
         }
-        list.appendChild(row);
-    });
 
-    // دالة صغيرة لتحديث العداد
-    function updateAttendanceCount() {
-        const count = document.querySelectorAll('.att-select option[value="present"]:checked').length;
-        document.getElementById('attendanceCountBadge').innerText = `${count}/${allStudents.length}`;
+        updateAttendanceCount(); // تشغيل العداد أول مرة
+    } catch (error) {
+        console.error("Error rendering daily class list:", error);
     }
-
-    updateAttendanceCount(); // تشغيل العداد أول مرة
 }
 
 // 📈 دالة الرسوم البيانية للمجموعة (جديد)
@@ -2980,15 +3138,15 @@ async function shareCardAction() {
                 try {
                     await navigator.share({
                         files: [file],
-                        title: 'Spot Student ID',
-                        text: 'بطاقة الطالب الرقمية - Spot System'
+                        title: 'الناظر - بطاقة الطالب',
+                        text: 'بطاقة الطالب الرقمية - منصة الناظر التعليمية'
                     });
                 } catch (err) {
                     if (err.name !== 'AbortError') console.error(err);
                 }
             } else {
                 const link = document.createElement('a');
-                link.download = `Spot_ID_${Date.now()}.png`;
+                link.download = `Nazer_ID_${Date.now()}.png`;
                 link.href = canvas.toDataURL();
                 link.click();
                 showToast("تم تحميل الصورة بنجاح");
@@ -3322,7 +3480,7 @@ function saveProfile() {
     if (!name) return;
     putToDB('teachers', { id: TEACHER_ID, name, subject, password });
     addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}`, data: { name, subject, password } });
-    document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${name}`;
+    document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${name}`;
     showToast(translations[currentLang].saved);
 }
 
@@ -3353,10 +3511,11 @@ async function loadPreferences() {
         TEACHER_ID = storedID;
 
         // محاولة جلب بيانات المعلم من الداتابيز المحلية لتعبئة البروفايل
+        let teacherData = null;
         try {
-            const teacherData = await getFromDB('teachers', TEACHER_ID);
+            teacherData = await getFromDB('teachers', TEACHER_ID);
             if (teacherData) {
-                document.getElementById('dashboardTitle').innerText = `${translations[currentLang].pageTitle} - ${teacherData.name || ''}`;
+                document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''}`;
                 document.getElementById('teacherNameInput').value = teacherData.name || '';
                 document.getElementById('teacherSubjectInput').value = teacherData.subject || '';
                 document.getElementById('profilePasswordInput').value = teacherData.password || '';
@@ -3365,12 +3524,16 @@ async function loadPreferences() {
 
         // إخفاء شاشة تسجيل الدخول وإظهار المحتوى
         document.getElementById('landingSection').classList.add('hidden');
-        document.getElementById('mainContent').classList.remove('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
+
+        if (teacherData) {
+            const portalWelcome = document.getElementById('portalWelcomeTeacher');
+            if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''} 👋`;
+        }
 
         // تحميل المجموعات والذهاب للمتابعة الذكية
         await loadGroups();
-        switchTab('overview');
+        checkGroupSelectionPortal();
 
         if (SELECTED_GROUP_ID) {
             const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
@@ -3381,15 +3544,14 @@ async function loadPreferences() {
         }
     }
 }
-function toggleLang() {
-    currentLang = currentLang === 'ar' ? 'en' : 'ar';
+function applyLanguage() {
     document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-    document.getElementById('languageToggleButton').innerText = currentLang === 'ar' ? 'EN' : 'ع';
+    const langBtn = document.getElementById('languageToggleButton');
+    if (langBtn) langBtn.innerText = currentLang === 'ar' ? 'EN' : 'ع';
 
     document.querySelectorAll('[data-key]').forEach(el => {
         const key = el.dataset.key;
         if (translations[currentLang][key]) {
-            // ✅ التعديل الضروري هنا: استخدمنا innerHTML بدل innerText
             el.innerHTML = translations[currentLang][key];
         }
     });
@@ -3399,6 +3561,23 @@ function toggleLang() {
         if (translations[currentLang][key]) el.placeholder = translations[currentLang][key];
     });
 
+    // Update dynamic welcome greetings with the teacher's name
+    const nameInput = document.getElementById('teacherNameInput');
+    if (nameInput && nameInput.value) {
+        const titleEl = document.getElementById('dashboardTitle');
+        if (titleEl) titleEl.innerText = `${translations[currentLang].welcomeTeacherGreeting}${nameInput.value}`;
+        const portalWelcome = document.getElementById('portalWelcomeTeacher');
+        if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${nameInput.value} 👋`;
+    }
+
+    updateOnlineStatus();
+}
+
+function toggleLang() {
+    currentLang = currentLang === 'ar' ? 'en' : 'ar';
+    applyLanguage();
+
+    if (SELECTED_GROUP_ID && !document.getElementById('tab-overview').classList.contains('hidden')) renderOverview();
     if (SELECTED_GROUP_ID && !document.getElementById('tab-daily').classList.contains('hidden')) renderDailyList();
     if (SELECTED_GROUP_ID && !document.getElementById('tab-students').classList.contains('hidden')) renderStudents();
 
@@ -3777,7 +3956,7 @@ function copyBotInvite() {
     const inviteMsg = `
 👋 أهلاً يا شباب!
 
-أنا فعلت ليكم "المساعد الذكي" (Spot AI) عشان يساعدكم في المذاكرة ويجاوب على أسئلتكم من الملازم بتاعتي طول الـ 24 ساعة! 🤖📚
+أنا فعلت ليكم "المساعد الذكي" (الناظر AI) عشان يساعدكم في المذاكرة ويجاوب على أسئلتكم من الملازم بتاعتي طول الـ 24 ساعة! 🤖📚
 
 1️⃣ ادخلوا كلموا البوت هنا:
 https://wa.me/${botNumber.replace('+', '')}?text=join%20off-drive
@@ -4197,9 +4376,9 @@ window.printExam = function (examData) {
             مع أطيب التمنيات بالتوفيق والنجاح
         </div>
         <div style="font-size: 16px; color: #333; font-weight: 700;">
-            ${window.lastTeacherName || document.getElementById('teacherNameInput')?.value ? `مستر/ ${window.lastTeacherName || document.getElementById('teacherNameInput').value}` : 'مع تحيات مستر Spot AI'}
+            ${window.lastTeacherName || document.getElementById('teacherNameInput')?.value ? `مستر/ ${window.lastTeacherName || document.getElementById('teacherNameInput').value}` : 'مع تحيات منصة الناظر التعليمية'}
         </div>
-        <div style="margin-top: 20px; font-size: 10px; color: #aaa;">Generated by Spot AI ✨ | Enjoy 🤓</div>
+        <div style="margin-top: 20px; font-size: 10px; color: #aaa;">نظام الناظر لإدارة التعليم الذكي ✨</div>
     </div>
 </body>
 </html>`;
@@ -4232,7 +4411,7 @@ window.printStudyNote = function (content) {
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
     <head>
-        <title>ملخص درس - Spot AI</title>
+        <title>ملخص درس - الناظر AI</title>
         <meta charset="UTF-8">
         
         <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
@@ -4350,7 +4529,7 @@ window.printStudyNote = function (content) {
     <body>
         <div class="header">
             <div class="logo-text">مذكرة تعليمية ذكية 📚</div>
-            <div class="sub-header">ملخص الدرس بواسطة المساعد الذكي Spot AI</div>
+            <div class="sub-header">ملخص الدرس بواسطة مساعد الناظر الذكي AI</div>
         </div>
 
         <div class="content">
@@ -4360,8 +4539,7 @@ window.printStudyNote = function (content) {
         <div style="height: 100px;"></div>
 
         <div class="footer">
-            Generated by Spot AI ✨<br>
-            Enjoy 🤓
+            نظام الناظر لإدارة التعليم الذكي ✨
         </div>
     </body>
     </html>`;
@@ -4943,5 +5121,17 @@ async function emergencyRestore(mode = 'upload') {
             btn.disabled = false;
             btn.innerHTML = '<i class="ri-error-warning-fill"></i> زرار طوارئ: استعادة البيانات من الجهاز للسيرفر';
         }
+    }
+}
+
+function togglePasswordVisibility() {
+    const input = document.getElementById('teacherPasswordInput');
+    const icon = document.getElementById('passwordToggleIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'ri-eye-off-line text-xl';
+    } else {
+        input.type = 'password';
+        icon.className = 'ri-eye-line text-xl';
     }
 }
