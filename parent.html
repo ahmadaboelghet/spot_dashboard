@@ -518,15 +518,26 @@
         const urlP = urlParams.get('p');
 
         if (urlP) {
-            currentParentPhone = urlP;
+            let phone = urlP.trim();
+            if (phone.startsWith('01') && phone.length === 11) {
+                phone = '+2' + phone;
+            } else if (!phone.startsWith('+')) {
+                phone = '+2' + phone;
+            }
+            currentParentPhone = phone;
             loadAppRealtime();
         } else {
             document.getElementById('loginSection').classList.remove('hidden');
         }
 
         function handleLogin() {
-            const phone = document.getElementById('parentPhoneInput').value.trim();
+            let phone = document.getElementById('parentPhoneInput').value.trim();
             if (phone.length < 10) return alert("رقم غير صحيح");
+            if (phone.startsWith('01') && phone.length === 11) {
+                phone = '+2' + phone;
+            } else if (!phone.startsWith('+')) {
+                phone = '+2' + phone;
+            }
             currentParentPhone = phone;
             document.getElementById('loginSection').classList.add('hidden');
             loadAppRealtime();

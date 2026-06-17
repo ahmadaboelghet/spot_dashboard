@@ -857,7 +857,7 @@ function renderNotificationSubList(list, containerId, isActivated) {
         div.innerHTML = `
             <div class="text-right">
                 <h5 class="text-sm font-black text-gray-800 dark:text-gray-200 group-hover:text-brand transition-colors tracking-tight">${s.name || 'مجهول'}</h5>
-                <p class="text-[10px] text-gray-400 font-bold mt-0.5">${s.parentPhoneNumber || '---'}</p>
+                <p class="text-[10px] text-gray-400 font-bold mt-0.5">${s.parentPhoneNumber ? (s.parentPhoneNumber.startsWith('+2') ? s.parentPhoneNumber.substring(2) : s.parentPhoneNumber) : '---'}</p>
             </div>
             <div class="w-10 h-10 rounded-xl ${isActivated ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-400'} dark:bg-zinc-800 flex items-center justify-center border border-gray-100 dark:border-zinc-800">
                 <i class="${isActivated ? 'ri-checkbox-circle-fill' : 'ri-error-warning-fill'} text-xl"></i>
@@ -1196,6 +1196,7 @@ function setupListeners() {
     toggleStudentInputs(false);
     setupPhoneInput('teacherPhoneInput');
     setupPhoneInput('newParentPhoneNumber');
+    setupPhoneInput('profileParentPhone');
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const tab = e.currentTarget.dataset.tab;
@@ -1213,6 +1214,12 @@ function setupListeners() {
     const handleGroupSelectionChange = async (groupId) => {
         SELECTED_GROUP_ID = groupId;
         
+        if (SELECTED_GROUP_ID) {
+            localStorage.setItem('learnaria-gid', SELECTED_GROUP_ID);
+        } else {
+            localStorage.removeItem('learnaria-gid');
+        }
+
         // Sync the main dropdown element
         const sel = document.getElementById('groupSelect');
         if (sel) sel.value = SELECTED_GROUP_ID || "";
@@ -1617,7 +1624,12 @@ async function loginTeacher() {
         btn.disabled = false;
     }
 }
-function logout() { localStorage.removeItem('learnaria-tid'); location.reload(); }
+function logout() {
+    localStorage.removeItem('learnaria-tid');
+    localStorage.removeItem('learnaria-gid');
+    localStorage.removeItem('learnaria-tab');
+    location.reload();
+}
 
 async function loadGroups() {
     let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
@@ -1739,6 +1751,7 @@ async function deleteCurrentGroup() {
 
         // 3. تصفير الحالة والعودة للبداية
         SELECTED_GROUP_ID = null;
+        localStorage.removeItem('learnaria-gid');
         document.getElementById('groupSelect').value = "";
 
         // إعادة تحميل المجموعات
@@ -2171,6 +2184,8 @@ function switchTab(tabId) {
     
     const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
     if (btn) btn.classList.add('active');
+
+    localStorage.setItem('learnaria-tab', tabId);
 
     if (!SELECTED_GROUP_ID && tabId !== 'profile') {
         return; // Don't fetch data if no group is selected
@@ -2747,9 +2762,14 @@ function tickScanner() {
 async function handleScan(scannedText) {
     const qrCode = scannedText.replace(/"/g, '').trim();
 
+    const matchPhone = (dbPhone, qrVal) => {
+        if (!dbPhone) return false;
+        return dbPhone.trim().replace(/^\+2/, '') === qrVal.trim().replace(/^\+2/, '');
+    };
+
     // 1. البحث في المجموعة الحالية (الأولوية)
     const matchedStudents = allStudents.filter(s =>
-        (s.parentPhoneNumber && s.parentPhoneNumber.trim() === qrCode) ||
+        matchPhone(s.parentPhoneNumber, qrCode) ||
         s.id === qrCode
     );
 
@@ -2762,7 +2782,7 @@ async function handleScan(scannedText) {
             // بحث شامل في كل الطلاب (Global Search)
             const allLocalStudents = await getAllFromDB('students');
             const globalMatch = allLocalStudents.find(s =>
-                (s.parentPhoneNumber && s.parentPhoneNumber.trim() === qrCode) ||
+                matchPhone(s.parentPhoneNumber, qrCode) ||
                 s.id === qrCode
             );
 
@@ -3068,7 +3088,7 @@ function renderStudents(filter = "") {
                     <p class="font-bold text-gray-800 dark:text-white"> ${s.name}</p>
                     <i class="ri-notification-3-fill ${s.parentFcmToken ? 'text-green-500' : 'text-red-500'}" title="${s.parentFcmToken ? 'الإشعارات مفعلة' : 'الإشعارات لسه مش مفعلة'}"></i>
                 </div>
-                <p class="text-xs text-gray-500">${s.parentPhoneNumber || ''}</p>
+                <p class="text-xs text-gray-500">${s.parentPhoneNumber ? (s.parentPhoneNumber.startsWith('+2') ? s.parentPhoneNumber.substring(2) : s.parentPhoneNumber) : ''}</p>
             </div>
             <div class="flex gap-2">
                 <button class="btn-icon w-10 h-10 bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 invite-btn" title="إرسال رابط المتابعة واتساب">
@@ -3239,7 +3259,14 @@ async function addNewStudent() {
     const nameInput = document.getElementById('newStudentName');
     const phoneInput = document.getElementById('newParentPhoneNumber');
     const name = nameInput.value;
-    const phone = phoneInput.value;
+    let phone = phoneInput.value.trim();
+    if (phone) {
+        if (phone.startsWith('01') && phone.length === 11) {
+            phone = '+2' + phone;
+        } else if (!phone.startsWith('+')) {
+            phone = '+2' + phone;
+        }
+    }
     if (!name) return;
     const id = generateUniqueId();
     const data = { id, groupId: SELECTED_GROUP_ID, name, parentPhoneNumber: phone };
@@ -3566,7 +3593,29 @@ async function loadPreferences() {
 
         // تحميل المجموعات والذهاب للمتابعة الذكية
         await loadGroups();
-        checkGroupSelectionPortal();
+        
+        // استرجاع المجموعة الحالية والتبويب المفتوح
+        const savedGroupId = localStorage.getItem('learnaria-gid');
+        if (savedGroupId) {
+            SELECTED_GROUP_ID = savedGroupId;
+            
+            // Sync main dropdown
+            const sel = document.getElementById('groupSelect');
+            if (sel) sel.value = SELECTED_GROUP_ID;
+
+            // Load data for this group
+            await loadGroupData();
+
+            // Restore last active tab
+            const savedTabId = localStorage.getItem('learnaria-tab');
+            if (savedTabId) {
+                switchTab(savedTabId);
+            } else {
+                switchTab('overview');
+            }
+        } else {
+            checkGroupSelectionPortal();
+        }
 
         if (SELECTED_GROUP_ID) {
             const savedAmount = localStorage.getItem(`SPOT_PAY_AMT_${SELECTED_GROUP_ID}`);
@@ -3632,13 +3681,18 @@ function setupPhoneInput(inputId) {
         const arabicMap = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
         val = val.replace(/[٠-٩]/g, match => arabicMap[match]);
 
-        val = val.replace(/\D/g, '');
-
-        if (val.length >= 2) {
-            if (!val.startsWith('01')) {
-
-            }
+        // Clean WhatsApp/country code formatting
+        let normalized = val.replace(/[\s\-\(\)]/g, ''); // Remove spaces, dashes, parens
+        
+        if (normalized.startsWith('+201')) {
+            normalized = '01' + normalized.substring(4);
+        } else if (normalized.startsWith('201') && normalized.length >= 12) {
+            normalized = '01' + normalized.substring(3);
+        } else if (normalized.startsWith('00201') && normalized.length >= 14) {
+            normalized = '01' + normalized.substring(5);
         }
+
+        val = normalized.replace(/\D/g, '');
 
         if (val.length > 11) {
             val = val.slice(0, 11);
@@ -3647,7 +3701,7 @@ function setupPhoneInput(inputId) {
         this.value = val;
     });
 
-    input.setAttribute("maxLength", "11");
+    input.removeAttribute("maxLength");
     input.setAttribute("inputmode", "numeric");
 }
 
@@ -4744,11 +4798,19 @@ async function openStudentProfile(studentId) {
     document.getElementById('studentProfilePage').classList.remove('hidden');
     document.body.style.overflow = 'hidden'; // منع السكرول في الخلفية
 
+    // إخفاء الهيدر الرئيسي لتجنب التداخل
+    const mainNav = document.querySelector('.app-bar');
+    if (mainNav) mainNav.classList.add('hidden');
+
     // تعبئة البيانات الأساسية
     const followUpText = translations[currentLang].studentFollowUp || "لوحة متابعة الطالب {name}";
     document.getElementById('profileHeaderTitle').innerHTML = followUpText.replace('{name}', `<span class="text-brand">${student.name}</span>`);
     document.getElementById('profileName').value = student.name;
-    document.getElementById('profileParentPhone').value = student.parentPhoneNumber || '';
+    let displayPhone = student.parentPhoneNumber || '';
+    if (displayPhone.startsWith('+2')) {
+        displayPhone = displayPhone.substring(2);
+    }
+    document.getElementById('profileParentPhone').value = displayPhone;
 
     // Avatar
     const avatarEl = document.getElementById('profileAvatar');
@@ -4765,6 +4827,10 @@ async function openStudentProfile(studentId) {
 function closeStudentProfile() {
     document.getElementById('studentProfilePage').classList.add('hidden');
     document.body.style.overflow = 'auto';
+
+    // إظهار الهيدر الرئيسي مرة أخرى
+    const mainNav = document.querySelector('.app-bar');
+    if (mainNav) mainNav.classList.remove('hidden');
 }
 
 // 3. تفعيل وضع التعديل
@@ -4796,6 +4862,14 @@ async function saveStudentChanges() {
 
     const newName = document.getElementById('profileName').value;
     const newParentPhone = document.getElementById('profileParentPhone').value;
+    let formattedPhone = newParentPhone.trim();
+    if (formattedPhone) {
+        if (formattedPhone.startsWith('01') && formattedPhone.length === 11) {
+            formattedPhone = '+2' + formattedPhone;
+        } else if (!formattedPhone.startsWith('+')) {
+            formattedPhone = '+2' + formattedPhone;
+        }
+    }
 
     const btn = document.querySelector('#saveProfileBtn button:last-child');
     const oldText = btn.innerText;
@@ -4810,7 +4884,7 @@ async function saveStudentChanges() {
             path: studentRef,
             data: {
                 name: newName,
-                parentPhoneNumber: newParentPhone
+                parentPhoneNumber: formattedPhone
             }
         });
 
@@ -4818,7 +4892,7 @@ async function saveStudentChanges() {
         const sIndex = allStudents.findIndex(s => s.id === currentProfileId);
         if (sIndex !== -1) {
             allStudents[sIndex].name = newName;
-            allStudents[sIndex].parentPhoneNumber = newParentPhone;
+            allStudents[sIndex].parentPhoneNumber = formattedPhone;
         }
 
         showToast("تم تحديث البيانات بنجاح ✅");
