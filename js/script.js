@@ -171,6 +171,33 @@ async function putToDB(store, data) {
     }
 }
 
+async function putAllToDB(store, dataArray) {
+    if (!dataArray || dataArray.length === 0) return;
+    try {
+        await openDB();
+        const tx = localDB.transaction(store, 'readwrite');
+        const objectStore = tx.objectStore(store);
+        dataArray.forEach(item => objectStore.put(item));
+        return new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        if (e.name === 'InvalidStateError' || !localDB) {
+            localDB = null;
+            await openDB();
+            const tx = localDB.transaction(store, 'readwrite');
+            const objectStore = tx.objectStore(store);
+            dataArray.forEach(item => objectStore.put(item));
+            return new Promise((resolve, reject) => {
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+        throw e;
+    }
+}
+
 async function getAllFromDB(store, idx, key) {
     try {
         await openDB();
@@ -1818,33 +1845,39 @@ async function loadGroupData() {
 
             // ب. الحضور الأخير (للتخزين المحلي)
             const aSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get();
-            for (const d of aSnap.docs) {
+            const attendanceDocs = aSnap.docs.map(d => {
                 const data = d.data();
-                await putToDB('attendance', {
+                return {
                     id: `${SELECTED_GROUP_ID}_${d.id}`,
                     groupId: SELECTED_GROUP_ID,
                     date: data.date || d.id,
                     ...data
-                });
-            }
+                };
+            });
+            await putAllToDB('attendance', attendanceDocs);
 
             // ج. التكاليف/الواجبات (للتخزين المحلي)
             const asSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`).limit(60).get();
-            for (const d of asSnap.docs) {
+            const assignmentsDocs = asSnap.docs.map(d => {
                 const data = d.data();
-                await putToDB('assignments', {
+                return {
                     id: d.id,
                     groupId: SELECTED_GROUP_ID,
                     date: data.date || d.id.split('_').pop(), // Backup date if missing
                     ...data
-                });
-            }
+                };
+            });
+            await putAllToDB('assignments', assignmentsDocs);
 
             // د. المدفوعات (للتخزين المحلي)
             const pSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments`).limit(24).get();
-            for (const d of pSnap.docs) {
-                await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${d.id}`, month: d.id, ...d.data() });
-            }
+            const paymentsDocs = pSnap.docs.map(d => ({
+                id: `${SELECTED_GROUP_ID}_PAY_${d.id}`,
+                month: d.id,
+                ...d.data()
+            }));
+            await putAllToDB('payments', paymentsDocs);
+            
             refreshCurrentTab();
         } catch (e) {
             console.error("Sync error:", e);
@@ -1858,7 +1891,7 @@ async function loadGroupData() {
 // ✅ دالة حفظ الطلاب للـ Cache في الخلفية
 async function saveStudentsToLocalDB(students) {
     try {
-        for (const s of students) await putToDB('students', s);
+        await putAllToDB('students', students);
     } catch (e) { console.error("Cache update failed", e); }
 }
 
