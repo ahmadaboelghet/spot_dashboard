@@ -140,9 +140,17 @@ async function sendNotificationToParent(studentData, payload, context, studentId
     const cleanPhone = studentData.parentPhoneNumber ? studentData.parentPhoneNumber.replace(/\s+/g, "").trim() : "";
     const parentAppLink = `https://ahmadaboelghet.github.io/spot_dashboard/parent.html?p=${cleanPhone}`;
 
+    // Ensure all data values are flat strings to satisfy FCM V1 requirements
+    const stringData = {};
+    if (payload.data) {
+      Object.keys(payload.data).forEach(key => {
+        stringData[key] = String(payload.data[key]);
+      });
+    }
+
     const message = {
       notification: payload.notification,
-      data: payload.data,
+      data: stringData,
       token: tokenToSend,
       webpush: {
         fcm_options: {
@@ -151,6 +159,14 @@ async function sendNotificationToParent(studentData, payload, context, studentId
       },
       android: {
         priority: "high",
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1,
+          },
+        },
       },
     };
     try {

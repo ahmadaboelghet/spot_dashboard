@@ -249,6 +249,23 @@ let isSyncing = false;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
 let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
 
+// Session & Remember Me Helpers
+function getSessionItem(key) {
+    return localStorage.getItem(key) || sessionStorage.getItem(key);
+}
+function setSessionItem(key, value) {
+    const remember = localStorage.getItem('learnaria-remember') === 'true';
+    if (remember) {
+        localStorage.setItem(key, value);
+    } else {
+        sessionStorage.setItem(key, value);
+    }
+}
+function removeSessionItem(key) {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+}
+
 const translations = {
     ar: {
         pageTitle: "الناظر - لوحة تحكم المعلم",
@@ -1215,9 +1232,9 @@ function setupListeners() {
         SELECTED_GROUP_ID = groupId;
         
         if (SELECTED_GROUP_ID) {
-            localStorage.setItem('learnaria-gid', SELECTED_GROUP_ID);
+            setSessionItem('learnaria-gid', SELECTED_GROUP_ID);
         } else {
-            localStorage.removeItem('learnaria-gid');
+            removeSessionItem('learnaria-gid');
         }
 
         // Sync the main dropdown element
@@ -1596,7 +1613,13 @@ async function loginTeacher() {
 
         // 4. تسجيل الدخول ناجح
         TEACHER_ID = fmt;
-        localStorage.setItem('learnaria-tid', TEACHER_ID);
+        const remember = document.getElementById('rememberMeInput') && document.getElementById('rememberMeInput').checked;
+        localStorage.setItem('learnaria-remember', remember ? 'true' : 'false');
+        if (remember) {
+            localStorage.setItem('learnaria-tid', TEACHER_ID);
+        } else {
+            sessionStorage.setItem('learnaria-tid', TEACHER_ID);
+        }
 
         document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
@@ -1625,9 +1648,10 @@ async function loginTeacher() {
     }
 }
 function logout() {
-    localStorage.removeItem('learnaria-tid');
-    localStorage.removeItem('learnaria-gid');
-    localStorage.removeItem('learnaria-tab');
+    localStorage.removeItem('learnaria-remember');
+    removeSessionItem('learnaria-tid');
+    removeSessionItem('learnaria-gid');
+    removeSessionItem('learnaria-tab');
     location.reload();
 }
 
@@ -1749,9 +1773,8 @@ async function deleteCurrentGroup() {
 
         showToast(translations[currentLang].deleteGroupSuccess);
 
-        // 3. تصفير الحالة والعودة للبداية
         SELECTED_GROUP_ID = null;
-        localStorage.removeItem('learnaria-gid');
+        removeSessionItem('learnaria-gid');
         document.getElementById('groupSelect').value = "";
 
         // إعادة تحميل المجموعات
@@ -1899,6 +1922,67 @@ async function loadGroupData() {
     }
 
     renderOverview();
+    
+    // تشغيل فحص مزامنة تفعيل الإشعارات في الخلفية
+    syncGroupNotificationStatus();
+}
+
+async function syncGroupNotificationStatus() {
+    if (!SELECTED_GROUP_ID || !TEACHER_ID || !navigator.onLine) return;
+    
+    // تصفية الطلاب الذين لديهم رقم هاتف ولكن ليس لديهم توكن إشعارات مسجل في حقل الطالب
+    const pendingStudents = allStudents.filter(s => !s.parentFcmToken && s.parentPhoneNumber);
+    if (pendingStudents.length === 0) return;
+    
+    let updatedAny = false;
+    
+    for (const student of pendingStudents) {
+        const cleanPhone = student.parentPhoneNumber.trim();
+        if (!cleanPhone) continue;
+        
+        let token = null;
+        try {
+            // 1. الفحص في كولكشن parents
+            const parentDoc = await firestoreDB.collection('parents').doc(cleanPhone).get();
+            if (parentDoc.exists && parentDoc.data().fcmToken) {
+                token = parentDoc.data().fcmToken;
+            }
+            
+            // 2. الفحص في كولكشن users (تطبيق الموبايل)
+            if (!token) {
+                const userQuery = await firestoreDB.collection('users')
+                    .where('phoneNumber', '==', cleanPhone)
+                    .limit(1)
+                    .get();
+                if (!userQuery.empty && userQuery.docs[0].data().fcmToken) {
+                    token = userQuery.docs[0].data().fcmToken;
+                }
+            }
+            
+            if (token) {
+                // تحديث مستند الطالب في الفايربيس بالتوكن الجديد
+                const studentRef = `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${student.id}`;
+                await addToSyncQueue({
+                    type: 'update',
+                    path: studentRef,
+                    data: { parentFcmToken: token }
+                });
+                
+                // تحديث البيانات محلياً وفي قاعدة البيانات المحلية
+                student.parentFcmToken = token;
+                await putToDB('students', student);
+                updatedAny = true;
+            }
+        } catch (e) {
+            console.error("Error syncing notification status for student: " + student.id, e);
+        }
+    }
+    
+    if (updatedAny) {
+        // إعادة رندرة الطلاب لتحديث لون الجرس إلى الأخضر فوراً
+        renderStudents();
+        if (typeof renderOverview === 'function') renderOverview();
+    }
 }
 
 // ✅ دالة حفظ الطلاب للـ Cache في الخلفية
@@ -2185,7 +2269,7 @@ function switchTab(tabId) {
     const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
     if (btn) btn.classList.add('active');
 
-    localStorage.setItem('learnaria-tab', tabId);
+    setSessionItem('learnaria-tab', tabId);
 
     if (!SELECTED_GROUP_ID && tabId !== 'profile') {
         return; // Don't fetch data if no group is selected
@@ -2194,6 +2278,10 @@ function switchTab(tabId) {
     if (tabId === 'overview') renderOverview();
 
     if (tabId === 'daily') {
+        const dailyInput = document.getElementById('dailyDateInput');
+        if (dailyInput) {
+            dailyInput.valueAsDate = new Date();
+        }
         renderDailyList();
         updateGroupAnalyticsChart();
     }
@@ -2226,7 +2314,11 @@ function switchTab(tabId) {
 // ==========================================
 async function renderDailyList() {
     try {
-        const date = document.getElementById('dailyDateInput').value || new Date().toISOString().slice(0, 10);
+        const dateInput = document.getElementById('dailyDateInput');
+        if (dateInput && !dateInput.value) {
+            dateInput.valueAsDate = new Date();
+        }
+        const date = dateInput ? dateInput.value : new Date().toISOString().slice(0, 10);
         const list = document.getElementById('dailyStudentsList');
         list.innerHTML = '';
 
@@ -3564,11 +3656,13 @@ async function loadPreferences() {
 
     // 2. استرجاع بيانات المعلم (تسجيل الدخول التلقائي)
     migrateTeacherID(); // ✨ إصلاح المعرف لو كان بالصيغة القديمة
-    const storedID = localStorage.getItem('learnaria-tid');
+    const storedID = getSessionItem('learnaria-tid');
 
     if (storedID) {
-        // لو لقينا ID، نرجعه للمتغير ونخفي شاشة الدخول
+        // لو لقينا ID، نرجعه للمتغير ونخفي شاشة الدخول فوراً
         TEACHER_ID = storedID;
+        document.getElementById('landingSection').classList.add('hidden');
+        document.getElementById('logoutButton').classList.remove('hidden');
 
         // محاولة جلب بيانات المعلم من الداتابيز المحلية لتعبئة البروفايل
         let teacherData = null;
@@ -3582,10 +3676,6 @@ async function loadPreferences() {
             }
         } catch (e) { console.log("Auto-login fetch error:", e); }
 
-        // إخفاء شاشة تسجيل الدخول وإظهار المحتوى
-        document.getElementById('landingSection').classList.add('hidden');
-        document.getElementById('logoutButton').classList.remove('hidden');
-
         if (teacherData) {
             const portalWelcome = document.getElementById('portalWelcomeTeacher');
             if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''} 👋`;
@@ -3595,7 +3685,7 @@ async function loadPreferences() {
         await loadGroups();
         
         // استرجاع المجموعة الحالية والتبويب المفتوح
-        const savedGroupId = localStorage.getItem('learnaria-gid');
+        const savedGroupId = getSessionItem('learnaria-gid');
         if (savedGroupId) {
             SELECTED_GROUP_ID = savedGroupId;
             
@@ -3607,12 +3697,13 @@ async function loadPreferences() {
             await loadGroupData();
 
             // Restore last active tab
-            const savedTabId = localStorage.getItem('learnaria-tab');
+            const savedTabId = getSessionItem('learnaria-tab');
             if (savedTabId) {
                 switchTab(savedTabId);
             } else {
                 switchTab('overview');
             }
+            checkGroupSelectionPortal();
         } else {
             checkGroupSelectionPortal();
         }
@@ -4998,7 +5089,7 @@ async function loadStudentStats(studentId) {
                         </div>
                         <div class="text-right">
                             <span class="text-lg font-black ${colorClass}">${scoreData.score}</span>
-                            <!-- مؤقتاً تم إخفاء الدرجة النهائية للتبسيط -->
+                            <span class="text-xs text-gray-400 font-bold">/${total}</span>
                         </div>
                     </div>
                 `;

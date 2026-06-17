@@ -20,5 +20,6 @@ service cloud.firestore {
     // 3. باقي القواعد
     match /parents/{phoneNumber} { allow read, write: if true; }
     match /teachers/{teacherId} { allow read, write: if true; }
+    match /users/{userId} { allow read, write: if true; }
   }
 }
