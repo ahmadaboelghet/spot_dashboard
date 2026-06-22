@@ -72,22 +72,56 @@ function formatTime12Hour(timeString) {
  * @return {Promise<void>} - وعد يكتمل عند انتهاء المحاولة
  */
 async function sendNotificationToParent(studentData, payload, context, studentId, teacherId = null, groupId = null) {
-  let tokenToSend = null;
+  const tokensToSend = [];
 
-  // 1. المحاولة الأولى: البحث عن التوكن داخل بيانات الطالب مباشرة (الأسرع)
-  if (studentData.parentFcmToken) {
-    tokenToSend = studentData.parentFcmToken;
+  // Helper to safely collect tokens (supporting both single strings and arrays of strings)
+  function collectToken(data) {
+    if (!data) return;
+    if (typeof data === "string" && data.trim() !== "") {
+      tokensToSend.push(data.trim());
+    } else if (Array.isArray(data)) {
+      data.forEach(t => {
+        if (typeof t === "string" && t.trim() !== "") {
+          tokensToSend.push(t.trim());
+        }
+      });
+    }
   }
 
-  // 2. المحاولة الثانية (الحل السحري): البحث في سجل الآباء العام برقم التليفون
-  if (!tokenToSend && studentData.parentPhoneNumber) {
+  // 1. المحاولة الأولى: البحث عن التوكن داخل بيانات الطالب مباشرة
+  collectToken(studentData.parentFcmToken);
+  collectToken(studentData.parentFcmTokens);
+
+  // 2. المحاولة الثانية: البحث في سجل الآباء العام برقم التليفون
+  if (studentData.parentPhoneNumber) {
     try {
       const cleanPhone = studentData.parentPhoneNumber.replace(/\s+/g, "").trim();
-      const parentDoc = await admin.firestore().collection("parents").doc(cleanPhone).get();
+      let phoneWithPlus = cleanPhone;
+      let phoneWithZero = cleanPhone;
+      if (cleanPhone.startsWith("+20")) {
+        phoneWithZero = "0" + cleanPhone.substring(3);
+      } else if (cleanPhone.startsWith("0")) {
+        phoneWithPlus = "+20" + cleanPhone.substring(1);
+      } else {
+        phoneWithPlus = "+20" + cleanPhone;
+        phoneWithZero = "0" + cleanPhone;
+      }
 
-      if (parentDoc.exists && parentDoc.data().fcmToken) {
-        tokenToSend = parentDoc.data().fcmToken;
-        console.log(`${context}: 🔄 Found token in global 'parents' collection for ${cleanPhone}`);
+      // البحث بكلا الصيغتين
+      const parentDoc1 = await admin.firestore().collection("parents").doc(phoneWithZero).get();
+      if (parentDoc1.exists) {
+        collectToken(parentDoc1.data().fcmToken);
+        collectToken(parentDoc1.data().fcmTokens);
+        console.log(`${context}: 🔄 Found tokens in global 'parents' collection for ${phoneWithZero}. Total tokens collected: ${tokensToSend.length}`);
+      }
+
+      if (phoneWithPlus !== phoneWithZero) {
+        const parentDoc2 = await admin.firestore().collection("parents").doc(phoneWithPlus).get();
+        if (parentDoc2.exists) {
+          collectToken(parentDoc2.data().fcmToken);
+          collectToken(parentDoc2.data().fcmTokens);
+          console.log(`${context}: 🔄 Found tokens in global 'parents' collection for ${phoneWithPlus}. Total tokens collected: ${tokensToSend.length}`);
+        }
       }
     } catch (e) {
       console.error(`${context}: Error fetching global parent token:`, e);
@@ -95,34 +129,48 @@ async function sendNotificationToParent(studentData, payload, context, studentId
   }
 
   // 3. المحاولة الثالثة: تطبيق الموبايل (users collection)
-  if (!tokenToSend) {
-    const parentUserId = studentData.parentUserId;
-    const parentPhoneNumber = studentData.parentPhoneNumber;
-    let parentUserDoc;
+  const parentUserId = studentData.parentUserId;
+  const parentPhoneNumber = studentData.parentPhoneNumber;
+  let parentUserDoc;
 
-    if (parentUserId) {
-      try {
-        const doc = await admin.firestore().collection("users").doc(parentUserId).get();
-        if (doc.exists) parentUserDoc = doc;
-      } catch (error) {
-        console.error(`${context}: Error fetching parent by ID:`, error);
-      }
-    }
-
-    if (!parentUserDoc && parentPhoneNumber) {
-      try {
-        const q = await admin.firestore().collection("users")
-          .where("phoneNumber", "==", parentPhoneNumber).limit(1).get();
-        if (!q.empty) parentUserDoc = q.docs[0];
-      } catch (error) {
-        console.error(`${context}: Error querying parent by phone:`, error);
-      }
-    }
-
-    if (parentUserDoc && parentUserDoc.data().fcmToken) {
-      tokenToSend = parentUserDoc.data().fcmToken;
+  if (parentUserId) {
+    try {
+      const doc = await admin.firestore().collection("users").doc(parentUserId).get();
+      if (doc.exists) parentUserDoc = doc;
+    } catch (error) {
+      console.error(`${context}: Error fetching parent by ID:`, error);
     }
   }
+
+  if (!parentUserDoc && parentPhoneNumber) {
+    try {
+      const cleanPhone = parentPhoneNumber.replace(/\s+/g, "").trim();
+      let phoneWithPlus = cleanPhone;
+      let phoneWithZero = cleanPhone;
+      if (cleanPhone.startsWith("+20")) {
+        phoneWithZero = "0" + cleanPhone.substring(3);
+      } else if (cleanPhone.startsWith("0")) {
+        phoneWithPlus = "+20" + cleanPhone.substring(1);
+      } else {
+        phoneWithPlus = "+20" + cleanPhone;
+        phoneWithZero = "0" + cleanPhone;
+      }
+
+      const q = await admin.firestore().collection("users")
+        .where("phoneNumber", "in", [phoneWithZero, phoneWithPlus]).limit(1).get();
+      if (!q.empty) parentUserDoc = q.docs[0];
+    } catch (error) {
+      console.error(`${context}: Error querying parent by phone:`, error);
+    }
+  }
+
+  if (parentUserDoc) {
+    collectToken(parentUserDoc.data().fcmToken);
+    collectToken(parentUserDoc.data().fcmTokens);
+  }
+
+  // Deduplicate and filter tokens
+  const uniqueTokens = [...new Set(tokensToSend)].filter(t => typeof t === "string" && t.trim() !== "");
 
   // ---------------------------------------------------------
   // تنفيذ الإرسال النهائي + حفظ السجل
@@ -136,7 +184,7 @@ async function sendNotificationToParent(studentData, payload, context, studentId
     status: "failed", // القيمة الافتراضية
   };
 
-  if (tokenToSend) {
+  if (uniqueTokens.length > 0) {
     const cleanPhone = studentData.parentPhoneNumber ? studentData.parentPhoneNumber.replace(/\s+/g, "").trim() : "";
     const parentAppLink = `https://ahmadaboelghet.github.io/spot_dashboard/parent.html?p=${cleanPhone}`;
 
@@ -151,7 +199,6 @@ async function sendNotificationToParent(studentData, payload, context, studentId
     const message = {
       notification: payload.notification,
       data: stringData,
-      token: tokenToSend,
       webpush: {
         fcm_options: {
           link: parentAppLink,
@@ -169,42 +216,62 @@ async function sendNotificationToParent(studentData, payload, context, studentId
         },
       },
     };
+
     try {
-      await admin.messaging().send(message);
-      notificationRecord.status = "sent";
-      console.log(`${context}: ✅ Notification sent successfully.`);
+      // Send multicast notification to all devices
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens: uniqueTokens,
+        ...message
+      });
+
+      console.log(`${context}: ✅ Multicast sent summary: successCount=${response.successCount}, failureCount=${response.failureCount}`);
+      notificationRecord.status = response.successCount > 0 ? "sent" : "failed";
+      notificationRecord.tokensSummary = {
+        total: uniqueTokens.length,
+        success: response.successCount,
+        failure: response.failureCount,
+      };
+
+      // Clean up failed/unregistered tokens
+      response.responses.forEach(async (res, idx) => {
+        if (!res.success) {
+          const error = res.error;
+          const badToken = uniqueTokens[idx];
+          console.error(`${context}: ❌ Token at index ${idx} failed:`, error);
+
+          if (error.code === "messaging/registration-token-not-registered" ||
+              error.message?.includes("not-registered")) {
+            console.log(`${context}: 🧹 Cleaning up invalid token...`);
+
+            // 1. مسحه من سجل الآباء العام
+            if (studentData.parentPhoneNumber) {
+              const cleanPhone = studentData.parentPhoneNumber.replace(/\s+/g, "").trim();
+              await admin.firestore().collection("parents").doc(cleanPhone).update({
+                fcmTokens: admin.firestore.FieldValue.arrayRemove(badToken),
+                fcmToken: admin.firestore.FieldValue.delete(), // legacy cleanup
+                lastTokenError: "not-registered",
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+              }).catch(() => { });
+            }
+
+            // 2. مسحه من بيانات الطالب (لو موجود هناك)
+            if (studentId && teacherId && groupId) {
+              await admin.firestore()
+                .doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`)
+                .update({
+                  parentFcmToken: admin.firestore.FieldValue.delete()
+                }).catch(() => { });
+            }
+          }
+        }
+      });
     } catch (error) {
-      console.error(`${context}: ❌ Failed to send notification:`, error);
+      console.error(`${context}: ❌ Failed to send multicast notification:`, error);
       notificationRecord.status = "error";
       notificationRecord.error = error.message;
-
-      // 🔥 تنظيف التوكنات القديمة (Dead Tokens Cleanup)
-      if (error.code === 'messaging/registration-token-not-registered' ||
-        error.message?.includes('not-registered')) {
-        console.log(`${context}: 🧹 Cleaning up invalid token...`);
-
-        // 1. مسحه من سجل الآباء العام
-        if (studentData.parentPhoneNumber) {
-          const cleanPhone = studentData.parentPhoneNumber.replace(/\s+/g, "").trim();
-          await admin.firestore().collection("parents").doc(cleanPhone).update({
-            fcmToken: admin.firestore.FieldValue.delete(),
-            lastTokenError: "not-registered",
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-          }).catch(() => { });
-        }
-
-        // 2. مسحه من بيانات الطالب (لو موجود هناك)
-        if (studentId && teacherId && groupId) {
-          await admin.firestore()
-            .doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`)
-            .update({
-              parentFcmToken: admin.firestore.FieldValue.delete()
-            }).catch(() => { });
-        }
-      }
     }
   } else {
-    console.log(`${context}: ⚠️ No token found for student ${studentId}`);
+    console.log(`${context}: ⚠️ No tokens found for student ${studentId}`);
     notificationRecord.status = "no_token";
   }
 
