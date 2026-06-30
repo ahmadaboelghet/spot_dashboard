@@ -2602,20 +2602,21 @@ async function handleChangePassword() {
     }
 
     try {
-        const user = firebase.auth().currentUser;
-        if (!user) {
-            showToast("حدث خطأ في الجلسة، يرجى تسجيل الدخول مجدداً", "error");
-            return;
-        }
-
         const btn = document.querySelector('#changePasswordModal button[onclick="handleChangePassword()"]');
         const oldText = btn.innerText;
         btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
         btn.disabled = true;
 
-        // 1. Re-authenticate
-        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-        await user.reauthenticateWithCredential(credential);
+        // 1. Re-authenticate with a fresh sign-in to ensure Firebase Auth session is active
+        const email = `2${TEACHER_ID.substring(1)}@spot.com`;
+        let userCredential;
+        try {
+            userCredential = await firebase.auth().signInWithEmailAndPassword(email, currentPassword);
+        } catch (signInErr) {
+            throw { code: 'auth/wrong-password' };
+        }
+        
+        const user = userCredential.user;
 
         // 2. Update Password in Firebase Auth
         await user.updatePassword(newPassword);
