@@ -1872,15 +1872,21 @@ async function loadGroupData() {
     // 2. جلب البيانات من السيرفر (Sync)
     if (navigator.onLine) {
         try {
+            // جلب كل البيانات بالتوازي لتسريع العملية بشكل كبير جداً بدلاً من جلبها بالتتابع
+            const [sSnap, aSnap, asSnap, pSnap] = await Promise.all([
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get(),
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get(),
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`).limit(60).get(),
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments`).limit(24).get()
+            ]);
+
             // أ. الطلاب
-            const sSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get();
             const remoteStudents = sSnap.docs.map(d => ({ id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() }));
             allStudents = remoteStudents;
-            saveStudentsToLocalDB(remoteStudents);
+            await saveStudentsToLocalDB(remoteStudents);
             refreshCurrentTab();
 
-            // ب. الحضور الأخير (للتخزين المحلي)
-            const aSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get();
+            // ب. الحضور الأخير
             const attendanceDocs = aSnap.docs.map(d => {
                 const data = d.data();
                 return {
@@ -1892,21 +1898,19 @@ async function loadGroupData() {
             });
             await putAllToDB('attendance', attendanceDocs);
 
-            // ج. التكاليف/الواجبات (للتخزين المحلي)
-            const asSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`).limit(60).get();
+            // ج. التكاليف/الواجبات
             const assignmentsDocs = asSnap.docs.map(d => {
                 const data = d.data();
                 return {
                     id: d.id,
                     groupId: SELECTED_GROUP_ID,
-                    date: data.date || d.id.split('_').pop(), // Backup date if missing
+                    date: data.date || d.id.split('_').pop(),
                     ...data
                 };
             });
             await putAllToDB('assignments', assignmentsDocs);
 
-            // د. المدفوعات (للتخزين المحلي)
-            const pSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments`).limit(24).get();
+            // د. المدفوعات
             const paymentsDocs = pSnap.docs.map(d => ({
                 id: `${SELECTED_GROUP_ID}_PAY_${d.id}`,
                 month: d.id,
@@ -1923,7 +1927,7 @@ async function loadGroupData() {
 
     renderOverview();
     
-    // تشغيل فحص مزامنة تفعيل الإشعارات في الخلفية
+    // تشغيل فحص مزامنة تفعيل الإشعارات في الخلفية بالتوازي
     syncGroupNotificationStatus();
 }
 
@@ -1936,9 +1940,10 @@ async function syncGroupNotificationStatus() {
     
     let updatedAny = false;
     
-    for (const student of pendingStudents) {
+    // تشغيل الفحوصات بالتوازي بدلاً من تشغيلها واحداً تلو الآخر لتجنب قفل الواجهة البرمجية والبطء
+    await Promise.all(pendingStudents.map(async (student) => {
         const cleanPhone = student.parentPhoneNumber.trim();
-        if (!cleanPhone) continue;
+        if (!cleanPhone) return;
         
         let token = null;
         try {
@@ -1976,7 +1981,7 @@ async function syncGroupNotificationStatus() {
         } catch (e) {
             console.error("Error syncing notification status for student: " + student.id, e);
         }
-    }
+    }));
     
     if (updatedAny) {
         // إعادة رندرة الطلاب لتحديث لون الجرس إلى الأخضر فوراً
