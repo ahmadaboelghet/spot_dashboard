@@ -2221,53 +2221,6 @@ async function renderOverview() {
                 rateEl.className = "text-5xl font-black tracking-tighter " + (rate < 50 ? 'text-red-500' : (rate < 80 ? 'text-yellow-500' : 'text-green-500'));
             }
         }
-
-        // 4. Monthly Collection Summary
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-        const monthPayments = await getFromDB('payments', `${SELECTED_GROUP_ID}_PAY_${currentMonth}`);
-        const paidStatus = monthPayments?.paid || {};
-        const paidCount = Object.values(paidStatus).filter(v => v === true).length;
-        const unpaidCount = Math.max(0, allStudents.length - paidCount);
-
-        const paidCountEl = document.getElementById('paidCountOverview');
-        const unpaidCountEl = document.getElementById('unpaidCountOverview');
-        if (paidCountEl) paidCountEl.innerText = paidCount;
-        if (unpaidCountEl) unpaidCountEl.innerText = unpaidCount;
-
-        // 5. Group Performance Chart (Progress over time)
-        const chartContainer = document.getElementById('groupPerformanceChartContainer');
-        if (allAssignments && allAssignments.length > 0) {
-            const chartExams = allAssignments.filter(e =>
-                (e.type === 'exam' || !e.type) &&
-                !e.name.includes("واجب") &&
-                e.scores && Object.keys(e.scores).length > 0
-            ).sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            if (chartExams.length > 0) {
-                if (chartContainer) {
-                    chartContainer.innerHTML = '<canvas id="groupPerformanceGlobalChart"></canvas>';
-                }
-                const labels = chartExams.map(e => e.name);
-                const dataPoints = chartExams.map(e => {
-                    const scores = Object.values(e.scores || {});
-                    if (scores.length === 0) return 0;
-                    const sum = scores.reduce((a, b) => a + (typeof b === 'object' ? (b.score || 0) : (b || 0)), 0);
-                    return Math.round((sum / (scores.length * (e.totalMark || 30))) * 100);
-                });
-                renderGroupPerformanceChart(labels, dataPoints);
-            } else {
-                if (chartContainer) {
-                    const notEnoughExamsMsg = currentLang === 'ar' ? 'لا توجد امتحانات كافية للتحليل' : 'Not enough exams for analysis';
-                    chartContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> ${notEnoughExamsMsg}</div>`;
-                }
-            }
-        } else {
-            if (chartContainer) {
-                const noDataRecordedMsg = currentLang === 'ar' ? 'لا توجد بيانات مسجلة' : 'No registered data';
-                chartContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> ${noDataRecordedMsg}</div>`;
-            }
-        }
-
     } catch (e) { console.error("Overview error:", e); }
 }
 
