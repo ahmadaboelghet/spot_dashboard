@@ -85,6 +85,15 @@ const motivationQuotes = [
     "أنت أقوى مما تخيل.. كمل طريقك.🌟"
 ];
 
+// --- GLOBAL STATE VARIABLES ---
+let currentLang = 'ar';
+let TEACHER_ID = null;
+let SELECTED_GROUP_ID = null;
+let allStudents = [];
+let videoElement = null;
+let isScannerPaused = false;
+let currentScannerMode = null;
+
 // --- FIRESTORE WRAPPERS (Replacing LocalDB) ---
 async function getFromDB(store, key) {
     try {
