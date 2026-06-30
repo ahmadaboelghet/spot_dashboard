@@ -2594,38 +2594,33 @@ async function updateGroupAnalyticsChart() {
     try {
         console.log("📊 Fetching analytics for Group:", SELECTED_GROUP_ID);
 
-        // 1. جلب البيانات (تجنب الـ Index عن طريق الجلب بدون ترتيب والترتيب يدوياً)
-        const [attSnap, hwSnap] = await Promise.all([
-            firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
-                .limit(100).get().catch(e => { console.error("Att Query Fail:", e); return { empty: true }; }),
-            firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`)
-                .limit(100).get().catch(e => { console.error("HW Query Fail:", e); return { empty: true }; })
+        // استخدام localDB للحصول على التحديثات الفورية حتى لو الإنترنت مقطوع أو الـ Sync متأخر
+        const [filteredAttRaw, filteredHwRaw] = await Promise.all([
+            getAllFromDB('attendance', 'groupId', SELECTED_GROUP_ID).catch(() => []),
+            getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID).catch(() => [])
         ]);
 
         // --- أ. معالجة الحضور ---
         let attLabels = ["-", "-", "-", "-", "-", "-", "-"];
         let attData = [0, 0, 0, 0, 0, 0, 0];
 
-        if (!attSnap.empty) {
-            const filteredAtt = attSnap.docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(d => d.date)
-                .sort((a, b) => new Date(b.date) - new Date(a.date)) // descending
-                .slice(0, 7) // newest 7
-                .reverse(); // reverse for chart
+        const filteredAtt = filteredAttRaw
+            .filter(d => d.date)
+            .sort((a, b) => new Date(b.date) - new Date(a.date)) // descending
+            .slice(0, 7) // newest 7
+            .reverse(); // reverse for chart
 
-            if (filteredAtt.length > 0) {
-                attLabels = [];
-                attData = [];
-                filteredAtt.forEach(d => {
-                    const parts = (d.date || "").split('-');
-                    const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : (d.date || "??");
-                    attLabels.push(label);
-                    const records = d.records || [];
-                    const percent = records.length > 0 ? Math.round((records.filter(r => r.status === 'present').length / records.length) * 100) : 0;
-                    attData.push(percent);
-                });
-            }
+        if (filteredAtt.length > 0) {
+            attLabels = [];
+            attData = [];
+            filteredAtt.forEach(d => {
+                const parts = (d.date || "").split('-');
+                const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : (d.date || "??");
+                attLabels.push(label);
+                const records = d.records || [];
+                const percent = records.length > 0 ? Math.round((records.filter(r => r.status === 'present').length / records.length) * 100) : 0;
+                attData.push(percent);
+            });
         }
 
         if (window.groupAnalyticsChartInstance) window.groupAnalyticsChartInstance.destroy();
@@ -2635,27 +2630,24 @@ async function updateGroupAnalyticsChart() {
         let hwLabels = ["-", "-", "-", "-", "-", "-", "-"];
         let hwData = [0, 0, 0, 0, 0, 0, 0];
 
-        if (!hwSnap.empty) {
-            const filteredHw = hwSnap.docs
-                .map(d => d.data())
-                .filter(d => d.type === 'daily')
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .slice(0, 7)
-                .reverse();
+        const filteredHw = filteredHwRaw
+            .filter(d => d.type === 'daily' && d.date)
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 7)
+            .reverse();
 
-            if (filteredHw.length > 0) {
-                hwLabels = [];
-                hwData = [];
-                filteredHw.forEach(d => {
-                    const parts = (d.date || "").split('-');
-                    const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : (d.date || "??");
-                    hwLabels.push(label);
-                    const scores = d.scores || {};
-                    const sids = Object.keys(scores);
-                    const percent = sids.length > 0 ? Math.round((sids.filter(sid => scores[sid].submitted).length / sids.length) * 100) : 0;
-                    hwData.push(percent);
-                });
-            }
+        if (filteredHw.length > 0) {
+            hwLabels = [];
+            hwData = [];
+            filteredHw.forEach(d => {
+                const parts = (d.date || "").split('-');
+                const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : (d.date || "??");
+                hwLabels.push(label);
+                const scores = d.scores || {};
+                const sids = Object.keys(scores);
+                const percent = sids.length > 0 ? Math.round((sids.filter(sid => scores[sid].submitted).length / sids.length) * 100) : 0;
+                hwData.push(percent);
+            });
         }
 
         if (window.groupHomeworkChartInstance) window.groupHomeworkChartInstance.destroy();
@@ -2832,6 +2824,10 @@ async function saveDailyData(isSilent = false) {
                 showToast(translations[currentLang]?.saved || "تم الحفظ");
             } else {
                 console.log("✅ Auto-saved successfully (Background)");
+            }
+            // ✅ تحديث الرسم البياني بعد الحفظ ليعكس التغييرات فوراً
+            if (document.getElementById('tab-daily') && !document.getElementById('tab-daily').classList.contains('hidden')) {
+                updateGroupAnalyticsChart();
             }
         } else if (!isSilent) {
             showToast("لا يوجد بيانات للحفظ حالياً", "info");
