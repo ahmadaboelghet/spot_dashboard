@@ -1695,9 +1695,12 @@ async function loginTeacher() {
             const portalWelcome = document.getElementById('portalWelcomeTeacher');
             if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${data.name || ''} 👋`;
             
-            document.getElementById('teacherNameInput').value = data.name || '';
-            document.getElementById('teacherSubjectInput').value = data.subject || '';
-            document.getElementById('profilePasswordInput').value = data.password || '';
+            const nameInput = document.getElementById('teacherNameInput');
+            if (nameInput) nameInput.value = data.name || '';
+            const subjectInput = document.getElementById('teacherSubjectInput');
+            if (subjectInput) subjectInput.value = data.subject || '';
+            const passwordInput = document.getElementById('profilePasswordInput');
+            if (passwordInput) passwordInput.value = data.password || '';
         }
 
         await loadGroups();
