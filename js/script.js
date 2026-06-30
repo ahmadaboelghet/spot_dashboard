@@ -74,7 +74,7 @@ try {
 // 2. LOCAL DATABASE (IndexedDB) - FIXED
 // ==========================================
 const DB_NAME = 'LearnariaDB';
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 let localDB = null;
 const motivationQuotes = [
     "بطل اليوم.. عالم الغد! 🚀",
@@ -2062,6 +2062,63 @@ async function renderOverview() {
         } else {
             const noDataMsg = currentLang === 'ar' ? 'لا توجد بيانات' : 'No data available';
             topList.innerHTML = `<p class="text-xs text-gray-400 text-center py-6 font-bold tracking-widest uppercase">${noDataMsg}</p>`;
+        }
+
+        // 4. Monthly Collection Summary
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        const monthPayments = await getFromDB('payments', `${SELECTED_GROUP_ID}_PAY_${currentMonth}`);
+        const paidStatus = monthPayments?.paid || {};
+        // ✅ إصلاح: حساب الطلاب الحاليين فقط لتجنب الأرقام الخاطئة للطلاب المحذوفين
+        const paidCount = allStudents.filter(s => paidStatus[s.id] === true).length;
+        const unpaidCount = Math.max(0, allStudents.length - paidCount);
+
+        const paidCountEl = document.getElementById('paidCountOverview');
+        const unpaidCountEl = document.getElementById('unpaidCountOverview');
+        if (paidCountEl) paidCountEl.innerText = paidCount;
+        if (unpaidCountEl) unpaidCountEl.innerText = unpaidCount;
+
+        // 5. Group Performance Chart (Progress over time)
+        const chartContainer = document.getElementById('groupPerformanceChartContainer');
+        if (allAssignments && allAssignments.length > 0) {
+            const chartExams = allAssignments.filter(e =>
+                (e.type === 'exam' || !e.type) &&
+                !e.name.includes("واجب") &&
+                e.scores && Object.keys(e.scores).length > 0
+            ).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (chartExams.length > 0) {
+                if (chartContainer) {
+                    chartContainer.innerHTML = '<canvas id="groupPerformanceGlobalChart"></canvas>';
+                }
+                const labels = chartExams.map(e => e.name);
+                const dataPoints = chartExams.map(e => {
+                    const examScores = e.scores || {};
+                    // ✅ إصلاح: حساب متوسط درجات الطلاب الحاليين فقط بالمجموعة
+                    const currentStudentScores = allStudents
+                        .map(s => examScores[s.id])
+                        .filter(v => v !== undefined && v !== null);
+
+                    if (currentStudentScores.length === 0) return 0;
+                    
+                    const sum = currentStudentScores.reduce((acc, scoreObj) => {
+                        const markVal = (scoreObj && typeof scoreObj === 'object') ? (scoreObj.score || 0) : scoreObj;
+                        return acc + (parseInt(markVal) || 0);
+                    }, 0);
+                    
+                    return Math.round((sum / (currentStudentScores.length * (e.totalMark || 30))) * 100);
+                });
+                renderGroupPerformanceChart(labels, dataPoints);
+            } else {
+                if (chartContainer) {
+                    const notEnoughExamsMsg = currentLang === 'ar' ? 'لا توجد امتحانات كافية للتحليل' : 'Not enough exams for analysis';
+                    chartContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> ${notEnoughExamsMsg}</div>`;
+                }
+            }
+        } else {
+            const noDataMsg = currentLang === 'ar' ? 'لا توجد بيانات' : 'No data available';
+            if (chartContainer) {
+                chartContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm font-bold opacity-60"><i class="ri-bar-chart-box-line text-4xl mb-2"></i> ${noDataMsg}</div>`;
+            }
         }
 
         // 2. Students at Risk (Absence Trend) & 3. Attendance Rate
