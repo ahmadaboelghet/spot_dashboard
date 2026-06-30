@@ -27,6 +27,16 @@
     <meta property="twitter:description" content="منصة الناظر التعليمية - لوحة تحكم المعلم الذكي لمتابعة الطلاب وإدارة الحصص والامتحانات والواجبات بدقة وسهولة.">
     <meta property="twitter:image" content="https://www.elnazer-edu.com/assets/images/learnaria_logo.png">
 
+    <!-- Anti-Flash Login Script (Prevents login screen from flashing on refresh) -->
+    <script>
+        if (sessionStorage.getItem('learnaria-tid') || localStorage.getItem('learnaria-remember')) {
+            document.documentElement.classList.add('is-logged-in');
+        }
+    </script>
+    <style>
+        html.is-logged-in body #landingSection { display: none !important; }
+    </style>
+
     <!-- Icons & Favicons -->
     <link rel="icon" href="assets/images/favicon.png" type="image/png">
     <link rel="shortcut icon" href="favicon.png" type="image/png">
