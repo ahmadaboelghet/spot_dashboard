@@ -7,10 +7,10 @@
     --secondary: #121212;
     --dark-bg: #121212;
     --dark-surface: #1E1E1E;
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --dark-glass-bg: rgba(30, 30, 30, 0.7);
-    --dark-glass-border: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --dark-glass-bg: rgba(30, 30, 30, 0.96);
+    --dark-glass-border: rgba(255, 255, 255, 0.08);
 }
 
 /* Animations */
@@ -915,4 +915,15 @@ body.desktop-device video {
 /* تحسين كل عناصر الـ animate-pulse الداخلية */
 .animate-pulse {
     will-change: opacity;
+}
+
+/* 🚀 إلغاء جميع فلاتر الـ backdrop-blur لتسريع السكرول والمتصفح بالكامل */
+*, ::before, ::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* 🚀 إخفاء دوائر الخلفية المضيئة الكبيرة لأن فلاتر الـ blur الضخمة تهنج كارت الشاشة والمتصفح */
+.blur-3xl {
+    display: none !important;
 }
