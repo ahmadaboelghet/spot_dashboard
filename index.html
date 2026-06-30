@@ -29,8 +29,12 @@
 
     <!-- Anti-Flash Login Script (Prevents login screen from flashing on refresh) -->
     <script>
-        if (sessionStorage.getItem('learnaria-tid') || localStorage.getItem('learnaria-remember')) {
-            document.documentElement.classList.add('is-logged-in');
+        try {
+            if (sessionStorage.getItem('learnaria-tid') || localStorage.getItem('learnaria-remember')) {
+                document.documentElement.classList.add('is-logged-in');
+            }
+        } catch (e) {
+            console.warn("Storage access blocked:", e);
         }
     </script>
     <style>

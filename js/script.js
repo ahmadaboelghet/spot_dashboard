@@ -114,6 +114,11 @@ function openDB() {
             });
         };
 
+        req.onblocked = () => {
+            console.warn("Database upgrade blocked by another tab. Reloading...");
+            window.location.reload();
+        };
+
         req.onsuccess = e => {
             localDB = e.target.result;
             localDB.onclose = () => { localDB = null; };
@@ -1191,22 +1196,30 @@ async function processSyncQueue() {
 // 5. INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    videoElement = document.getElementById('scannerVideo');
-    applyLanguage();
-    await openDB();
-    setupListeners();
-    await loadPreferences();
-    updateOnlineStatus();
+    try {
+        videoElement = document.getElementById('scannerVideo');
+        applyLanguage();
+        await openDB();
+        setupListeners();
+        await loadPreferences();
+        updateOnlineStatus();
 
-    const dailyInput = document.getElementById('dailyDateInput');
-    if (dailyInput) dailyInput.valueAsDate = new Date();
+        const dailyInput = document.getElementById('dailyDateInput');
+        if (dailyInput) dailyInput.valueAsDate = new Date();
 
-    createTimePicker('recurringTimeContainer');
-    createTimePicker('exceptionNewTimeContainer');
-    renderDayCheckboxes();
+        createTimePicker('recurringTimeContainer');
+        createTimePicker('exceptionNewTimeContainer');
+        renderDayCheckboxes();
 
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+    } catch (err) {
+        console.error("🔥 Fatal initialization error:", err);
+        // Recovery fallback: remove anti-flash class and show landing section so page is not blank
+        document.documentElement.classList.remove('is-logged-in');
+        const landing = document.getElementById('landingSection');
+        if (landing) landing.classList.remove('hidden');
+    }
 });
 
 function setupListeners() {
@@ -2069,7 +2082,7 @@ async function renderOverview() {
         const monthPayments = await getFromDB('payments', `${SELECTED_GROUP_ID}_PAY_${currentMonth}`);
         const paidStatus = monthPayments?.paid || {};
         // ✅ إصلاح: حساب الطلاب الحاليين فقط لتجنب الأرقام الخاطئة للطلاب المحذوفين
-        const paidCount = allStudents.filter(s => paidStatus[s.id] === true).length;
+        const paidCount = allStudents.filter(s => s && s.id && paidStatus[s.id] === true).length;
         const unpaidCount = Math.max(0, allStudents.length - paidCount);
 
         const paidCountEl = document.getElementById('paidCountOverview');
@@ -2095,6 +2108,7 @@ async function renderOverview() {
                     const examScores = e.scores || {};
                     // ✅ إصلاح: حساب متوسط درجات الطلاب الحاليين فقط بالمجموعة
                     const currentStudentScores = allStudents
+                        .filter(s => s && s.id)
                         .map(s => examScores[s.id])
                         .filter(v => v !== undefined && v !== null);
 
