@@ -96,20 +96,25 @@ function openDB() {
 
         req.onupgradeneeded = e => {
             const db = e.target.result;
+            const tx = e.target.transaction || req.transaction || e.currentTarget?.transaction;
             ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions', 'syncQueue'].forEach(store => {
-                let s;
-                if (!db.objectStoreNames.contains(store)) {
-                    const params = store === 'syncQueue' ? { autoIncrement: true } : { keyPath: 'id' };
-                    s = db.createObjectStore(store, params);
-                } else {
-                    s = e.target.transaction.objectStore(store);
-                }
-
-                if (['groups', 'students', 'assignments', 'schedules', 'attendance', 'payments'].includes(store)) {
-                    const indexKey = (store === 'groups') ? 'teacherId' : 'groupId';
-                    if (!s.indexNames.contains(indexKey)) {
-                        s.createIndex(indexKey, indexKey, { unique: false });
+                try {
+                    let s;
+                    if (!db.objectStoreNames.contains(store)) {
+                        const params = store === 'syncQueue' ? { autoIncrement: true } : { keyPath: 'id' };
+                        s = db.createObjectStore(store, params);
+                    } else if (tx) {
+                        s = tx.objectStore(store);
                     }
+
+                    if (s && ['groups', 'students', 'assignments', 'schedules', 'attendance', 'payments'].includes(store)) {
+                        const indexKey = (store === 'groups') ? 'teacherId' : 'groupId';
+                        if (!s.indexNames.contains(indexKey)) {
+                            s.createIndex(indexKey, indexKey, { unique: false });
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`⚠️ Error upgrading store "${store}":`, err);
                 }
             });
         };
