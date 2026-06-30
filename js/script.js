@@ -1660,16 +1660,19 @@ async function loadGroups() {
     renderGroupsDropdown(groups);
 
     if (navigator.onLine) {
-        try {
-            const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups`).get();
-            const remoteGroups = snap.docs.map(doc => ({ id: doc.id, teacherId: TEACHER_ID, ...doc.data() }));
-            for (const g of remoteGroups) {
-                await putToDB('groups', g);
+        // Sync in background to not block UI loading
+        (async () => {
+            try {
+                const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups`).get();
+                const remoteGroups = snap.docs.map(doc => ({ id: doc.id, teacherId: TEACHER_ID, ...doc.data() }));
+                for (const g of remoteGroups) {
+                    await putToDB('groups', g);
+                }
+                renderGroupsDropdown(remoteGroups);
+            } catch (e) {
+                console.error("Failed to sync groups:", e);
             }
-            renderGroupsDropdown(remoteGroups);
-        } catch (e) {
-            console.error("Failed to sync groups:", e);
-        }
+        })();
     }
 }
 
@@ -2463,6 +2466,7 @@ async function renderDailyList() {
 
                 // تحديث عداد الحضور المباشر
                 updateAttendanceCount();
+                clearTimeout(saveTimeout);
                 saveTimeout = setTimeout(() => {
                     silentSave(); // هيحفظ التغيير ده لوحده بعد 3 ثواني
                 }, 3000);
