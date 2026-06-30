@@ -1706,7 +1706,7 @@ async function loginTeacher() {
     } catch (error) {
         if (error.message !== "Offline first login") {
             console.error("Login Error:", error);
-            showToast(translations[currentLang].error, "error");
+            showToast("خطأ: " + error.message, "error");
         }
     } finally {
         btn.innerHTML = originalText;
