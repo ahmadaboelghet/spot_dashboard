@@ -927,3 +927,10 @@ body.desktop-device video {
 .blur-3xl {
     display: none !important;
 }
+
+/* 🚀 تحسين أداء السكرول في قائمة الحصة اليومية */
+.daily-student-row {
+    content-visibility: auto;
+    contain-intrinsic-size: 50px;
+    will-change: transform;
+}

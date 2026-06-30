@@ -2387,6 +2387,7 @@ async function renderDailyList() {
         }
 
         let presentCount = 0;
+        const fragment = document.createDocumentFragment();
 
         allStudents.forEach(s => {
             const status = attMap[s.id] || 'absent'; // الافتراضي غائب لو مفيش تسجيل
@@ -2402,7 +2403,7 @@ async function renderDailyList() {
             row.dataset.sid = s.id;
 
             // تنسيق الصف حسب الحالة
-            row.className = `grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 cursor-pointer ${status === 'present'
+            row.className = `daily-student-row grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 cursor-pointer ${status === 'present'
                 ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
                 : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
                 }`;
@@ -2475,8 +2476,10 @@ async function renderDailyList() {
                     }, 3000);
                 });
             }
-            list.appendChild(row);
+            fragment.appendChild(row);
         });
+
+        list.appendChild(fragment);
 
         // دالة صغيرة لتحديث العداد
         function updateAttendanceCount() {
