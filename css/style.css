@@ -69,6 +69,9 @@
     border-radius: 24px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .dark-mode .glass-panel {
@@ -86,6 +89,9 @@
     border-radius: 28px;
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .dark-mode .glass-card {
@@ -269,6 +275,9 @@
     margin-bottom: 0.5rem;
     border: 1px solid #f3f4f6;
     transition: transform 0.2s, box-shadow 0.2s;
+    /* تحسين أداء السكرول والتحميل للقوائم الطويلة */
+    content-visibility: auto;
+    contain-intrinsic-size: 80px;
 }
 
 .dark-mode .record-item {
@@ -860,6 +869,9 @@ body.desktop-device video {
     border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .dark-mode .glass-feature-card {
@@ -883,4 +895,11 @@ body.desktop-device video {
     background: linear-gradient(135deg, #F2CE5A 0%, #d97706 50%, #f59e0b 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+/* تسريع وتخفيف الـ Navigation Bar العلوي أثناء السكرول */
+.app-bar {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
