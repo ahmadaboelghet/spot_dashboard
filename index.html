@@ -47,7 +47,7 @@
         href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;600;800&display=swap"
         rel="stylesheet">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/tailwind.css">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
@@ -59,29 +59,6 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 
     <link rel="stylesheet" href="css/style.css">
-
-    <script>
-        tailwind.config = {
-            darkMode: ['class', '.dark-mode'],
-            theme: {
-                extend: {
-                    colors: {
-                        brand: '#F2CE5A',
-                        brandHover: '#e6c045',
-                        darkBg: '#121212',
-                        darkSurface: '#1E1E1E',
-                    },
-                    fontFamily: {
-                        cairo: ['Cairo', 'sans-serif'],
-                        inter: ['Inter', 'sans-serif'],
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
-    </script>
 </head>
 
 <body class="font-cairo bg-gray-100 text-gray-800 transition-colors duration-300 dark:bg-darkBg dark:text-gray-100">

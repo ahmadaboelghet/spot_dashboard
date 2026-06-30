@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "build:css": "npx tailwindcss@3 -i css/tailwind-input.css -o css/tailwind.css --minify",
+    "watch:css": "npx tailwindcss@3 -i css/tailwind-input.css -o css/tailwind.css --watch"
+  },
   "dependencies": {
     "firebase": "^12.0.0",
     "qrcode": "^1.5.4"

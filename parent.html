@@ -33,47 +33,12 @@
     <link rel="manifest" href="manifest.json">
 
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/tailwind.css">
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: ['class', '.dark-mode'],
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#F2CE5A',
-                        brand: '#F2CE5A',
-                        darkBg: '#121212',
-                        darkCard: '#1E1E1E',
-                        lightBg: '#F9FAFB',
-                    },
-                    fontFamily: {
-                        cairo: ['Cairo', 'sans-serif'],
-                        readex: ['Readex Pro', 'sans-serif'],
-                        inter: ['Inter', 'sans-serif'],
-                    },
-                    boxShadow: {
-                        'glow': '0 0 20px rgba(242, 206, 90, 0.15)',
-                    },
-                    animation: {
-                        'fade-up': 'fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'pulse-slow': 'pulse 3s infinite ease-in-out'
-                    },
-                    keyframes: {
-                        fadeUp: {
-                            '0%': { opacity: '0', transform: 'translateY(15px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
 
     <style>
         body {

@@ -20,7 +20,7 @@
     <!-- Icons & Favicons -->
     <link rel="icon" href="assets/images/favicon.png" type="image/png">
     <link rel="shortcut icon" href="favicon.png" type="image/png">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/tailwind.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800&display=swap');
@@ -32,11 +32,6 @@
         .typing-dot:nth-child(2) { animation-delay: -0.16s; }
         @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
     </style>
-    <script>
-        tailwind.config = {
-            theme: { extend: { colors: { brand: '#FFD700', dark: '#0F0F0F' } } }
-        }
-    </script>
 </head>
 <body class="bg-dark text-white h-screen flex flex-col overflow-hidden">
 
