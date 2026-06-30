@@ -2112,9 +2112,13 @@ async function renderOverview() {
         // 4. Monthly Collection Summary
         const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
         const monthPayments = await getFromDB('payments', `${SELECTED_GROUP_ID}_PAY_${currentMonth}`);
-        const paidStatus = monthPayments?.paid || {};
-        // ✅ إصلاح: حساب الطلاب الحاليين فقط لتجنب الأرقام الخاطئة للطلاب المحذوفين
-        const paidCount = allStudents.filter(s => s && s.id && paidStatus[s.id] === true).length;
+        const records = monthPayments?.records || [];
+        // ✅ إصلاح: حساب الطلاب الحاليين فقط وتصحيح استخراج حالة الدفع من مصفوفة records
+        const paidCount = allStudents.filter(s => {
+            if (!s || !s.id) return false;
+            const record = records.find(r => r.studentId === s.id);
+            return record && record.paid === true;
+        }).length;
         const unpaidCount = Math.max(0, allStudents.length - paidCount);
 
         const paidCountEl = document.getElementById('paidCountOverview');
@@ -2142,17 +2146,24 @@ async function renderOverview() {
                     const currentStudentScores = allStudents
                         .filter(s => s && s.id)
                         .map(s => examScores[s.id])
-                        .filter(v => v !== undefined && v !== null);
+                        .filter(v => v !== undefined && v !== null && v !== "");
 
                     if (currentStudentScores.length === 0) return 0;
                     
                     const sum = currentStudentScores.reduce((acc, scoreObj) => {
                         const markVal = (scoreObj && typeof scoreObj === 'object') ? (scoreObj.score || 0) : scoreObj;
-                        return acc + (parseInt(markVal) || 0);
+                        return acc + (parseFloat(markVal) || 0);
                     }, 0);
                     
-                    return Math.round((sum / (currentStudentScores.length * (e.totalMark || 30))) * 100);
+                    return Math.round((sum / (currentStudentScores.length * (parseFloat(e.totalMark) || 30))) * 100);
                 });
+
+                // ✅ إصلاح: إذا كان هناك امتحان واحد فقط، نضيف نقطة بداية لتشكيل منحنى بدلاً من نقطة واحدة
+                if (chartExams.length === 1) {
+                    labels.unshift(currentLang === 'ar' ? 'البداية' : 'Start');
+                    dataPoints.unshift(0);
+                }
+
                 renderGroupPerformanceChart(labels, dataPoints);
             } else {
                 if (chartContainer) {
