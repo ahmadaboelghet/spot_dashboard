@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
@@ -10,6 +10,48 @@ admin.initializeApp();
 // ===================================================================
 // (الجزء الأول: دوال مساعدة)
 // ===================================================================
+
+
+
+exports.migrateTeachersToAuth = onRequest(async (req, res) => {
+    try {
+        const snapshot = await admin.firestore().collection("teachers").get();
+        let count = 0;
+        let logs = [];
+        
+        for (const doc of snapshot.docs) {
+            const teacherId = doc.id; // e.g. +20123456789
+            const data = doc.data();
+            const password = data.password && data.password.toString().trim() !== "" ? data.password.toString().trim() : "Spot123456";
+            const email = `${teacherId.substring(1)}@spot.com`;
+
+            try {
+                await admin.auth().getUser(teacherId);
+                logs.push(`User ${teacherId} already exists in Auth.`);
+            } catch (e) {
+                if (e.code === "auth/user-not-found") {
+                    try {
+                        await admin.auth().createUser({
+                            uid: teacherId,
+                            email: email,
+                            password: password,
+                            displayName: data.name || "Teacher"
+                        });
+                        logs.push(`Successfully migrated: ${teacherId}`);
+                        count++;
+                    } catch (createErr) {
+                        logs.push(`Error creating auth for ${teacherId}: ${createErr.message}`);
+                    }
+                } else {
+                    logs.push(`Error fetching auth for ${teacherId}: ${e.message}`);
+                }
+            }
+        }
+        res.status(200).send({ message: `Migration complete. Migrated ${count} teachers.`, logs });
+    } catch (err) {
+        res.status(500).send({ error: err.message });
+    }
+});
 
 /**
  * جلب اسم المادة للمدرس.
@@ -334,8 +376,12 @@ exports.sendAbsenceNotifications = onCall({ cors: true }, async (request) => {
   // استقبال البيانات
   const { groupId, date, teacherId } = request.data;
 
-  if (!teacherId) {
-    throw new HttpsError("invalid-argument", "Teacher ID is required");
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be logged in.");
+  }
+  
+  if (!teacherId || request.auth.uid !== teacherId) {
+    throw new HttpsError("permission-denied", "You don't have permission to perform this action for this teacher.");
   }
 
   try {
@@ -931,6 +977,14 @@ exports.notifyOnPayment = onDocumentWritten(
 exports.sendCustomMessage = onCall(async (request) => {
   const { teacherId, groupId, studentId, messageBody } = request.data;
 
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be logged in.");
+  }
+  
+  if (!teacherId || request.auth.uid !== teacherId) {
+    throw new HttpsError("permission-denied", "You don't have permission to perform this action for this teacher.");
+  }
+
   try {
     const studentDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
 
@@ -956,7 +1010,7 @@ exports.sendCustomMessage = onCall(async (request) => {
   }
 });
 
-const { onRequest } = require("firebase-functions/v2/https");
+
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");

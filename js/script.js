@@ -1615,49 +1615,69 @@ async function loginTeacher() {
     btn.disabled = true;
 
     try {
-        // 1. البحث في الداتابيز المحلية أولاً
-        let data = await getFromDB('teachers', fmt);
+        const fakeEmail = `${fmt.substring(1)}@spot.com`; // e.g. 20123456789@spot.com
 
-        // 2. لو مش موجود محلياً، نسأل السيرفر (أونلاين)
-        if (!data) {
-            if (!navigator.onLine) {
-                showToast(translations[currentLang].offlineFirstLogin || "Internet required for first login", "error");
-                throw new Error("Offline first login");
-            }
+        try {
+            // 1. محاولة تسجيل الدخول بنظام Firebase Auth المشفّر
+            await firebase.auth().signInWithEmailAndPassword(fakeEmail, password);
+        } catch (authErr) {
+            // 2. إذا لم يكن مسجلاً في Auth بعد (نحتاج لعمل Migration له من النظام القديم)
+            if (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-credential') {
+                if (!navigator.onLine) {
+                    showToast(translations[currentLang].offlineFirstLogin || "Internet required for first login", "error");
+                    throw new Error("Offline first login");
+                }
 
-            const doc = await firestoreDB.collection('teachers').doc(fmt).get();
+                // التأكد من وجوده في الداتابيز القديمة
+                const doc = await firestoreDB.collection('teachers').doc(fmt).get();
+                if (!doc.exists) {
+                    showToast(translations[currentLang].accountNotRegistered, "error");
+                    passInput.value = '';
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    return;
+                }
 
-            if (!doc.exists) {
-                showToast(translations[currentLang].accountNotRegistered, "error");
-                passInput.value = '';
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                return;
-            }
+                const data = doc.data();
+                const storedPass = data.password ? data.password.toString().trim() : "";
 
-            // لو موجود -> نحفظه عندنا محلياً
-            data = { id: doc.id, ...doc.data() };
-            await putToDB('teachers', data);
-        }
+                // التحقق من الباسورد القديم
+                if (storedPass !== "" && storedPass !== password) {
+                    showToast(translations[currentLang].wrongPassword, "error");
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    return;
+                }
 
-        // 3. التحقق من الباسورد
-        if (data) {
-            const storedPass = data.password ? data.password.toString().trim() : "";
+                // ✅ تمت المصادقة بنجاح بالطريقة القديمة -> سنقوم بإنشاء حساب Auth مشفّر له فوراً (Seamless Migration)
+                await firebase.auth().createUserWithEmailAndPassword(fakeEmail, password);
 
-            if (storedPass !== "" && storedPass !== password) {
+                // حفظ الباسورد لو كانت دي أول مرة يفتح الحساب (للتوافق القديم)
+                if (storedPass === "" && password !== "") {
+                    await firestoreDB.collection('teachers').doc(fmt).set({ password: password }, { merge: true });
+                }
+
+            } else if (authErr.code === 'auth/wrong-password') {
                 showToast(translations[currentLang].wrongPassword, "error");
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 return;
+            } else {
+                console.error(authErr);
+                showToast("خطأ في تسجيل الدخول: " + authErr.message, "error");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
             }
+        }
 
-            // السماح بتعيين كلمة مرور لأول مرة
-            if (storedPass === "" && password !== "") {
-                data.password = password;
+        // 3. تحديث البيانات محلياً بعد نجاح الدخول
+        let data = await getFromDB('teachers', fmt);
+        if (!data) {
+            const doc = await firestoreDB.collection('teachers').doc(fmt).get();
+            if (doc.exists) {
+                data = { id: doc.id, ...doc.data() };
                 await putToDB('teachers', data);
-                if (navigator.onLine) {
-                    firestoreDB.collection('teachers').doc(fmt).set({ password: password }, { merge: true });
-                }
             }
         }
 
