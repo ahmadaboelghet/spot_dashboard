@@ -72,6 +72,8 @@
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    /* يحد نطاق إعادة الرسم ليسرع الـ scroll */
+    contain: layout style;
 }
 
 .dark-mode .glass-panel {
@@ -850,6 +852,8 @@ body.desktop-device video {
 
 .deluxe-float {
     animation: float 6s ease-in-out infinite;
+    /* ترفع العنصر لطبقة GPU منفصلة فوراً قبل بدء الحركة */
+    will-change: transform;
 }
 
 @keyframes pulse-ring {
@@ -860,6 +864,7 @@ body.desktop-device video {
 
 .deluxe-pulse-ring {
     animation: pulse-ring 4s ease-in-out infinite;
+    will-change: transform, opacity;
 }
 
 .glass-feature-card {
@@ -902,4 +907,12 @@ body.desktop-device video {
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    /* يعزل الـ nav عن باقي طبقات الصفحة لمنع إعادة الرسم عند السكرول */
+    isolation: isolate;
+    contain: layout style;
+}
+
+/* تحسين كل عناصر الـ animate-pulse الداخلية */
+.animate-pulse {
+    will-change: opacity;
 }
