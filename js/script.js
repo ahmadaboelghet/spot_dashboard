@@ -251,15 +251,18 @@ let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupS
 
 // Session & Remember Me Helpers
 function getSessionItem(key) {
-    return localStorage.getItem(key) || sessionStorage.getItem(key);
+    let val = localStorage.getItem(key);
+    if (!val) {
+        val = sessionStorage.getItem(key);
+        if (val) {
+            localStorage.setItem(key, val); // Migrate old sessionStorage to localStorage
+            sessionStorage.removeItem(key);
+        }
+    }
+    return val;
 }
 function setSessionItem(key, value) {
-    const remember = localStorage.getItem('learnaria-remember') === 'true';
-    if (remember) {
-        localStorage.setItem(key, value);
-    } else {
-        sessionStorage.setItem(key, value);
-    }
+    localStorage.setItem(key, value);
 }
 function removeSessionItem(key) {
     localStorage.removeItem(key);
@@ -1614,13 +1617,8 @@ async function loginTeacher() {
 
         // 4. تسجيل الدخول ناجح
         TEACHER_ID = fmt;
-        const remember = document.getElementById('rememberMeInput') && document.getElementById('rememberMeInput').checked;
-        localStorage.setItem('learnaria-remember', remember ? 'true' : 'false');
-        if (remember) {
-            localStorage.setItem('learnaria-tid', TEACHER_ID);
-        } else {
-            sessionStorage.setItem('learnaria-tid', TEACHER_ID);
-        }
+        localStorage.setItem('learnaria-remember', 'true');
+        localStorage.setItem('learnaria-tid', TEACHER_ID);
 
         document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
