@@ -1105,12 +1105,13 @@ async function processSyncQueue() {
 
             const attempts = action.attempts || 0;
             if (action.failed || attempts >= MAX_SYNC_RETRIES) {
-                console.warn("⏭️ Skipping permanently failed sync item:", {
+                console.warn("⏭️ Removing permanently failed sync item from queue:", {
                     type: action.type,
                     path: action.path,
                     attempts,
                     lastError: action.lastError
                 });
+                await deleteFromDB('syncQueue', key);
                 continue;
             }
 
@@ -2426,7 +2427,7 @@ async function renderDailyList() {
 
             if (hasHomeworkToday) {
                 html += `
-                <div class="col-span-3 flex justify-center fade-in-up">
+                <div class="col-span-3 flex justify-center">
                     <input type="checkbox" class="hw-check w-5 h-5 accent-brand rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
                         ${hwSubmitted ? 'checked' : ''} 
                         ${isAbsent ? 'disabled' : ''}>
