@@ -85,1143 +85,72 @@ const motivationQuotes = [
     "أنت أقوى مما تخيل.. كمل طريقك.🌟"
 ];
 
-function openDB() {
-    return new Promise((resolve, reject) => {
-        if (localDB) {
-            resolve(localDB);
-            return;
-        }
-
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-
-        req.onupgradeneeded = e => {
-            const db = e.target.result;
-            const tx = e.target.transaction || req.transaction || e.currentTarget?.transaction;
-            ['teachers', 'groups', 'students', 'assignments', 'attendance', 'payments', 'schedules', 'scheduleExceptions', 'syncQueue'].forEach(store => {
-                try {
-                    let s;
-                    if (!db.objectStoreNames.contains(store)) {
-                        const params = store === 'syncQueue' ? { autoIncrement: true } : { keyPath: 'id' };
-                        s = db.createObjectStore(store, params);
-                    } else if (tx) {
-                        s = tx.objectStore(store);
-                    }
-
-                    if (s && ['groups', 'students', 'assignments', 'schedules', 'attendance', 'payments'].includes(store)) {
-                        const indexKey = (store === 'groups') ? 'teacherId' : 'groupId';
-                        if (!s.indexNames.contains(indexKey)) {
-                            s.createIndex(indexKey, indexKey, { unique: false });
-                        }
-                    }
-                } catch (err) {
-                    console.warn(`⚠️ Error upgrading store "${store}":`, err);
-                }
-            });
-        };
-
-        req.onblocked = () => {
-            console.warn("Database upgrade blocked by another tab. Reloading...");
-            window.location.reload();
-        };
-
-        req.onsuccess = e => {
-            localDB = e.target.result;
-            localDB.onclose = () => { localDB = null; };
-            localDB.onversionchange = () => { localDB.close(); localDB = null; };
-            resolve(localDB);
-        };
-
-        req.onerror = e => reject(e.target.error);
-    });
-}
-
-// --- DB HELPERS (With Retry Logic) ---
+// --- FIRESTORE WRAPPERS (Replacing LocalDB) ---
 async function getFromDB(store, key) {
     try {
-        await openDB();
-        return new Promise((res, rej) => {
-            const tx = localDB.transaction(store, 'readonly').objectStore(store).get(key);
-            tx.onsuccess = () => res(tx.result);
-            tx.onerror = () => rej(tx.error);
-        });
-    } catch (e) {
-        if (e.name === 'InvalidStateError' || !localDB) {
-            localDB = null;
-            await openDB();
-            return new Promise((res, rej) => {
-                const tx = localDB.transaction(store, 'readonly').objectStore(store).get(key);
-                tx.onsuccess = () => res(tx.result); tx.onerror = () => rej(tx.error);
-            });
+        if (store === 'teachers') {
+            const doc = await firestoreDB.collection('teachers').doc(key).get();
+            return doc.exists ? doc.data() : null;
         }
-        throw e;
+        if (store === 'assignments') {
+            const doc = await firestoreDB.doc(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${key}`).get();
+            return doc.exists ? doc.data() : null;
+        }
+        if (store === 'groups') {
+            const doc = await firestoreDB.doc(`teachers/${TEACHER_ID}/groups/${key}`).get();
+            return doc.exists ? doc.data() : null;
+        }
+        return null;
+    } catch (e) {
+        console.error("getFromDB Error:", e);
+        return null;
     }
 }
 
 async function putToDB(store, data) {
-    try {
-        await openDB();
-        const tx = localDB.transaction(store, 'readwrite');
-        tx.objectStore(store).put(data);
-        return new Promise((resolve, reject) => {
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    } catch (e) {
-        if (e.name === 'InvalidStateError' || !localDB) {
-            localDB = null;
-            await openDB();
-            const tx = localDB.transaction(store, 'readwrite');
-            tx.objectStore(store).put(data);
-            return new Promise((resolve, reject) => {
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject(tx.error);
-            });
-        }
-        throw e;
-    }
-}
-
-async function putAllToDB(store, dataArray) {
-    if (!dataArray || dataArray.length === 0) return;
-    try {
-        await openDB();
-        const tx = localDB.transaction(store, 'readwrite');
-        const objectStore = tx.objectStore(store);
-        dataArray.forEach(item => objectStore.put(item));
-        return new Promise((resolve, reject) => {
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    } catch (e) {
-        if (e.name === 'InvalidStateError' || !localDB) {
-            localDB = null;
-            await openDB();
-            const tx = localDB.transaction(store, 'readwrite');
-            const objectStore = tx.objectStore(store);
-            dataArray.forEach(item => objectStore.put(item));
-            return new Promise((resolve, reject) => {
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject(tx.error);
-            });
-        }
-        throw e;
+    // Fallback for un-migrated putToDB calls
+    console.warn(`putToDB called for ${store} - using fallback firestore set`);
+    if (store === 'assignments' && data.id) {
+        await firestoreDB.doc(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${data.id}`).set(data, { merge: true });
+    } else if (store === 'groups' && data.id) {
+        await firestoreDB.doc(`teachers/${TEACHER_ID}/groups/${data.id}`).set(data, { merge: true });
     }
 }
 
 async function getAllFromDB(store, idx, key) {
     try {
-        await openDB();
-        return new Promise((res, rej) => {
-            const s = localDB.transaction(store, 'readonly').objectStore(store);
-            let req;
-            try {
-                req = idx ? s.index(idx).getAll(key) : s.getAll();
-            } catch (indexErr) {
-                console.warn(`⚠️ Index "${idx}" not found on store "${store}". Falling back to in-memory filtering.`, indexErr);
-                const fallbackReq = s.getAll();
-                fallbackReq.onsuccess = () => {
-                    const all = fallbackReq.result || [];
-                    const filtered = all.filter(item => item && item[idx] === key);
-                    res(filtered);
-                };
-                fallbackReq.onerror = () => rej(fallbackReq.error);
-                return;
-            }
-            req.onsuccess = () => res(req.result);
-            req.onerror = () => rej(req.error);
-        });
+        if (store === 'groups') {
+            const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups`).get();
+            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+        
+        if (!SELECTED_GROUP_ID) return [];
+
+        let path = '';
+        if (store === 'students') path = `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`;
+        else if (store === 'attendance') path = `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`;
+        else if (store === 'assignments') path = `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`;
+        else if (store === 'payments') path = `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments`;
+        else if (store === 'schedules') path = `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/schedules`;
+        
+        if (!path) return [];
+        
+        const snap = await firestoreDB.collection(path).get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (e) {
-        if (e.name === 'InvalidStateError' || !localDB) {
-            localDB = null;
-            await openDB();
-            return new Promise((res, rej) => {
-                const s = localDB.transaction(store, 'readonly').objectStore(store);
-                let req;
-                try {
-                    req = idx ? s.index(idx).getAll(key) : s.getAll();
-                } catch (indexErr) {
-                    console.warn(`⚠️ Index "${idx}" not found on store "${store}" during retry. Falling back to in-memory filtering.`, indexErr);
-                    const fallbackReq = s.getAll();
-                    fallbackReq.onsuccess = () => {
-                        const all = fallbackReq.result || [];
-                        const filtered = all.filter(item => item && item[idx] === key);
-                        res(filtered);
-                    };
-                    fallbackReq.onerror = () => rej(fallbackReq.error);
-                    return;
-                }
-                req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
-            });
-        }
-        throw e;
+        console.error("getAllFromDB Error:", e);
+        return [];
     }
 }
 
-async function deleteFromDB(store, key) {
-    try {
-        await openDB();
-        const tx = localDB.transaction(store, 'readwrite');
-        tx.objectStore(store).delete(key);
-        return new Promise((resolve, reject) => {
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    } catch (e) {
-        localDB = null;
-        await openDB();
-        const tx = localDB.transaction(store, 'readwrite');
-        tx.objectStore(store).delete(key);
-        return new Promise((resolve, reject) => {
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    }
-}
-
-// ==========================================
-// 3. STATE & TRANSLATIONS
-// ==========================================
-let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = 'ar';
-let isSyncing = false;
-let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
-let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
-
-// Session & Remember Me Helpers
-function getSessionItem(key) {
-    let val = localStorage.getItem(key);
-    if (!val) {
-        val = sessionStorage.getItem(key);
-        if (val) {
-            localStorage.setItem(key, val); // Migrate old sessionStorage to localStorage
-            sessionStorage.removeItem(key);
-        }
-    }
-    return val;
-}
-function setSessionItem(key, value) {
-    localStorage.setItem(key, value);
-}
-function removeSessionItem(key) {
-    localStorage.removeItem(key);
-    sessionStorage.removeItem(key);
-}
-
-const translations = {
-    ar: {
-        pageTitle: "الناظر - لوحة تحكم المعلم",
-        welcomeTeacherGreeting: "أهلاً بك، مستر ",
-        teacherLoginTitle: "بوابة الناظر التعليمية",
-        teacherLoginPrompt: "سجل دخولك الآن للبدء في إدارة صفوفك الذكية",
-        loginButton: "دخول",
-        loginVerifying: "جاري التحقق...",
-        passwordLabel: "كلمة المرور",
-        phonePlaceholder: "01xxxxxxxxx",
-        passwordPlaceholder: "كلمة المرور",
-        welcomeTitle: "لوحة تحكم المعلم",
-        currentGroupLabel: "المجموعة الحالية",
-        selectGroupPlaceholder: "اختر مجموعة...",
-        addGroupTitle: "مجموعة جديدة",
-        groupNamePlaceholder: "اسم المجموعة",
-        addBtn: "إضافة",
-        tabProfile: "الملف",
-        tabOverview: "المتابعة الذكية",
-        tabDaily: "الحصة اليومية",
-        tabStudents: "الطلاب",
-        tabGrades: "الامتحانات",
-        tabPayments: "التحصيل",
-        tabSchedule: "الجدول",
-        tabBot: "المساعد الذكي",
-        dailyClassTitle: "إدارة الحصة",
-        selectDateLabel: "تاريخ اليوم",
-        homeworkToggleLabel: "يوجد واجب؟",
-        homeworkToggleSub: "تفعيل المطالبة بالتسليم",
-        startSmartScan: "بدء الرصد الذكي",
-        liveLogTitle: "سجل الحصة المباشر",
-        saveAllButton: "حفظ الكل",
-        tableHeaderStudent: "الطالب",
-        tableHeaderAttendance: "الحضور",
-        tableHeaderHomework: "الواجب",
-        myProfileTitle: "بياناتي",
-        fullNamePlaceholder: "الاسم",
-        subjectPlaceholder: "المادة",
-        changePasswordPlaceholder: "تغيير كلمة المرور",
-        saveProfileButton: "حفظ التغييرات",
-        manageStudentsTitle: "الطلاب",
-        newStudentPlaceholder: "اسم الطالب الجديد",
-        parentPhonePlaceholder: "رقم ولي الأمر",
-        addNewStudentButton: "إضافة للقائمة",
-        searchPlaceholder: "بحث عن طالب...",
-        msgModalTitle: "رسالة لولي الأمر",
-        msgPlaceholder: "اكتب ملاحظاتك هنا (مثلاً: الطالب تحسن مستواه...)",
-        sendMsgBtn: "إرسال",
-        sendingMsg: "جاري الإرسال...",
-        cancelBtn: "إلغاء",
-        editGroupNameTitle: "تعديل اسم المجموعة",
-        enterNewGroupName: "أدخل الاسم الجديد للمجموعة:",
-        groupUpdatedSuccess: "تم تحديث اسم المجموعة بنجاح",
-        yes: "نعم",
-        no: "لا",
-        examsTitle: "الامتحانات والدرجات",
-        newAssignmentNameLabel: "اسم الامتحان / الواجب",
-        addNewAssignmentButton: "إنشاء",
-        selectExamPlaceholder: "-- اختر الامتحان --",
-        saveGradesButton: "حفظ الدرجات",
-        gradePlaceholder: "الدرجة",
-        selectMonthLabel: "شهر التحصيل",
-        amountLabel: "قيمة المصاريف",
-        defaultAmountPlaceholder: "مثلاً 150",
-        savePaymentsButton: "حفظ التحصيل",
-        addRecurringScheduleTitle: "إضافة موعد ثابت",
-        subjectLabel: "المادة",
-        timeLabel: "الوقت",
-        locationLabel: "المكان",
-        selectDaysLabel: "الأيام",
-        saveRecurringScheduleButton: "إضافة للجدول",
-        mySchedulesLabel: "مواعيدي",
-        modifySingleClassTitle: "تعديل طارئ",
-        modifyClassPrompt: "تغيير أو إلغاء حصة محددة (سيتم إرسال إشعار فوري لأولياء الأمور).",
-        classDateLabel: "تاريخ الحصة",
-        newTimeLabel: "الموعد الجديد",
-        updateClassButton: "تحديث",
-        days: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
-        repeatsOn: "كل:",
-        scanOverlayText: "وجه الكود داخل الإطار",
-        closeCamera: "إغلاق الكاميرا",
-        homeworkQuestion: "هل سلم الواجب؟",
-        yes: "نعم",
-        no: "لا",
-        printBtn: "طباعة",
-        closeBtn: "إغلاق",
-        saved: "تم الحفظ بنجاح!",
-        error: "حدث خطأ!",
-        studentAdded: "تمت الإضافة",
-        confirmDelete: "تأكيد الحذف؟",
-        online: "متصل",
-        offline: "غير متصل",
-        noStudentsInGroup: "لا يوجد طلاب في هذه المجموعة.",
-        fillScheduleForm: "أدخل المادة والوقت واختر يوماً واحداً على الأقل.",
-        scheduleSavedSuccess: "تم حفظ الجدول!",
-        confirmScheduleDelete: "حذف هذا الموعد؟",
-        classUpdatedSuccess: "تم تحديث الحصة ليوم {date}.",
-        classCancelledSuccess: "تم إلغاء حصة يوم {date}.",
-        paymentMonthMissing: "اختر الشهر أولاً",
-        writeMsgFirst: "الرجاء كتابة رسالة",
-        msgSentSuccess: "تم إرسال الرسالة بنجاح",
-        msgSendFail: "فشل الإرسال. تأكد من الإنترنت",
-        wrongPassword: "كلمة المرور خاطئة! حاول مرة أخرى.",
-        present: "حاضر",
-        absent: "غائب",
-        late: "متأخر",
-        accountNotRegistered: "هذا الحساب غير مسجل! يرجى التواصل مع الإدارة.",
-        offlineFirstLogin: "يجب الاتصال بالإنترنت لتسجيل الدخول لأول مرة",
-        selectGroupFirst: "الرجاء اختيار مجموعة أولاً",
-        newStudentPlaceholder: "اسم الطالب",
-        parentPhonePlaceholder: "رقم ولي الأمر",
-        groupNamePlaceholder: "اسم المجموعة",
-        newAssignmentNameLabel: "اسم الامتحان",
-        locationPlaceholder: "سنتر كوليدج",
-        groupCreatedSuccess: "تم إنشاء المجموعة بنجاح!",
-        examCreatedSuccess: "تم إضافة الامتحان بنجاح!",
-        linkCopied: "تم نسخ رابط المتابعة بنجاح 📋",
-        copyFailed: "فشل النسخ ❌",
-        landingNewVersion: "🚀 الإصدار الجديد متاح الآن",
-        landingHeroTitle: "إدارتك كلها في <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>مكان واحد.</span>",
-        landingHeroSubtitle: "تطبيق <strong>الناظر</strong> هو مساعدك الشخصي الذكي. رصد غياب بالـ QR، متابعة درجات، تحصيل مصروفات، وتواصل فوري مع أولياء الأمور.. كل ده وأنت بتشرب قهوتك ☕",
-        featureSmartAttendance: "غياب ذكي",
-        featureSmartAttendanceSub: "سكانر سريع جداً",
-        featureInstantConnect: "تواصل فوري",
-        featureInstantConnectSub: "رابط لولي الأمر",
-        featureFinance: "تحصيل مالي",
-        featureFinanceSub: "متابعة دقيقة",
-        featureReports: "تقارير",
-        featureReportsSub: "إحصائيات شاملة",
-        footerText: "© 2026 نظام الناظر. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
-        goldenSettingsBtn: "إعدادات التذكرة الذهبية",
-        goldenSettingsTitle: "إعدادات التذكرة الذهبية",
-        goldenEnable: "تفعيل النظام",
-        goldenWinRate: "نسبة الحظ (Win Rate)",
-        goldenHint: "كلما زادت النسبة، زاد عدد الطلاب الفائزين.",
-        goldenPrizesLabel: "قائمة الجوائز (جائزة في كل سطر)",
-        goldenPrizesPlaceholder: "مثال: قلم هدية\nخصم 10 جنيه\nشوكولاتة",
-        goldenSave: "حفظ الإعدادات 💾",
-        goldenModalTitle: "🌟 مبروووووك! 🌟",
-        goldenFoundMsg: "لقد عثرت على تذكرة ذهبية!",
-        goldenClaim: "استلم الجائزة",
-        tabBot: "المساعد الذكي",
-        botFeedTitle: "تغذية البوت (الملازم)",
-        botFeedHint: "أي ملف (PDF، صور، صوت) هترفع هنا، البوت هيذاكره فوراً ويجاوب منه على أسئلة الطلاب.",
-        botDropArea: "اضغط للرفع أو اسحب الملف هنا",
-        botFileHint: "PDF, Images & Audio (MP3, WAV)",
-        botLibraryTitle: "مكتبة المعرفة",
-        botLibraryEmpty: "المكتبة فارغة",
-        botProcessing: "جاري المعالجة بواسطة الذكاء الاصطناعي...",
-        botFileReady: "جاهز للاستخدام",
-        deleteConfirm: "هل أنت متأكد من حذف هذا الملف من ذاكرة البوت؟",
-        uploadSuccess: "تم الرفع! جاري المعالجة...",
-        uploadError: "فشل الرفع",
-        mustBePDF: "نوع الملف غير مدعوم. مسموح بـ PDF، صور، أو صوت فقط",
-        loginFirst: "يجب تسجيل الدخول أولاً",
-
-        // كارت الدعوة
-        botInviteTitle: "رابط البوت الذكي",
-        botInviteDesc: "شارك هذا الرابط والكود مع طلابك ليبدأوا المذاكرة معك.",
-        teacherCodeLabel: "كود المدرس",
-        copyInviteBtn: "نسخ رسالة الدعوة",
-        inviteCopied: "تم نسخ رسالة الدعوة! ابعتها للطلاب فوراً 🚀",
-        inviteCopyFail: "فشل النسخ",
-        addNewStudentSectionTitle: "إضافة طالب جديد",
-        studentFollowUp: "متابعة الطالب {name}",
-        deleteGroupConfirm: "هل أنت متأكد من حذف هذه المجموعة نهائياً؟ سيتم حذف جميع الطلاب والبيانات المرتبطة بها!",
-        deleteGroupSuccess: "تم حذف المجموعة بنجاح",
-        overviewHonorRoll: "لوحة الشرف",
-        overviewTopStudents: "أوائل المجموعة",
-        overviewAbsenceAlert: "تنبيه الغياب المتكرر",
-        overviewStudentsAtRisk: "طلاب في خطر",
-        overviewWeeklySummary: "الملخص الأسبوعي",
-        overviewAttendanceRate: "نسبة الحضور",
-        overviewAvgAttendanceDesc: "متوسط الحضور لآخر 3 حصص",
-        overviewGroupCurve: "منحنى مستوى المجموعة",
-        overviewCollectionStatus: "حالة التحصيل (الشهر الحالي)",
-        overviewPaymentStats: "إحصائيات الدفع لهذا الشهر",
-        overviewPaidCount: "سددوا",
-        overviewUnpaidCount: "متبقي",
-        portalGroupDesc: "من فضلك اختر المجموعة الدراسية التي ترغب في إدارتها الآن للبدء، أو يمكنك إضافة مجموعة جديدة للعمل عليها.",
-        portalGroupsHeader: "المجموعات الدراسية",
-        portalAddGroupBtn: "إضافة مجموعة جديدة"
-    },
-    en: {
-        pageTitle: "Al-Nazer - Teacher Dashboard",
-        welcomeTeacherGreeting: "Welcome, Mr. ",
-        teacherLoginTitle: "Al-Nazer Portal",
-        teacherLoginPrompt: "Login to start managing your smart classes",
-        loginButton: "Login",
-        loginVerifying: "Verifying...",
-        passwordLabel: "Password",
-        phonePlaceholder: "01xxxxxxxxx",
-        passwordPlaceholder: "Password",
-        welcomeTitle: "Teacher Dashboard",
-        currentGroupLabel: "Current Group",
-        selectGroupPlaceholder: "Select Group...",
-        addGroupTitle: "New Group",
-        groupNamePlaceholder: "Group Name",
-        addBtn: "Add",
-        tabProfile: "Profile",
-        tabOverview: "Smart Overview",
-        tabDaily: "Daily Class",
-        tabStudents: "Students",
-        tabGrades: "Exams",
-        tabPayments: "Payments",
-        tabSchedule: "Schedule",
-        tabBot: "AI Assistant",
-        dailyClassTitle: "Class Manager",
-        selectDateLabel: "Today's Date",
-        homeworkToggleLabel: "Homework?",
-        homeworkToggleSub: "Enable submission tracking",
-        startSmartScan: "Smart Scan",
-        liveLogTitle: "Live Log",
-        saveAllButton: "Save All",
-        tableHeaderStudent: "Student",
-        tableHeaderAttendance: "Status",
-        tableHeaderHomework: "Homework",
-        myProfileTitle: "My Profile",
-        fullNamePlaceholder: "Full Name",
-        subjectPlaceholder: "Subject",
-        changePasswordPlaceholder: "Change Password",
-        saveProfileButton: "Save Changes",
-        manageStudentsTitle: "Students",
-        newStudentPlaceholder: "New Student Name",
-        parentPhonePlaceholder: "Parent Phone",
-        addNewStudentButton: "Add to List",
-        searchPlaceholder: "Search student...",
-        msgModalTitle: "Message to Parent",
-        msgPlaceholder: "Write your notes here...",
-        sendMsgBtn: "Send",
-        sendingMsg: "Sending...",
-        cancelBtn: "Cancel",
-        editGroupNameTitle: "Edit Group Name",
-        enterNewGroupName: "Enter new group name:",
-        groupUpdatedSuccess: "Group name updated successfully",
-        yes: "Yes",
-        no: "No",
-        examsTitle: "Exams & Grades",
-        newAssignmentNameLabel: "Exam / Assignment Name",
-        addNewAssignmentButton: "Create",
-        selectExamPlaceholder: "-- Select Exam --",
-        saveGradesButton: "Save Grades",
-        gradePlaceholder: "Score",
-        selectMonthLabel: "Collection Month",
-        amountLabel: "Amount",
-        defaultAmountPlaceholder: "e.g. 150",
-        savePaymentsButton: "Save Payments",
-        addRecurringScheduleTitle: "Add Recurring Class",
-        subjectLabel: "Subject",
-        timeLabel: "Time",
-        locationLabel: "Location",
-        selectDaysLabel: "Days",
-        saveRecurringScheduleButton: "Add to Schedule",
-        mySchedulesLabel: "My Schedules",
-        modifySingleClassTitle: "Emergency Edit",
-        modifyClassPrompt: "Change or cancel a specific class (Parents will be notified immediately).",
-        classDateLabel: "Class Date",
-        newTimeLabel: "New Time",
-        updateClassButton: "Update",
-        days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-        repeatsOn: "Every:",
-        scanOverlayText: "Align code in frame",
-        closeCamera: "Close Camera",
-        homeworkQuestion: "Submitted Homework?",
-        yes: "Yes",
-        no: "No",
-        printBtn: "Print",
-        closeBtn: "Close",
-        deleteGroupConfirm: "Are you sure you want to delete this group permanently? All students and related data will be deleted!",
-        deleteGroupSuccess: "Group deleted successfully",
-        saved: "Saved Successfully!",
-        error: "Error Occurred!",
-        studentAdded: "Student Added",
-        confirmDelete: "Confirm Delete?",
-        online: "Online",
-        offline: "Offline",
-        noStudentsInGroup: "No students in this group.",
-        fillScheduleForm: "Fill subject, time and select a day.",
-        scheduleSavedSuccess: "Schedule Saved!",
-        confirmScheduleDelete: "Delete this schedule?",
-        classUpdatedSuccess: "Class updated for {date}.",
-        classCancelledSuccess: "Class cancelled for {date}.",
-        paymentMonthMissing: "Select Month First",
-        writeMsgFirst: "Please write a message",
-        msgSentSuccess: "Message sent successfully",
-        msgSendFail: "Sending failed. Check internet.",
-        wrongPassword: "Wrong Password! Try again.",
-        present: "Present",
-        absent: "Absent",
-        late: "Late",
-        accountNotRegistered: "Account not registered! Please contact admin.",
-        offlineFirstLogin: "Internet connection required for first login",
-        selectGroupFirst: "Please select a group first",
-        newStudentPlaceholder: "Student Name",
-        parentPhonePlaceholder: "Parent Phone",
-        groupNamePlaceholder: "Group Name",
-        newAssignmentNameLabel: "Exam Name",
-        locationPlaceholder: "Center College",
-        groupCreatedSuccess: "Group created successfully!",
-        examCreatedSuccess: "Exam added successfully!",
-        linkCopied: "Follow-up link copied successfully 📋",
-        copyFailed: "Copy failed ❌",
-        landingNewVersion: "🚀 New Version Available",
-        landingHeroTitle: "Manage Everything in <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>One Place.</span>",
-        landingHeroSubtitle: "<strong>Al-Nazer</strong> is your smart personal assistant. QR Attendance, Grade Tracking, Fee Collection, and Instant Parent Communication.. all while you sip your coffee ☕",
-        featureSmartAttendance: "Smart Attendance",
-        featureSmartAttendanceSub: "Super Fast Scanner",
-        featureInstantConnect: "Instant Connect",
-        featureInstantConnectSub: "Parent Link",
-        featureFinance: "Finance",
-        featureFinanceSub: "Accurate Tracking",
-        featureReports: "Reports",
-        featureReportsSub: "Full Analytics",
-        footerText: "© 2026 Al-Nazer System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
-        goldenSettingsBtn: "Golden Ticket Settings",
-        goldenSettingsTitle: "Golden Ticket Settings",
-        goldenEnable: "Enable System",
-        goldenWinRate: "Win Rate (%)",
-        goldenHint: "Higher rate means more winners.",
-        goldenPrizesLabel: "Prizes List (one per line)",
-        goldenPrizesPlaceholder: "e.g. Gift Pen\n10 LE Discount\nChocolate",
-        goldenSave: "Save Settings 💾",
-        goldenModalTitle: "🌟 Congratulations! 🌟",
-        goldenFoundMsg: "You found a Golden Ticket!",
-        goldenClaim: "Claim Prize",
-        // ... (Old Translations) ...
-
-        // 👇👇 Spot AI Additions 👇👇
-        tabBot: "Al-Nazer AI",
-        botFeedTitle: "Feed the Bot (Materials)",
-        botFeedHint: "Upload PDFs, Images, or Audio here. The bot will study them instantly to answer student questions.",
-        botDropArea: "Click to upload or drag file here",
-        botFileHint: "PDF, Images & Audio (MP3, WAV)",
-        botLibraryTitle: "Knowledge Library",
-        botLibraryEmpty: "Library is empty",
-        botProcessing: "Processing by AI...",
-        botFileReady: "Ready to use",
-        deleteConfirm: "Are you sure you want to delete this file?",
-        uploadSuccess: "Uploaded! Processing...",
-        uploadError: "Upload Failed",
-        mustBePDF: "Unsupported file type. Allowed: PDF, Images, Audio",
-        loginFirst: "Login required first",
-
-        // Invite Card
-        botInviteTitle: "Al-Nazer AI Link",
-        botInviteDesc: "Share this link and code with your students to start studying.",
-        teacherCodeLabel: "Teacher Code",
-        copyInviteBtn: "Copy Invite Message",
-        inviteCopied: "Invite message copied! Send it to students 🚀",
-        inviteCopyFail: "Copy failed",
-        addNewStudentSectionTitle: "Add New Student",
-        studentFollowUp: "Student Dashboard: {name}",
-        overviewHonorRoll: "Honor Roll",
-        overviewTopStudents: "Top Performers",
-        overviewAbsenceAlert: "Absence Alert",
-        overviewStudentsAtRisk: "Students at Risk",
-        overviewWeeklySummary: "Weekly Summary",
-        overviewAttendanceRate: "Attendance Rate",
-        overviewAvgAttendanceDesc: "Avg Attendance (Last 3 Classes)",
-        overviewGroupCurve: "Group Performance Curve",
-        overviewCollectionStatus: "Collection Status (Current Month)",
-        overviewPaymentStats: "Payment Stats for this Month",
-        overviewPaidCount: "Paid",
-        overviewUnpaidCount: "Remaining",
-        portalGroupDesc: "Please select the group you wish to manage now to start, or you can add a new group to work on.",
-        portalGroupsHeader: "Study Groups",
-        portalAddGroupBtn: "Add New Group"
-    }
-};
-
-// ==========================================
-// 4. UTILS
-// ==========================================
-function generateUniqueId() { return `off_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; }
-// ✅ تحسين: تنظيف الرقم من المسافات قبل الفحص
-function isValidEgyptianPhoneNumber(p) {
-    if (!p) return false;
-    const clean = p.replace(/\s+/g, '').replace(/[^\d]/g, ''); // شيل أي مسافة أو علامة
-    return /^01[0125]\d{8}$/.test(clean);
-}
-
-function formatPhoneNumber(p) {
-    if (!p) return null;
-    const clean = p.replace(/\s+/g, '').replace(/[^\d]/g, '');
-    // نعيد الرقم بصيغة +20 الدولية لأنها الصيغة اللي فيها الداتا التاريخية
-    return isValidEgyptianPhoneNumber(clean) ? `+20${clean.substring(1)}` : null;
-}
-
-function checkGroupSelectionPortal() {
-    const portal = document.getElementById('groupSelectorPortal');
-    const main = document.getElementById('mainContent');
-    if (!TEACHER_ID) {
-        if (portal) portal.classList.add('hidden');
-        if (main) main.classList.add('hidden');
-        return;
-    }
-    
-    if (!SELECTED_GROUP_ID) {
-        if (portal) portal.classList.remove('hidden');
-        if (main) main.classList.add('hidden');
-    } else {
-        if (portal) portal.classList.add('hidden');
-        if (main) main.classList.remove('hidden');
-    }
-}
-
-window.openAddNewGroupFlow = function() {
-    // 1. Hide portal and show main content
-    const portal = document.getElementById('groupSelectorPortal');
-    const main = document.getElementById('mainContent');
-    if (portal) portal.classList.add('hidden');
-    if (main) main.classList.remove('hidden');
-    
-    // 2. Switch to profile tab
-    switchTab('profile');
-    
-    // 3. Focus and select group name input
-    setTimeout(() => {
-        const inputField = document.getElementById('newGroupName');
-        if (inputField) {
-            inputField.focus();
-            inputField.select();
-        }
-    }, 150);
-};
-
-// ✅ دالة لإصلاح المعرف المخزن لو كان بالصيغة القديمة (بدون +20)
-function migrateTeacherID() {
-    let tid = localStorage.getItem('learnaria-tid');
-    if (tid && tid.startsWith('01')) {
-        const migrated = `+20${tid.substring(1)}`;
-        console.log(`🔄 Migrating Teacher ID in localStorage: ${tid} -> ${migrated}`);
-        localStorage.setItem('learnaria-tid', migrated);
-        TEACHER_ID = migrated;
-    }
-}
-
-// ✅ كشف نوع الجهاز لضبط المراية
-document.addEventListener('DOMContentLoaded', function () {
-    // بنشوف هل الجهاز موبايل (أندرويد أو آيفون)
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    // لو مش موبايل (يعني لابتوب)، ضيف الكلاس ده للـ Body
-    if (!isMobile) {
-        document.body.classList.add('desktop-device');
-    }
-});
-
-function playBeep() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.frequency.value = 800; gain.gain.value = 0.1;
-        osc.start(); osc.stop(ctx.currentTime + 0.1);
-        if (navigator.vibrate) navigator.vibrate(50);
-    } catch (e) { }
-}
-
-function showToast(msg, type = 'success') {
-    const div = document.createElement('div');
-    div.className = `message-box ${type === 'error' ? 'border-red-500 text-red-500' : ''}`;
-    div.innerHTML = type === 'error' ? `<i class="ri-error-warning-line"></i> ${msg}` : `<i class="ri-checkbox-circle-line"></i> ${msg}`;
-    document.body.appendChild(div);
-    setTimeout(() => div.remove(), 3000);
-}
-
-// ✅ CUSTOM PREMIUM PROMPT & CONFIRM (REPLACES BROWSER DIALOGS)
-function showCustomPrompt(title, desc, defaultValue = '', icon = 'ri-edit-line', isConfirm = false) {
-    return new Promise((resolve) => {
-        const modal = document.getElementById('customInputModal');
-        const content = document.getElementById('customInputContent');
-        const overlay = document.getElementById('customInputOverlay');
-        const inputContainer = document.getElementById('customInputContainer');
-        const input = document.getElementById('customInputField');
-        const titleEl = document.getElementById('customInputTitle');
-        const descEl = document.getElementById('customInputDesc');
-        const iconEl = document.getElementById('customInputIcon');
-        const confirmBtn = document.getElementById('customInputConfirmBtn');
-        const cancelBtn = document.getElementById('customInputCancelBtn');
-
-        titleEl.innerText = title;
-        descEl.innerText = desc;
-        input.value = defaultValue;
-        iconEl.className = `${icon} text-brand text-2xl`;
-
-        if (isConfirm) {
-            inputContainer.classList.add('hidden');
-            confirmBtn.innerText = translations[currentLang].yes || 'نعم';
-        } else {
-            inputContainer.classList.remove('hidden');
-            confirmBtn.innerText = translations[currentLang].saveProfileButton || 'حفظ';
-        }
-
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            content.classList.remove('scale-95', 'opacity-0');
-            content.classList.add('scale-100', 'opacity-100');
-            if (!isConfirm) {
-                input.focus();
-                input.select();
-            }
-        }, 10);
-
-        const close = (value) => {
-            content.classList.remove('scale-100', 'opacity-100');
-            content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                resolve(value);
-            }, 300);
-
-            confirmBtn.onclick = null;
-            cancelBtn.onclick = null;
-            overlay.onclick = null;
-            input.onkeydown = null;
-        };
-
-        confirmBtn.onclick = () => close(isConfirm ? true : input.value);
-        cancelBtn.onclick = () => close(isConfirm ? false : null);
-        overlay.onclick = () => close(isConfirm ? false : null);
-        input.onkeydown = (e) => {
-            if (!isConfirm) {
-                if (e.key === 'Enter') close(input.value);
-                if (e.key === 'Escape') close(null);
-            }
-        };
-    });
-}
-
-async function showCustomConfirm(title, desc, icon = 'ri-question-line') {
-    return await showCustomPrompt(title, desc, '', icon, true);
-}
-
-// ✅ NOTIFICATION STATUS MODAL FUNCTIONS
-function openNotificationStatusModal() {
-    console.log("🔔 Opening Notification Modal. Total students:", typeof allStudents !== 'undefined' ? allStudents.length : 'undefined');
-    const modal = document.getElementById('notificationStatusModal');
-    const content = document.getElementById('notificationStatusModalContent');
-
-    if (!modal || !content) {
-        console.error("❌ Notification Modal elements not found!");
-        return;
-    }
-
-    // Reset lists
-    document.getElementById('activatedStudentsList').innerHTML = '';
-    document.getElementById('notActivatedStudentsList').innerHTML = '';
-
-    const activated = [];
-    const notActivated = [];
-
-    if (Array.isArray(allStudents)) {
-        allStudents.forEach(s => {
-            if (s.parentFcmToken) activated.push(s);
-            else notActivated.push(s);
-        });
-    }
-
-    document.getElementById('activatedCount').innerText = activated.length;
-    document.getElementById('notActivatedCount').innerText = notActivated.length;
-
-    renderNotificationSubList(activated, 'activatedStudentsList', true);
-    renderNotificationSubList(notActivated, 'notActivatedStudentsList', false);
-
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    setTimeout(() => {
-        content.classList.remove('scale-95', 'opacity-0');
-        content.classList.add('scale-100', 'opacity-100');
-    }, 10);
-}
-
-function closeNotificationStatusModal() {
-    const modal = document.getElementById('notificationStatusModal');
-    const content = document.getElementById('notificationStatusModalContent');
-    if (!modal || !content) return;
-
-    content.classList.remove('scale-100', 'opacity-100');
-    content.classList.add('scale-95', 'opacity-0');
-
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }, 300);
-}
-
-function renderNotificationSubList(list, containerId, isActivated) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    if (list.length === 0) {
-        container.innerHTML = `
-            <div class="col-span-full py-6 px-4 border border-dashed border-gray-200 dark:border-white/10 rounded-2xl text-center">
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">لا يوجد طلاب</p>
-            </div>
-        `;
-        return;
-    }
-
-    list.forEach(s => {
-        const div = document.createElement('div');
-        div.className = `group p-4 rounded-[1.2rem] border transition-all flex items-center justify-between bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-brand/40 shadow-sm hover:shadow-md`;
-
-        div.innerHTML = `
-            <div class="text-right">
-                <h5 class="text-sm font-black text-gray-800 dark:text-gray-200 group-hover:text-brand transition-colors tracking-tight">${s.name || 'مجهول'}</h5>
-                <p class="text-[10px] text-gray-400 font-bold mt-0.5">${s.parentPhoneNumber ? (s.parentPhoneNumber.startsWith('+2') ? s.parentPhoneNumber.substring(2) : s.parentPhoneNumber) : '---'}</p>
-            </div>
-            <div class="w-10 h-10 rounded-xl ${isActivated ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-400'} dark:bg-zinc-800 flex items-center justify-center border border-gray-100 dark:border-zinc-800">
-                <i class="${isActivated ? 'ri-checkbox-circle-fill' : 'ri-error-warning-fill'} text-xl"></i>
-            </div>
-        `;
-        container.appendChild(div);
-    });
-}
-
-// --- SYNC (Robust Queue with Retry Metadata) ---
-const MAX_SYNC_RETRIES = 5;
-
-async function addToSyncQueue(action) {
-    const enriched = {
-        ...action,
-        createdAt: action.createdAt || Date.now(),
-        attempts: action.attempts || 0,
-        lastError: action.lastError || null,
-        failed: action.failed || false,
-    };
-
-    try {
-        await putToDB('syncQueue', enriched);
-        updateOnlineStatus();
-    } catch (e) {
-        console.error("❌ Failed to enqueue sync action:", {
-            action,
-            error: e && e.message ? e.message : e
-        });
-        // ملاحظة مهمة: حتى لو فشل الحفظ في syncQueue، بيانات IndexedDB الأصلية (attendance, assignments, ...etc)
-        // تظل كما هي ولم يتم حذفها في أي مكان.
-    }
-}
-
-function updateOnlineStatus() {
-    const indicator = document.getElementById('statusIndicator');
-    if (!indicator) return;
-
-    const dot = indicator.querySelector('.status-dot');
-    const text = indicator.querySelector('.status-text');
-
-    if (navigator.onLine) {
-        indicator.classList.remove('offline');
-        indicator.classList.add('online');
-        text.innerText = translations[currentLang].online;
-        dot.className = 'status-dot w-2.5 h-2.5 rounded-full';
-        processSyncQueue();
-    } else {
-        indicator.classList.remove('online');
-        indicator.classList.add('offline');
-        text.innerText = translations[currentLang].offline;
-        dot.className = 'status-dot w-2.5 h-2.5 rounded-full';
-    }
-    updateSyncUI();
-}
+async function putAllToDB() { /* Deprecated */ }
+function addToSyncQueue() { /* Deprecated */ }
+function updateSyncUI() { /* Deprecated */ }
 
 // دالة الحفظ الصامت (بدون Loading Screen يوقف الشغل)
 async function silentSave() {
     console.log("🔄 جاري الحفظ التلقائي في الخلفية...");
     await saveDailyData(true); // true دي عشان نعرف الدالة إن ده حفظ صامت
-}
-
-async function updateSyncUI() {
-    if (!localDB) await openDB();
-    const count = await new Promise(r => {
-        const req = localDB.transaction('syncQueue').objectStore('syncQueue').count();
-        req.onsuccess = () => r(req.result);
-    });
-    const el = document.getElementById('syncIndicator');
-    if (el) {
-        if (count > 0) el.innerHTML = `<i class="ri-refresh-line animate-spin text-yellow-500"></i> ${count}`;
-        else el.innerHTML = `<i class="ri-check-double-line text-green-500"></i>`;
-    }
-}
-
-async function getAllSyncQueueItemsWithKeys() {
-    await openDB();
-    return new Promise((resolve, reject) => {
-        try {
-            const tx = localDB.transaction('syncQueue', 'readonly');
-            const store = tx.objectStore('syncQueue');
-
-            const reqItems = store.getAll();
-            const reqKeys = store.getAllKeys();
-
-            const result = { items: null, keys: null };
-
-            reqItems.onsuccess = () => {
-                result.items = reqItems.result || [];
-                if (result.keys !== null) resolve(result);
-            };
-            reqItems.onerror = (e) => {
-                reject(e.target.error || new Error("Failed to read syncQueue items"));
-            };
-
-            reqKeys.onsuccess = () => {
-                result.keys = reqKeys.result || [];
-                if (result.items !== null) resolve(result);
-            };
-            reqKeys.onerror = (e) => {
-                reject(e.target.error || new Error("Failed to read syncQueue keys"));
-            };
-
-            tx.onerror = (e) => {
-                reject(tx.error || e.target.error || new Error("Transaction error reading syncQueue"));
-            };
-        } catch (e) {
-            reject(e);
-        }
-    });
-}
-
-async function processSyncQueue() {
-    if (isSyncing) return;
-
-    if (!navigator.onLine) {
-        console.warn("🌐 processSyncQueue aborted: navigator reports offline.");
-        return;
-    }
-
-    isSyncing = true;
-    try {
-        const { items, keys } = await getAllSyncQueueItemsWithKeys();
-
-        if (!items || items.length === 0) {
-            isSyncing = false;
-            await updateSyncUI();
-            return;
-        }
-
-        console.log(`🚀 Starting sync of ${items.length} queued actions (raw)...`);
-
-        // نبني قائمة entries فيها action + key + index عشان نقدر نحل التعارضات
-        const entries = items.map((action, idx) => ({
-            action,
-            key: keys[idx],
-            index: idx
-        }));
-
-        // 1️⃣ تجميع حسب الـ path
-        const groupedByPath = new Map();
-        for (const entry of entries) {
-            const { action } = entry;
-            const pathKey = action.path || action.collectionPath || '';
-            if (!pathKey) continue;
-            if (!groupedByPath.has(pathKey)) groupedByPath.set(pathKey, []);
-            groupedByPath.get(pathKey).push(entry);
-        }
-
-        const supersededKeys = new Set();
-        const filteredEntries = [];
-
-        // 2️⃣ حل التعارضات (مثلاً set + delete لنفس dailyAttendance)
-        groupedByPath.forEach((list, pathKey) => {
-            const hasSetOrUpdate = list.some(e => e.action.type === 'set' || e.action.type === 'update');
-            const isDailyAttendanceDoc = pathKey.includes('/dailyAttendance/');
-
-            if (hasSetOrUpdate) {
-                // احتفظ بآخر set/update فقط
-                let lastSetEntry = null;
-                for (const e of list) {
-                    if (e.action.type === 'set' || e.action.type === 'update') {
-                        if (!lastSetEntry || e.index > lastSetEntry.index) {
-                            lastSetEntry = e;
-                        }
-                    }
-                }
-
-                if (lastSetEntry) {
-                    filteredEntries.push(lastSetEntry);
-                }
-
-                for (const e of list) {
-                    if (lastSetEntry && e.key === lastSetEntry.key) continue;
-
-                    // لو فيه delete لنفس dailyAttendance مع وجود set -> نرميه من الـ Queue من غير ما ننفذه
-                    if (e.action.type === 'delete' && isDailyAttendanceDoc) {
-                        console.warn("🚫 Dropping conflicting DELETE for dailyAttendance (SET exists):", {
-                            path: pathKey,
-                            queueKey: e.key
-                        });
-                    }
-
-                    supersededKeys.add(e.key);
-                }
-            } else {
-                // مفيش set/update لنفس الـ path
-                // لو كله Deletes لنفس الـ doc، نخلي آخر واحدة بس
-                const deletes = list.filter(e => e.action.type === 'delete');
-                const others = list.filter(e => e.action.type !== 'delete');
-
-                if (deletes.length > 1) {
-                    let lastDelete = deletes[0];
-                    for (const d of deletes) {
-                        if (d.index > lastDelete.index) lastDelete = d;
-                    }
-                    filteredEntries.push(lastDelete);
-                    for (const d of deletes) {
-                        if (d.key !== lastDelete.key) supersededKeys.add(d.key);
-                    }
-                } else if (deletes.length === 1) {
-                    filteredEntries.push(deletes[0]);
-                }
-
-                // أي Actions تانية (add مثلا) نضيفها زي ما هي
-                for (const e of others) {
-                    filteredEntries.push(e);
-                }
-            }
-        });
-
-        // مسح العناصر المتجاوزة من الـ Queue (اللي اتستبدلت بإصدارات أحدث لنفس الـ path)
-        for (const key of supersededKeys) {
-            try {
-                await deleteFromDB('syncQueue', key);
-                console.log("🧹 Removed superseded queue item:", { key });
-            } catch (cleanupErr) {
-                console.error("⚠️ Failed to remove superseded queue item:", { key, error: cleanupErr });
-            }
-        }
-
-        console.log(`✅ After conflict resolution: ${filteredEntries.length} actions will be sent to Firestore.`);
-
-        // 3️⃣ تنفيذ الـ Actions بعد حل التعارضات
-        for (const entry of filteredEntries) {
-            const action = entry.action;
-            const key = entry.key;
-
-            const attempts = action.attempts || 0;
-            if (action.failed || attempts >= MAX_SYNC_RETRIES) {
-                console.warn("⏭️ Removing permanently failed sync item from queue:", {
-                    type: action.type,
-                    path: action.path,
-                    attempts,
-                    lastError: action.lastError
-                });
-                await deleteFromDB('syncQueue', key);
-                continue;
-            }
-
-            if (!navigator.onLine) {
-                console.warn("🌐 Went offline mid-sync. Stopping further processing.");
-                break;
-            }
-
-            const { type, path, data, id, options } = action;
-
-            try {
-                console.log("📡 Syncing action:", { type, path, attempts });
-
-                if (type === 'set' || type === 'update') {
-                    console.log("➡️ FIRESTORE SET (doc):", {
-                        path,
-                        options: options || { merge: true },
-                        payloadPreview: data && typeof data === 'object'
-                            ? { keys: Object.keys(data), date: data.date }
-                            : data
-                    });
-                    await firestoreDB.doc(path).set(data, options || { merge: true });
-                } else if (type === 'add') {
-                    console.log("➡️ FIRESTORE SET (add to collection):", {
-                        collectionPath: path,
-                        docId: id,
-                        payloadPreview: data && typeof data === 'object'
-                            ? { keys: Object.keys(data), date: data.date }
-                            : data
-                    });
-                    await firestoreDB.collection(path).doc(id).set(data, { merge: true });
-                } else if (type === 'delete') {
-                    console.log("🗑️ FIRESTORE DELETE:", { path });
-                    await firestoreDB.doc(path).delete();
-                } else {
-                    console.warn("⚠️ Unknown syncQueue action type. Skipping:", action);
-                    continue;
-                }
-
-                await deleteFromDB('syncQueue', key);
-                console.log("✅ Sync success, removed from queue:", { type, path });
-            } catch (err) {
-                const message = err && err.message ? err.message : String(err);
-                console.error("❌ Sync error for item:", {
-                    type,
-                    path,
-                    attempts,
-                    error: message
-                });
-
-                const updated = {
-                    ...action,
-                    attempts: attempts + 1,
-                    lastError: message,
-                    failed: attempts + 1 >= MAX_SYNC_RETRIES
-                };
-
-                try {
-                    await putToDB('syncQueue', updated);
-                } catch (metaErr) {
-                    console.error("⚠️ Failed to update retry metadata for sync item:", metaErr);
-                }
-            }
-        }
-    } catch (e) {
-        console.error("🔥 Fatal error in processSyncQueue:", e);
-    } finally {
-        isSyncing = false;
-        await updateSyncUI();
-    }
 }
 
 // ==========================================
@@ -1927,71 +856,13 @@ async function loadGroupData() {
 
     document.querySelectorAll('.tab-button').forEach(b => b.disabled = false);
 
-    // 1. محاولة جلب البيانات محلياً (داخل try-catch)
+    // جلب الطلاب مباشرة من Firebase (سيعتمد على الكاش تلقائياً بفضل Offline Persistence)
     try {
-        const localData = await getAllFromDB('students', 'groupId', SELECTED_GROUP_ID);
-        if (localData && Array.isArray(localData) && localData.length > 0) {
-            allStudents = localData;
-            refreshCurrentTab(); // تحديث سريع
-        }
+        const snap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get();
+        allStudents = snap.docs.map(d => ({ id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() }));
+        refreshCurrentTab();
     } catch (error) {
-        console.warn("Local load skipped:", error);
-    }
-
-    // 2. جلب البيانات من السيرفر (Sync)
-    if (navigator.onLine) {
-        try {
-            // جلب كل البيانات بالتوازي لتسريع العملية بشكل كبير جداً بدلاً من جلبها بالتتابع
-            const [sSnap, aSnap, asSnap, pSnap] = await Promise.all([
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get(),
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get(),
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`).limit(60).get(),
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments`).limit(24).get()
-            ]);
-
-            // أ. الطلاب
-            const remoteStudents = sSnap.docs.map(d => ({ id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() }));
-            allStudents = remoteStudents;
-            await saveStudentsToLocalDB(remoteStudents);
-            refreshCurrentTab();
-
-            // ب. الحضور الأخير
-            const attendanceDocs = aSnap.docs.map(d => {
-                const data = d.data();
-                return {
-                    id: `${SELECTED_GROUP_ID}_${d.id}`,
-                    groupId: SELECTED_GROUP_ID,
-                    date: data.date || d.id,
-                    ...data
-                };
-            });
-            await putAllToDB('attendance', attendanceDocs);
-
-            // ج. التكاليف/الواجبات
-            const assignmentsDocs = asSnap.docs.map(d => {
-                const data = d.data();
-                return {
-                    id: d.id,
-                    groupId: SELECTED_GROUP_ID,
-                    date: data.date || d.id.split('_').pop(),
-                    ...data
-                };
-            });
-            await putAllToDB('assignments', assignmentsDocs);
-
-            // د. المدفوعات
-            const paymentsDocs = pSnap.docs.map(d => ({
-                id: `${SELECTED_GROUP_ID}_PAY_${d.id}`,
-                month: d.id,
-                ...d.data()
-            }));
-            await putAllToDB('payments', paymentsDocs);
-            
-            refreshCurrentTab();
-        } catch (e) {
-            console.error("Sync error:", e);
-            refreshCurrentTab();
-        }
+        console.error("Error loading students:", error);
     }
 
     renderOverview();
@@ -2596,10 +1467,12 @@ async function updateGroupAnalyticsChart() {
         console.log("📊 Fetching analytics for Group:", SELECTED_GROUP_ID);
 
         // استخدام localDB للحصول على التحديثات الفورية حتى لو الإنترنت مقطوع أو الـ Sync متأخر
-        const [filteredAttRaw, filteredHwRaw] = await Promise.all([
-            getAllFromDB('attendance', 'groupId', SELECTED_GROUP_ID).catch(() => []),
-            getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID).catch(() => [])
+        const [attSnap, hwSnap] = await Promise.all([
+            firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get().catch(() => ({ docs: [] })),
+            firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`).limit(60).get().catch(() => ({ docs: [] }))
         ]);
+        const filteredAttRaw = attSnap.docs.map(d => d.data());
+        const filteredHwRaw = hwSnap.docs.map(d => d.data());
 
         // --- أ. معالجة الحضور ---
         let attLabels = ["-", "-", "-", "-", "-", "-", "-"];
@@ -2763,16 +1636,9 @@ async function saveDailyData(isSilent = false) {
                     recordsCount: attendanceRecords.length
                 });
 
-                promises.push(putToDB('attendance', attendanceData));
                 promises.push(
-                    addToSyncQueue({
-                        type: 'set',
-                        path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
-                        data: {
-                            date,
-                            records: attendanceRecords
-                        }
-                    })
+                    firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
+                        .doc(date).set({ date, records: attendanceRecords }, { merge: true })
                 );
             }
 
@@ -2801,19 +1667,11 @@ async function saveDailyData(isSilent = false) {
                     type: 'daily'
                 };
 
-                console.log("📝 Queuing homework save:", {
-                    path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`,
-                    localId: hwId,
-                    studentsCount: Object.keys(scores).length
-                });
+                console.log("📝 Saving homework to Firestore:", hwId);
 
-                promises.push(putToDB('assignments', hwData));
                 promises.push(
-                    addToSyncQueue({
-                        type: 'set',
-                        path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`,
-                        data: hwData
-                    })
+                    firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`)
+                        .doc(hwId).set(hwData, { merge: true })
                 );
             }
         }
@@ -3702,14 +2560,12 @@ function saveProfile() {
     const subject = document.getElementById('teacherSubjectInput').value;
     if (!name) return;
     
-    // الاحتفاظ بالباسورد القديم كما هو في قاعدة البيانات المحلية لتجنب فقدانه أو مسحه عن طريق الخطأ
-    getFromDB('teachers', TEACHER_ID).then(existingTeacher => {
-        const password = existingTeacher ? existingTeacher.password : '';
-        putToDB('teachers', { id: TEACHER_ID, name, subject, password });
-        addToSyncQueue({ type: 'update', path: `teachers/${TEACHER_ID}`, data: { name, subject } });
-        document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${name}`;
-        showToast(translations[currentLang].saved);
-    }).catch(e => console.error("Error saving profile", e));
+    firestoreDB.collection('teachers').doc(TEACHER_ID).set({ name, subject }, { merge: true })
+        .then(() => {
+            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${name}`;
+            showToast(translations[currentLang].saved);
+        })
+        .catch(e => console.error("Error saving profile", e));
 }
 
 function openChangePasswordModal() {
@@ -3764,13 +2620,8 @@ async function handleChangePassword() {
         // 2. Update Password in Firebase Auth
         await user.updatePassword(newPassword);
 
-        // 3. Update Password in local DB and Firestore (for backward compatibility)
-        const existingTeacher = await getFromDB('teachers', TEACHER_ID);
-        const name = existingTeacher ? existingTeacher.name : '';
-        const subject = existingTeacher ? existingTeacher.subject : '';
-        
-        await putToDB('teachers', { id: TEACHER_ID, name, subject, password: newPassword });
-        await addToSyncQueue({ type: 'update', path: `teachers/${TEACHER_ID}`, data: { password: newPassword } });
+        // 3. Update Password in Firestore (for backward compatibility)
+        await firestoreDB.collection('teachers').doc(TEACHER_ID).set({ password: newPassword }, { merge: true });
 
         showToast("تم تغيير كلمة المرور بنجاح 🔒", "success");
         closeChangePasswordModal();
