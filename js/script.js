@@ -1210,16 +1210,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function setupListeners() {
-    document.getElementById('setTeacherButton').addEventListener('click', loginTeacher);
-    document.getElementById('logoutButton').addEventListener('click', logout);
+    document.getElementById('setTeacherButton')?.addEventListener('click', loginTeacher);
+    document.getElementById('logoutButton')?.addEventListener('click', logout);
 
     // ✅✅ FIX: Disable student inputs by default on load
     toggleStudentInputs(false);
     setupPhoneInput('teacherPhoneInput');
     setupPhoneInput('newParentPhoneNumber');
     setupPhoneInput('profileParentPhone');
+    
     document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn?.addEventListener('click', (e) => {
             const tab = e.currentTarget.dataset.tab;
             if (!SELECTED_GROUP_ID && tab !== 'profile') {
                 showToast(translations[currentLang].selectGroupPlaceholder, 'error');
@@ -1229,8 +1230,8 @@ function setupListeners() {
         });
     });
 
-    document.getElementById('saveProfileButton').addEventListener('click', saveProfile);
-    document.getElementById('createNewGroupBtn').addEventListener('click', createGroup);
+    document.getElementById('saveProfileButton')?.addEventListener('click', saveProfile);
+    document.getElementById('createNewGroupBtn')?.addEventListener('click', createGroup);
 
     const handleGroupSelectionChange = async (groupId) => {
         SELECTED_GROUP_ID = groupId;
@@ -1260,7 +1261,7 @@ function setupListeners() {
     
     window.handleGroupSelectionChange = handleGroupSelectionChange;
 
-    document.getElementById('groupSelect').addEventListener('change', (e) => {
+    document.getElementById('groupSelect')?.addEventListener('change', (e) => {
         handleGroupSelectionChange(e.target.value);
     });
 
@@ -1273,7 +1274,7 @@ function setupListeners() {
         });
     }
 
-    document.getElementById('addNewGroupButton').addEventListener('click', () => {
+    document.getElementById('addNewGroupButton')?.addEventListener('click', () => {
         // 1. الانتقال لتابة الملف الشخصي (Profile)
         switchTab('profile');
 
@@ -1286,45 +1287,45 @@ function setupListeners() {
             }
         }, 100); // 100 مللي ثانية كافية جداً
     });
-    document.getElementById('deleteGroupButton').addEventListener('click', deleteCurrentGroup);
-    document.getElementById('editGroupButton').addEventListener('click', editCurrentGroupName);
+    document.getElementById('deleteGroupButton')?.addEventListener('click', deleteCurrentGroup);
+    document.getElementById('editGroupButton')?.addEventListener('click', editCurrentGroupName);
 
-    document.getElementById('startSmartScanBtn').addEventListener('click', () => startScanner('daily'));
-    document.getElementById('homeworkToggle').addEventListener('change', (e) => {
+    document.getElementById('startSmartScanBtn')?.addEventListener('click', () => startScanner('daily'));
+    document.getElementById('homeworkToggle')?.addEventListener('change', (e) => {
         hasHomeworkToday = e.target.checked;
         renderDailyList();
     });
-    document.getElementById('dailyDateInput').addEventListener('change', renderDailyList);
-    document.getElementById('saveDailyBtn').addEventListener('click', saveDailyData);
-    document.getElementById('hwYesBtn').addEventListener('click', () => resolveHomework(true));
-    document.getElementById('hwNoBtn').addEventListener('click', () => resolveHomework(false));
+    document.getElementById('dailyDateInput')?.addEventListener('change', renderDailyList);
+    document.getElementById('saveDailyBtn')?.addEventListener('click', saveDailyData);
+    document.getElementById('hwYesBtn')?.addEventListener('click', () => resolveHomework(true));
+    document.getElementById('hwNoBtn')?.addEventListener('click', () => resolveHomework(false));
 
-    document.getElementById('addNewStudentButton').addEventListener('click', addNewStudent);
-    document.getElementById('studentSearchInput').addEventListener('input', (e) => renderStudents(e.target.value));
+    document.getElementById('addNewStudentButton')?.addEventListener('click', addNewStudent);
+    document.getElementById('studentSearchInput')?.addEventListener('input', (e) => renderStudents(e.target.value));
 
-    document.getElementById('addRecurringScheduleButton').addEventListener('click', saveRecurringSchedule);
-    document.getElementById('updateSingleClassButton').addEventListener('click', updateSingleClass);
-    document.getElementById('cancelSingleClassButton').addEventListener('click', cancelSingleClass);
+    document.getElementById('addRecurringScheduleButton')?.addEventListener('click', saveRecurringSchedule);
+    document.getElementById('updateSingleClassButton')?.addEventListener('click', updateSingleClass);
+    document.getElementById('cancelSingleClassButton')?.addEventListener('click', cancelSingleClass);
 
-    document.getElementById('scanPaymentsBtn').addEventListener('click', () => startScanner('payments'));
-    document.getElementById('paymentMonthInput').addEventListener('change', renderPaymentsList);
+    document.getElementById('scanPaymentsBtn')?.addEventListener('click', () => startScanner('payments'));
+    document.getElementById('paymentMonthInput')?.addEventListener('change', renderPaymentsList);
 
-    document.getElementById('addNewExamBtn').addEventListener('click', addNewExam);
-    document.getElementById('examSelect').addEventListener('change', renderExamGrades);
+    document.getElementById('addNewExamBtn')?.addEventListener('click', addNewExam);
+    document.getElementById('examSelect')?.addEventListener('change', renderExamGrades);
 
 
-    document.getElementById('closeScannerModal').addEventListener('click', stopScanner);
-    document.getElementById('closeQrModal').addEventListener('click', () => document.getElementById('qrCodeModal').classList.add('hidden'));
-    document.getElementById('printIdButton').addEventListener('click', () => window.print());
-    document.getElementById('darkModeToggleButton').addEventListener('click', toggleDarkMode);
-    document.getElementById('languageToggleButton').addEventListener('click', toggleLang);
+    document.getElementById('closeScannerModal')?.addEventListener('click', stopScanner);
+    document.getElementById('closeQrModal')?.addEventListener('click', () => document.getElementById('qrCodeModal').classList.add('hidden'));
+    document.getElementById('printIdButton')?.addEventListener('click', () => window.print());
+    document.getElementById('darkModeToggleButton')?.addEventListener('click', toggleDarkMode);
+    document.getElementById('languageToggleButton')?.addEventListener('click', toggleLang);
 
-    document.getElementById('closeMsgModal').addEventListener('click', () => {
+    document.getElementById('closeMsgModal')?.addEventListener('click', () => {
         document.getElementById('messageModal').classList.add('hidden');
     });
-    document.getElementById('confirmSendMsgBtn').addEventListener('click', sendCustomMessageAction);
-    document.getElementById('shareIdBtn').addEventListener('click', shareCardAction);
-    document.getElementById('botFileInput').addEventListener('change', handleBotFileUpload);
+    document.getElementById('confirmSendMsgBtn')?.addEventListener('click', sendCustomMessageAction);
+    document.getElementById('shareIdBtn')?.addEventListener('click', shareCardAction);
+    document.getElementById('botFileInput')?.addEventListener('change', handleBotFileUpload);
 }
 
 // ✅✅ NEW HELPER: Enable/Disable Student Inputs
