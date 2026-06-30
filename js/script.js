@@ -3262,12 +3262,6 @@ function renderStudents(filter = "") {
                 <p class="text-xs text-gray-500">${s.parentPhoneNumber ? (s.parentPhoneNumber.startsWith('+2') ? s.parentPhoneNumber.substring(2) : s.parentPhoneNumber) : ''}</p>
             </div>
             <div class="flex gap-2">
-                <button class="btn-icon w-10 h-10 bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 invite-btn" title="إرسال رابط المتابعة واتساب">
-                    <i class="ri-whatsapp-line"></i>
-                </button>
-                <button class="btn-icon w-10 h-10 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 link-btn" title="نسخ رابط ولي الأمر">
-                    <i class="ri-link-m"></i>
-                </button>
                 <button class="btn-icon w-10 h-10 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 msg-btn" title="إرسال رسالة">
                     <i class="ri-chat-1-line"></i>
                 </button>
@@ -3279,24 +3273,6 @@ function renderStudents(filter = "") {
                 </button>
             </div>
         `;
-        div.querySelector('.invite-btn').onclick = () => {
-            if (!pNum) {
-                showToast("لا يوجد رقم هاتف لولي الأمر", "error");
-                return;
-            }
-            const msg = `مرحباً ولي أمر الطالب *${s.name}*\n\nلمتابعة مستوى الطالب (الغياب، الدرجات، والمصاريف) لحظياً، يرجى الدخول على الرابط الخاص به:\n${fullDirectLink}\n\n *يرجي ارسال اللينك لولي الامر وعدم فتحه اطلاقا من قبل الطالب*\n\nدمتم بخير`;
-            let waPhone = pNum.replace(/\s+/g, '');
-            if (!waPhone.startsWith('+')) waPhone = '+2' + waPhone;
-
-            window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-        };
-
-        div.querySelector('.link-btn').onclick = () => {
-            navigator.clipboard.writeText(fullDirectLink)
-                .then(() => showToast(translations[currentLang].linkCopied))
-                .catch(() => showToast(translations[currentLang].copyFailed, "error"));
-        };
-
         div.querySelector('.msg-btn').onclick = () => openMessageModal(s);
         div.querySelector('.qr-btn').onclick = () => showStudentQR(s);
         div.querySelector('.del-btn').onclick = () => deleteStudent(s.id);
@@ -5411,4 +5387,121 @@ function togglePasswordVisibility() {
         input.type = 'password';
         icon.className = 'ri-eye-line text-xl';
     }
+}
+
+// --- Bulk QR Print Feature ---
+window.openBulkPrintModal = function() {
+    if (!allStudents || allStudents.length === 0) {
+        showToast(translations[currentLang].noDataMsg || "لا يوجد طلاب في المجموعة", "error");
+        return;
+    }
+    document.getElementById('bulkQrPrintModal').classList.remove('hidden');
+    document.getElementById('bulkQrPrintModal').classList.add('flex');
+}
+
+window.closeBulkPrintModal = function() {
+    document.getElementById('bulkQrPrintModal').classList.add('hidden');
+    document.getElementById('bulkQrPrintModal').classList.remove('flex');
+}
+
+let currentBulkPrintTargetStudents = [];
+
+window.closeBulkQrPrintSuccessModal = async function(success) {
+    document.getElementById('bulkQrPrintSuccessModal').classList.add('hidden');
+    document.getElementById('bulkQrPrintSuccessModal').classList.remove('flex');
+    if (success && currentBulkPrintTargetStudents.length > 0) {
+        for (const s of currentBulkPrintTargetStudents) {
+            s.qrPrinted = true;
+            await putToDB('students', s);
+            await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${s.id}`, data: { qrPrinted: true } });
+        }
+        showToast("تم حفظ حالة الطباعة بنجاح!");
+    }
+    document.getElementById('bulkQrPrintContainer').innerHTML = ''; // Clean up
+    currentBulkPrintTargetStudents = [];
+}
+
+window.startBulkPrint = async function(mode) {
+    let targetStudents = [];
+    if (mode === 'new') {
+        targetStudents = allStudents.filter(s => !s.qrPrinted);
+    } else {
+        targetStudents = allStudents;
+    }
+
+    if (targetStudents.length === 0) {
+        showToast("لا يوجد طلاب في هذه الفئة لطباعة كروت لهم", "error");
+        closeBulkPrintModal();
+        return;
+    }
+
+    currentBulkPrintTargetStudents = targetStudents; // store globally for the modal
+    const container = document.getElementById('bulkQrPrintContainer');
+    container.innerHTML = '';
+
+    // Generate cards
+    targetStudents.forEach(s => {
+        const qrContent = s.parentPhoneNumber ? s.parentPhoneNumber.trim() : s.id;
+        
+        let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
+        // إزالة الـ Emojis والإبقاء على الحروف والأرقام والمسافات
+        randomQuote = randomQuote.replace(/[^\u0600-\u06FF\u0020-\u007E\s]/g, '').trim();
+        
+        const card = document.createElement('div');
+        card.className = 'qr-card';
+        card.innerHTML = `
+            <div class="qr-card-header">
+                <img src="assets/images/favicon.png" alt="logo">
+                <span>الناظر - Al-Nazer</span>
+            </div>
+            <div class="qr-card-name">${s.name}</div>
+            <div class="qr-card-subtitle">Smart Access ID</div>
+            <div class="qr-card-code" id="bulk-qr-${s.id}"></div>
+            <div class="qr-card-quote">"${randomQuote}"</div>
+        `;
+        container.appendChild(card);
+
+        // Generate QR code inside the card
+        new QRCode(card.querySelector(`#bulk-qr-${s.id}`), {
+            text: qrContent,
+            width: 120,
+            height: 120,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    });
+
+    closeBulkPrintModal();
+
+    // Small delay to allow QR codes to render before printing
+    setTimeout(() => {
+        window.print();
+        
+        // Ask for confirmation after printing dialog closes using our custom modal
+        const checkSuccess = () => {
+            document.getElementById('bulkQrPrintSuccessModal').classList.remove('hidden');
+            document.getElementById('bulkQrPrintSuccessModal').classList.add('flex');
+        };
+        
+        // Some browsers support onafterprint nicely
+        window.onafterprint = () => {
+            window.onafterprint = null;
+            setTimeout(checkSuccess, 500);
+        };
+        
+        // Safari / older browsers fallback
+        if (window.matchMedia) {
+            let mediaQueryList = window.matchMedia('print');
+            mediaQueryList.addListener(function(mql) {
+                if (!mql.matches) {
+                    if (window.onafterprint !== null) {
+                        window.onafterprint = null;
+                        setTimeout(checkSuccess, 500);
+                    }
+                }
+            });
+        }
+        
+    }, 500);
 }
