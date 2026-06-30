@@ -1276,6 +1276,7 @@ function setupListeners() {
     });
 
     document.getElementById('saveProfileButton')?.addEventListener('click', saveProfile);
+    document.getElementById('openChangePasswordBtn')?.addEventListener('click', openChangePasswordModal);
     document.getElementById('createNewGroupBtn')?.addEventListener('click', createGroup);
 
     const handleGroupSelectionChange = async (groupId) => {
@@ -3699,12 +3700,98 @@ async function saveExamGrades() {
 function saveProfile() {
     const name = document.getElementById('teacherNameInput').value;
     const subject = document.getElementById('teacherSubjectInput').value;
-    const password = document.getElementById('profilePasswordInput').value.trim();
     if (!name) return;
-    putToDB('teachers', { id: TEACHER_ID, name, subject, password });
-    addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}`, data: { name, subject, password } });
-    document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${name}`;
-    showToast(translations[currentLang].saved);
+    
+    // الاحتفاظ بالباسورد القديم كما هو في قاعدة البيانات المحلية لتجنب فقدانه أو مسحه عن طريق الخطأ
+    getFromDB('teachers', TEACHER_ID).then(existingTeacher => {
+        const password = existingTeacher ? existingTeacher.password : '';
+        putToDB('teachers', { id: TEACHER_ID, name, subject, password });
+        addToSyncQueue({ type: 'update', path: `teachers/${TEACHER_ID}`, data: { name, subject } });
+        document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${name}`;
+        showToast(translations[currentLang].saved);
+    }).catch(e => console.error("Error saving profile", e));
+}
+
+function openChangePasswordModal() {
+    document.getElementById('currentPasswordInput').value = '';
+    document.getElementById('newPasswordInput').value = '';
+    document.getElementById('confirmNewPasswordInput').value = '';
+    document.getElementById('changePasswordModal').classList.remove('hidden');
+    document.getElementById('changePasswordModal').classList.add('flex');
+}
+
+function closeChangePasswordModal() {
+    document.getElementById('changePasswordModal').classList.add('hidden');
+    document.getElementById('changePasswordModal').classList.remove('flex');
+}
+
+async function handleChangePassword() {
+    const currentPassword = document.getElementById('currentPasswordInput').value;
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const confirmPassword = document.getElementById('confirmNewPasswordInput').value;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showToast("يرجى ملء جميع الحقول", "error");
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        showToast("كلمة المرور الجديدة غير متطابقة", "error");
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        showToast("كلمة المرور يجب أن تكون 6 أحرف على الأقل", "error");
+        return;
+    }
+
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            showToast("حدث خطأ في الجلسة، يرجى تسجيل الدخول مجدداً", "error");
+            return;
+        }
+
+        const btn = document.querySelector('#changePasswordModal button[onclick="handleChangePassword()"]');
+        const oldText = btn.innerText;
+        btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
+        btn.disabled = true;
+
+        // 1. Re-authenticate
+        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+        await user.reauthenticateWithCredential(credential);
+
+        // 2. Update Password in Firebase Auth
+        await user.updatePassword(newPassword);
+
+        // 3. Update Password in local DB and Firestore (for backward compatibility)
+        const existingTeacher = await getFromDB('teachers', TEACHER_ID);
+        const name = existingTeacher ? existingTeacher.name : '';
+        const subject = existingTeacher ? existingTeacher.subject : '';
+        
+        await putToDB('teachers', { id: TEACHER_ID, name, subject, password: newPassword });
+        await addToSyncQueue({ type: 'update', path: `teachers/${TEACHER_ID}`, data: { password: newPassword } });
+
+        showToast("تم تغيير كلمة المرور بنجاح 🔒", "success");
+        closeChangePasswordModal();
+
+        btn.innerText = oldText;
+        btn.disabled = false;
+
+    } catch (error) {
+        console.error("Change Password Error:", error);
+        const btn = document.querySelector('#changePasswordModal button[onclick="handleChangePassword()"]');
+        btn.innerText = "تأكيد وتغيير";
+        btn.disabled = false;
+        
+        if (error.code === 'auth/wrong-password') {
+            showToast("كلمة المرور الحالية غير صحيحة", "error");
+        } else if (error.code === 'auth/too-many-requests') {
+            showToast("محاولات كثيرة خاطئة، يرجى المحاولة لاحقاً", "error");
+        } else {
+            showToast("حدث خطأ أثناء تغيير كلمة المرور", "error");
+        }
+    }
 }
 
 function toggleDarkMode() {

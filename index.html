@@ -724,11 +724,12 @@
                                 data-key-placeholder="fullNamePlaceholder">
                             <input type="text" id="teacherSubjectInput" class="input-field"
                                 data-key-placeholder="subjectPlaceholder">
-                            <div>
-                                <label class="label-custom" data-key="passwordLabel">كلمة المرور</label>
-                                <input type="password" id="profilePasswordInput" class="input-field"
-                                    data-key-placeholder="changePasswordPlaceholder" placeholder="تغيير كلمة المرور">
-                            </div>
+                            
+                            <button id="openChangePasswordBtn" class="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 rounded-xl font-bold transition-colors">
+                                <i class="ri-lock-password-line text-brand"></i>
+                                <span>تغيير كلمة المرور</span>
+                            </button>
+
                             <button id="saveProfileButton" class="btn-primary-custom w-full mt-2"
                                 data-key="saveProfileButton">حفظ التغييرات</button>
                         </div>
@@ -1908,6 +1909,60 @@
                 </button>
                 <button onclick="closeBulkQrPrintSuccessModal(false)" class="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
                     لا، حدثت مشكلة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="fixed inset-0 z-[2000] hidden items-center justify-center p-4">
+        <div class="absolute inset-0 bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm" onclick="closeChangePasswordModal()"></div>
+        <div class="relative bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[2rem] shadow-2xl p-6 border border-gray-100 dark:border-zinc-800 animate-slide-up transform transition-all overflow-hidden">
+            <!-- Decorative Background -->
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-brand/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div class="flex items-center gap-3 mb-6 relative">
+                <div class="w-12 h-12 rounded-2xl bg-brand/10 text-brand flex items-center justify-center text-xl shadow-inner border border-brand/20">
+                    <i class="ri-lock-password-fill"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-gray-900 dark:text-white tracking-tight">تغيير كلمة المرور</h3>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">تأمين الحساب</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 relative">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">كلمة المرور الحالية</label>
+                    <div class="relative">
+                        <i class="ri-lock-line absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="password" id="currentPasswordInput" class="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-zinc-800 rounded-xl px-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-brand transition-colors" placeholder="أدخل كلمة المرور الحالية">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">كلمة المرور الجديدة</label>
+                    <div class="relative">
+                        <i class="ri-key-2-line absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="password" id="newPasswordInput" class="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-zinc-800 rounded-xl px-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-brand transition-colors" placeholder="أدخل كلمة المرور الجديدة">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">تأكيد كلمة المرور الجديدة</label>
+                    <div class="relative">
+                        <i class="ri-check-double-line absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="password" id="confirmNewPasswordInput" class="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-zinc-800 rounded-xl px-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-brand transition-colors" placeholder="أعد إدخال كلمة المرور الجديدة">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 mt-8 relative">
+                <button onclick="handleChangePassword()" class="flex-1 bg-brand text-black font-black py-3.5 rounded-xl shadow-lg shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all">
+                    تأكيد وتغيير
+                </button>
+                <button onclick="closeChangePasswordModal()" class="px-6 bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400 font-bold py-3.5 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors">
+                    إلغاء
                 </button>
             </div>
         </div>
