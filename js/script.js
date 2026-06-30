@@ -74,7 +74,7 @@ try {
 // 2. LOCAL DATABASE (IndexedDB) - FIXED
 // ==========================================
 const DB_NAME = 'LearnariaDB';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 let localDB = null;
 const motivationQuotes = [
     "بطل اليوم.. عالم الغد! 🚀",
@@ -213,8 +213,22 @@ async function getAllFromDB(store, idx, key) {
         await openDB();
         return new Promise((res, rej) => {
             const s = localDB.transaction(store, 'readonly').objectStore(store);
-            const req = idx ? s.index(idx).getAll(key) : s.getAll();
-            req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+            let req;
+            try {
+                req = idx ? s.index(idx).getAll(key) : s.getAll();
+            } catch (indexErr) {
+                console.warn(`⚠️ Index "${idx}" not found on store "${store}". Falling back to in-memory filtering.`, indexErr);
+                const fallbackReq = s.getAll();
+                fallbackReq.onsuccess = () => {
+                    const all = fallbackReq.result || [];
+                    const filtered = all.filter(item => item && item[idx] === key);
+                    res(filtered);
+                };
+                fallbackReq.onerror = () => rej(fallbackReq.error);
+                return;
+            }
+            req.onsuccess = () => res(req.result);
+            req.onerror = () => rej(req.error);
         });
     } catch (e) {
         if (e.name === 'InvalidStateError' || !localDB) {
@@ -222,7 +236,20 @@ async function getAllFromDB(store, idx, key) {
             await openDB();
             return new Promise((res, rej) => {
                 const s = localDB.transaction(store, 'readonly').objectStore(store);
-                const req = idx ? s.index(idx).getAll(key) : s.getAll();
+                let req;
+                try {
+                    req = idx ? s.index(idx).getAll(key) : s.getAll();
+                } catch (indexErr) {
+                    console.warn(`⚠️ Index "${idx}" not found on store "${store}" during retry. Falling back to in-memory filtering.`, indexErr);
+                    const fallbackReq = s.getAll();
+                    fallbackReq.onsuccess = () => {
+                        const all = fallbackReq.result || [];
+                        const filtered = all.filter(item => item && item[idx] === key);
+                        res(filtered);
+                    };
+                    fallbackReq.onerror = () => rej(fallbackReq.error);
+                    return;
+                }
                 req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
             });
         }
