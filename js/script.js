@@ -1027,6 +1027,13 @@ async function getAllSyncQueueItemsWithKeys() {
     });
 }
 
+const withTimeout = (promise, ms) => {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout (Firebase offline)")), ms))
+    ]);
+};
+
 async function processSyncQueue() {
     if (isSyncing) return;
 
@@ -1144,7 +1151,9 @@ async function processSyncQueue() {
             const key = entry.key;
 
             const attempts = action.attempts || 0;
-            if (action.failed || attempts >= MAX_SYNC_RETRIES) {
+            // Removed fatal deletion based on attempts to ensure data is NEVER lost!
+            // It will keep retrying until it successfully hits the server.
+            if (action.failed) {
                 console.warn("⏭️ Removing permanently failed sync item from queue:", {
                     type: action.type,
                     path: action.path,
@@ -1173,7 +1182,7 @@ async function processSyncQueue() {
                             ? { keys: Object.keys(data), date: data.date }
                             : data
                     });
-                    await firestoreDB.doc(path).set(data, options || { merge: true });
+                    await withTimeout(firestoreDB.doc(path).set(data, options || { merge: true }), 10000);
                 } else if (type === 'add') {
                     console.log("➡️ FIRESTORE SET (add to collection):", {
                         collectionPath: path,
@@ -1182,10 +1191,10 @@ async function processSyncQueue() {
                             ? { keys: Object.keys(data), date: data.date }
                             : data
                     });
-                    await firestoreDB.collection(path).doc(id).set(data, { merge: true });
+                    await withTimeout(firestoreDB.collection(path).doc(id).set(data, { merge: true }), 10000);
                 } else if (type === 'delete') {
                     console.log("🗑️ FIRESTORE DELETE:", { path });
-                    await firestoreDB.doc(path).delete();
+                    await withTimeout(firestoreDB.doc(path).delete(), 10000);
                 } else {
                     console.warn("⚠️ Unknown syncQueue action type. Skipping:", action);
                     continue;
@@ -1206,7 +1215,7 @@ async function processSyncQueue() {
                     ...action,
                     attempts: attempts + 1,
                     lastError: message,
-                    failed: attempts + 1 >= MAX_SYNC_RETRIES
+                    failed: false // We never mark it as failed for network/timeout errors
                 };
 
                 try {
