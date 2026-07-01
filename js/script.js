@@ -3050,11 +3050,26 @@ async function handleScan(scannedText) {
     if (currentScannerMode === 'daily') {
         checkGoldenTicket(studentToMark.name);
         processDailyScan(studentToMark);
-        // ✅✅ الإضافة الجديدة: الحفظ التلقائي الذكي ✅✅
-        // لو المدرس بيعمل scan ورا بعض بسرعة، بنلغي الحفظ القديم ونستنى الجديد
-        clearTimeout(saveTimeout);
 
-        // بنقوله: استنى 3 ثواني، لو مفيش حد تاني جه، احفظ اللي فات كله
+        // ✅ إرسال إشعار فوري لولي الأمر في نفس لحظة السكان (بدون انتظار الـ SyncQueue)
+        const dateInput = document.getElementById('dailyDateInput');
+        const scanDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+
+        try {
+            const sendPresenceFn = firebase.functions().httpsCallable('sendPresenceNotification');
+            sendPresenceFn({
+                teacherId: TEACHER_ID,
+                groupId: SELECTED_GROUP_ID,
+                studentId: studentToMark.id,
+                date: scanDate,
+                homeworkSubmitted: null // سيتحدد بعد سؤال الواجب
+            }).catch(err => console.warn("Presence notification fire-and-forget error:", err));
+        } catch(e) {
+            console.warn("Could not send instant presence notification:", e);
+        }
+
+        // حفظ الحضور في الداتابيز (كما كان)
+        clearTimeout(saveTimeout);
         saveTimeout = setTimeout(() => {
             silentSave();
         }, 3000);

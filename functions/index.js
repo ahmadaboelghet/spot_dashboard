@@ -371,6 +371,54 @@ async function sendNotificationToParent(studentData, payload, context, studentId
 //       await Promise.all(notifications);
 //     });
 
+// ✅ دالة إرسال إشعار الحضور الفوري (تُستدعى مباشرة من الداشبورد عند كل سكان)
+exports.sendPresenceNotification = onCall({ cors: true }, async (request) => {
+  const { teacherId, groupId, studentId, date, homeworkSubmitted } = request.data;
+
+  if (!teacherId || !groupId || !studentId) {
+    throw new HttpsError("invalid-argument", "Missing required fields.");
+  }
+
+  try {
+    const subjectName = await getTeacherSubject(teacherId);
+
+    // جلب بيانات الطالب
+    const sDoc = await admin.firestore()
+      .doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`)
+      .get();
+
+    if (!sDoc.exists) {
+      return { success: false, message: "Student not found" };
+    }
+
+    const sData = sDoc.data();
+
+    // بناء نص الإشعار
+    let title = "تم تسجيل الحضور ✅";
+    let body = `تم تسجيل حضور الطالب ${sData.name} اليوم في حصة ${subjectName}.`;
+
+    if (homeworkSubmitted === true) {
+      title = "حضور + تسليم واجب 🌟";
+      body = `ممتاز! حضر الطالب ${sData.name} حصة ${subjectName} وقام بتسليم الواجب بنجاح.`;
+    } else if (homeworkSubmitted === false) {
+      title = "حضور بدون واجب ⚠️";
+      body = `حضر الطالب ${sData.name} حصة ${subjectName} ولم يسلم الواجب اليوم.`;
+    }
+
+    const payload = {
+      notification: { title, body },
+      data: { screen: "attendance", studentId, date: date || "" }
+    };
+
+    await sendNotificationToParent(sData, payload, "sendPresenceNotification", studentId, teacherId, groupId);
+
+    return { success: true };
+  } catch (error) {
+    console.error("sendPresenceNotification error:", error);
+    throw new HttpsError("internal", error.message);
+  }
+});
+
 // 3. دالة الغياب اليدوية (التصحيح: المسار الصحيح للطلاب)
 exports.sendAbsenceNotifications = onCall({ cors: true }, async (request) => {
   // استقبال البيانات
