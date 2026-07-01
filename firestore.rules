@@ -2,26 +2,24 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 1. قاعدة عامة للبحث في أي مجموعة اسمها "students" (يجب أن يكون مسجلاً للدخول)
+    // 1. قاعدة عامة للبحث في أي مجموعة اسمها "students" (مهمة جداً للكود الجديد)
     match /{path=**}/students/{studentId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
 
     // 2. القواعد التفصيلية للمدرسين والجروبات
-    match /teachers/{teacherId} {
-      allow read, write: if request.auth != null; // مؤقتاً لحل مشكلة تطابق الـ UID مع رقم الهاتف
+    match /teachers/{teacherId}/groups/{groupId} {
+      allow read, write: if true;
       
-      match /groups/{groupId} {
-        allow read, write: if request.auth != null;
-        
-        match /{allSubcollections=**} {
-          allow read, write: if request.auth != null;
-        }
+      // السماح بالوصول لكل المجموعات الفرعية (الحضور، الواجبات، الطلاب، إلخ) بشكل تلقائي
+      match /{allSubcollections=**} {
+        allow read, write: if true;
       }
     }
 
-    // 3. باقي القواعد (يجب أن يكون مسجلاً للدخول)
-    match /parents/{phoneNumber} { allow read, write: if request.auth != null; }
-    match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; }
+    // 3. باقي القواعد
+    match /parents/{phoneNumber} { allow read, write: if true; }
+    match /teachers/{teacherId} { allow read, write: if true; }
+    match /users/{userId} { allow read, write: if true; }
   }
 }
