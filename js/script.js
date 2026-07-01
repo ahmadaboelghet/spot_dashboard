@@ -1215,21 +1215,21 @@ async function processSyncQueue() {
                     console.error("⚠️ Failed to update retry metadata for sync item:", metaErr);
                 }
             }
-        }
-    } catch (e) {
-        console.error("🔥 Fatal error in processSyncQueue:", e);
     } finally {
         isSyncing = false;
         await updateSyncUI();
 
-        // ✅ لو في عناصر جديدة اتضافت أثناء المزامنة، نشغل المزامنة تاني تلقائياً
-        // عشان نضمن إن كل عملية تتبعت فوراً ومش تستنى
+        // 🚀 إعادة التشغيل التلقائي الآمن إذا كان هناك عناصر متبقية صالحة
         try {
             const { items } = await getAllSyncQueueItemsWithKeys();
             if (items && items.length > 0 && navigator.onLine) {
-                processSyncQueue();
+                // نتحقق أن العناصر ليست فاشلة نهائياً لتجنب اللوب اللانهائي
+                const hasPending = items.some(item => !item.failed && item.attempts < MAX_SYNC_RETRIES);
+                if (hasPending) {
+                    setTimeout(processSyncQueue, 1000);
+                }
             }
-        } catch (_) { /* تجاهل أخطاء الفحص */ }
+        } catch (_) {}
     }
 }
 
@@ -3051,28 +3051,11 @@ async function handleScan(scannedText) {
         checkGoldenTicket(studentToMark.name);
         processDailyScan(studentToMark);
 
-        // ✅ إرسال إشعار فوري لولي الأمر في نفس لحظة السكان (بدون انتظار الـ SyncQueue)
-        const dateInput = document.getElementById('dailyDateInput');
-        const scanDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
-
-        try {
-            const sendPresenceFn = firebase.functions().httpsCallable('sendPresenceNotification');
-            sendPresenceFn({
-                teacherId: TEACHER_ID,
-                groupId: SELECTED_GROUP_ID,
-                studentId: studentToMark.id,
-                date: scanDate,
-                homeworkSubmitted: null // سيتحدد بعد سؤال الواجب
-            }).catch(err => console.warn("Presence notification fire-and-forget error:", err));
-        } catch(e) {
-            console.warn("Could not send instant presence notification:", e);
-        }
-
-        // حفظ الحضور في الداتابيز (كما كان)
+        // حفظ الحضور في الداتابيز
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(() => {
             silentSave();
-        }, 3000);
+        }, 500);
     }
     else if (currentScannerMode === 'payments') {
         processPaymentScan(studentToMark);
@@ -3573,7 +3556,7 @@ async function renderPaymentsList() {
 
             // Auto-save payments
             if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(savePayments, 1000);
+            saveTimeout = setTimeout(savePayments, 500);
         });
 
         container.appendChild(div);
@@ -3696,7 +3679,7 @@ async function renderExamGrades() {
                 showCelebration();
             }
             if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(saveExamGrades, 1500);
+            saveTimeout = setTimeout(saveExamGrades, 500);
         });
 
         container.appendChild(div);
