@@ -3063,6 +3063,21 @@ async function handleScan(scannedText) {
         checkGoldenTicket(studentToMark.name);
         processDailyScan(studentToMark);
 
+        // ✅ إرسال إشعار فوري لولي الأمر عبر الـ Callable Function (في لحظتها)
+        if (navigator.onLine) {
+            const dateInput = document.getElementById('dailyDateInput');
+            const scanDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+            try {
+                firebase.functions().httpsCallable('sendPresenceNotification')({
+                    teacherId: TEACHER_ID,
+                    groupId: SELECTED_GROUP_ID,
+                    studentId: studentToMark.id,
+                    date: scanDate,
+                    homeworkSubmitted: null // يتم تحديثه لو فيه سؤال واجب
+                }).catch(err => console.warn("Presence notification error:", err));
+            } catch(e) { console.warn(e); }
+        }
+
         // حفظ الحضور في الداتابيز
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(() => {
@@ -3557,6 +3572,20 @@ async function renderPaymentsList() {
                 div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.add('text-green-600', 'font-bold');
                 currentGroupTotal += parseInt(input.value || 0);
+
+                // ✅ إرسال إشعار فوري لولي الأمر عبر الـ Callable Function
+                if (navigator.onLine) {
+                    try {
+                        const month = document.getElementById('paymentMonthInput').value;
+                        firebase.functions().httpsCallable('sendPaymentNotification')({
+                            teacherId: TEACHER_ID,
+                            groupId: SELECTED_GROUP_ID,
+                            studentId: student.id,
+                            month: month,
+                            amountPaid: parseInt(input.value || 0)
+                        }).catch(err => console.warn("Payment notification error:", err));
+                    } catch(e) { console.warn(e); }
+                }
             } else {
                 currentGroupTotal -= parseInt(input.value || 0);
                 input.value = '';

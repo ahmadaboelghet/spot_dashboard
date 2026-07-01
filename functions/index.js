@@ -957,73 +957,42 @@ exports.checkParentExists = onCall(async (request) => {
   }
 });
 
-// 5. إشعار عند دفع المصروفات
-exports.notifyOnPayment = onDocumentWritten(
-  "teachers/{teacherId}/groups/{groupId}/payments/{month}",
-  async (event) => {
-    console.log(`[DEBUG] notifyOnPayment TRIGGERED for teacher ${event.params.teacherId}, group ${event.params.groupId}, month ${event.params.month}`);
-    const teacherId = event.params.teacherId;
-    const groupId = event.params.groupId;
-    const month = event.params.month;
+exports.sendPaymentNotification = onCall(async (request) => {
+  const { teacherId, groupId, studentId, month, amountPaid } = request.data;
+  console.log(`[DEBUG] sendPaymentNotification TRIGGERED for student ${studentId}, month ${month}`);
 
-    const snapAfter = event.data.after;
-    const snapBefore = event.data.before;
-
-    if (!snapAfter || !snapAfter.exists) return;
-
-    const afterData = snapAfter.data();
-    const beforeData = snapBefore.exists ? snapBefore.data() : { records: [] };
-
-    const afterRecords = afterData.records || [];
-    const beforeRecords = beforeData.records || [];
-
-    const beforeStatusMap = {};
-    beforeRecords.forEach((r) => {
-      beforeStatusMap[r.studentId] = r.paid;
-    });
-
+  try {
     let teacherName = "المستر";
     let subjectName = "المادة";
 
-    try {
-      const teacherDoc = await admin.firestore().collection("teachers").doc(teacherId).get();
-      if (teacherDoc.exists) {
-        const tData = teacherDoc.data();
-        teacherName = tData.name || "المستر";
-        subjectName = tData.subject || "المادة";
-      }
-    } catch (e) {
-      console.error("Error fetching teacher info:", e);
+    const teacherDoc = await admin.firestore().collection("teachers").doc(teacherId).get();
+    if (teacherDoc.exists) {
+      const tData = teacherDoc.data();
+      teacherName = tData.name || "المستر";
+      subjectName = tData.subject || "المادة";
     }
 
-    // eslint-disable-next-line no-restricted-syntax
-    for (const record of afterRecords) {
-      const isNowPaid = record.amount > 0;
-      const wasPaid = beforeStatusMap[record.studentId] === true;
-      const amountPaid = record.amount || 0;
+    const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
+    if (sDoc.exists) {
+      const sData = sDoc.data();
+      const payload = {
+        notification: {
+          title: "تأكيد سداد المصروفات",
+          body: `تم استلام مبلغ ${amountPaid} جنيه مصاريف شهر ${month} لمادة ${subjectName} مع ${teacherName} للطالب ${sData.name}. شكراً لكم.`,
+        },
+        data: { "screen": "payments", "month": month },
+      };
 
-      if (isNowPaid && !wasPaid) {
-        const studentId = record.studentId;
-
-        // eslint-disable-next-line no-await-in-loop
-        const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
-
-        if (sDoc.exists) {
-          const sData = sDoc.data();
-          const payload = {
-            notification: {
-              title: "تأكيد سداد المصروفات",
-              body: `تم استلام مبلغ ${amountPaid} جنيه مصاريف شهر ${month} لمادة ${subjectName} مع ${teacherName} للطالب ${sData.name}. شكراً لكم.`,
-            },
-            data: { "screen": "payments", "month": month },
-          };
-
-          // eslint-disable-next-line no-await-in-loop
-          await sendNotificationToParent(sData, payload, "notifyOnPayment", studentId, teacherId, groupId);
-        }
-      }
+      await sendNotificationToParent(sData, payload, "sendPaymentNotification", studentId, teacherId, groupId);
+      return { success: true };
+    } else {
+      throw new HttpsError("not-found", "Student not found");
     }
-  });
+  } catch (error) {
+    console.error("Error sending payment notification:", error);
+    throw new HttpsError("internal", error.message);
+  }
+});
 
 exports.sendCustomMessage = onCall(async (request) => {
   const { teacherId, groupId, studentId, messageBody } = request.data;
@@ -1622,107 +1591,62 @@ async function generateAndUploadPDF(content, teacherId) {
 exports.notifyOnPresence = onDocumentWritten(
   "teachers/{teacherId}/groups/{groupId}/dailyAttendance/{date}",
   async (event) => {
-    console.log(`[DEBUG] notifyOnPresence TRIGGERED for teacher ${event.params.teacherId}, group ${event.params.groupId}, date ${event.params.date}`);
-    // 1. التحقق من صحة البيانات
     const snapAfter = event.data.after;
-    const snapBefore = event.data.before;
-
-    if (!snapAfter.exists) return; // تم الحذف، لا نفعل شيئاً
-
+    if (!snapAfter.exists) return;
     const afterData = snapAfter.data();
-    const beforeData = snapBefore.exists ? snapBefore.data() : { records: [] };
-
-    const afterRecords = afterData.records || [];
-    const beforeRecords = beforeData.records || [];
-
-    // 2. استخراج الطلاب الذين تم تسجيل حضورهم *الآن* (الجدد فقط)
-    // (عشان لو عدلت طالب تاني، منبعتش للي اتسجل قبل كده مرة تانية)
-    const newlyPresentStudents = afterRecords.filter((rAfter) => {
-      const isPresentNow = rAfter.status === "present";
-      // نتأكد إنه ماكنش حاضر قبل التعديل ده
-      const wasPresent = beforeRecords.some((rBefore) =>
-        rBefore.studentId === rAfter.studentId && rBefore.status === "present",
-      );
-      return isPresentNow && !wasPresent;
-    });
-
-    if (newlyPresentStudents.length === 0) return;
-
-    // ✅ حفظ وقت أول "سكان" لو مش موجود (عشان نحسب الساعة بالضبط من أول واحد)
     if (!afterData.firstScanAt) {
       await snapAfter.ref.update({ firstScanAt: admin.firestore.FieldValue.serverTimestamp() });
     }
+  }
+);
 
-    const teacherId = event.params.teacherId;
-    const groupId = event.params.groupId;
-    const date = event.params.date;
+exports.sendPresenceNotification = onCall(async (request) => {
+  const { teacherId, groupId, studentId, date, homeworkSubmitted } = request.data;
+  console.log(`[DEBUG] sendPresenceNotification TRIGGERED for student ${studentId}`);
 
-    // 3. جلب بيانات مساعدة (اسم المادة + ملف الواجب لهذا اليوم)
+  try {
     const subjectName = await getTeacherSubject(teacherId);
-
-    // بنحاول نجيب ملف الواجب بنفس الـ ID اللي بنعمله في الـ Frontend
-    // ID Format: {groupId}_HW_{date}
+    
+    // Find homework for this date to display in notification
     const hwId = `${groupId}_HW_${date}`;
     const hwDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/assignments/${hwId}`).get();
-
-    let hwScores = {};
-    let hasHomeworkToday = false;
     let homeworkName = "الواجب";
-
+    let hasHomeworkToday = false;
     if (hwDoc.exists) {
       hasHomeworkToday = true;
       const hwData = hwDoc.data();
-      hwScores = hwData.scores || {};
       homeworkName = hwData.name || "الواجب";
     }
 
-    // 4. إرسال الإشعارات لكل طالب تم تسجيله
-    const notifications = newlyPresentStudents.map(async (record) => {
-      const studentId = record.studentId;
+    const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
+    if (!sDoc.exists) throw new HttpsError("not-found", "Student not found");
+    const sData = sDoc.data();
 
-      // جلب بيانات الطالب (الاسم + التوكن)
-      const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
-      if (!sDoc.exists) return;
+    let title = "تم تسجيل الحضور ✅";
+    let body = `تم تسجيل حضور الطالب ${sData.name} اليوم في حصة ${subjectName}.`;
 
-      const sData = sDoc.data();
-
-      // 5. تحديد نص الرسالة بناءً على الواجب
-      let title = "تم تسجيل الحضور ✅";
-      let body = `تم تسجيل حضور الطالب ${sData.name} اليوم في حصة ${subjectName}.`;
-
-      if (hasHomeworkToday) {
-        const studentHw = hwScores[studentId];
-        // التحقق: هل سلم الواجب؟ (submitted = true)
-        const isSubmitted = studentHw && studentHw.submitted === true;
-
-        if (isSubmitted) {
-          title = "حضور + تسليم واجب 🌟";
-          body = `ممتاز! حضر الطالب ${sData.name} حصة ${subjectName} وقام بتسليم "${homeworkName}" بنجاح.`;
-        } else {
-          title = "تنبيه واجب ⚠️";
-          body = `تم تسجيل حضور ${sData.name} في حصة ${subjectName}، ولكن لم يتم تسليم "${homeworkName}".`;
-        }
+    if (hasHomeworkToday) {
+      if (homeworkSubmitted === true) {
+        title = "حضور + تسليم واجب 🌟";
+        body = `ممتاز! حضر الطالب ${sData.name} حصة ${subjectName} وقام بتسليم "${homeworkName}" بنجاح.`;
+      } else {
+        title = "تنبيه واجب ⚠️";
+        body = `تم تسجيل حضور ${sData.name} في حصة ${subjectName}، ولكن لم يتم تسليم "${homeworkName}".`;
       }
+    }
 
-      const payload = {
-        notification: {
-          title: title,
-          body: body,
-        },
-        data: {
-          "screen": "attendance",
-          "date": date,
-          "studentId": studentId,
-        },
-      };
+    const payload = {
+      notification: { title, body },
+      data: { "screen": "attendance", "date": date, "studentId": studentId },
+    };
 
-      // استخدام الدالة المساعدة الموجودة في ملفك لإرسال الإشعار
-      return sendNotificationToParent(sData, payload, "notifyOnPresence", studentId, teacherId, groupId);
-    });
-
-    await Promise.all(notifications);
-  },
-);
+    await sendNotificationToParent(sData, payload, "sendPresenceNotification", studentId, teacherId, groupId);
+    return { success: true };
+  } catch (error) {
+    console.error("Error sending presence notification:", error);
+    throw new HttpsError("internal", error.message);
+  }
+});
 
 // ===================================================================
 // 6. الإرسال التلقائي للغياب (تحسين: بعد ساعة من البداية + ربع ساعة ركود)
