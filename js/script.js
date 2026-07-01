@@ -1221,6 +1221,15 @@ async function processSyncQueue() {
     } finally {
         isSyncing = false;
         await updateSyncUI();
+
+        // ✅ لو في عناصر جديدة اتضافت أثناء المزامنة، نشغل المزامنة تاني تلقائياً
+        // عشان نضمن إن كل عملية تتبعت فوراً ومش تستنى
+        try {
+            const { items } = await getAllSyncQueueItemsWithKeys();
+            if (items && items.length > 0 && navigator.onLine) {
+                processSyncQueue();
+            }
+        } catch (_) { /* تجاهل أخطاء الفحص */ }
     }
 }
 

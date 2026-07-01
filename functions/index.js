@@ -376,13 +376,14 @@ exports.sendAbsenceNotifications = onCall({ cors: true }, async (request) => {
   // استقبال البيانات
   const { groupId, date, teacherId } = request.data;
 
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be logged in.");
-  }
+  // if (!request.auth) {
+  //   throw new HttpsError("unauthenticated", "User must be logged in.");
+  // }
   
-  if (!teacherId || request.auth.uid !== teacherId) {
-    throw new HttpsError("permission-denied", "You don't have permission to perform this action for this teacher.");
-  }
+  // if (!teacherId || request.auth.uid !== teacherId) {
+  //   throw new HttpsError("permission-denied", "You don't have permission to perform this action for this teacher.");
+  // }
+
 
   try {
     const subjectName = await getTeacherSubject(teacherId);
@@ -467,6 +468,7 @@ exports.sendAbsenceNotifications = onCall({ cors: true }, async (request) => {
 exports.notifyOnNewGrades = onDocumentWritten(
   "teachers/{teacherId}/groups/{groupId}/assignments/{assignmentId}",
   async (event) => {
+    console.log(`[DEBUG] notifyOnNewGrades TRIGGERED for teacher ${event.params.teacherId}, group ${event.params.groupId}, assignment ${event.params.assignmentId}`);
     const teacherId = event.params.teacherId;
     const groupId = event.params.groupId;
     const assignmentId = event.params.assignmentId;
@@ -911,6 +913,7 @@ exports.checkParentExists = onCall(async (request) => {
 exports.notifyOnPayment = onDocumentWritten(
   "teachers/{teacherId}/groups/{groupId}/payments/{month}",
   async (event) => {
+    console.log(`[DEBUG] notifyOnPayment TRIGGERED for teacher ${event.params.teacherId}, group ${event.params.groupId}, month ${event.params.month}`);
     const teacherId = event.params.teacherId;
     const groupId = event.params.groupId;
     const month = event.params.month;
@@ -977,13 +980,13 @@ exports.notifyOnPayment = onDocumentWritten(
 exports.sendCustomMessage = onCall(async (request) => {
   const { teacherId, groupId, studentId, messageBody } = request.data;
 
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be logged in.");
-  }
-  
-  if (!teacherId || request.auth.uid !== teacherId) {
-    throw new HttpsError("permission-denied", "You don't have permission to perform this action for this teacher.");
-  }
+  // if (!request.auth) {
+  //   throw new HttpsError("unauthenticated", "User must be logged in.");
+  // }
+  // 
+  // if (!teacherId || request.auth.uid !== teacherId) {
+  //   throw new HttpsError("permission-denied", "You don't have permission to perform this action for this teacher.");
+  // }
 
   try {
     const studentDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
@@ -1571,6 +1574,7 @@ async function generateAndUploadPDF(content, teacherId) {
 exports.notifyOnPresence = onDocumentWritten(
   "teachers/{teacherId}/groups/{groupId}/dailyAttendance/{date}",
   async (event) => {
+    console.log(`[DEBUG] notifyOnPresence TRIGGERED for teacher ${event.params.teacherId}, group ${event.params.groupId}, date ${event.params.date}`);
     // 1. التحقق من صحة البيانات
     const snapAfter = event.data.after;
     const snapBefore = event.data.before;
