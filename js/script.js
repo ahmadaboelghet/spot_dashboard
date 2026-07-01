@@ -1368,7 +1368,13 @@ function setupListeners() {
     document.getElementById('hwNoBtn')?.addEventListener('click', () => resolveHomework(false));
 
     document.getElementById('addNewStudentButton')?.addEventListener('click', addNewStudent);
-    document.getElementById('studentSearchInput')?.addEventListener('input', (e) => renderStudents(e.target.value));
+    let studentSearchTimeout;
+    document.getElementById('studentSearchInput')?.addEventListener('input', (e) => {
+        clearTimeout(studentSearchTimeout);
+        studentSearchTimeout = setTimeout(() => {
+            renderStudents(e.target.value);
+        }, 300);
+    });
 
     document.getElementById('addRecurringScheduleButton')?.addEventListener('click', saveRecurringSchedule);
     document.getElementById('updateSingleClassButton')?.addEventListener('click', updateSingleClass);
@@ -2158,11 +2164,13 @@ async function renderOverview() {
         const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
         const monthPayments = await getFromDB('payments', `${SELECTED_GROUP_ID}_PAY_${currentMonth}`);
         const records = monthPayments?.records || [];
-        // ✅ إصلاح: حساب الطلاب الحاليين فقط وتصحيح استخراج حالة الدفع من مصفوفة records
+        // ✅ إصلاح: تحويل سجل الدفع لخريطة (Map) لتسريع البحث بدلاً من O(N^2)
+        const paymentMap = {};
+        records.forEach(r => paymentMap[r.studentId] = r.paid);
+        
         const paidCount = allStudents.filter(s => {
             if (!s || !s.id) return false;
-            const record = records.find(r => r.studentId === s.id);
-            return record && record.paid === true;
+            return paymentMap[s.id] === true;
         }).length;
         const unpaidCount = Math.max(0, allStudents.length - paidCount);
 
@@ -2233,12 +2241,21 @@ async function renderOverview() {
             let totalChecked = 0;
             let totalPresent = 0;
 
+            // تحويل السجلات لماب لتسريع البحث بدلاً من O(N^2)
+            const sessionsWithMap = sortedAttendance.map(session => {
+                const map = {};
+                if (session.records) {
+                    session.records.forEach(r => map[r.studentId] = r);
+                }
+                return { ...session, recordMap: map };
+            });
+
             allStudents.forEach(student => {
                 let absentCount = 0;
                 let studentSessionCount = 0;
 
-                sortedAttendance.forEach(session => {
-                    const record = session.records?.find(r => r.studentId === student.id);
+                sessionsWithMap.forEach(session => {
+                    const record = session.recordMap[student.id];
                     if (record) {
                         studentSessionCount++;
                         if (record.status === 'absent') absentCount++;
@@ -2952,15 +2969,21 @@ function stopScanner() {
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
 }
 
+let scanCanvas = null;
+let scanCtx = null;
+
 function tickScanner() {
     if (isScannerPaused || document.getElementById('scannerModal').classList.contains('hidden')) return;
     if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-        const canvas = document.createElement('canvas');
-        canvas.width = videoElement.videoWidth;
-        canvas.height = videoElement.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        if (!scanCanvas) {
+            scanCanvas = document.createElement('canvas');
+            scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        scanCanvas.width = videoElement.videoWidth;
+        scanCanvas.height = videoElement.videoHeight;
+        
+        scanCtx.drawImage(videoElement, 0, 0, scanCanvas.width, scanCanvas.height);
+        const imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
         if (code) handleScan(code.data);
     }
@@ -3283,6 +3306,8 @@ function renderStudents(filter = "") {
         return;
     }
     const DOMAIN_URL = "https://ahmadaboelghet.github.io/spot_dashboard/";
+    const fragment = document.createDocumentFragment();
+
     filtered.forEach(s => {
         const pNum = s.parentPhoneNumber ? s.parentPhoneNumber.trim() : "";
         const fullDirectLink = `${DOMAIN_URL}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
@@ -3316,8 +3341,10 @@ function renderStudents(filter = "") {
         div.querySelector('.qr-btn').onclick = () => showStudentQR(s);
         div.querySelector('.del-btn').onclick = () => deleteStudent(s.id);
 
-        container.appendChild(div);
+        fragment.appendChild(div);
     });
+
+    container.appendChild(fragment);
 }
 
 function openMessageModal(student) {
@@ -3503,6 +3530,7 @@ async function renderPaymentsList() {
     calculateOverallIncome(currentGroupTotal); // ✅ بنبعت الرقم المبدئي
 
     // 2. رسم القائمة
+    const fragment = document.createDocumentFragment();
     allStudents.forEach(s => {
         let amount = map[s.id];
         const isPaid = amount && amount > 0;
@@ -3525,6 +3553,7 @@ async function renderPaymentsList() {
 
         const checkbox = div.querySelector('.payment-check');
         const input = div.querySelector('.payment-input');
+        let oldVal = 0;
 
         input.addEventListener('focus', (e) => {
             oldVal = parseInt(e.target.value) || 0; // حفظ القيمة قبل التعديل
@@ -3571,8 +3600,9 @@ async function renderPaymentsList() {
             saveTimeout = setTimeout(savePayments, 500);
         });
 
-        container.appendChild(div);
+        fragment.appendChild(div);
     });
+    container.appendChild(fragment);
 }
 
 async function savePayments() {
@@ -3666,6 +3696,7 @@ async function renderExamGrades() {
         saveTimeout = setTimeout(saveExamGrades, 1000);
     };
 
+    const fragment = document.createDocumentFragment();
     allStudents.forEach(s => {
         const val = scores[s.id]?.score || '';
         const div = document.createElement('div');
@@ -3694,8 +3725,9 @@ async function renderExamGrades() {
             saveTimeout = setTimeout(saveExamGrades, 500);
         });
 
-        container.appendChild(div);
+        fragment.appendChild(div);
     });
+    container.appendChild(fragment);
 }
 async function saveExamGrades() {
     const examId = document.getElementById('examSelect').value;
