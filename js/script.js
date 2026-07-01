@@ -1214,7 +1214,10 @@ async function processSyncQueue() {
                 } catch (metaErr) {
                     console.error("⚠️ Failed to update retry metadata for sync item:", metaErr);
                 }
+                }
             }
+    } catch (e) {
+        console.error("🔥 Fatal error in processSyncQueue:", e);
     } finally {
         isSyncing = false;
         await updateSyncUI();
