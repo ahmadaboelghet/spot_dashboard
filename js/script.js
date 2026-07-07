@@ -490,9 +490,9 @@ const translations = {
         portalAddGroupBtn: "إضافة مجموعة جديدة"
     },
     en: {
-        pageTitle: "Al-Nazer - Teacher Dashboard",
+        pageTitle: "Elnazer - Teacher Dashboard",
         welcomeTeacherGreeting: "Welcome, Mr. ",
-        teacherLoginTitle: "Al-Nazer Portal",
+        teacherLoginTitle: "Elnazer Portal",
         teacherLoginPrompt: "Login to start managing your smart classes",
         loginButton: "Login",
         loginVerifying: "Verifying...",
@@ -610,7 +610,7 @@ const translations = {
         copyFailed: "Copy failed ❌",
         landingNewVersion: "🚀 New Version Available",
         landingHeroTitle: "Manage Everything in <br> <span class='text-transparent bg-clip-text bg-gradient-to-r from-brand to-yellow-600'>One Place.</span>",
-        landingHeroSubtitle: "<strong>Al-Nazer</strong> is your smart personal assistant. QR Attendance, Grade Tracking, Fee Collection, and Instant Parent Communication.. all while you sip your coffee ☕",
+        landingHeroSubtitle: "<strong>Elnazer</strong> is your smart personal assistant. QR Attendance, Grade Tracking, Fee Collection, and Instant Parent Communication.. all while you sip your coffee ☕",
         featureSmartAttendance: "Smart Attendance",
         featureSmartAttendanceSub: "Super Fast Scanner",
         featureInstantConnect: "Instant Connect",
@@ -619,7 +619,7 @@ const translations = {
         featureFinanceSub: "Accurate Tracking",
         featureReports: "Reports",
         featureReportsSub: "Full Analytics",
-        footerText: "© 2026 Al-Nazer System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
+        footerText: "© 2026 Elnazer System. Made with <i class='ri-heart-fill text-red-500'></i> for Teachers.",
         goldenSettingsBtn: "Golden Ticket Settings",
         goldenSettingsTitle: "Golden Ticket Settings",
         goldenEnable: "Enable System",
@@ -634,7 +634,7 @@ const translations = {
         // ... (Old Translations) ...
 
         // 👇👇 Spot AI Additions 👇👇
-        tabBot: "Al-Nazer AI",
+        tabBot: "Elnazer AI",
         botFeedTitle: "Feed the Bot (Materials)",
         botFeedHint: "Upload PDFs, Images, or Audio here. The bot will study them instantly to answer student questions.",
         botDropArea: "Click to upload or drag file here",
@@ -650,7 +650,7 @@ const translations = {
         loginFirst: "Login required first",
 
         // Invite Card
-        botInviteTitle: "Al-Nazer AI Link",
+        botInviteTitle: "Elnazer AI Link",
         botInviteDesc: "Share this link and code with your students to start studying.",
         teacherCodeLabel: "Teacher Code",
         copyInviteBtn: "Copy Invite Message",
@@ -5609,7 +5609,7 @@ window.startBulkPrint = async function(mode) {
         card.innerHTML = `
             <div class="qr-card-header">
                 <img src="assets/images/favicon.png" alt="logo">
-                <span>الناظر - Al-Nazer</span>
+                <span>الناظر - Elnazer</span>
             </div>
             <div class="qr-card-name">${s.name}</div>
             <div class="qr-card-subtitle">Smart Access ID</div>
