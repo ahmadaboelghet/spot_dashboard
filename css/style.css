@@ -4,13 +4,17 @@
     --primary: #F2CE5A;
     --primary-hover: #e6c045;
 
-    --secondary: #121212;
-    --dark-bg: #121212;
-    --dark-surface: #1E1E1E;
+    --secondary: #09090b;
+    --dark-bg: #09090b;
+    --dark-surface: #18181b;
     --glass-border: rgba(255, 255, 255, 0.15);
     --glass-bg: rgba(255, 255, 255, 0.95);
-    --dark-glass-bg: rgba(30, 30, 30, 0.96);
+    --dark-glass-bg: rgba(24, 24, 27, 0.96);
     --dark-glass-border: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode {
+    background-color: var(--dark-bg) !important;
 }
 
 /* Animations */
@@ -114,8 +118,8 @@
 }
 
 .dark-mode .profile-grid-bg {
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
 }
 
 /* ابحث عن هذا الكلاس وعدله */
@@ -283,7 +287,7 @@
 }
 
 .dark-mode .record-item {
-    background: #121212;
+    background: var(--dark-bg);
     border-color: #333;
     color: #fff;
 }
@@ -322,7 +326,7 @@ html[dir="rtl"] .record-item:hover {
 }
 
 .dark-mode .student-row {
-    background-color: #121212;
+    background-color: var(--dark-bg);
     border-color: #333;
     color: #fff;
 }
@@ -378,7 +382,7 @@ html[dir="rtl"] .record-item:hover {
 }
 
 .dark-mode .day-checkbox-container {
-    background: #121212;
+    background: var(--dark-bg);
     border-color: #333;
     color: #d1d5db;
 }
@@ -411,7 +415,7 @@ html[dir="rtl"] .record-item:hover {
 
 .dark-mode #recurringTimeContainer select,
 .dark-mode #exceptionNewTimeContainer select {
-    background-color: #121212;
+    background-color: var(--dark-bg);
     border-color: #333;
     color: white;
 }
@@ -511,7 +515,7 @@ html[dir="rtl"] .record-item:hover {
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: #121212;
+    background: var(--dark-bg);
     color: var(--primary);
     padding: 12px 24px;
     border-radius: 99px;
@@ -631,13 +635,15 @@ html[dir="rtl"] .record-item:hover {
 /* 4. Modal Backgrounds & Text */
 .dark-mode .glass-panel,
 .dark-mode .bg-white {
-    background-color: #1E1E1E !important;
+    background-color: var(--dark-surface) !important;
     color: white !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }
 
 .dark-mode .modal-content {
-    background-color: #1E1E1E;
-    border: 1px solid #333;
+    background-color: var(--dark-surface);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* 5. Icons inside inputs */
