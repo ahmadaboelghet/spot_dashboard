@@ -1435,6 +1435,119 @@
             <p class="text-[10px] text-center text-gray-400 mt-2">Powered by Gemini AI ✨</p>
         </div>
     </div> -->
+    <!-- Print Container (Hidden normally, visible during print) -->
+    <div id="bulkQrPrintContainer" class="print-hide"></div>
+    <style>
+        @media print {
+            @page {
+                margin: 5mm;
+            }
+            body * { visibility: hidden !important; }
+            #bulkQrPrintContainer, #bulkQrPrintContainer * { visibility: visible !important; }
+            #bulkQrPrintContainer {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                display: flex !important;
+                flex-wrap: wrap;
+                gap: 10mm;
+                justify-content: center;
+                align-items: flex-start;
+                background: white;
+                padding: 10px;
+                box-sizing: border-box;
+            }
+            .print-hide { display: none !important; }
+            
+            /* University ID Size (CR-80) */
+            .qr-card {
+                width: 5.4cm;
+                height: 8.6cm;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: flex-start;
+                box-sizing: border-box;
+                page-break-inside: avoid;
+                background-color: #fafafa;
+                position: relative;
+                overflow: hidden;
+                box-shadow: 0 0 0 1px rgba(0,0,0,0.05) inset;
+            }
+            .qr-card-header {
+                background-color: #111827;
+                width: 100%;
+                padding: 12px 0 8px 0;
+                color: #ffffff;
+                font-size: 13px;
+                font-family: 'Cairo', sans-serif;
+                font-weight: 900;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 5px;
+                border-bottom: 4px solid #F2CE5A;
+            }
+            .qr-card-header img {
+                width: 24px;
+                height: 24px;
+                background: white;
+                border-radius: 50%;
+                padding: 2px;
+            }
+            .qr-card-name {
+                font-size: 15px;
+                font-family: 'Cairo', sans-serif;
+                font-weight: 900;
+                text-align: center;
+                color: #111827;
+                margin-top: 15px;
+                width: 90%;
+                line-height: 1.3;
+            }
+            .qr-card-subtitle {
+                font-size: 8px;
+                color: #9ca3af;
+                font-weight: bold;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-top: 4px;
+            }
+            .qr-card-code {
+                margin-top: auto;
+                margin-bottom: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 8px;
+                background: #ffffff;
+                border: 1px solid #f3f4f6;
+                border-radius: 10px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            }
+            .qr-card-code img {
+                width: 3.2cm;
+                height: 3.2cm;
+            }
+            .qr-card-quote {
+                font-size: 8px;
+                font-family: 'Cairo', sans-serif;
+                font-style: italic;
+                color: #4b5563;
+                text-align: center;
+                padding: 0 10px;
+                margin-bottom: 10px;
+                line-height: 1.2;
+            }
+        }
+        @media screen {
+            .print-hide { display: none !important; }
+        }
+    </style>
     <div id="customInputModal" class="fixed inset-0 hidden overflow-y-auto" style="z-index: 9999;" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" id="customInputOverlay"></div>
         <div class="flex items-center justify-center min-h-screen px-4 py-6">
@@ -1965,119 +2078,6 @@
         </div>
     </div>
 
-    <!-- Print Container (Hidden normally, visible during print) -->
-    <div id="bulkQrPrintContainer" class="print-hide"></div>
-    <style>
-        @media print {
-            @page {
-                margin: 5mm;
-            }
-            body * { visibility: hidden !important; }
-            #bulkQrPrintContainer, #bulkQrPrintContainer * { visibility: visible !important; }
-            #bulkQrPrintContainer {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                display: flex !important;
-                flex-wrap: wrap;
-                gap: 10mm;
-                justify-content: center;
-                align-items: flex-start;
-                background: white;
-                padding: 10px;
-                box-sizing: border-box;
-            }
-            .print-hide { display: none !important; }
-            
-            /* University ID Size (CR-80) */
-            .qr-card {
-                width: 5.4cm;
-                height: 8.6cm;
-                border: 1px solid #e5e7eb;
-                border-radius: 12px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: flex-start;
-                box-sizing: border-box;
-                page-break-inside: avoid;
-                background-color: #fafafa;
-                position: relative;
-                overflow: hidden;
-                box-shadow: 0 0 0 1px rgba(0,0,0,0.05) inset;
-            }
-            .qr-card-header {
-                background-color: #111827;
-                width: 100%;
-                padding: 12px 0 8px 0;
-                color: #ffffff;
-                font-size: 13px;
-                font-family: 'Cairo', sans-serif;
-                font-weight: 900;
-                text-align: center;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 5px;
-                border-bottom: 4px solid #F2CE5A;
-            }
-            .qr-card-header img {
-                width: 24px;
-                height: 24px;
-                background: white;
-                border-radius: 50%;
-                padding: 2px;
-            }
-            .qr-card-name {
-                font-size: 15px;
-                font-family: 'Cairo', sans-serif;
-                font-weight: 900;
-                text-align: center;
-                color: #111827;
-                margin-top: 15px;
-                width: 90%;
-                line-height: 1.3;
-            }
-            .qr-card-subtitle {
-                font-size: 8px;
-                color: #9ca3af;
-                font-weight: bold;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                margin-top: 4px;
-            }
-            .qr-card-code {
-                margin-top: auto;
-                margin-bottom: 15px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 8px;
-                background: #ffffff;
-                border: 1px solid #f3f4f6;
-                border-radius: 10px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            }
-            .qr-card-code img {
-                width: 3.2cm;
-                height: 3.2cm;
-            }
-            .qr-card-quote {
-                font-size: 8px;
-                font-family: 'Cairo', sans-serif;
-                font-style: italic;
-                color: #4b5563;
-                text-align: center;
-                padding: 0 10px;
-                margin-bottom: 10px;
-                line-height: 1.2;
-            }
-        }
-        @media screen {
-            .print-hide { display: none !important; }
-        }
-    </style>
 </body>
 
 </html>
