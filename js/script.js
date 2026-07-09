@@ -2113,7 +2113,7 @@ async function renderOverview() {
             // Filter only EXAMS (not daily homework or anything starting with "واجب")
             const exams = allAssignments.filter(e =>
                 (e.type === 'exam' || !e.type) &&
-                !e.name.includes("واجب") &&
+                !(e.name || '').includes("واجب") &&
                 e.scores && Object.keys(e.scores).length > 0
             ).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
