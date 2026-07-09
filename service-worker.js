@@ -1,4 +1,4 @@
-const CACHE_NAME = 'learnaria-cache-v4';
+const CACHE_NAME = 'learnaria-cache-v5';
 
 // Only cache truly static assets - NEVER cache script.js so updates are instant
 const urlsToCache = [
@@ -20,7 +20,7 @@ self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            console.log('Service Worker: Cache opened v4');
+            console.log('Service Worker: Cache opened v5');
             return cache.addAll(urlsToCache);
         })
     );
