@@ -972,12 +972,17 @@ async function updateOnlineStatus() {
         indicator.classList.add('online');
         text.innerText = translations[currentLang].online;
         dot.className = 'status-dot w-2.5 h-2.5 rounded-full';
-        processSyncQueue();
+        
+        const isRecovering = window.wasOffline === true;
+        window.wasOffline = false;
+        
+        processSyncQueue(isRecovering);
     } else {
         indicator.classList.remove('online');
         indicator.classList.add('offline');
         text.innerText = translations[currentLang].offline;
         dot.className = 'status-dot w-2.5 h-2.5 rounded-full';
+        window.wasOffline = true;
     }
     updateSyncUI();
 }
@@ -1045,7 +1050,7 @@ const withTimeout = (promise, ms) => {
     ]);
 };
 
-async function processSyncQueue() {
+async function processSyncQueue(isRecovering = false) {
     if (isSyncing) return;
 
     if (!navigator.onLine) {
@@ -1247,7 +1252,7 @@ async function processSyncQueue() {
         }
 
         // Show a celebratory toast if items synced successfully upon returning online!
-        if (successCount > 0) {
+        if (successCount > 0 && (isRecovering || successCount > 2)) {
             const msg = currentLang === 'ar' ? `تمت مزامنة ${successCount} عمليات بنجاح! ☁️` : `Successfully synced ${successCount} items! ☁️`;
             showToast(msg, 'success');
         }
