@@ -1156,6 +1156,8 @@ async function processSyncQueue() {
 
         console.log(`✅ After conflict resolution: ${filteredEntries.length} actions will be sent to Firestore.`);
 
+        let successCount = 0;
+
         // 3️⃣ تنفيذ الـ Actions بعد حل التعارضات
         for (const entry of filteredEntries) {
             const action = entry.action;
@@ -1213,6 +1215,7 @@ async function processSyncQueue() {
 
                 await deleteFromDB('syncQueue', key);
                 console.log("✅ Sync success, removed from queue:", { type, path });
+                successCount++;
             } catch (err) {
                 const message = err && err.message ? err.message : String(err);
                 console.error("❌ Sync error for item:", {
@@ -1222,11 +1225,17 @@ async function processSyncQueue() {
                     error: message
                 });
 
+                // Detect unrecoverable errors (permissions, quota, invalid args) so we don't get stuck in a loop forever
+                const isUnrecoverable = message.includes('permission-denied') || 
+                                        message.includes('Missing or insufficient permissions') || 
+                                        message.includes('INVALID_ARGUMENT') ||
+                                        message.includes('Quota exceeded');
+
                 const updated = {
                     ...action,
                     attempts: attempts + 1,
                     lastError: message,
-                    failed: false // We never mark it as failed for network/timeout errors
+                    failed: isUnrecoverable // True if unrecoverable, false if network error
                 };
 
                 try {
@@ -1234,8 +1243,15 @@ async function processSyncQueue() {
                 } catch (metaErr) {
                     console.error("⚠️ Failed to update retry metadata for sync item:", metaErr);
                 }
-                }
             }
+        }
+
+        // Show a celebratory toast if items synced successfully upon returning online!
+        if (successCount > 0) {
+            const msg = currentLang === 'ar' ? `تمت مزامنة ${successCount} عمليات بنجاح! ☁️` : `Successfully synced ${successCount} items! ☁️`;
+            showToast(msg, 'success');
+        }
+
     } catch (e) {
         console.error("🔥 Fatal error in processSyncQueue:", e);
     } finally {
