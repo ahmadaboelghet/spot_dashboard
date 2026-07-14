@@ -960,7 +960,7 @@ async function updateOnlineStatus() {
 
     if (isActuallyOnline) {
         try {
-            await fetch('/manifest.json?_cb=' + new Date().getTime(), { method: 'HEAD', cache: 'no-store' });
+            await fetch('https://www.google.com/favicon.ico?_cb=' + new Date().getTime(), { mode: 'no-cors', cache: 'no-store' });
             isActuallyOnline = true;
         } catch (e) {
             isActuallyOnline = false;
@@ -2380,20 +2380,17 @@ function showCelebration() {
     overlay.classList.remove('hidden');
     container.innerHTML = '';
 
-    const anim = lottie.loadAnimation({
-        container: container,
-        renderer: 'svg',
-        loop: false,
-        autoplay: true,
-        path: 'https://assets5.lottiefiles.com/packages/lf20_myejioos.json'
+    // Fire confetti from the center
+    confetti({
+        particleCount: 150,
+        spread: 100,
+        origin: { y: 0.6 },
+        colors: ['#F2CE5A', '#4ade80', '#3b82f6', '#ec4899']
     });
 
-    anim.onComplete = () => {
-        setTimeout(() => {
-            overlay.classList.add('hidden');
-            anim.destroy();
-        }, 500);
-    };
+    setTimeout(() => {
+        overlay.classList.add('hidden');
+    }, 2500);
 }
 
 // ✅ دالة تحديث الشاشة حسب التبويب المفتوح (تم تصحيح الشرط)
