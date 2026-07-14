@@ -949,14 +949,25 @@ async function addToSyncQueue(action) {
     }
 }
 
-function updateOnlineStatus() {
+async function updateOnlineStatus() {
     const indicator = document.getElementById('statusIndicator');
     if (!indicator) return;
 
     const dot = indicator.querySelector('.status-dot');
     const text = indicator.querySelector('.status-text');
 
-    if (navigator.onLine) {
+    let isActuallyOnline = navigator.onLine;
+
+    if (isActuallyOnline) {
+        try {
+            await fetch('/js/ping.js?_cb=' + new Date().getTime(), { method: 'HEAD', cache: 'no-store' });
+            isActuallyOnline = true;
+        } catch (e) {
+            isActuallyOnline = false;
+        }
+    }
+
+    if (isActuallyOnline) {
         indicator.classList.remove('offline');
         indicator.classList.add('online');
         text.innerText = translations[currentLang].online;
@@ -1266,6 +1277,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         window.addEventListener('online', updateOnlineStatus);
         window.addEventListener('offline', updateOnlineStatus);
+
+        // Check actual internet connectivity periodically (every 15s) to recover from ISP disconnects
+        setInterval(updateOnlineStatus, 15000);
     } catch (err) {
         console.error("🔥 Fatal initialization error:", err);
         // Recovery fallback: remove anti-flash class and show landing section so page is not blank
