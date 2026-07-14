@@ -960,7 +960,7 @@ async function updateOnlineStatus() {
 
     if (isActuallyOnline) {
         try {
-            await fetch('/js/ping.js?_cb=' + new Date().getTime(), { method: 'HEAD', cache: 'no-store' });
+            await fetch('/manifest.json?_cb=' + new Date().getTime(), { method: 'HEAD', cache: 'no-store' });
             isActuallyOnline = true;
         } catch (e) {
             isActuallyOnline = false;
