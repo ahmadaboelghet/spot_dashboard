@@ -3723,7 +3723,7 @@ async function renderExamGrades() {
                          </div>`;
 
         const inp = div.querySelector('input');
-        inp.addEventListener('change', (e) => {
+        inp.addEventListener('input', (e) => {
             const currentTotal = parseInt(totalMarkInput.value) || 0;
             if (parseInt(e.target.value) > currentTotal) {
                 e.target.value = currentTotal;
@@ -3732,8 +3732,9 @@ async function renderExamGrades() {
             if (parseInt(e.target.value) === currentTotal && currentTotal > 0) {
                 showCelebration();
             }
+            // Wait 3 seconds after the user stops typing before saving/sending notification
             if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(saveExamGrades, 200);
+            saveTimeout = setTimeout(saveExamGrades, 3000);
         });
 
         fragment.appendChild(div);
