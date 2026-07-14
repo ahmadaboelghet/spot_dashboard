@@ -3726,7 +3726,7 @@ async function renderExamGrades() {
                          </div>`;
 
         const inp = div.querySelector('input');
-        inp.addEventListener('input', (e) => {
+        inp.addEventListener('change', (e) => {
             const currentTotal = parseInt(totalMarkInput.value) || 0;
             if (parseInt(e.target.value) > currentTotal) {
                 e.target.value = currentTotal;
@@ -3736,7 +3736,7 @@ async function renderExamGrades() {
                 showCelebration();
             }
             if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(saveExamGrades, 500);
+            saveTimeout = setTimeout(saveExamGrades, 200);
         });
 
         fragment.appendChild(div);
