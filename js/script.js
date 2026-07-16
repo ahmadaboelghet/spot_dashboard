@@ -3583,7 +3583,8 @@ async function linkCardToStudent(student, cardId) {
 }
 
 function startCardLinkScanner() {
-    closeCardLinkModal();
+    document.getElementById('cardLinkModal').classList.add('hidden');
+    // We do NOT clear studentPendingCardLink here, because the scanner needs it!
     startScanner('link-card');
 }
 
