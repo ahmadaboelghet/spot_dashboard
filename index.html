@@ -2193,8 +2193,7 @@
             #printCardsContainer { display: none !important; }
         }
         @media print {
-            body * { visibility: hidden; }
-            #printCardsContainer, #printCardsContainer * { visibility: visible; }
+            #printCardsContainer, #printCardsContainer * { visibility: visible !important; }
             #printCardsContainer {
                 position: absolute;
                 left: 0;
