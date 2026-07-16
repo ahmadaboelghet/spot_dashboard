@@ -5810,16 +5810,20 @@ function generateGenericCards() {
         const card = document.createElement('div');
         card.className = 'generic-card';
         card.innerHTML = `
-            <div style="flex-grow: 1; padding-left: 15px;">
+            <div style="flex-grow: 1; padding-left: 15px; position: relative; z-index: 10;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <img src="assets/images/favicon.png" alt="logo" style="width: 24px; height: 24px; border-radius: 6px;">
-                    <span style="font-weight: 900; font-size: 14px; font-family: 'cairo', sans-serif;">الناظر - Elnazer</span>
+                    <div style="width: 24px; height: 24px; background: #F2CE5A; border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        <img src="assets/images/favicon.png" alt="logo" style="width: 16px; height: 16px; filter: brightness(0) invert(1);">
+                    </div>
+                    <span style="font-weight: 900; font-size: 14px; font-family: 'cairo', sans-serif; color: #F2CE5A; letter-spacing: 0.5px; text-transform: uppercase;">Elnazer</span>
                 </div>
-                <div style="font-weight: 900; font-size: 18px; margin-bottom: 2px;">Smart Access ID</div>
-                <div style="font-weight: 800; font-size: 12px; color: #6b7280; margin-bottom: 15px;">${cardId}</div>
-                <div style="font-weight: 700; font-size: 11px; color: #4b5563;">"${randomQuote}"</div>
+                <div style="font-weight: 900; font-size: 17px; margin-bottom: 2px; color: #ffffff; letter-spacing: 1px;">SMART ACCESS</div>
+                <div style="font-weight: 800; font-size: 12px; color: #9ca3af; margin-bottom: 15px; font-family: monospace; letter-spacing: 2px;">${cardId}</div>
+                <div style="font-weight: 700; font-size: 9px; color: #6b7280; font-style: italic; line-height: 1.3;">"${randomQuote}"</div>
             </div>
-            <div id="generic-qr-${cardId}"></div>
+            <div style="position: relative; z-index: 10; background: white; padding: 6px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
+                <div id="generic-qr-${cardId}"></div>
+            </div>
         `;
         container.appendChild(card);
 

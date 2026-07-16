@@ -2207,28 +2207,40 @@
             .generic-card {
                 width: 85.6mm;
                 height: 54mm;
-                border: 2px solid #e5e7eb;
                 border-radius: 12px;
                 padding: 15px;
-                background: white;
+                background: linear-gradient(135deg, #111827 0%, #1f2937 100%) !important;
+                color: white !important;
                 position: relative;
                 page-break-inside: avoid;
                 display: flex;
                 flex-direction: row;
                 align-items: center;
                 justify-content: space-between;
-                box-shadow: none !important;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                overflow: hidden;
             }
-            /* Add brand colors for print */
             .generic-card::before {
                 content: '';
                 position: absolute;
-                top: 0; left: 0; right: 0; height: 6px;
-                background-color: #fbbf24 !important; /* brand yellow */
-                border-top-left-radius: 10px;
-                border-top-right-radius: 10px;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                top: 0; left: 0; right: 0; height: 4px;
+                background: linear-gradient(90deg, #F2CE5A, #eab308) !important;
+                border-top-left-radius: 12px;
+                border-top-right-radius: 12px;
+            }
+            /* Add some decorative elements */
+            .generic-card::after {
+                content: '';
+                position: absolute;
+                bottom: -20px;
+                left: -20px;
+                width: 100px;
+                height: 100px;
+                border-radius: 50%;
+                background: rgba(242, 206, 90, 0.05) !important;
+                z-index: 0;
             }
         }
     </style>
