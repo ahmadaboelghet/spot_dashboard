@@ -680,6 +680,14 @@ const translations = {
 // 4. UTILS
 // ==========================================
 function generateUniqueId() { return `off_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; }
+function generateCardId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = 'NAZ-';
+    for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
 // ✅ تحسين: تنظيف الرقم من المسافات قبل الفحص
 function isValidEgyptianPhoneNumber(p) {
     if (!p) return false;
@@ -3029,6 +3037,16 @@ function tickScanner() {
 async function handleScan(scannedText) {
     const qrCode = scannedText.replace(/"/g, '').trim();
 
+    // 🛑 الحالة: ربط الكارت
+    if (currentScannerMode === 'link-card') {
+        playBeep();
+        stopScanner();
+        if (studentPendingCardLink) {
+            await linkCardToStudent(studentPendingCardLink, qrCode);
+        }
+        return;
+    }
+
     const matchPhone = (dbPhone, qrVal) => {
         if (!dbPhone) return false;
         return dbPhone.trim().replace(/^\+2/, '') === qrVal.trim().replace(/^\+2/, '');
@@ -3036,6 +3054,7 @@ async function handleScan(scannedText) {
 
     // 1. البحث في المجموعة الحالية (الأولوية)
     const matchedStudents = allStudents.filter(s =>
+        (s.cardId && s.cardId === qrCode) ||
         matchPhone(s.parentPhoneNumber, qrCode) ||
         s.id === qrCode
     );
@@ -3049,6 +3068,7 @@ async function handleScan(scannedText) {
             // بحث شامل في كل الطلاب (Global Search)
             const allLocalStudents = await getAllFromDB('students');
             const globalMatch = allLocalStudents.find(s =>
+                (s.cardId && s.cardId === qrCode) ||
                 matchPhone(s.parentPhoneNumber, qrCode) ||
                 s.id === qrCode
             );
@@ -3514,13 +3534,57 @@ async function addNewStudent() {
     }
     if (!name) return;
     const id = generateUniqueId();
-    const data = { id, groupId: SELECTED_GROUP_ID, name, parentPhoneNumber: phone };
+    const data = { id, groupId: SELECTED_GROUP_ID, name, parentPhoneNumber: phone, cardId: null };
     await putToDB('students', data);
     await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`, id, data });
     nameInput.value = ''; phoneInput.value = '';
     allStudents.push(data);
     renderStudents();
-    showToast(translations[currentLang].studentAdded);
+    
+    // Instead of just a toast, let's open the card link modal
+    openCardLinkModal(data);
+}
+
+let studentPendingCardLink = null;
+
+function openCardLinkModal(student) {
+    studentPendingCardLink = student;
+    document.getElementById('cardLinkStudentName').innerText = student.name;
+    document.getElementById('cardLinkModal').classList.remove('hidden');
+}
+
+function closeCardLinkModal() {
+    studentPendingCardLink = null;
+    document.getElementById('cardLinkModal').classList.add('hidden');
+}
+
+async function linkCardToStudent(student, cardId) {
+    student.cardId = cardId;
+    
+    // Update local DB
+    await putToDB('students', student);
+    
+    // Sync to Firestore
+    await addToSyncQueue({ 
+        type: 'update', 
+        path: `teachers/${TEACHER_ID}/groups/${student.groupId}/students/${student.id}`, 
+        data: { cardId } 
+    });
+
+    // Update in-memory array if it's the current group
+    const idx = allStudents.findIndex(s => s.id === student.id);
+    if (idx !== -1) {
+        allStudents[idx].cardId = cardId;
+        renderStudents();
+    }
+    
+    closeCardLinkModal();
+    showToast(translations[currentLang].studentAdded || 'تم ربط الكارت بالطالب بنجاح!', 'success');
+}
+
+function startCardLinkScanner() {
+    closeCardLinkModal();
+    startScanner('link-card');
 }
 
 async function deleteStudent(id) {
@@ -5125,6 +5189,14 @@ let currentProfileId = null;
 let attendanceChartInstance = null;
 
 // 1. فتح البروفايل عند الضغط على اسم الطالب
+function openProfileCardLinkModal() {
+    if (!currentProfileId) return;
+    const student = allStudents.find(s => s.id === currentProfileId);
+    if (student) {
+        openCardLinkModal(student);
+    }
+}
+
 async function openStudentProfile(studentId) {
     currentProfileId = studentId;
     const student = allStudents.find(s => s.id === studentId);
@@ -5147,6 +5219,21 @@ async function openStudentProfile(studentId) {
         displayPhone = displayPhone.substring(2);
     }
     document.getElementById('profileParentPhone').value = displayPhone;
+
+    // Card Badge
+    const cardBadgeText = document.getElementById('profileCardText');
+    const cardBadgeIcon = document.getElementById('profileCardIcon');
+    if (student.cardId) {
+        cardBadgeText.innerText = student.cardId;
+        cardBadgeText.classList.remove('text-gray-500');
+        cardBadgeText.classList.add('text-brand');
+        cardBadgeIcon.className = 'ri-qr-code-line text-brand';
+    } else {
+        cardBadgeText.innerText = 'لم يتم ربط كارت';
+        cardBadgeText.classList.remove('text-brand');
+        cardBadgeText.classList.add('text-gray-500');
+        cardBadgeIcon.className = 'ri-error-warning-line text-gray-400';
+    }
 
     // Avatar
     const avatarEl = document.getElementById('profileAvatar');
@@ -5694,4 +5781,74 @@ window.startBulkPrint = async function(mode) {
         }
         
     }, 500);
+}
+
+// ==========================================
+// 🖨️ Generic QR Cards Logic
+// ==========================================
+
+function generateGenericCards() {
+    const countInput = document.getElementById('cardsCountInput');
+    let count = parseInt(countInput.value) || 10;
+    
+    // limit max count to prevent browser hanging
+    if (count > 200) count = 200;
+    if (count < 1) count = 1;
+    countInput.value = count;
+
+    const container = document.getElementById('printCardsContainer');
+    container.innerHTML = '';
+
+    for (let i = 0; i < count; i++) {
+        const cardId = generateCardId();
+        
+        let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
+        // إزالة الـ Emojis والإبقاء على الحروف والأرقام والمسافات
+        randomQuote = randomQuote.replace(/[^\u0600-\u06FF\u0020-\u007E\s]/g, '').trim();
+
+        const card = document.createElement('div');
+        card.className = 'generic-card';
+        card.innerHTML = `
+            <div style="flex-grow: 1; padding-left: 15px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <img src="assets/images/favicon.png" alt="logo" style="width: 24px; height: 24px; border-radius: 6px;">
+                    <span style="font-weight: 900; font-size: 14px; font-family: 'cairo', sans-serif;">الناظر - Elnazer</span>
+                </div>
+                <div style="font-weight: 900; font-size: 18px; margin-bottom: 2px;">Smart Access ID</div>
+                <div style="font-weight: 800; font-size: 12px; color: #6b7280; margin-bottom: 15px;">${cardId}</div>
+                <div style="font-weight: 700; font-size: 11px; color: #4b5563;">"${randomQuote}"</div>
+            </div>
+            <div id="generic-qr-${cardId}"></div>
+        `;
+        container.appendChild(card);
+
+        // Generate QR code inside the card
+        new QRCode(card.querySelector(`#generic-qr-${cardId}`), {
+            text: cardId,
+            width: 100,
+            height: 100,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+
+    // Update UI
+    document.getElementById('cardsGeneratedCount').innerText = count;
+    document.getElementById('cardsPreviewSection').classList.remove('hidden');
+    showToast(`تم تجهيز ${count} كارت للطباعة`, 'success');
+}
+
+async function submitManualCardLink() {
+    const input = document.getElementById('manualCardIdInput');
+    const cardId = input.value.trim().toUpperCase();
+    
+    if (!cardId || !cardId.startsWith('NAZ-') || cardId.length < 8) {
+        showToast('يرجى إدخال رقم كارت صحيح يبدأ بـ NAZ-', 'error');
+        return;
+    }
+
+    if (studentPendingCardLink) {
+        await linkCardToStudent(studentPendingCardLink, cardId);
+    }
 }

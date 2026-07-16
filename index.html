@@ -447,6 +447,10 @@
                             <i class="ri-user-settings-line text-lg"></i>
                             <span data-key="tabProfile" class="font-bold text-sm">الملف الشخصي</span>
                         </button>
+                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="cards">
+                            <i class="ri-printer-line text-lg"></i>
+                            <span class="font-bold text-sm">كروت الطلاب</span>
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -966,6 +970,51 @@
                                 </div>
                             </div>
                         </section>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generic QR Cards Tab -->
+            <div id="tab-cards" class="tab-content hidden">
+                <div class="glass-panel p-6 border border-brand/20 dark:border-brand/10 bg-white/70 dark:bg-zinc-900/60 shadow-lg print-hide">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand text-2xl">
+                            <i class="ri-printer-line"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black text-gray-900 dark:text-white font-cairo">مولد كروت الطلاب (الذكية)</h3>
+                            <p class="text-sm text-gray-500 mt-1 font-bold">قم بتوليد كروت فارغة لربطها بالطلاب لاحقاً بكل سهولة.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-4 items-end">
+                        <div class="flex-grow w-full">
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">عدد الكروت المطلوب توليدها (أقصى حد 100 في المرة)</label>
+                            <input type="number" id="cardsCountInput" min="1" max="100" value="9" 
+                                class="w-full px-4 py-3 bg-gray-50 dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all font-bold text-gray-900 dark:text-white"
+                                placeholder="أدخل العدد (مثال: 9)">
+                        </div>
+                        <button onclick="generateGenericCards()" class="w-full md:w-auto px-6 py-3 bg-brand hover:bg-brand/90 text-black font-black rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+                            <i class="ri-magic-line text-lg"></i>
+                            توليد الكروت
+                        </button>
+                    </div>
+                </div>
+
+                <div id="cardsPreviewSection" class="mt-8 hidden print-hide">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                        <h4 class="text-lg font-bold text-gray-900 dark:text-white">معاينة الكروت</h4>
+                        <button onclick="window.print()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 w-full md:w-auto">
+                            <i class="ri-printer-fill"></i>
+                            طباعة الكل
+                        </button>
+                    </div>
+                    <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+                        <p class="text-gray-600 dark:text-gray-300 font-bold mb-4 text-lg">تم تجهيز <span id="cardsGeneratedCount" class="text-brand font-black mx-1">0</span> كارت للطباعة.</p>
+                        <div class="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-3">
+                            <i class="ri-printer-cloud-line text-3xl text-blue-500"></i>
+                        </div>
+                        <p class="text-sm mt-2 text-gray-500 font-bold">اضغط على زر الطباعة بالأعلى لعرض الكروت في شكل A4 وطباعتها فوراً.</p>
                     </div>
                 </div>
             </div>
@@ -1713,6 +1762,11 @@
                                 <input type="tel" id="profileParentPhone" disabled
                                     class="bg-transparent text-sm font-bold text-gray-600 dark:text-gray-300 w-32 outline-none">
                             </div>
+                            <div id="profileCardBadgeContainer" onclick="openProfileCardLinkModal()"
+                                class="flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold cursor-pointer transition-all hover:scale-105">
+                                <i id="profileCardIcon" class="ri-qr-code-line"></i>
+                                <span id="profileCardText">كارت الطالب</span>
+                            </div>
                         </div>
                     </div>
 
@@ -2093,6 +2147,92 @@
         </div>
     </div>
 
+    <!-- 🔗 Card Link Modal -->
+    <div id="cardLinkModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCardLinkModal()"></div>
+        <div class="relative bg-white dark:bg-darkSurface rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all border border-gray-100 dark:border-white/5 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-3xl -z-10"></div>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 rounded-full bg-brand/10 text-brand text-3xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <i class="ri-links-line"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 dark:text-white">ربط كارت ذكي</h3>
+                <p class="text-sm font-bold text-gray-500 mt-1">الطالب: <span id="cardLinkStudentName" class="text-brand"></span></p>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="startCardLinkScanner()" class="w-full flex items-center justify-center gap-3 px-5 py-3.5 bg-brand text-black font-black rounded-xl shadow-lg hover:shadow-brand/30 hover:scale-[1.02] transition-all">
+                    <i class="ri-qr-scan-2-line text-lg"></i>
+                    مسح كارت بالكاميرا الآن
+                </button>
+                <div class="relative flex items-center py-2">
+                    <div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+                    <span class="flex-shrink-0 mx-4 text-xs font-bold text-gray-400">أو إدخال يدوي</span>
+                    <div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="manualCardIdInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-brand uppercase" placeholder="NAZ-XXXXXX" maxlength="12">
+                    <button onclick="submitManualCardLink()" class="px-4 bg-gray-800 dark:bg-gray-700 text-white rounded-xl hover:bg-gray-900 transition-colors font-bold">
+                        <i class="ri-check-line"></i>
+                    </button>
+                </div>
+                <button onclick="closeCardLinkModal()" class="w-full mt-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline underline-offset-4">
+                    تخطي الآن
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🖨️ Print Container -->
+    <div id="printCardsContainer"></div>
+
+    <style>
+        /* Card Generator Print Styles */
+        @media screen {
+            #printCardsContainer { display: none !important; }
+        }
+        @media print {
+            body * { visibility: hidden; }
+            #printCardsContainer, #printCardsContainer * { visibility: visible; }
+            #printCardsContainer {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr); /* 2 columns for A4 */
+                gap: 15mm;
+                padding: 10mm;
+            }
+            .generic-card {
+                width: 85.6mm;
+                height: 54mm;
+                border: 2px solid #e5e7eb;
+                border-radius: 12px;
+                padding: 15px;
+                background: white;
+                position: relative;
+                page-break-inside: avoid;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                box-shadow: none !important;
+            }
+            /* Add brand colors for print */
+            .generic-card::before {
+                content: '';
+                position: absolute;
+                top: 0; left: 0; right: 0; height: 6px;
+                background-color: #fbbf24 !important; /* brand yellow */
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
 </body>
 
 </html>
