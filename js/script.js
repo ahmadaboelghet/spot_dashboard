@@ -5853,3 +5853,75 @@ async function submitManualCardLink() {
         await linkCardToStudent(studentPendingCardLink, cardId);
     }
 }
+
+// ==========================================
+// 🚀 Hardware Scanner Global Listener (Auto-Capture)
+// ==========================================
+let hwScannerBuffer = "";
+let hwScannerLastKeyTime = Date.now();
+
+document.addEventListener('keydown', async (e) => {
+    // We only care about characters and Enter
+    if (e.key !== 'Enter' && e.key.length !== 1) return;
+
+    const currentTime = Date.now();
+    
+    // Most hardware scanners type extremely fast (10-30ms per character).
+    // If the gap is more than 50ms, it's likely a human typing, so reset the buffer.
+    if (currentTime - hwScannerLastKeyTime > 50) {
+        hwScannerBuffer = "";
+    }
+    
+    hwScannerLastKeyTime = currentTime;
+
+    if (e.key === "Enter") {
+        if (hwScannerBuffer.length >= 8 && hwScannerBuffer.startsWith("NAZ-")) {
+            // It's a valid scanner scan!
+            const qrCode = hwScannerBuffer;
+            hwScannerBuffer = ""; // Reset for next scan
+            
+            // 1. Prevent form submission if an input was focused
+            const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+            const isInput = activeTag === 'input' || activeTag === 'textarea';
+            if (isInput) {
+                e.preventDefault();
+                // Remove the rapid typing from the input if it sneaked in
+                const currentVal = document.activeElement.value;
+                if (currentVal.toUpperCase().endsWith(qrCode)) {
+                    document.activeElement.value = currentVal.slice(0, -qrCode.length);
+                }
+            }
+
+            // 2. Determine mode based on UI state
+            const linkModal = document.getElementById('cardLinkModal');
+            if (linkModal && !linkModal.classList.contains('hidden')) {
+                currentScannerMode = 'link-card';
+                // Hide modal and link
+                if (studentPendingCardLink) {
+                    await linkCardToStudent(studentPendingCardLink, qrCode);
+                }
+                return;
+            }
+
+            // Default to Daily Attendance if not linking
+            const activeTab = document.querySelector('.tab-button.active')?.dataset.tab;
+            if (activeTab === 'payments') {
+                currentScannerMode = 'payments';
+            } else {
+                currentScannerMode = 'daily';
+                if (activeTab !== 'daily') switchTab('daily');
+            }
+
+            // 3. Process the scan
+            await handleScan(qrCode);
+        } else {
+            // Not a NAZ- code, just clear buffer
+            hwScannerBuffer = "";
+        }
+        return;
+    }
+
+    if (e.key.length === 1) {
+        hwScannerBuffer += e.key.toUpperCase(); // Ensure uppercase matching
+    }
+});
