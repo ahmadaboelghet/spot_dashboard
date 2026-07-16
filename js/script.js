@@ -5810,18 +5810,18 @@ function generateGenericCards() {
         const card = document.createElement('div');
         card.className = 'generic-card';
         card.innerHTML = `
-            <div style="flex-grow: 1; padding-left: 15px; position: relative; z-index: 10;">
+            <div style="flex-grow: 1; padding-left: 20px; position: relative; z-index: 10;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <div style="width: 24px; height: 24px; background: #F2CE5A; border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                        <img src="assets/images/favicon.png" alt="logo" style="width: 16px; height: 16px; filter: brightness(0) invert(1);">
+                    <div style="width: 28px; height: 28px; background: #fef3c7; border: 1px solid #F2CE5A; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <img src="assets/images/favicon.png" alt="logo" style="width: 18px; height: 18px;">
                     </div>
-                    <span style="font-weight: 900; font-size: 14px; font-family: 'cairo', sans-serif; color: #F2CE5A; letter-spacing: 0.5px; text-transform: uppercase;">Elnazer</span>
+                    <span style="font-weight: 900; font-size: 14px; font-family: 'cairo', sans-serif; color: #b45309; letter-spacing: 0.5px; text-transform: uppercase;">Elnazer</span>
                 </div>
-                <div style="font-weight: 900; font-size: 17px; margin-bottom: 2px; color: #ffffff; letter-spacing: 1px;">SMART ACCESS</div>
-                <div style="font-weight: 800; font-size: 12px; color: #9ca3af; margin-bottom: 15px; font-family: monospace; letter-spacing: 2px;">${cardId}</div>
-                <div style="font-weight: 700; font-size: 9px; color: #6b7280; font-style: italic; line-height: 1.3;">"${randomQuote}"</div>
+                <div style="font-weight: 900; font-size: 17px; margin-bottom: 2px; color: #0f172a; letter-spacing: 1px;">SMART ACCESS</div>
+                <div style="font-weight: 800; font-size: 12px; color: #64748b; margin-bottom: 15px; font-family: monospace; letter-spacing: 2px;">${cardId}</div>
+                <div style="font-weight: 700; font-size: 9px; color: #94a3b8; font-style: italic; line-height: 1.4; max-width: 90%;">"${randomQuote}"</div>
             </div>
-            <div style="position: relative; z-index: 10; background: white; padding: 6px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
+            <div style="position: relative; z-index: 10; padding-right: 5px;">
                 <div id="generic-qr-${cardId}"></div>
             </div>
         `;
@@ -5830,9 +5830,9 @@ function generateGenericCards() {
         // Generate QR code inside the card
         new QRCode(card.querySelector(`#generic-qr-${cardId}`), {
             text: cardId,
-            width: 100,
-            height: 100,
-            colorDark: "#000000",
+            width: 90,
+            height: 90,
+            colorDark: "#0f172a",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });

@@ -2207,17 +2207,18 @@
             .generic-card {
                 width: 85.6mm;
                 height: 54mm;
-                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                border-radius: 16px;
                 padding: 15px;
-                background: linear-gradient(135deg, #111827 0%, #1f2937 100%) !important;
-                color: white !important;
+                background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+                color: #0f172a !important;
                 position: relative;
                 page-break-inside: avoid;
                 display: flex;
                 flex-direction: row;
                 align-items: center;
                 justify-content: space-between;
-                box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
                 overflow: hidden;
@@ -2225,21 +2226,19 @@
             .generic-card::before {
                 content: '';
                 position: absolute;
-                top: 0; left: 0; right: 0; height: 4px;
-                background: linear-gradient(90deg, #F2CE5A, #eab308) !important;
-                border-top-left-radius: 12px;
-                border-top-right-radius: 12px;
+                top: 0; left: 0; bottom: 0; width: 6px;
+                background: linear-gradient(180deg, #F2CE5A, #d97706) !important;
             }
-            /* Add some decorative elements */
+            /* Add some decorative elegant curves */
             .generic-card::after {
                 content: '';
                 position: absolute;
-                bottom: -20px;
-                left: -20px;
-                width: 100px;
-                height: 100px;
+                top: -30px;
+                right: -30px;
+                width: 120px;
+                height: 120px;
                 border-radius: 50%;
-                background: rgba(242, 206, 90, 0.05) !important;
+                background: linear-gradient(135deg, rgba(242, 206, 90, 0.15), rgba(242, 206, 90, 0.05)) !important;
                 z-index: 0;
             }
         }
