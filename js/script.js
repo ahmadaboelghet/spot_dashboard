@@ -1693,7 +1693,7 @@ async function loginTeacher() {
             await firebase.auth().signInWithEmailAndPassword(fakeEmail, password);
         } catch (authErr) {
             // 2. إذا لم يكن مسجلاً في Auth بعد (نحتاج لعمل Migration له من النظام القديم)
-            if (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-credential') {
+            if (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-credential' || authErr.code === 'auth/invalid-login-credentials') {
                 if (!navigator.onLine) {
                     showToast(translations[currentLang].offlineFirstLogin || "Internet required for first login", "error");
                     throw new Error("Offline first login");
@@ -1721,7 +1721,18 @@ async function loginTeacher() {
                 }
 
                 // ✅ تمت المصادقة بنجاح بالطريقة القديمة -> سنقوم بإنشاء حساب Auth مشفّر له فوراً (Seamless Migration)
-                await firebase.auth().createUserWithEmailAndPassword(fakeEmail, password);
+                try {
+                    await firebase.auth().createUserWithEmailAndPassword(fakeEmail, password);
+                } catch (createErr) {
+                    if (createErr.code === 'auth/email-already-in-use') {
+                        // User is in Auth but wrong password was used (and storedPass was empty so it bypassed the check)
+                        showToast(translations[currentLang].wrongPassword, "error");
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        return;
+                    }
+                    throw createErr;
+                }
 
                 // حفظ الباسورد لو كانت دي أول مرة يفتح الحساب (للتوافق القديم)
                 if (storedPass === "" && password !== "") {
