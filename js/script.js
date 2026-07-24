@@ -5739,14 +5739,8 @@ window.startBulkPrint = async function(mode) {
         const card = document.createElement('div');
         card.className = 'qr-card';
         card.innerHTML = `
-            <div class="qr-card-header">
-                <img src="assets/images/favicon.png" alt="logo">
-                <span>الناظر - Elnazer</span>
-            </div>
-            <div class="qr-card-name">${s.name}</div>
-            <div class="qr-card-subtitle">Smart Access ID</div>
             <div class="qr-card-code" id="bulk-qr-${s.id}"></div>
-            <div class="qr-card-quote">"${randomQuote}"</div>
+            <div class="qr-card-name">${s.name}</div>
         `;
         container.appendChild(card);
 
@@ -5821,20 +5815,8 @@ function generateGenericCards() {
         const card = document.createElement('div');
         card.className = 'generic-card';
         card.innerHTML = `
-            <div style="flex-grow: 1; padding-left: 20px; position: relative; z-index: 10;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <div style="width: 28px; height: 28px; background: #fef3c7; border: 1px solid #F2CE5A; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                        <img src="assets/images/favicon.png" alt="logo" style="width: 18px; height: 18px;">
-                    </div>
-                    <span style="font-weight: 900; font-size: 14px; font-family: 'cairo', sans-serif; color: #b45309; letter-spacing: 0.5px; text-transform: uppercase;">Elnazer</span>
-                </div>
-                <div style="font-weight: 900; font-size: 17px; margin-bottom: 2px; color: #0f172a; letter-spacing: 1px;">SMART ACCESS</div>
-                <div style="font-weight: 800; font-size: 12px; color: #64748b; margin-bottom: 15px; font-family: monospace; letter-spacing: 2px;">${cardId}</div>
-                <div style="font-weight: 700; font-size: 9px; color: #94a3b8; font-style: italic; line-height: 1.4; max-width: 90%;">"${randomQuote}"</div>
-            </div>
-            <div style="position: relative; z-index: 10; padding-right: 5px;">
-                <div id="generic-qr-${cardId}"></div>
-            </div>
+            <div id="generic-qr-${cardId}"></div>
+            <div class="generic-card-id">${cardId}</div>
         `;
         container.appendChild(card);
 
