@@ -5740,7 +5740,6 @@ window.startBulkPrint = async function(mode) {
         card.className = 'qr-card';
         card.innerHTML = `
             <div class="qr-card-code" id="bulk-qr-${s.id}"></div>
-            <div class="qr-card-name">${s.name}</div>
         `;
         container.appendChild(card);
 
@@ -5816,7 +5815,6 @@ function generateGenericCards() {
         card.className = 'generic-card';
         card.innerHTML = `
             <div id="generic-qr-${cardId}"></div>
-            <div class="generic-card-id">${cardId}</div>
         `;
         container.appendChild(card);
 
