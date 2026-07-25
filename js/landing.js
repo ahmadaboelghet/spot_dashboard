@@ -955,4 +955,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- 12. Mobile Menu Toggle Logic ---
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const mobileMenuPanel = document.getElementById('mobileMenuPanel');
+    const menuToggleIcon = document.getElementById('menuToggleIcon');
+    const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+
+    if (mobileMenuToggle && mobileMenuPanel) {
+        mobileMenuToggle.addEventListener('click', () => {
+            mobileMenuPanel.classList.toggle('hidden');
+            if (mobileMenuPanel.classList.contains('hidden')) {
+                menuToggleIcon.className = 'ri-menu-3-line text-xl';
+            } else {
+                menuToggleIcon.className = 'ri-close-line text-xl';
+            }
+        });
+
+        // Close menu panel when clicking a link
+        mobileNavLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenuPanel.classList.add('hidden');
+                menuToggleIcon.className = 'ri-menu-3-line text-xl';
+            });
+        });
+    }
 });

@@ -66,11 +66,29 @@
                     AR
                 </button>
 
+                <!-- Start Now Button (Desktop only) -->
                 <a href="dashboard.html" class="btn-primary-custom hidden md:flex items-center font-bold" style="display: flex; gap: 0.5rem; border-radius: 12px; padding: 10px 22px; font-size:13px; text-decoration:none;">
                     <span data-i18n="nav_enroll">ابدأ الآن</span>
                     <i class="ri-arrow-left-line nav-arrow"></i>
                 </a>
+
+                <!-- Hamburger Button (Mobile only) -->
+                <button id="mobileMenuToggle" class="nav-circle-btn md:hidden" aria-label="Toggle Menu">
+                    <i class="ri-menu-3-line text-xl" id="menuToggleIcon"></i>
+                </button>
             </div>
+        </div>
+
+        <!-- Glassmorphism Dropdown Mobile Menu Panel (Unmatched dela3) -->
+        <div id="mobileMenuPanel" class="hidden absolute top-full left-0 right-0 w-full glass-panel border-t border-b-0 py-6 px-6 shadow-2xl transition-all duration-300 flex flex-col gap-5 z-40" style="backdrop-filter: blur(25px); background: rgba(15, 23, 42, 0.95); text-align: right;">
+            <a href="#about" class="mobile-nav-link font-bold text-lg py-2 border-b border-white/5" style="text-decoration:none;" data-i18n="nav_about">عن المنصة</a>
+            <a href="#features" class="mobile-nav-link font-bold text-lg py-2 border-b border-white/5" style="text-decoration:none;" data-i18n="nav_features">المميزات</a>
+            <a href="#pricing" class="mobile-nav-link font-bold text-lg py-2 border-b border-white/5" style="text-decoration:none;" data-i18n="nav_pricing">الأسعار</a>
+            <a href="#download" class="mobile-nav-link font-bold text-lg py-2 border-b border-white/5" style="text-decoration:none;" data-i18n="nav_download">التطبيقات</a>
+            <a href="dashboard.html" class="btn-primary-custom flex items-center justify-center font-bold py-3 mt-2" style="border-radius: 12px; text-decoration:none;">
+                <span data-i18n="nav_enroll">ابدأ الآن</span>
+                <i class="ri-arrow-left-line nav-arrow mr-2"></i>
+            </a>
         </div>
     </nav>
 
