@@ -1,0 +1,385 @@
+[debug] [2026-07-25T07:34:10.862Z] ----------------------------------------------------------------------
+[debug] [2026-07-25T07:34:10.869Z] Command:       /Users/aboelghet/.nvm/versions/node/v24.4.1/bin/node /Users/aboelghet/.nvm/versions/node/v24.4.1/bin/firebase emulators:start
+[debug] [2026-07-25T07:34:10.869Z] CLI Version:   15.11.0
+[debug] [2026-07-25T07:34:10.869Z] Platform:      darwin
+[debug] [2026-07-25T07:34:10.869Z] Node Version:  v24.4.1
+[debug] [2026-07-25T07:34:10.870Z] Time:          Sat Jul 25 2026 10:34:10 GMT+0300 (Eastern European Summer Time)
+[debug] [2026-07-25T07:34:10.870Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-25T07:34:11.642Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-25T07:34:11.642Z] > authorizing via signed-in user (ahmadaboelghet@gmail.com)
+[debug] [2026-07-25T07:34:11.840Z] openjdk version "26" 2026-03-17
+
+[debug] [2026-07-25T07:34:11.840Z] OpenJDK Runtime Environment (build 26+35-2893)
+OpenJDK 64-Bit Server VM (build 26+35-2893, mixed mode, sharing)
+
+[debug] [2026-07-25T07:34:11.849Z] Parsed Java major version: 26
+[info] i  emulators: Starting emulators: functions, firestore, hosting, storage, extensions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: functions, firestore, hosting, storage, extensions"}}
+[debug] [2026-07-25T07:34:11.850Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:34:11.850Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:34:11.850Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/learnaria-483e7 [none]
+[debug] [2026-07-25T07:34:12.752Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/learnaria-483e7 200
+[debug] [2026-07-25T07:34:12.752Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/learnaria-483e7 {"projectNumber":"573038013067","projectId":"learnaria-483e7","lifecycleState":"ACTIVE","name":"Learnaria","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-07-28T09:46:17.658480Z"}
+[debug] [2026-07-25T07:34:13.083Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-25T07:34:13.083Z] [firestore] Firestore Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-25T07:34:13.084Z] [firestore.websocket] websocket server for firestore only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-25T07:34:13.084Z] [storage] Storage Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[warn] ⚠  hosting: Hosting Emulator unable to start on port 5000, starting on 5002 instead. {"metadata":{"emulator":{"name":"hosting"},"message":"Hosting Emulator unable to start on port 5000, starting on 5002 instead."}}
+[debug] [2026-07-25T07:34:13.084Z] [hosting] Hosting Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-25T07:34:13.084Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"storage":[{"address":"127.0.0.1","family":"IPv4","port":9199}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5002}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-07-25T07:34:13.086Z] Write emulator hub locator at /var/folders/8p/3v2p6dd969b_f1fld0w0nqwc0000gn/T/hub-learnaria-483e7.json
+[debug] [2026-07-25T07:34:13.089Z] [Extensions] Started Extensions emulator, this is a noop.
+[debug] [2026-07-25T07:34:13.195Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-25T07:34:13.195Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-25T07:34:13.195Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-25T07:34:13.195Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"storage":[{"address":"127.0.0.1","family":"IPv4","port":9199}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5002}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[warn] ⚠  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, auth, database, pubsub, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, auth, database, pubsub, dataconnect\u001b[22m"}}
+[debug] [2026-07-25T07:34:13.201Z] defaultcredentials: writing to file /Users/aboelghet/.config/firebase/ahmadaboelghet_gmail_com_application_default_credentials.json
+[debug] [2026-07-25T07:34:13.201Z] Setting GAC to /Users/aboelghet/.config/firebase/ahmadaboelghet_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to /Users/aboelghet/.config/firebase/ahmadaboelghet_gmail_com_application_default_credentials.json"}}
+[debug] [2026-07-25T07:34:13.202Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:34:13.202Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:34:13.202Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/learnaria-483e7/adminSdkConfig [none]
+[debug] [2026-07-25T07:34:14.019Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/learnaria-483e7/adminSdkConfig 200
+[debug] [2026-07-25T07:34:14.019Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/learnaria-483e7/adminSdkConfig {"projectId":"learnaria-483e7","storageBucket":"learnaria-483e7.firebasestorage.app"}
+[info] i  firestore: downloading cloud-firestore-emulator-v1.20.4.jar... {"metadata":{"emulator":{"name":"firestore"},"message":"downloading cloud-firestore-emulator-v1.20.4.jar..."}}
+[debug] [2026-07-25T07:34:14.043Z] >>> [apiv2][query] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.20.4.jar 
+[debug] [2026-07-25T07:34:14.382Z] <<< [apiv2][status] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.20.4.jar 200
+[debug] [2026-07-25T07:34:14.382Z] <<< [apiv2][body] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.20.4.jar [stream]
+[debug] [2026-07-25T07:35:33.029Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2026-07-25T07:35:33.036Z] Ignoring unsupported arg: single_project_mode_error {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: single_project_mode_error"}}
+[debug] [2026-07-25T07:35:33.036Z] Starting Firestore Emulator with command {"binary":"java","args":["-Dgoogle.cloud_firestore.debug_log_level=FINE","-Duser.language=en","-jar","/Users/aboelghet/.cache/firebase/emulators/cloud-firestore-emulator-v1.20.4.jar","--host","127.0.0.1","--port",8080,"--websocket_port",9150,"--project_id","learnaria-483e7","--rules","/Users/aboelghet/Developer/SpotDashboard/firestore.rules","--single_project_mode",true,"--functions_emulator","127.0.0.1:5001"],"optionalArgs":["port","webchannel_port","host","rules","websocket_port","functions_emulator","seed_from_export","project_id","single_project_mode"],"joinArgs":false,"shell":false,"port":8080} {"metadata":{"emulator":{"name":"firestore"},"message":"Starting Firestore Emulator with command {\"binary\":\"java\",\"args\":[\"-Dgoogle.cloud_firestore.debug_log_level=FINE\",\"-Duser.language=en\",\"-jar\",\"/Users/aboelghet/.cache/firebase/emulators/cloud-firestore-emulator-v1.20.4.jar\",\"--host\",\"127.0.0.1\",\"--port\",8080,\"--websocket_port\",9150,\"--project_id\",\"learnaria-483e7\",\"--rules\",\"/Users/aboelghet/Developer/SpotDashboard/firestore.rules\",\"--single_project_mode\",true,\"--functions_emulator\",\"127.0.0.1:5001\"],\"optionalArgs\":[\"port\",\"webchannel_port\",\"host\",\"rules\",\"websocket_port\",\"functions_emulator\",\"seed_from_export\",\"project_id\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":8080}"}}
+[info] i  firestore: Firestore Emulator logging to firestore-debug.log {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator logging to \u001b[1mfirestore-debug.log\u001b[22m"}}
+[debug] [2026-07-25T07:35:33.516Z] WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::allocateMemory has been called by io.netty.util.internal.PlatformDependent0$2 (file:/Users/aboelghet/.cache/firebase/emulators/cloud-firestore-emulator-v1.20.4.jar)
+WARNING: Please consider reporting this to the maintainers of class io.netty.util.internal.PlatformDependent0$2
+WARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release
+ {"metadata":{"emulator":{"name":"firestore"},"message":"WARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::allocateMemory has been called by io.netty.util.internal.PlatformDependent0$2 (file:/Users/aboelghet/.cache/firebase/emulators/cloud-firestore-emulator-v1.20.4.jar)\nWARNING: Please consider reporting this to the maintainers of class io.netty.util.internal.PlatformDependent0$2\nWARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release\n"}}
+[debug] [2026-07-25T07:35:33.972Z] Jul 25, 2026 10:35:33 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+INFO: Started WebSocket server on ws://127.0.0.1:9150
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 25, 2026 10:35:33 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start\nINFO: Started WebSocket server on ws://127.0.0.1:9150\n"}}
+[debug] [2026-07-25T07:35:33.985Z] 
+API endpoint: http:// {"metadata":{"emulator":{"name":"firestore"},"message":"\nAPI endpoint: http://"}}
+[debug] [2026-07-25T07:35:33.985Z] 127.0.0.1:8080
+Database Edition: STANDARD
+Database Mode: CLOUD_FIRESTORE
+
+If you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:
+
+   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+
+If you are running a Firestore in Datastore Mode project, run:
+
+   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080
+
+Note: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.
+Dev App Server is now running.
+
+ {"metadata":{"emulator":{"name":"firestore"},"message":"127.0.0.1:8080\nDatabase Edition: STANDARD\nDatabase Mode: CLOUD_FIRESTORE\n\nIf you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:\n\n   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080\n\nIf you are running a Firestore in Datastore Mode project, run:\n\n   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080\n\nNote: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.\nDev App Server is now running.\n\n"}}
+[info] ✔  firestore: Firestore Emulator UI websocket is running on 9150. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator UI websocket is running on 9150."}}
+[info] i  storage: downloading cloud-storage-rules-runtime-v1.1.3.jar... {"metadata":{"emulator":{"name":"storage"},"message":"downloading cloud-storage-rules-runtime-v1.1.3.jar..."}}
+[debug] [2026-07-25T07:35:34.082Z] >>> [apiv2][query] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-storage-rules-runtime-v1.1.3.jar 
+[debug] [2026-07-25T07:35:34.290Z] <<< [apiv2][status] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-storage-rules-runtime-v1.1.3.jar 200
+[debug] [2026-07-25T07:35:34.291Z] <<< [apiv2][body] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-storage-rules-runtime-v1.1.3.jar [stream]
+[debug] [2026-07-25T07:36:09.863Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"storage"},"message":"Ignoring unsupported arg: port"}}
+[warn] ⚠  Unexpected rules runtime error: WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.google.protobuf.UnsafeUtil$MemoryAccessor (file:/Users/aboelghet/.cache/firebase/emulators/cloud-storage-rules-runtime-v1.1.3.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.protobuf.UnsafeUtil$MemoryAccessor
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+ {"metadata":{"emulator":{"name":"storage"},"message":"Unexpected rules runtime error: WARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.google.protobuf.UnsafeUtil$MemoryAccessor (file:/Users/aboelghet/.cache/firebase/emulators/cloud-storage-rules-runtime-v1.1.3.jar)\nWARNING: Please consider reporting this to the maintainers of class com.google.protobuf.UnsafeUtil$MemoryAccessor\nWARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release\n"}}
+[debug] [2026-07-25T07:36:10.254Z] Temp file directory for storage emulator: /var/folders/8p/3v2p6dd969b_f1fld0w0nqwc0000gn/T/firebase/storage/blobs {"metadata":{"emulator":{"name":"storage"},"message":"Temp file directory for storage emulator: /var/folders/8p/3v2p6dd969b_f1fld0w0nqwc0000gn/T/firebase/storage/blobs"}}
+[debug] [2026-07-25T07:36:10.259Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:36:10.259Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:36:10.260Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/learnaria-483e7/sites 
+[debug] [2026-07-25T07:36:11.594Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/learnaria-483e7/sites 200
+[debug] [2026-07-25T07:36:11.595Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/learnaria-483e7/sites {"sites":[{"name":"projects/learnaria-483e7/sites/learnaria-483e7","defaultUrl":"https://learnaria-483e7.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2026-07-25T07:36:11.595Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:36:11.595Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:36:11.595Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/learnaria-483e7/webApps/-/config [none]
+[debug] [2026-07-25T07:36:12.605Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/learnaria-483e7/webApps/-/config 200
+[debug] [2026-07-25T07:36:12.605Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/learnaria-483e7/webApps/-/config {"projectId":"learnaria-483e7","storageBucket":"learnaria-483e7.firebasestorage.app","apiKey":"AIzaSyCcgkwdGFTLtC1wKfT5EJ8TkJoea-i1zJc","authDomain":"learnaria-483e7.firebaseapp.com","messagingSenderId":"573038013067","projectNumber":"573038013067","version":"2"}
+[debug] [2026-07-25T07:36:12.620Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:36:12.620Z] Checked if tokens are valid: true, expires at: 1784967836704
+[debug] [2026-07-25T07:36:12.621Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/learnaria-483e7 [none]
+[debug] [2026-07-25T07:36:12.889Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/learnaria-483e7 200
+[debug] [2026-07-25T07:36:12.889Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/learnaria-483e7 {"projectId":"learnaria-483e7","projectNumber":"573038013067","displayName":"Learnaria","name":"projects/learnaria-483e7","resources":{"hostingSite":"learnaria-483e7"},"state":"ACTIVE","labels":{"firebase":"enabled","firebaseworkflows/environment":"unspecified","firebase/storage-default-bucket":"created"},"etag":"1_fcaa7d99-dac4-4701-8d60-3b344359af0b"}
+[info] ✔  hosting[learnaria-483e7]: Local server: http://127.0.0.1:5002 {"metadata":{"emulator":{"name":"hosting"},"message":"Local server: \u001b[4m\u001b[1mhttp://127.0.0.1:5002\u001b[22m\u001b[24m"}}
+[info] i  ui: downloading ui-v1.15.0.zip... {"metadata":{"emulator":{"name":"ui"},"message":"downloading ui-v1.15.0.zip..."}}
+[debug] [2026-07-25T07:36:12.974Z] >>> [apiv2][query] GET https://storage.googleapis.com/firebase-preview-drop/emulator/ui-v1.15.0.zip 
+[debug] [2026-07-25T07:36:13.194Z] <<< [apiv2][status] GET https://storage.googleapis.com/firebase-preview-drop/emulator/ui-v1.15.0.zip 200
+[debug] [2026-07-25T07:36:13.195Z] <<< [apiv2][body] GET https://storage.googleapis.com/firebase-preview-drop/emulator/ui-v1.15.0.zip [stream]
+[debug] [2026-07-25T07:36:15.280Z] Data is 3538469
+[debug] [2026-07-25T07:36:15.281Z] [unzip] Entry: client/ (compressed_size=0 bytes, uncompressed_size=0 bytes)
+[debug] [2026-07-25T07:36:15.281Z] [unzip] Processing entry: client/
+[debug] [2026-07-25T07:36:15.281Z] [unzip] mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/
+[debug] [2026-07-25T07:36:15.282Z] [unzip] Entry: client/favicon-16x16.png (compressed_size=293 bytes, uncompressed_size=293 bytes)
+[debug] [2026-07-25T07:36:15.282Z] [unzip] Processing entry: client/favicon-16x16.png
+[debug] [2026-07-25T07:36:15.283Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.283Z] [unzip] Writing file: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/favicon-16x16.png
+[debug] [2026-07-25T07:36:15.288Z] [unzip] Entry: client/safari-pinned-tab.svg (compressed_size=1433 bytes, uncompressed_size=2611 bytes)
+[debug] [2026-07-25T07:36:15.288Z] [unzip] Processing entry: client/safari-pinned-tab.svg
+[debug] [2026-07-25T07:36:15.288Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.288Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/safari-pinned-tab.svg
+[debug] [2026-07-25T07:36:15.294Z] [unzip] Entry: client/favicon.ico (compressed_size=2933 bytes, uncompressed_size=13294 bytes)
+[debug] [2026-07-25T07:36:15.294Z] [unzip] Processing entry: client/favicon.ico
+[debug] [2026-07-25T07:36:15.294Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.294Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/favicon.ico
+[debug] [2026-07-25T07:36:15.295Z] [unzip] Entry: client/index.html (compressed_size=1364 bytes, uncompressed_size=3071 bytes)
+[debug] [2026-07-25T07:36:15.295Z] [unzip] Processing entry: client/index.html
+[debug] [2026-07-25T07:36:15.295Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.295Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/index.html
+[debug] [2026-07-25T07:36:15.296Z] [unzip] Entry: client/android-chrome-192x192.png (compressed_size=2684 bytes, uncompressed_size=2684 bytes)
+[debug] [2026-07-25T07:36:15.296Z] [unzip] Processing entry: client/android-chrome-192x192.png
+[debug] [2026-07-25T07:36:15.296Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.297Z] [unzip] Writing file: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/android-chrome-192x192.png
+[debug] [2026-07-25T07:36:15.297Z] [unzip] Entry: client/apple-touch-icon.png (compressed_size=2123 bytes, uncompressed_size=2152 bytes)
+[debug] [2026-07-25T07:36:15.297Z] [unzip] Processing entry: client/apple-touch-icon.png
+[debug] [2026-07-25T07:36:15.297Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.297Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/apple-touch-icon.png
+[debug] [2026-07-25T07:36:15.298Z] [unzip] Entry: client/android-chrome-512x512.png (compressed_size=5369 bytes, uncompressed_size=5411 bytes)
+[debug] [2026-07-25T07:36:15.298Z] [unzip] Processing entry: client/android-chrome-512x512.png
+[debug] [2026-07-25T07:36:15.298Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.298Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/android-chrome-512x512.png
+[debug] [2026-07-25T07:36:15.299Z] [unzip] Entry: client/manifest.json (compressed_size=245 bytes, uncompressed_size=551 bytes)
+[debug] [2026-07-25T07:36:15.299Z] [unzip] Processing entry: client/manifest.json
+[debug] [2026-07-25T07:36:15.299Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.299Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/manifest.json
+[debug] [2026-07-25T07:36:15.300Z] [unzip] Entry: client/robots.txt (compressed_size=26 bytes, uncompressed_size=26 bytes)
+[debug] [2026-07-25T07:36:15.300Z] [unzip] Processing entry: client/robots.txt
+[debug] [2026-07-25T07:36:15.300Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.300Z] [unzip] Writing file: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/robots.txt
+[debug] [2026-07-25T07:36:15.300Z] [unzip] Entry: client/mstile-150x150.png (compressed_size=2034 bytes, uncompressed_size=2034 bytes)
+[debug] [2026-07-25T07:36:15.301Z] [unzip] Processing entry: client/mstile-150x150.png
+[debug] [2026-07-25T07:36:15.301Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.301Z] [unzip] Writing file: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/mstile-150x150.png
+[debug] [2026-07-25T07:36:15.301Z] [unzip] Entry: client/assets/ (compressed_size=0 bytes, uncompressed_size=0 bytes)
+[debug] [2026-07-25T07:36:15.301Z] [unzip] Processing entry: client/assets/
+[debug] [2026-07-25T07:36:15.301Z] [unzip] mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/
+[debug] [2026-07-25T07:36:15.301Z] [unzip] Entry: client/assets/index-BX-A56oj.js (compressed_size=582089 bytes, uncompressed_size=2092775 bytes)
+[debug] [2026-07-25T07:36:15.302Z] [unzip] Processing entry: client/assets/index-BX-A56oj.js
+[debug] [2026-07-25T07:36:15.302Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets
+[debug] [2026-07-25T07:36:15.302Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/index-BX-A56oj.js
+[debug] [2026-07-25T07:36:15.312Z] [unzip] Entry: client/assets/index-CjB9C900.css (compressed_size=35979 bytes, uncompressed_size=298654 bytes)
+[debug] [2026-07-25T07:36:15.312Z] [unzip] Processing entry: client/assets/index-CjB9C900.css
+[debug] [2026-07-25T07:36:15.312Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets
+[debug] [2026-07-25T07:36:15.312Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/index-CjB9C900.css
+[debug] [2026-07-25T07:36:15.314Z] [unzip] Entry: client/assets/index-BX-A56oj.js.map (compressed_size=2362482 bytes, uncompressed_size=10036679 bytes)
+[debug] [2026-07-25T07:36:15.314Z] [unzip] Processing entry: client/assets/index-BX-A56oj.js.map
+[debug] [2026-07-25T07:36:15.314Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets
+[debug] [2026-07-25T07:36:15.314Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/index-BX-A56oj.js.map
+[debug] [2026-07-25T07:36:15.352Z] [unzip] Entry: client/assets/extensions/ (compressed_size=0 bytes, uncompressed_size=0 bytes)
+[debug] [2026-07-25T07:36:15.352Z] [unzip] Processing entry: client/assets/extensions/
+[debug] [2026-07-25T07:36:15.352Z] [unzip] mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/extensions/
+[debug] [2026-07-25T07:36:15.352Z] [unzip] Entry: client/assets/extensions/default-extension.png (compressed_size=1646 bytes, uncompressed_size=1657 bytes)
+[debug] [2026-07-25T07:36:15.352Z] [unzip] Processing entry: client/assets/extensions/default-extension.png
+[debug] [2026-07-25T07:36:15.352Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/extensions
+[debug] [2026-07-25T07:36:15.352Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/extensions/default-extension.png
+[debug] [2026-07-25T07:36:15.353Z] [unzip] Entry: client/assets/img/ (compressed_size=0 bytes, uncompressed_size=0 bytes)
+[debug] [2026-07-25T07:36:15.353Z] [unzip] Processing entry: client/assets/img/
+[debug] [2026-07-25T07:36:15.353Z] [unzip] mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/img/
+[debug] [2026-07-25T07:36:15.353Z] [unzip] Entry: client/assets/img/database.png (compressed_size=29449 bytes, uncompressed_size=29988 bytes)
+[debug] [2026-07-25T07:36:15.353Z] [unzip] Processing entry: client/assets/img/database.png
+[debug] [2026-07-25T07:36:15.353Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/img
+[debug] [2026-07-25T07:36:15.353Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/img/database.png
+[debug] [2026-07-25T07:36:15.353Z] [unzip] Entry: client/assets/provider-icons/ (compressed_size=0 bytes, uncompressed_size=0 bytes)
+[debug] [2026-07-25T07:36:15.353Z] [unzip] Processing entry: client/assets/provider-icons/
+[debug] [2026-07-25T07:36:15.353Z] [unzip] mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/
+[debug] [2026-07-25T07:36:15.353Z] [unzip] Entry: client/assets/provider-icons/auth_service_saml.svg (compressed_size=575 bytes, uncompressed_size=1226 bytes)
+[debug] [2026-07-25T07:36:15.353Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_saml.svg
+[debug] [2026-07-25T07:36:15.353Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.353Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_saml.svg
+[debug] [2026-07-25T07:36:15.354Z] [unzip] Entry: client/assets/provider-icons/auth_service_phone.svg (compressed_size=261 bytes, uncompressed_size=414 bytes)
+[debug] [2026-07-25T07:36:15.354Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_phone.svg
+[debug] [2026-07-25T07:36:15.354Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.354Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_phone.svg
+[debug] [2026-07-25T07:36:15.354Z] [unzip] Entry: client/assets/provider-icons/auth_service_facebook.svg (compressed_size=289 bytes, uncompressed_size=457 bytes)
+[debug] [2026-07-25T07:36:15.354Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_facebook.svg
+[debug] [2026-07-25T07:36:15.354Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.354Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_facebook.svg
+[debug] [2026-07-25T07:36:15.354Z] [unzip] Entry: client/assets/provider-icons/auth_service_game_center.svg (compressed_size=991 bytes, uncompressed_size=3921 bytes)
+[debug] [2026-07-25T07:36:15.354Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_game_center.svg
+[debug] [2026-07-25T07:36:15.354Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.354Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_game_center.svg
+[debug] [2026-07-25T07:36:15.355Z] [unzip] Entry: client/assets/provider-icons/auth_service_apple.svg (compressed_size=230 bytes, uncompressed_size=334 bytes)
+[debug] [2026-07-25T07:36:15.355Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_apple.svg
+[debug] [2026-07-25T07:36:15.355Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.355Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_apple.svg
+[debug] [2026-07-25T07:36:15.355Z] [unzip] Entry: client/assets/provider-icons/auth_service_github.svg (compressed_size=466 bytes, uncompressed_size=838 bytes)
+[debug] [2026-07-25T07:36:15.355Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_github.svg
+[debug] [2026-07-25T07:36:15.355Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.355Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_github.svg
+[debug] [2026-07-25T07:36:15.355Z] [unzip] Entry: client/assets/provider-icons/auth_service_mslive.svg (compressed_size=203 bytes, uncompressed_size=378 bytes)
+[debug] [2026-07-25T07:36:15.355Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_mslive.svg
+[debug] [2026-07-25T07:36:15.355Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.355Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_mslive.svg
+[debug] [2026-07-25T07:36:15.356Z] [unzip] Entry: client/assets/provider-icons/auth_service_yahoo.svg (compressed_size=577 bytes, uncompressed_size=1182 bytes)
+[debug] [2026-07-25T07:36:15.356Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_yahoo.svg
+[debug] [2026-07-25T07:36:15.356Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.356Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_yahoo.svg
+[debug] [2026-07-25T07:36:15.356Z] [unzip] Entry: client/assets/provider-icons/auth_service_twitter.svg (compressed_size=444 bytes, uncompressed_size=751 bytes)
+[debug] [2026-07-25T07:36:15.356Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_twitter.svg
+[debug] [2026-07-25T07:36:15.356Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.356Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_twitter.svg
+[debug] [2026-07-25T07:36:15.356Z] [unzip] Entry: client/assets/provider-icons/auth_service_play_games.svg (compressed_size=565 bytes, uncompressed_size=1173 bytes)
+[debug] [2026-07-25T07:36:15.356Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_play_games.svg
+[debug] [2026-07-25T07:36:15.356Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.356Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_play_games.svg
+[debug] [2026-07-25T07:36:15.357Z] [unzip] Entry: client/assets/provider-icons/auth_service_email.svg (compressed_size=228 bytes, uncompressed_size=326 bytes)
+[debug] [2026-07-25T07:36:15.357Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_email.svg
+[debug] [2026-07-25T07:36:15.357Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.357Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_email.svg
+[debug] [2026-07-25T07:36:15.357Z] [unzip] Entry: client/assets/provider-icons/auth_service_google.svg (compressed_size=409 bytes, uncompressed_size=720 bytes)
+[debug] [2026-07-25T07:36:15.357Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_google.svg
+[debug] [2026-07-25T07:36:15.357Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.357Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_google.svg
+[debug] [2026-07-25T07:36:15.357Z] [unzip] Entry: client/assets/provider-icons/auth_service_oidc.svg (compressed_size=414 bytes, uncompressed_size=858 bytes)
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Processing entry: client/assets/provider-icons/auth_service_oidc.svg
+[debug] [2026-07-25T07:36:15.358Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons
+[debug] [2026-07-25T07:36:15.358Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/assets/provider-icons/auth_service_oidc.svg
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Entry: client/browserconfig.xml (compressed_size=491 bytes, uncompressed_size=822 bytes)
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Processing entry: client/browserconfig.xml
+[debug] [2026-07-25T07:36:15.358Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.358Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/browserconfig.xml
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Entry: client/favicon-32x32.png (compressed_size=475 bytes, uncompressed_size=475 bytes)
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Processing entry: client/favicon-32x32.png
+[debug] [2026-07-25T07:36:15.358Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Writing file: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/client/favicon-32x32.png
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Entry: server/ (compressed_size=0 bytes, uncompressed_size=0 bytes)
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Processing entry: server/
+[debug] [2026-07-25T07:36:15.358Z] [unzip] mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/server/
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Entry: server/server.mjs.map (compressed_size=217845 bytes, uncompressed_size=944978 bytes)
+[debug] [2026-07-25T07:36:15.358Z] [unzip] Processing entry: server/server.mjs.map
+[debug] [2026-07-25T07:36:15.358Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/server
+[debug] [2026-07-25T07:36:15.358Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/server/server.mjs.map
+[debug] [2026-07-25T07:36:15.361Z] [unzip] Entry: server/server.mjs (compressed_size=276407 bytes, uncompressed_size=933701 bytes)
+[debug] [2026-07-25T07:36:15.361Z] [unzip] Processing entry: server/server.mjs
+[debug] [2026-07-25T07:36:15.361Z] [unzip] else mkdir: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/server
+[debug] [2026-07-25T07:36:15.361Z] [unzip] deflating: /Users/aboelghet/.cache/firebase/emulators/ui-v1.15.0/server/server.mjs
+[debug] [2026-07-25T07:36:15.364Z] [Extensions] Connecting Extensions emulator, this is a noop.
+[info] i  functions: Watching "/Users/aboelghet/Developer/SpotDashboard/functions" for Cloud Functions... {"metadata":{"emulator":{"name":"functions"},"message":"Watching \"/Users/aboelghet/Developer/SpotDashboard/functions\" for Cloud Functions..."}}
+[debug] [2026-07-25T07:36:15.366Z] Validating nodejs source
+[warn] ⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] ⚠  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2026-07-25T07:36:16.351Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "lint": "eslint .",
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "arabic-reshaper": "^1.1.0",
+    "axios": "^1.13.2",
+    "bidi-js": "^1.0.3",
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^6.0.1",
+    "firebase-tools": "^15.11.0",
+    "pdfkit": "^0.17.2",
+    "svg-to-pdfkit": "^0.1.8",
+    "twilio": "^5.12.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "eslint-config-google": "^0.14.0",
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2026-07-25T07:36:16.351Z] Building nodejs source
+[debug] [2026-07-25T07:36:16.351Z] Failed to find version of module node: reached end of search path /Users/aboelghet/Developer/SpotDashboard/functions/node_modules
+[warn] ⚠  functions: Your requested "node" version "22" doesn't match your global version "24". Using node@24 from host. 
+[info] i  functions: Loaded environment variables from .env. 
+[debug] [2026-07-25T07:36:16.354Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-07-25T07:36:16.359Z] Found firebase-functions binary at '/Users/aboelghet/Developer/SpotDashboard/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8162
+
+[debug] [2026-07-25T07:36:16.921Z] Got response from /__/functions.yaml {"endpoints":{"sendAbsenceNotifications":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"sendAbsenceNotifications"},"notifyOnNewGrades":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.written","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"teachers/{teacherId}/groups/{groupId}/assignments/{assignmentId}"},"retry":false},"entryPoint":"notifyOnNewGrades"},"notifyOnScheduleException":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.written","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"teachers/{teacherId}/groups/{groupId}/exceptions/{exceptionId}"},"retry":false},"entryPoint":"notifyOnScheduleException"},"classReminder":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"scheduleTrigger":{"schedule":"*/15 * * * *","retryConfig":{},"timeZone":"Africa/Cairo"},"entryPoint":"classReminder"},"paymentReminder":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"scheduleTrigger":{"schedule":"0 14 * * *","retryConfig":{},"timeZone":"Africa/Cairo"},"entryPoint":"paymentReminder"},"getDashboardData":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"getDashboardData"},"checkParentExists":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"checkParentExists"},"notifyOnPayment":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.written","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"teachers/{teacherId}/groups/{groupId}/payments/{month}"},"retry":false},"entryPoint":"notifyOnPayment"},"sendCustomMessage":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"sendCustomMessage"},"processUploadedFile":{"platform":"gcfv2","availableMemoryMb":1024,"timeoutSeconds":540,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"cpu":1,"region":["us-central1"],"labels":{},"eventTrigger":{"eventType":"google.cloud.storage.object.v1.finalized","eventFilters":{"bucket":"learnaria-483e7.firebasestorage.app"},"retry":false},"entryPoint":"processUploadedFile"},"whatsappWebhook":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"httpsTrigger":{},"entryPoint":"whatsappWebhook"},"chatWithSpot":{"availableMemoryMb":1024,"timeoutSeconds":300,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"chatWithSpot"},"notifyOnPresence":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"eventTrigger":{"eventType":"google.cloud.firestore.document.v1.written","eventFilters":{"database":"(default)","namespace":"(default)"},"eventFilterPathPatterns":{"document":"teachers/{teacherId}/groups/{groupId}/dailyAttendance/{date}"},"retry":false},"entryPoint":"notifyOnPresence"},"autoAbsenceReminder":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"scheduleTrigger":{"schedule":"*/15 * * * *","retryConfig":{},"timeZone":"Africa/Cairo"},"entryPoint":"autoAbsenceReminder"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."}],"extensions":{}}
+[debug] [2026-07-25T07:36:20.959Z] defaultcredentials: writing to file /Users/aboelghet/.config/firebase/ahmadaboelghet_gmail_com_application_default_credentials.json
+[debug] [2026-07-25T07:36:20.961Z] Setting GAC to /Users/aboelghet/.config/firebase/ahmadaboelghet_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to /Users/aboelghet/.config/firebase/ahmadaboelghet_gmail_com_application_default_credentials.json"}}
+[info] ✔  functions: Loaded functions definitions from source: sendAbsenceNotifications, notifyOnNewGrades, notifyOnScheduleException, classReminder, paymentReminder, getDashboardData, checkParentExists, notifyOnPayment, sendCustomMessage, processUploadedFile, whatsappWebhook, chatWithSpot, notifyOnPresence, autoAbsenceReminder. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: sendAbsenceNotifications, notifyOnNewGrades, notifyOnScheduleException, classReminder, paymentReminder, getDashboardData, checkParentExists, notifyOnPayment, sendCustomMessage, processUploadedFile, whatsappWebhook, chatWithSpot, notifyOnPresence, autoAbsenceReminder."}}
+[info] ✔  functions[us-central1-sendAbsenceNotifications]: http function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/sendAbsenceNotifications). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/sendAbsenceNotifications)."}}
+[debug] [2026-07-25T07:36:20.967Z] Found a v2 firestore trigger.
+[debug] [2026-07-25T07:36:20.967Z] addFirestoreTrigger "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"teachers/{teacherId}/groups/{groupId}/assignments/{assignmentId}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2026-07-25T07:36:20.968Z] >>> [apiv2][query] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnNewGrades-0 [none]
+[debug] [2026-07-25T07:36:20.968Z] >>> [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnNewGrades-0 "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"teachers/{teacherId}/groups/{groupId}/assignments/{assignmentId}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2026-07-25T07:36:20.982Z] Jul 25, 2026 10:36:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 25, 2026 10:36:20 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\n"}}
+[debug] [2026-07-25T07:36:21.110Z] Jul 25, 2026 10:36:21 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 25, 2026 10:36:21 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected HTTP/2 connection.\n"}}
+[debug] [2026-07-25T07:36:21.402Z] <<< [apiv2][status] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnNewGrades-0 200
+[debug] [2026-07-25T07:36:21.402Z] <<< [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnNewGrades-0 {"eventType":"google.cloud.firestore.document.v1.written","database":"(default)","namespace":"(default)","document":{"value":"teachers/{teacherId}/groups/{groupId}/assignments/{assignmentId}","matchType":"PATH_PATTERN"}}
+[info] ✔  functions[us-central1-notifyOnNewGrades]: firestore function initialized. {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mfirestore\u001b[22m function initialized."}}
+[debug] [2026-07-25T07:36:21.403Z] Found a v2 firestore trigger.
+[debug] [2026-07-25T07:36:21.403Z] addFirestoreTrigger "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"teachers/{teacherId}/groups/{groupId}/exceptions/{exceptionId}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2026-07-25T07:36:21.403Z] >>> [apiv2][query] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnScheduleException-0 [none]
+[debug] [2026-07-25T07:36:21.403Z] >>> [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnScheduleException-0 "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"teachers/{teacherId}/groups/{groupId}/exceptions/{exceptionId}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2026-07-25T07:36:21.409Z] <<< [apiv2][status] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnScheduleException-0 200
+[debug] [2026-07-25T07:36:21.409Z] <<< [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnScheduleException-0 {"eventType":"google.cloud.firestore.document.v1.written","database":"(default)","namespace":"(default)","document":{"value":"teachers/{teacherId}/groups/{groupId}/exceptions/{exceptionId}","matchType":"PATH_PATTERN"}}
+[info] ✔  functions[us-central1-notifyOnScheduleException]: firestore function initialized. {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mfirestore\u001b[22m function initialized."}}
+[info] i  functions[us-central1-classReminder]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[info] i  functions[us-central1-paymentReminder]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[info] ✔  functions[us-central1-getDashboardData]: http function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/getDashboardData). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/getDashboardData)."}}
+[info] ✔  functions[us-central1-checkParentExists]: http function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/checkParentExists). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/checkParentExists)."}}
+[debug] [2026-07-25T07:36:21.410Z] Found a v2 firestore trigger.
+[debug] [2026-07-25T07:36:21.410Z] addFirestoreTrigger "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"teachers/{teacherId}/groups/{groupId}/payments/{month}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2026-07-25T07:36:21.410Z] >>> [apiv2][query] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnPayment-0 [none]
+[debug] [2026-07-25T07:36:21.410Z] >>> [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnPayment-0 "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"teachers/{teacherId}/groups/{groupId}/payments/{month}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2026-07-25T07:36:21.415Z] <<< [apiv2][status] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnPayment-0 200
+[debug] [2026-07-25T07:36:21.415Z] <<< [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnPayment-0 {"eventType":"google.cloud.firestore.document.v1.written","database":"(default)","namespace":"(default)","document":{"value":"teachers/{teacherId}/groups/{groupId}/payments/{month}","matchType":"PATH_PATTERN"}}
+[info] ✔  functions[us-central1-notifyOnPayment]: firestore function initialized. {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mfirestore\u001b[22m function initialized."}}
+[info] ✔  functions[us-central1-sendCustomMessage]: http function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/sendCustomMessage). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/sendCustomMessage)."}}
+[debug] [2026-07-25T07:36:21.415Z] addStorageTrigger {"eventTrigger":{"eventType":"google.cloud.storage.object.v1.finalized","resource":"learnaria-483e7.firebasestorage.app","eventFilters":{"bucket":"learnaria-483e7.firebasestorage.app"}}}
+[info] ✔  functions[us-central1-processUploadedFile]: storage function initialized. {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mstorage\u001b[22m function initialized."}}
+[info] ✔  functions[us-central1-whatsappWebhook]: http function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/whatsappWebhook). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/whatsappWebhook)."}}
+[info] ✔  functions[us-central1-chatWithSpot]: http function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/chatWithSpot). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/learnaria-483e7/us-central1/chatWithSpot)."}}
+[debug] [2026-07-25T07:36:21.415Z] Found a v2 firestore trigger.
+[debug] [2026-07-25T07:36:21.415Z] addFirestoreTrigger "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"teachers/{teacherId}/groups/{groupId}/dailyAttendance/{date}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2026-07-25T07:36:21.415Z] >>> [apiv2][query] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnPresence-0 [none]
+[debug] [2026-07-25T07:36:21.415Z] >>> [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnPresence-0 "{\"eventType\":\"google.cloud.firestore.document.v1.written\",\"database\":\"(default)\",\"namespace\":\"(default)\",\"document\":{\"value\":\"teachers/{teacherId}/groups/{groupId}/dailyAttendance/{date}\",\"matchType\":\"PATH_PATTERN\"}}"
+[debug] [2026-07-25T07:36:21.420Z] <<< [apiv2][status] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnPresence-0 200
+[debug] [2026-07-25T07:36:21.420Z] <<< [apiv2][body] POST http://127.0.0.1:8080/emulator/v1/projects/learnaria-483e7/eventarcTrigger?eventarcTriggerId=us-central1-notifyOnPresence-0 {"eventType":"google.cloud.firestore.document.v1.written","database":"(default)","namespace":"(default)","document":{"value":"teachers/{teacherId}/groups/{groupId}/dailyAttendance/{date}","matchType":"PATH_PATTERN"}}
+[info] ✔  functions[us-central1-notifyOnPresence]: firestore function initialized. {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mfirestore\u001b[22m function initialized."}}
+[info] i  functions[us-central1-autoAbsenceReminder]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[debug] [2026-07-25T07:36:21.428Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────┬────────────────┬──────────────────────────────────┐
+│ Emulator   │ Host:Port      │ View in Emulator UI              │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Functions  │ 127.0.0.1:5001 │ http://127.0.0.1:4000/functions  │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Firestore  │ 127.0.0.1:8080 │ http://127.0.0.1:4000/firestore  │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Hosting    │ 127.0.0.1:5002 │ n/a                              │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Storage    │ 127.0.0.1:9199 │ http://127.0.0.1:4000/storage    │
+├────────────┼────────────────┼──────────────────────────────────┤
+│ Extensions │ 127.0.0.1:5001 │ http://127.0.0.1:4000/extensions │
+└────────────┴────────────────┴──────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500, 9150
+┌─────────────────────────┬───────────────┬─────────────────────┐
+│ Extension Instance Name │ Extension Ref │ View in Emulator UI │
+└─────────────────────────┴───────────────┴─────────────────────┘
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2026-07-25T07:36:39.704Z] Jul 25, 2026 10:36:39 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler initChannel
+INFO: Connected to new websocket client
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 25, 2026 10:36:39 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler initChannel\nINFO: Connected to new websocket client\n"}}
+[debug] [2026-07-25T07:36:52.579Z] Jul 25, 2026 10:36:52 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler channelClosed
+INFO: Websocket client disconnected
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 25, 2026 10:36:52 AM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketChannelHandler channelClosed\nINFO: Websocket client disconnected\n"}}

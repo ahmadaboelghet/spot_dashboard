@@ -26,6 +26,9 @@
     "ignore": [
       "firebase.json",
       "**/.*",
+      "**/.*/**",
+      "**/.git/**",
+      "**/.agents/**",
       "**/node_modules/**",
       "functions/**",
       "spot_kmp/**",
