@@ -5850,73 +5850,70 @@ async function submitManualCardLink() {
 }
 
 // ==========================================
-// 🚀 Hardware Scanner Global Listener (Auto-Capture)
+// 🚀 Hardware Scanner Global Listener (Auto-Capture) - MAC COMPATIBLE
 // ==========================================
 let hwScannerBuffer = "";
 let hwScannerLastKeyTime = Date.now();
 
 document.addEventListener('keydown', async (e) => {
-    // We only care about characters and Enter
+    // إحنا مهتمين بالحروف وزرار الـ Enter بس
     if (e.key !== 'Enter' && e.key.length !== 1) return;
 
     const currentTime = Date.now();
     
-    // Most hardware scanners type extremely fast (10-30ms per character).
-    // If the gap is more than 50ms, it's likely a human typing, so reset the buffer.
-    if (currentTime - hwScannerLastKeyTime > 50) {
+    // تم زيادة الوقت لـ 150 ملي ثانية عشان يتوافق مع سرعة استجابة الـ USB في أجهزة Mac
+    if (currentTime - hwScannerLastKeyTime > 150) {
         hwScannerBuffer = "";
     }
     
     hwScannerLastKeyTime = currentTime;
 
     if (e.key === "Enter") {
-        if (hwScannerBuffer.length >= 8 && hwScannerBuffer.startsWith("NAZ-")) {
-            // It's a valid scanner scan!
-            const qrCode = hwScannerBuffer;
-            hwScannerBuffer = ""; // Reset for next scan
+        // لو السكانر داس انتر، نأخد الكود المكتوب
+        const qrCode = hwScannerBuffer.trim();
+        hwScannerBuffer = ""; // تصفير للعملية القادمة
+        
+        // التأكد إن في كود فعلاً اتقرا (شيلنا شرط الـ NAZ- عشان يقبل أرقام التليفونات)
+        if (qrCode.length >= 4) {
             
-            // 1. Prevent form submission if an input was focused
+            // 1. منع الـ Form من الإرسال لو المدرس كان واقف بالماوس جوا خانة بحث أو إدخال
             const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
             const isInput = activeTag === 'input' || activeTag === 'textarea';
             if (isInput) {
                 e.preventDefault();
-                // Remove the rapid typing from the input if it sneaked in
                 const currentVal = document.activeElement.value;
                 if (currentVal.toUpperCase().endsWith(qrCode)) {
                     document.activeElement.value = currentVal.slice(0, -qrCode.length);
                 }
             }
 
-            // 2. Determine mode based on UI state
+            // 2. تحديد وضع السكانر (هل إحنا بنربط كارت ولا بناخد غياب ولا بنحّصل مصاريف؟)
             const linkModal = document.getElementById('cardLinkModal');
             if (linkModal && !linkModal.classList.contains('hidden')) {
                 currentScannerMode = 'link-card';
-                // Hide modal and link
                 if (studentPendingCardLink) {
                     await linkCardToStudent(studentPendingCardLink, qrCode);
                 }
                 return;
             }
 
-            // Default to Daily Attendance if not linking
             const activeTab = document.querySelector('.tab-button.active')?.dataset.tab;
             if (activeTab === 'payments') {
                 currentScannerMode = 'payments';
             } else {
                 currentScannerMode = 'daily';
+                // لو المدرس مش واقف في شاشة الحصة، حوله عليها تلقائي
                 if (activeTab !== 'daily') switchTab('daily');
             }
 
-            // 3. Process the scan
+            // 3. إرسال الكود لنفس الدالة اللي بتشغل كاميرا اللابتوب/الموبايل
             await handleScan(qrCode);
-        } else {
-            // Not a NAZ- code, just clear buffer
-            hwScannerBuffer = "";
         }
         return;
     }
 
     if (e.key.length === 1) {
-        hwScannerBuffer += e.key.toUpperCase(); // Ensure uppercase matching
+        // تحويل الحروف لكابيتال لتوحيد الصيغة
+        hwScannerBuffer += e.key.toUpperCase();
     }
 });
