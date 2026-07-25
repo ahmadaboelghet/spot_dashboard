@@ -22,6 +22,19 @@
 <body class="font-cairo transition-colors duration-300 profile-grid-bg theme-base">
 
     <!-- Minimalist Floating Fixed Navbar (Removed navbar icons for clean European layout) -->
+    <!-- كود إصلاح استجابة الـ Navbar -->
+    <style>
+        /* إخفاء الروابط وزر ابدأ الآن في الموبايل والتابلت */
+        @media (max-width: 1023px) {
+            .desktop-only-nav { display: none !important; }
+        }
+        /* إخفاء الـ 3 شرط في الشاشات الكبيرة (الويب) */
+        @media (min-width: 1024px) {
+            .mobile-only-nav { display: none !important; }
+        }
+    </style>
+
+    <!-- Minimalist Floating Fixed Navbar -->
     <nav class="fixed top-0 left-0 right-0 w-full z-50 glass-panel border-b-0 transition-all duration-300 py-3" id="navbar">
         <div class="container mx-auto px-4 md:px-6 flex justify-between items-center">
             
@@ -38,7 +51,7 @@
             </a>
 
             <!-- Clean European Nav Links (No Icons) -->
-            <div class="hidden  lg:flex items-center nav-links-wrapper">
+            <div class="desktop-only-nav items-center nav-links-wrapper">
                 <a href="#about" class="transition-colors nav-link link-text font-bold" style="text-decoration:none;">
                     <span data-i18n="nav_about">عن المنصة</span>
                 </a>
@@ -67,19 +80,19 @@
                 </button>
 
                 <!-- Start Now Button (Desktop only) -->
-                <a href="dashboard.html" class="btn-primary-custom hidden lg:flex items-center font-bold" style="display: flex; gap: 0.5rem; border-radius: 12px; padding: 10px 22px; font-size:13px; text-decoration:none;">
+                <a href="dashboard.html" class="desktop-only-nav btn-primary-custom items-center font-bold" style="gap: 0.5rem; border-radius: 12px; padding: 10px 22px; font-size:13px; text-decoration:none;">
                     <span data-i18n="nav_enroll">ابدأ الآن</span>
                     <i class="ri-arrow-left-line nav-arrow"></i>
                 </a>
 
                 <!-- Hamburger Button (Mobile only) -->
-                <button id="mobileMenuToggle" class="nav-circle-btn lg:hidden" aria-label="Toggle Menu">
+                <button id="mobileMenuToggle" class="mobile-only-nav nav-circle-btn" aria-label="Toggle Menu">
                     <i class="ri-menu-3-line text-xl" id="menuToggleIcon"></i>
                 </button>
             </div>
         </div>
 
-        <!-- Glassmorphism Dropdown Mobile Menu Panel (Unmatched dela3) -->
+        <!-- Glassmorphism Dropdown Mobile Menu Panel -->
         <div id="mobileMenuPanel" class="hidden absolute top-full left-0 right-0 w-full glass-panel border-t border-b-0 py-6 px-6 shadow-2xl transition-all duration-300 flex flex-col gap-5 z-40" style="backdrop-filter: blur(25px); background: rgba(15, 23, 42, 0.95); text-align: right;">
             <a href="#about" class="mobile-nav-link font-bold text-lg py-2 border-b border-white/5" style="text-decoration:none;" data-i18n="nav_about">عن المنصة</a>
             <a href="#features" class="mobile-nav-link font-bold text-lg py-2 border-b border-white/5" style="text-decoration:none;" data-i18n="nav_features">المميزات</a>
