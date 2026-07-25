@@ -1,2154 +1,639 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-
+<html lang="ar" dir="rtl" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title data-i18n="page_title">الناظر - المعلم الذكي</title>
     
-    <!-- SEO Meta Tags -->
-    <title data-key="pageTitle">الناظر - المعلم الذكي</title>
-    <meta name="description" content="منصة الناظر التعليمية - لوحة تحكم المعلم الذكي لمتابعة الطلاب وإدارة الحصص والامتحانات والواجبات بدقة وسهولة.">
-    <meta name="keywords" content="الناظر, الناظر التعليمية, لوحة المعلم, المعلم الذكي, متابعة الطلاب, elnazer, elnazer-edu, منصة الناظر">
-    <meta name="author" content="الناظر التعليمية">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://www.elnazer-edu.com/">
-
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://www.elnazer-edu.com/">
-    <meta property="og:title" content="الناظر - لوحة تحكم المعلم الذكي">
-    <meta property="og:description" content="منصة الناظر التعليمية - لوحة تحكم المعلم الذكي لمتابعة الطلاب وإدارة الحصص والامتحانات والواجبات بدقة وسهولة.">
-    <meta property="og:image" content="https://www.elnazer-edu.com/assets/images/learnaria_logo.png">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://www.elnazer-edu.com/">
-    <meta property="twitter:title" content="الناظر - لوحة تحكم المعلم الذكي">
-    <meta property="twitter:description" content="منصة الناظر التعليمية - لوحة تحكم المعلم الذكي لمتابعة الطلاب وإدارة الحصص والامتحانات والواجبات بدقة وسهولة.">
-    <meta property="twitter:image" content="https://www.elnazer-edu.com/assets/images/learnaria_logo.png">
-
-    <!-- Anti-Flash Login Script (Prevents login screen from flashing on refresh) -->
-    <script>
-        try {
-            if (sessionStorage.getItem('learnaria-tid') || localStorage.getItem('learnaria-remember')) {
-                document.documentElement.classList.add('is-logged-in');
-            }
-        } catch (e) {
-            console.warn("Storage access blocked:", e);
-        }
-    </script>
-    <style>
-        html.is-logged-in body #landingSection { display: none !important; }
-    </style>
-
-    <!-- Icons & Favicons -->
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" href="/favicon-48x48.png" sizes="48x48" type="image/png">
-    <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
-    <link rel="apple-touch-icon" href="/assets/images/learnaria_logo.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/assets/images/learnaria_logo.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/learnaria_logo.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="/assets/images/learnaria_logo.png">
-
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="الناظر">
-
-    <link rel="manifest" href="manifest.json">
-
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;600;800&display=swap"
-        rel="stylesheet">
-
-    <link rel="stylesheet" href="css/tailwind.css">
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome & RemixIcon for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="css/style.css?v=2">
-
-    <!-- JSON-LD Structured Data for Google SEO -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "الناظر",
-      "alternateName": "منصة الناظر التعليمية",
-      "applicationCategory": "EducationalApplication",
-      "operatingSystem": "Web",
-      "url": "https://www.elnazer-edu.com/",
-      "description": "لوحة تحكم المعلم الذكي لمتابعة الطلاب وإدارة الحصص والامتحانات بدقة وسهولة.",
-      "creator": {
-        "@type": "Organization",
-        "name": "الناظر التعليمية"
-      }
-    }
-    </script>
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/tailwind.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/landing.css">
 </head>
+<body class="font-cairo transition-colors duration-300 profile-grid-bg theme-base">
 
-<body class="font-cairo bg-gray-100 text-gray-800 transition-colors duration-300 dark:bg-darkBg dark:text-gray-100 profile-grid-bg">
-
-    <nav
-        class="app-bar fixed top-4 left-4 right-4 md:left-10 md:right-10 rounded-2xl bg-white dark:bg-darkSurface shadow-lg z-50 px-6 py-3 flex justify-between items-center border border-gray-200 dark:border-gray-800 transition-colors duration-300">
-        <div class="flex items-center gap-3">
-            <div class="relative">
-                <img src="assets/images/learnaria_logo.png" alt="Logo"
-                    class="h-10 w-10 rounded-xl shadow-sm border border-brand">
-                <div
-                    class="absolute -bottom-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white dark:border-darkSurface">
+    <!-- Minimalist Floating Fixed Navbar (Removed navbar icons for clean European layout) -->
+    <nav class="fixed top-0 z-50 glass-panel border-b-0 transition-all duration-300 py-3" id="navbar">
+        <div class="container mx-auto px-6 flex justify-between items-center">
+            
+            <!-- Logo (Dashboard Style - Arabic "الناظر" Always) -->
+            <a href="#" class="flex items-center gap-3 text-2xl font-black hover:scale-105 transition-transform" style="display:flex; align-items:center; text-decoration:none;">
+                <div class="logo-container">
+                    <div class="logo-box">
+                        <img src="assets/images/learnaria_logo.png" alt="الناظر">
+                    </div>
+                    <!-- Status Dot -->
+                    <div class="logo-status-dot"></div>
                 </div>
-            </div>
-            <h1 class="text-2xl font-black text-gray-900 dark:text-white font-cairo tracking-tight">الناظر<span
-                    class="text-brand">.</span></h1>
-        </div>
+                <span class="font-cairo logo-text">الناظر<span class="logo-dot">.</span></span>
+            </a>
 
-        <div class="flex items-center gap-3 md:gap-5">
-            <div
-                class="hidden md:flex items-center gap-3 bg-gray-100 dark:bg-black px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-800">
-                <div id="statusIndicator" class="flex items-center gap-2 text-xs font-bold transition-colors">
-                    <span class="status-dot w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-                    <span class="status-text">...</span>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <button id="languageToggleButton"
-                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-brand dark:hover:bg-brand hover:text-black transition-all font-bold text-sm shadow-sm dark:text-gray-200 dark:hover:text-black">EN</button>
-
-                <button id="darkModeToggleButton"
-                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-brand dark:hover:bg-brand hover:text-black transition-all shadow-sm flex items-center justify-center dark:text-gray-200 dark:hover:text-black">
-                    <i id="darkModeIcon" class="ri-moon-line text-lg"></i>
-                    <i id="lightModeIcon" class="ri-sun-line text-lg hidden"></i>
-                </button>
-
-                <a href="https://wa.me/+201001133246" target="_blank"
-                    class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-green-500 dark:hover:bg-green-500 hover:text-white dark:hover:text-white transition-all shadow-sm flex items-center justify-center dark:text-gray-200"
-                    title="تواصل معنا">
-                    <i class="ri-customer-service-2-line text-lg"></i>
+            <!-- Clean European Nav Links (No Icons) -->
+            <div class="hidden md:flex items-center nav-links-wrapper">
+                <a href="#about" class="transition-colors nav-link link-text font-bold" style="text-decoration:none;">
+                    <span data-i18n="nav_about">عن المنصة</span>
                 </a>
+                <a href="#features" class="transition-colors nav-link link-text font-bold" style="text-decoration:none;">
+                    <span data-i18n="nav_features">المميزات</span>
+                </a>
+                <a href="#pricing" class="transition-colors nav-link link-text font-bold" style="text-decoration:none;">
+                    <span data-i18n="nav_pricing">الأسعار</span>
+                </a>
+                <a href="#download" class="transition-colors nav-link link-text font-bold" style="text-decoration:none;">
+                    <span data-i18n="nav_download">التطبيقات</span>
+                </a>
+            </div>
 
-                <button id="logoutButton"
-                    class="hidden w-10 h-10 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm flex items-center justify-center dark:bg-red-900/20">
-                    <i class="ri-logout-box-r-line text-lg"></i>
+            <!-- Actions -->
+            <div class="flex items-center" style="display: flex; gap: 0.75rem; align-items:center;">
+                <!-- Theme Toggle (Circular) -->
+                <button id="themeToggle" class="nav-circle-btn">
+                    <i class="ri-moon-line dark:hidden"></i>
+                    <i class="ri-sun-line hidden dark:block text-yellow-400"></i>
                 </button>
+                
+                <!-- Language Toggle (Circular) -->
+                <button id="langToggle" class="nav-circle-btn font-bold">
+                    AR
+                </button>
+
+                <a href="dashboard.html" class="btn-primary-custom hidden md:flex items-center font-bold" style="display: flex; gap: 0.5rem; border-radius: 12px; padding: 10px 22px; font-size:13px; text-decoration:none;">
+                    <span data-i18n="nav_enroll">ابدأ الآن</span>
+                    <i class="ri-arrow-left-line nav-arrow"></i>
+                </a>
             </div>
         </div>
     </nav>
 
-    <div id="landingSection" class="min-h-screen flex items-center justify-center pt-24 pb-10 relative overflow-hidden bg-transparent">
-        <!-- Modern Blur Blobs -->
-        <div class="absolute -top-40 -right-40 w-96 h-96 bg-brand/20 dark:bg-brand/10 rounded-full blur-3xl deluxe-float -z-10"></div>
-        <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-500/20 dark:bg-blue-500/10 rounded-full blur-3xl deluxe-float -z-10" style="animation-delay: -3s;"></div>
+    <!-- Hero Section (About / Eye Catching) -->
+    <section id="about" class="relative flex items-center overflow-hidden landing-py-hero" style="min-height: 100vh;">
+        <div class="absolute top-1/4 left-1/4 animate-blob" style="width:500px; height:500px; background:#F2CE5A; opacity:0.18; border-radius:50%; filter:blur(120px); z-index:-1;"></div>
+        <div class="absolute bottom-1/4 right-1/4 animate-blob animation-delay-2000" style="width:400px; height:400px; background:var(--primary); opacity:0.12; border-radius:50%; filter:blur(120px); z-index:-1;"></div>
 
-        <!-- Decorative Floating Grid Dots & Pluses -->
-        <div class="absolute hidden lg:block top-1/4 left-1/3 text-brand/20 dark:text-brand/10 text-2xl font-bold font-sans pointer-events-none select-none animate-pulse-slow">+</div>
-        <div class="absolute hidden lg:block bottom-1/3 right-1/4 text-blue-500/25 dark:text-blue-500/15 text-2xl font-bold font-sans pointer-events-none select-none animate-pulse-slow" style="animation-delay: 1.5s;">+</div>
-        <div class="absolute hidden lg:block top-2/3 left-[15%] text-brand/15 text-3xl font-bold font-sans pointer-events-none select-none animate-pulse-slow" style="animation-delay: 3s;">+</div>
-        <div class="absolute hidden lg:block top-12 right-1/3 text-blue-500/15 text-xl font-bold font-sans pointer-events-none select-none animate-pulse-slow" style="animation-delay: 0.8s;">+</div>
-        
-        <!-- Floating sparkles in the background -->
-        <div class="absolute hidden lg:block top-[15%] left-[25%] text-brand/30 dark:text-brand/20 text-lg pointer-events-none select-none deluxe-float" style="animation-delay: -0.5s;"><i class="ri-sparkle-fill"></i></div>
-        <div class="absolute hidden lg:block bottom-[25%] left-[40%] text-blue-400/30 dark:text-blue-400/20 text-2xl pointer-events-none select-none deluxe-float" style="animation-delay: -2.5s;"><i class="ri-sparkle-fill"></i></div>
-        <div class="absolute hidden lg:block top-[45%] right-[22%] text-brand/25 dark:text-brand/15 text-sm pointer-events-none select-none deluxe-float" style="animation-delay: -1.2s;"><i class="ri-sparkle-fill"></i></div>
-        
-        <!-- Floating Achievement Badges -->
-        <div class="absolute hidden xl:flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-yellow-400 to-amber-500 text-black shadow-lg shadow-yellow-500/10 top-24 right-[28%] deluxe-float opacity-80 pointer-events-none animate-pulse" style="animation-delay: -1.5s;">
-            <i class="ri-trophy-fill text-xl"></i>
-        </div>
-        <div class="absolute hidden xl:flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/10 bottom-24 left-[24%] deluxe-float opacity-80 pointer-events-none animate-pulse" style="animation-delay: -3.5s;">
-            <i class="ri-brain-fill text-xl"></i>
-        </div>
-        <div class="absolute hidden xl:flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-400 to-blue-500 text-white shadow-md top-1/2 left-[5%] deluxe-float opacity-70 pointer-events-none animate-pulse" style="animation-delay: -0.8s;">
-            <i class="ri-sparkle-fill text-lg"></i>
-        </div>
-
-        <!-- Floating Mock Dashboard Cards to Fill Space -->
-        <div class="absolute hidden xl:flex items-center gap-3 p-3.5 bg-white/40 dark:bg-zinc-800/30 backdrop-blur-md border border-white/30 dark:border-white/5 rounded-2xl shadow-lg top-20 left-16 deluxe-float opacity-75 pointer-events-none">
-            <div class="w-8 h-8 rounded-xl bg-green-500/20 text-green-500 flex items-center justify-center text-lg">
-                <i class="ri-checkbox-circle-fill"></i>
-            </div>
-            <div class="text-right">
-                <p class="text-[9px] font-bold text-gray-500 dark:text-gray-400">حضور ذكي</p>
-                <p class="text-xs font-black text-gray-800 dark:text-white mt-0.5">تم رصد حضور أحمد ممدوح ✅</p>
-            </div>
-        </div>
-
-        <div class="absolute hidden xl:flex items-center gap-3 p-3.5 bg-white/40 dark:bg-zinc-800/30 backdrop-blur-md border border-white/30 dark:border-white/5 rounded-2xl shadow-lg bottom-20 right-16 deluxe-float opacity-75 pointer-events-none" style="animation-delay: -2s;">
-            <div class="w-8 h-8 rounded-xl bg-brand/20 text-brand flex items-center justify-center text-lg">
-                <i class="ri-bar-chart-fill"></i>
-            </div>
-            <div class="text-right">
-                <p class="text-[9px] font-bold text-gray-500 dark:text-gray-400">نسبة الحضور اليوم</p>
-                <p class="text-xs font-black text-gray-800 dark:text-white mt-0.5">96.4% (مستقر)</p>
-            </div>
-        </div>
-
-        <div class="absolute hidden xl:flex items-center gap-3 p-3.5 bg-white/40 dark:bg-zinc-800/30 backdrop-blur-md border border-white/30 dark:border-white/5 rounded-2xl shadow-lg top-1/2 -translate-y-1/2 right-12 deluxe-float opacity-65 pointer-events-none" style="animation-delay: -4s;">
-            <div class="w-8 h-8 rounded-xl bg-green-500/20 text-green-500 flex items-center justify-center text-lg">
-                <i class="ri-whatsapp-line"></i>
-            </div>
-            <div class="text-right">
-                <p class="text-[9px] font-bold text-gray-500 dark:text-gray-400">إشعارات فورية</p>
-                <p class="text-xs font-black text-gray-800 dark:text-white mt-0.5">تم إرسال غياب الطالب لولي الأمر 📱</p>
-            </div>
-        </div>
-
-        <div class="absolute hidden xl:flex items-center gap-3 p-3.5 bg-white/40 dark:bg-zinc-800/30 backdrop-blur-md border border-white/30 dark:border-white/5 rounded-2xl shadow-lg top-1/3 left-10 deluxe-float opacity-60 pointer-events-none" style="animation-delay: -1s;">
-            <div class="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg">
-                <i class="ri-wallet-3-line"></i>
-            </div>
-            <div class="text-right">
-                <p class="text-[9px] font-bold text-gray-500 dark:text-gray-400">تحصيل المصروفات</p>
-                <p class="text-xs font-black text-gray-800 dark:text-white mt-0.5">تم تسديد شهر يونيو 💳</p>
-            </div>
-        </div>
-
-        <div class="container mx-auto px-4 max-w-5xl z-10">
-            <!-- Unified split-card portal -->
-            <div class="flex flex-col lg:flex-row rounded-3xl overflow-hidden shadow-2xl border border-gray-200/60 dark:border-gray-800/80 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl transition-all duration-300 hover:shadow-brand/5">
+        <div class="container mx-auto px-6">
+            <div class="grid lg:grid-cols-2 items-center" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items:center;">
                 
-                <!-- Left Side: Branding and Features (Sleek Dark Design) -->
-                <div class="w-full lg:w-[45%] bg-gradient-to-br from-gray-950 via-zinc-900 to-black text-white p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden">
-                    <div class="absolute -top-20 -left-20 w-60 h-60 bg-brand/10 rounded-full blur-2xl"></div>
-                    <!-- Tech globe watermark -->
-                    <div class="absolute -right-12 -bottom-12 opacity-10 pointer-events-none select-none translate-x-6 translate-y-6">
-                        <i class="ri-globe-line text-[250px] text-white"></i>
+                <!-- Text Content -->
+                <div class="reveal-up z-10 text-center lg:text-start" style="text-align: right;">
+                    <!-- Live Ticker Badge -->
+                    <div class="badge-custom flex items-center gap-2 mb-6 animate-pulse" style="display: inline-flex; align-items: center; border-radius: 50px; padding: 8px 20px; font-size: 13px; font-weight: bold; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #10b981;">
+                        <span class="relative flex h-2.5 w-2.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                        </span>
+                        <span data-i18n="hero_live_teachers">4,210 معلماً متصل الآن يباشرون أعمالهم</span>
                     </div>
                     
-                    <div class="relative z-10 space-y-8">
-                        <div class="flex items-center gap-3">
-                            <img src="assets/images/learnaria_logo.png" alt="Logo" class="h-12 w-12 rounded-xl shadow-lg border border-brand/30">
-                            <h1 class="text-3xl font-black font-cairo tracking-tight">الناظر<span class="text-brand">.</span></h1>
-                        </div>
-                        
-                        <div class="space-y-4">
-                            <div class="inline-block bg-brand/20 text-brand px-3 py-1 rounded-full text-xs font-bold border border-brand/20" data-key="landingNewVersion">
-                                🚀 الإصدار الجديد متاح الآن
-                            </div>
-                            <h2 class="text-3xl lg:text-4xl font-extrabold font-cairo leading-tight">
-                                إدارتك كلها في <span class="text-brand">مكان واحد.</span>
-                            </h2>
-                            <p class="text-sm text-gray-400 leading-relaxed font-medium" data-key="landingHeroSubtitle">
-                                تطبيق <strong>الناظر</strong> هو مساعدك الشخصي الذكي. رصد غياب بالـ QR، متابعة درجات، تحصيل مصروفات، وتواصل فوري مع أولياء الأمور.
-                            </p>
-                        </div>
-                    </div>
+                    <h1 class="landing-text-huge font-black mb-6 heading-text" style="margin-bottom: 1.5rem; line-height:1.2;">
+                        <span data-i18n="hero_title_1">منصة الناظر<span class="logo-dot">.</span> لإدارة التعليم</span> <br>
+                        <span data-i18n="hero_title_2">وداعاً للأعباء الورقية واليدوية</span>
+                    </h1>
                     
-                    <!-- Sleek vertical list of features -->
-                    <div class="relative z-10 space-y-5 mt-10 lg:mt-0">
-                        <div class="flex items-center gap-3 bg-white/5 p-3.5 rounded-2xl border border-white/5">
-                            <div class="w-9 h-9 rounded-xl bg-brand/20 text-brand flex items-center justify-center text-lg">
-                                <i class="ri-qr-scan-2-line"></i>
-                            </div>
-                            <div class="text-right">
-                                <h4 class="font-bold text-xs" data-key="featureSmartAttendance">غياب ذكي</h4>
-                                <p class="text-[10px] text-gray-400 mt-0.5" data-key="featureSmartAttendanceSub">سكانر سريع جداً</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 bg-white/5 p-3.5 rounded-2xl border border-white/5">
-                            <div class="w-9 h-9 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center text-lg">
-                                <i class="ri-whatsapp-line"></i>
-                            </div>
-                            <div class="text-right">
-                                <h4 class="font-bold text-xs" data-key="featureInstantConnect">تواصل فوري</h4>
-                                <p class="text-[10px] text-gray-400 mt-0.5" data-key="featureInstantConnectSub">رابط لولي الأمر</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 bg-white/5 p-3.5 rounded-2xl border border-white/5">
-                            <div class="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg">
-                                <i class="ri-money-dollar-circle-line"></i>
-                            </div>
-                            <div class="text-right">
-                                <h4 class="font-bold text-xs" data-key="featureFinance">تحصيل مالي</h4>
-                                <p class="text-[10px] text-gray-400 mt-0.5" data-key="featureFinanceSub">متابعة دقيقة</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Right Side: Login Form (Sleek Light/Dark Design) -->
-                <div class="w-full lg:w-[55%] p-8 lg:p-12 flex flex-col justify-center bg-white/30 dark:bg-black/20">
-                    <div class="text-center lg:text-right mb-8">
-                        <h3 class="text-2xl font-black text-gray-900 dark:text-white font-cairo" data-key="teacherLoginTitle">
-                            بوابة المعلم الذكي</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 font-medium" data-key="teacherLoginPrompt">سجل دخولك الآن للبدء في إدارة صفوفك الذكية</p>
+                    <p class="landing-text-normal mb-8 sub-text font-semibold" data-i18n="hero_subtitle" style="margin-bottom: 2.5rem; max-width: 600px;">
+                        المعلم المحترف يستحق نظاماً محترفاً. منصة الناظر تمنحك القوة والتحكم المطلق لإدارة مجموعاتك الدراسية وحصصك، وإعداد وتصحيح الامتحانات، ومتابعة درجات وغياب الطلاب تلقائياً، مع ربط أولياء الأمور فوريًا بكل التفاصيل لتتفرغ تماماً للتدريس والإبداع.
+                    </p>
+                    
+                    <div style="display:flex; gap:1.5rem; justify-content: flex-end;" class="hero-buttons-container">
+                        <a href="dashboard.html" class="btn-primary-custom btn-glowing-gold font-bold hover:scale-105 transition-transform" style="padding:14px 28px; font-size:1.1rem; display:flex; align-items:center; gap:10px; border-radius:12px; text-decoration:none;">
+                            <span data-i18n="hero_btn_primary">ابدأ مجاناً الآن</span>
+                            <i class="ri-arrow-left-line nav-arrow"></i>
+                        </a>
+                        <a href="#features" class="btn-secondary-custom font-bold hover:-translate-y-1 transition-transform" style="padding:14px 28px; font-size:1.1rem; display:flex; align-items:center; gap:10px; border-radius:12px; text-decoration:none;">
+                            <i class="ri-play-circle-line text-2xl"></i>
+                            <span data-i18n="hero_btn_secondary">شاهد المميزات</span>
+                        </a>
                     </div>
 
-                    <div class="space-y-5">
-                        <div class="relative group">
-                            <div class="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
-                                <i class="ri-smartphone-line text-xl"></i>
-                            </div>
-                            <input type="tel" id="teacherPhoneInput"
-                                class="w-full py-4 ps-12 pe-4 bg-gray-50/80 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-2xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal text-left"
-                                placeholder="01xxxxxxxxx" data-key-placeholder="phonePlaceholder">
-                        </div>
-
-                        <div class="relative group">
-                            <div class="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand transition-colors">
-                                <i class="ri-lock-2-line text-xl"></i>
-                            </div>
-                            <input type="password" id="teacherPasswordInput"
-                                class="w-full py-4 ps-12 pe-12 bg-gray-50/80 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-2xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all font-bold text-gray-800 dark:text-white text-lg placeholder:font-normal text-left"
-                                placeholder="كلمة المرور" data-key-placeholder="passwordPlaceholder">
-                            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 end-0 pe-4 flex items-center text-gray-400 hover:text-brand transition-colors">
-                                <i id="passwordToggleIcon" class="ri-eye-line text-xl"></i>
-                            </button>
-                        </div>
-
-                        <!-- Remember Me & Support Row -->
-                        <div class="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 mt-2 px-1">
-                            <label class="flex items-center gap-2 cursor-pointer select-none">
-                                <input type="checkbox" id="rememberMeInput" checked class="rounded border-gray-300 dark:border-gray-700 text-brand focus:ring-brand bg-white dark:bg-zinc-800">
-                                <span>تذكرني</span>
-                            </label>
-                            <a href="https://wa.me/+201001133246" target="_blank" class="text-brand hover:underline">نسيت كلمة المرور؟</a>
-                        </div>
-
-                        <button id="setTeacherButton"
-                            class="w-full bg-gradient-to-r from-brand via-yellow-400 to-brandHover hover:from-brandHover hover:to-brand text-black font-black text-lg py-4 rounded-2xl shadow-[0_4px_20px_rgba(242,206,90,0.25)] hover:shadow-[0_8px_30px_rgba(242,206,90,0.5)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 group border-0">
-                            <span data-key="loginButton">تسجيل الدخول</span>
-                            <i class="ri-arrow-left-line group-hover:-translate-x-1 transition-transform login-arrow"></i>
-                        </button>
-                    </div>
-
-                    <!-- Helpful System Hint Box to Fill Empty Space -->
-                    <div class="mt-8 p-4 bg-yellow-500/5 dark:bg-yellow-500/10 border border-yellow-500/20 dark:border-yellow-500/10 rounded-2xl flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-xl bg-brand/20 text-brand flex items-center justify-center flex-shrink-0 text-base">
-                            <i class="ri-lightbulb-line"></i>
-                        </div>
-                        <p class="text-[11px] text-gray-600 dark:text-gray-400 leading-normal font-medium text-right">لوحة التحكم تدعم المزامنة السريعة للغياب والدرجات بدون إنترنت وتحديثها فور استرجاع الاتصال.</p>
-                    </div>
-
-                    <div class="mt-6 text-center lg:text-right">
-                        <p class="text-xs text-gray-400 font-medium">تواجه مشكلة؟ <a href="https://wa.me/+201001133246"
-                                target="_blank" class="text-brand hover:underline font-bold">تواصل مع الدعم الفني</a>
-                        </p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="text-center text-gray-400 text-xs mt-8" data-key="footerText">
-                © 2026 نظام الناظر. Made with <i class="ri-heart-fill text-red-500"></i> for Teachers.
-            </div>
-        </div>
-    </div>
-
-    <!-- Onboarding Group Selector Portal (Immersive Full Screen) -->
-    <div id="groupSelectorPortal" class="container mx-auto px-4 pt-28 pb-10 max-w-4xl hidden animate-fade-in">
-        <div class="glass-panel p-8 md:p-12 border border-gray-200/50 dark:border-gray-800 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md shadow-2xl rounded-3xl relative overflow-hidden">
-            <!-- Glowing background blobs inside portal -->
-            <div class="absolute -top-20 -left-20 w-72 h-72 bg-brand/20 dark:bg-brand/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-20 -right-20 w-72 h-72 bg-blue-500/20 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-            <div class="relative z-10 text-center mb-10 max-w-xl mx-auto space-y-4">
-                <div class="flex items-center justify-center gap-3 mb-2">
-                    <img src="assets/images/favicon.png" alt="Logo" class="h-12 w-12 rounded-xl shadow-lg border border-brand/30">
-                    <h1 class="text-3xl font-black text-gray-900 dark:text-white font-cairo tracking-tight">الناظر<span class="text-brand">.</span></h1>
-                </div>
-                <h2 id="portalWelcomeTeacher" class="text-2xl font-black text-gray-800 dark:text-white font-cairo">أهلاً بك، مستر 👋</h2>
-                <p data-key="portalGroupDesc" class="text-sm text-gray-500 dark:text-gray-400 font-bold max-w-md mx-auto leading-relaxed">
-                    من فضلك اختر المجموعة الدراسية التي ترغب في إدارتها الآن للبدء، أو يمكنك إضافة مجموعة جديدة للعمل عليها.
-                </p>
-            </div>
-            
-            <div class="relative z-10 space-y-6">
-                <div class="flex items-center justify-between border-b border-gray-200/50 dark:border-gray-800 pb-4 text-right">
-                    <span data-key="portalGroupsHeader" class="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">المجموعات الدراسية</span>
-                    <button onclick="window.openAddNewGroupFlow()" class="bg-brand/10 hover:bg-brand/20 text-brand font-black px-4 py-2 rounded-xl text-xs transition-all active:scale-95 flex items-center gap-1">
-                        <i class="ri-add-line text-sm"></i>
-                        <span data-key="portalAddGroupBtn">إضافة مجموعة جديدة</span>
-                    </button>
-                </div>
-                
-                <div id="promptGroupCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                    <!-- Loaded dynamically via script.js -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="mainContent" class="container mx-auto px-4 pt-28 pb-10 max-w-7xl hidden fade-in-up delay-100">
-        
-        <div class="flex flex-col lg:flex-row gap-8 items-start">
-            
-            <!-- Left Sidebar Navigation -->
-            <aside class="w-full lg:w-64 flex-shrink-0 space-y-6 lg:sticky lg:top-28">
-                <!-- Group Selector Card -->
-                <div id="globalGroupSelector" class="card-container glass-panel p-5 flex flex-col gap-4 border border-gray-200/50 dark:border-gray-800 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md shadow-sm">
-                    <div>
-                        <label class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5 block" data-key="currentGroupLabel">المجموعة الحالية</label>
-                        <div class="relative">
-                            <select id="groupSelect" class="w-full py-2.5 pr-10 pl-4 bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all font-bold text-sm cursor-pointer appearance-none"></select>
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                                <i class="ri-arrow-down-s-line"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1">
-                        <button id="addNewGroupButton" class="flex flex-col items-center justify-center gap-1 py-2 bg-brand/10 hover:bg-brand/20 text-brand rounded-xl font-bold text-[10px] transition-all border border-brand/20" title="Add Group">
-                            <i class="ri-add-line text-sm"></i><span>جديد</span>
-                        </button>
-                        <button id="editGroupButton" class="flex flex-col items-center justify-center gap-1 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-xl font-bold text-[10px] transition-all border border-blue-500/20" title="Edit Group Name">
-                            <i class="ri-edit-line text-sm"></i><span>تعديل</span>
-                        </button>
-                        <button id="deleteGroupButton" class="flex flex-col items-center justify-center gap-1 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-bold text-[10px] transition-all border border-red-500/20" title="Delete Group">
-                            <i class="ri-delete-bin-line text-sm"></i><span>حذف</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Sidebar Tab Menu Navigation -->
-                <div class="card-container glass-panel p-3 border border-gray-200/50 dark:border-gray-800 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md shadow-sm overflow-x-auto lg:overflow-visible scrollbar-hide">
-                    <label class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-2 block lg:block hidden">القائمة الرئيسية</label>
-                    <div id="tabs-nav" class="flex flex-row lg:flex-col gap-1.5 min-w-max lg:min-w-0">
-                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo active" data-tab="overview">
-                            <i class="ri-dashboard-3-line text-lg"></i>
-                            <span data-key="tabOverview" class="font-bold text-sm">المتابعة الذكية</span>
-                        </button>
-                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="daily" disabled>
-                            <i class="ri-qr-scan-2-line text-lg"></i>
-                            <span data-key="tabDaily" class="font-bold text-sm">الحصة اليومية</span>
-                        </button>
-                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="students" disabled>
-                            <i class="ri-group-line text-lg"></i>
-                            <span data-key="tabStudents" class="font-bold text-sm">الطلاب</span>
-                        </button>
-                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="exams" disabled>
-                            <i class="ri-file-list-3-line text-lg"></i>
-                            <span data-key="tabGrades" class="font-bold text-sm">الامتحانات</span>
-                        </button>
-                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="payments" disabled>
-                            <i class="ri-money-dollar-circle-line text-lg"></i>
-                            <span data-key="tabPayments" class="font-bold text-sm">التحصيل</span>
-                        </button>
-                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="schedule" disabled>
-                            <i class="ri-time-line text-lg"></i>
-                            <span data-key="tabSchedule" class="font-bold text-sm">الجدول</span>
-                        </button>
-                        <!-- <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="bot" disabled>
-                            <i class="ri-robot-2-line text-lg"></i>
-                            <span data-key="tabBot" class="font-bold text-sm">المساعد الذكي</span>
-                        </button> -->
-                        <!-- Responsive dividers -->
-                        <div class="hidden lg:block h-[1px] w-full bg-gray-200/50 dark:bg-gray-800 my-2"></div>
-                        <div class="block lg:hidden w-[1px] h-6 bg-gray-200/50 dark:bg-gray-800 mx-1 align-self-center"></div>
-                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="profile">
-                            <i class="ri-user-settings-line text-lg"></i>
-                            <span data-key="tabProfile" class="font-bold text-sm">الملف الشخصي</span>
-                        </button>
-                        <button class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="cards">
-                            <i class="ri-printer-line text-lg"></i>
-                            <span class="font-bold text-sm">كروت الطلاب</span>
-                        </button>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Right Main Content Area -->
-            <div class="flex-grow w-full lg:w-0 space-y-6">
-                <!-- Header (Welcome Message, Quick Stats) -->
-                <div class="glass-panel p-6 flex flex-col md:flex-row items-center justify-between gap-4 border border-gray-200/50 dark:border-gray-800 shadow-sm relative overflow-hidden bg-gradient-to-r from-white via-white to-yellow-500/5 dark:from-darkSurface dark:to-yellow-500/5 rounded-3xl">
-                    <div class="text-right w-full">
-                        <h2 id="dashboardTitle" class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white mb-1 font-cairo"></h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 font-bold" data-key="welcomeTitle">لوحة تحكم المعلم الذكي</p>
-                    </div>
-                </div>
-
-                <div id="tabs-content" class="relative">
-
-            <div id="tab-overview" class="tab-content transition-all duration-500 animate-fade-in">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    <!-- Top Performers Card -->
-                    <div class="glass-card p-6 border-t-4 border-t-yellow-400 relative overflow-hidden group">
-                        <i
-                            class="ri-medal-fill absolute -bottom-4 -left-4 text-7xl text-yellow-500/10 -rotate-12 transition-transform group-hover:scale-110"></i>
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h4 data-key="overviewHonorRoll"
-                                    class="text-[11px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-400">
-                                    لوحة الشرف</h4>
-                                <p data-key="overviewTopStudents" class="text-xl font-black text-gray-900 dark:text-white">أوائل المجموعة</p>
-                            </div>
-                            <div
-                                class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center text-yellow-600">
-                                <i class="ri-trophy-line text-xl"></i>
-                            </div>
-                        </div>
-                        <div id="topPerformersList" class="space-y-3 min-h-[120px]">
-                            <!-- Skeleton Loader -->
-                            <div class="skeleton-row h-12 w-full"></div>
-                            <div class="skeleton-row h-12 w-full"></div>
-                            <div class="skeleton-row h-12 w-full"></div>
-                        </div>
-                    </div>
-
-                    <!-- Students at Risk Card -->
-                    <div class="glass-card p-6 border-t-4 border-t-red-500 relative overflow-hidden group">
-                        <i
-                            class="ri-alarm-warning-fill absolute -bottom-4 -left-4 text-7xl text-red-500/10 -rotate-12 transition-transform group-hover:scale-110"></i>
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h4 data-key="overviewAbsenceAlert"
-                                    class="text-[11px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">
-                                    تنبيه الغياب المتكرر</h4>
-                                <p data-key="overviewStudentsAtRisk" class="text-xl font-black text-gray-900 dark:text-white">طلاب في خطر</p>
-                            </div>
-                            <div
-                                class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center text-red-600 animate-pulse">
-                                <i class="ri-error-warning-line text-xl"></i>
-                            </div>
-                        </div>
-                        <div id="atRiskStudentsList" class="space-y-3 min-h-[120px]">
-                            <!-- Skeleton Loader -->
-                            <div class="skeleton-row h-12 w-full"></div>
-                            <div class="skeleton-row h-12 w-full"></div>
-                        </div>
-                    </div>
-
-                    <!-- Attendance Rate Card -->
-                    <div class="glass-card p-6 border-t-4 border-t-brand relative overflow-hidden group">
-                        <i
-                            class="ri-bar-chart-fill absolute -bottom-4 -left-4 text-7xl text-brand/10 -rotate-12 transition-transform group-hover:scale-110"></i>
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h4 data-key="overviewWeeklySummary" class="text-[11px] font-black uppercase tracking-widest text-brand">الملخص الأسبوعي
-                                </h4>
-                                <p data-key="overviewAttendanceRate" class="text-xl font-black text-gray-900 dark:text-white">نسبة الحضور</p>
-                            </div>
-                            <div class="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand">
-                                <i class="ri-user-follow-line text-xl"></i>
-                            </div>
-                        </div>
-                        <div class="text-center py-4">
-                            <h5 id="avgAttendanceRate"
-                                class="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">0%</h5>
-                            <p data-key="overviewAvgAttendanceDesc" class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-bold">متوسط الحضور لآخر 3 حصص
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="glass-card p-6 min-h-[350px]">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="font-black text-lg flex items-center gap-2 text-gray-800 dark:text-white">
-                                <i class="ri-line-chart-line text-brand"></i>
-                                <span data-key="overviewGroupCurve">منحنى مستوى المجموعة</span>
-                            </h3>
-                        </div>
-                        <div id="groupPerformanceChartContainer" class="h-[250px] w-full">
-                            <canvas id="groupPerformanceGlobalChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="glass-card p-6 min-h-[350px]">
-                        <h3 class="font-black text-lg flex items-center gap-2 text-gray-800 dark:text-white">
-                            <i class="ri-money-dollar-circle-line text-green-500"></i>
-                            <span data-key="overviewCollectionStatus">حالة التحصيل (الشهر الحالي)</span>
-                        </h3>
-                        <div id="monthlyCollectionSummary" class="space-y-6">
-                            <div class="flex flex-col items-center justify-center py-4">
-                                <i class="ri-pie-chart-2-line text-6xl text-gray-200 dark:text-zinc-800 mb-2"></i>
-                                <p data-key="overviewPaymentStats" class="text-xs font-bold text-gray-400">إحصائيات الدفع لهذا الشهر</p>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div
-                                    class="p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-900/30 text-center">
-                                    <p data-key="overviewPaidCount"
-                                        class="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest mb-1">
-                                        سددوا</p>
-                                    <p id="paidCountOverview" class="text-3xl font-black text-gray-900 dark:text-white">
-                                        0</p>
-                                </div>
-                                <div
-                                    class="p-4 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/30 text-center">
-                                    <p data-key="overviewUnpaidCount"
-                                        class="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-1">
-                                        متبقي</p>
-                                    <p id="unpaidCountOverview"
-                                        class="text-3xl font-black text-gray-900 dark:text-white">0</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tab-daily" class="tab-content hidden">
-                <div class="grid lg:grid-cols-3 gap-6">
-                    <section class="card-container glass-panel p-6 h-fit lg:col-span-1">
-                        <div class="section-header">
-                            <i class="ri-dashboard-line text-brand"></i>
-                            <h3 data-key="dailyClassTitle">إدارة الحصة</h3>
-                        </div>
-
-                        <div class="space-y-5">
-                            <div>
-                                <label class="label-custom" data-key="selectDateLabel">تاريخ اليوم</label>
-                                <input type="date" id="dailyDateInput" class="input-field">
-                            </div>
-
-                            <div
-                                class="bg-gray-50 dark:bg-black/40 p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <div
-                                        class="p-2 bg-blue-100 text-blue-600 rounded-lg dark:bg-blue-900/30 dark:text-blue-400">
-                                        <i class="ri-book-open-line"></i>
-                                    </div>
-                                    <div>
-                                        <p class="font-bold text-sm text-gray-900 dark:text-white"
-                                            data-key="homeworkToggleLabel">يوجد واجب؟</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400"
-                                            data-key="homeworkToggleSub">تفعيل المطالبة بالتسليم</p>
-                                    </div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="homeworkToggle" class="sr-only peer">
-                                    <div
-                                        class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand">
-                                    </div>
-                                </label>
-                            </div>
-
-                            <div class="flex flex-col gap-3 mt-6">
-
-                                <button id="startSmartScanBtn" disabled
-                                    class="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-black text-lg py-4 rounded-2xl shadow-[0_4px_14px_rgba(242,206,90,0.5)] hover:shadow-[0_6px_20px_rgba(242,206,90,0.6)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 animate-pulse-slow disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none">
-                                    <i class="ri-qr-scan-2-line text-2xl"></i>
-                                    <span data-key="startSmartScan">بدء الرصد الذكي</span>
-                                </button>
-
-                                <button id="openGoldenSettingsBtn" disabled
-                                    class="group w-full flex items-center justify-between bg-white dark:bg-gray-800 border-2 border-yellow-400/30 hover:border-yellow-500 text-gray-700 dark:text-gray-300 py-2.5 px-4 rounded-xl transition-all duration-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 active:scale-98 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:hover:border-yellow-400/30 disabled:hover:bg-white">
-                                    <div class="flex items-center gap-2">
-                                        <div
-                                            class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <i
-                                                class="ri-vip-crown-fill text-xl text-yellow-600 dark:text-yellow-400"></i>
-                                        </div>
-                                        <span class="font-bold text-sm" data-key="goldenSettingsBtn">إعدادات التذكرة
-                                            الذهبية</span>
-                                    </div>
-
-                                    <div class="flex items-center gap-2">
-                                        <span id="winRateBadge"
-                                            class="text-xs font-bold bg-yellow-500 text-white px-2 py-1 rounded-md hidden shadow-sm">5%</span>
-                                        <span id="goldenActiveIndicator" class="relative flex h-3 w-3 hidden">
-                                            <span
-                                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                            <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                                        </span>
-                                        <i
-                                            class="ri-settings-3-line text-gray-400 group-hover:text-gray-600 transition-colors text-lg ml-1"></i>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="card-container glass-panel p-6 lg:col-span-2">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-lg flex items-center gap-2">
-                                <span data-key="liveLogTitle">سجل الحصة المباشر</span>
-                                <span id="attendanceCountBadge"
-                                    class="bg-gray-100 dark:bg-gray-800 text-xs px-2 py-1 rounded-full">0/0</span>
-                            </h3>
-                            <div class="flex items-center gap-2">
-                                <button id="sendAbsenceBtn"
-                                    class="bg-red-100 text-red-600 hover:bg-red-200 px-3 py-2 rounded-xl font-bold text-xs flex items-center gap-1 transition-colors">
-                                    <i class="ri-alarm-warning-line"></i>
-                                    <span class="hidden md:inline">تنبيه الغياب</span> </button>
-
-                                <button id="saveDailyBtn" class="btn-primary-custom text-xs px-4 py-2"
-                                    data-key="saveAllButton">
-                                    حفظ الكل
-                                </button>
-                            </div>
-                        </div>
-
-                        <div
-                            class="grid grid-cols-12 gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 px-2">
-                            <div id="headerStudent" class="col-span-6 transition-all duration-300"
-                                data-key="tableHeaderStudent">الطالب</div>
-                            <div id="headerAttendance" class="col-span-3 text-center transition-all duration-300"
-                                data-key="tableHeaderAttendance">الحضور</div>
-                            <div id="headerHomework" class="col-span-3 text-center transition-all duration-300"
-                                data-key="tableHeaderHomework">الواجب</div>
-                        </div>
-
-                        <div id="dailyStudentsList"
-                            class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar p-1"></div>
-                    </section>
-
-                    <section class="card-container glass-panel p-6 lg:col-span-3 overflow-hidden">
-                        <div class="grid md:grid-cols-2 gap-8">
-                            <!-- Attendance Chart -->
-                            <div>
-                                <div class="flex justify-between items-center mb-4">
-                                    <h3
-                                        class="font-bold text-lg flex items-center gap-2 text-gray-800 dark:text-gray-100">
-                                        <i class="ri-bar-chart-2-line text-brand"></i>
-                                        <span>إحصائيات الحضور</span>
-                                    </h3>
-                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">آخر 7
-                                        حصص</span>
-                                </div>
-                                <div class="h-[200px] w-full relative">
-                                    <canvas id="groupAttendanceChart"></canvas>
-                                </div>
-                            </div>
-
-                            <!-- Homework Chart -->
-                            <div class="border-r border-gray-100 dark:border-gray-800 pr-0 md:pr-8">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h3
-                                        class="font-bold text-lg flex items-center gap-2 text-gray-800 dark:text-gray-100">
-                                        <i class="ri-book-open-line text-blue-500"></i>
-                                        <span>نسبة تسليم الواجب</span>
-                                    </h3>
-                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">آخر 7
-                                        حصص</span>
-                                </div>
-                                <div class="h-[200px] w-full relative">
-                                    <canvas id="groupHomeworkChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-
-            <div id="tab-profile" class="tab-content hidden">
-                <div class="grid md:grid-cols-2 gap-6">
-                    <section class="card-container glass-panel p-6">
-                        <div class="section-header">
-                            <i class="ri-id-card-line text-brand"></i>
-                            <h3 data-key="myProfileTitle">بياناتي</h3>
-                        </div>
-                        <div class="space-y-4">
-                            <input type="text" id="teacherNameInput" class="input-field"
-                                data-key-placeholder="fullNamePlaceholder">
-                            <input type="text" id="teacherSubjectInput" class="input-field"
-                                data-key-placeholder="subjectPlaceholder">
-                            
-                            <button id="openChangePasswordBtn" class="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 rounded-xl font-bold transition-colors">
-                                <i class="ri-lock-password-line text-brand"></i>
-                                <span>تغيير كلمة المرور</span>
-                            </button>
-
-                            <button id="saveProfileButton" class="btn-primary-custom w-full mt-2"
-                                data-key="saveProfileButton">حفظ التغييرات</button>
-                        </div>
-                    </section>
-
-                    <section class="card-container glass-panel p-6 border-t-4 border-t-gray-800 dark:border-t-gray-600">
-                        <div class="section-header"><i class="ri-team-line"></i>
-                            <h3 data-key="addGroupTitle">مجموعة جديدة</h3>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="text" id="newGroupName" class="input-field"
-                                data-key-placeholder="groupNamePlaceholder" placeholder="اسم المجموعة الجديدة">
-                            <button id="createNewGroupBtn" class="btn-primary-custom" data-key="addBtn">إضافة</button>
-                        </div>
-                    </section>
-                </div>
-            </div>
-
-            <div id="tab-students" class="tab-content hidden">
-                <section class="card-container glass-panel p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <div class="section-header mb-0"><i class="ri-user-add-line text-brand"></i>
-                            <h3 data-key="manageStudentsTitle">الطلاب</h3>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button id="bulkPrintQrBtn" onclick="openBulkPrintModal()"
-                                class="btn-icon bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 shadow-sm"
-                                title="طباعة كروت الطلاب">
-                                <i class="ri-printer-line text-xl"></i>
-                            </button>
-                            <button id="showNotificationStatusBtn" onclick="openNotificationStatusModal()"
-                                class="btn-icon bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-800 shadow-sm"
-                                title="حالة الإشعارات">
-                                <i class="ri-notification-3-line text-xl"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="relative mb-4">
-                        <i class="ri-search-line absolute top-3 right-3 text-gray-400"></i>
-                        <input type="search" id="studentSearchInput" class="input-field pr-10"
-                            data-key-placeholder="searchPlaceholder" placeholder="بحث عن طالب...">
-                    </div>
-
-                    <div id="studentsListDisplay"
-                        class="space-y-2 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar mb-6">
-                    </div>
-
-                    <div
-                        class="bg-gray-50 dark:bg-black/40 p-5 rounded-2xl border-t-4 border-brand shadow-sm border-gray-100 dark:border-gray-700">
-                        <h4 class="font-bold text-sm mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                            <i class="ri-add-circle-fill text-brand"></i>
-                            <span data-key="addNewStudentSectionTitle">إضافة طالب جديد</span>
-                        </h4>
-
-                        <div class="grid md:grid-cols-2 gap-4 mb-4">
-                            <input type="text" id="newStudentName" class="input-field"
-                                data-key-placeholder="newStudentPlaceholder" placeholder="اسم الطالب">
-                            <input type="text" id="newParentPhoneNumber" class="input-field"
-                                data-key-placeholder="parentPhonePlaceholder" placeholder="رقم ولي الأمر">
-                        </div>
-
-                        <button id="addNewStudentButton" class="btn-primary-custom w-full"
-                            data-key="addNewStudentButton">
-                            <i class="ri-user-follow-line mr-2"></i> إضافة للقائمة
-                        </button>
-                    </div>
-
-                </section>
-            </div>
-
-            <div id="tab-exams" class="tab-content hidden">
-                <section class="card-container glass-panel p-6">
-                    <div class="section-header"><i class="ri-award-line text-brand"></i>
-                        <h3 data-key="examsTitle">الامتحانات والدرجات</h3>
-                    </div>
-                    <div class="bg-yellow-50 dark:bg-yellow-900/10 p-5 rounded-2xl mb-6 border border-yellow-100">
-                        <div class="grid md:grid-cols-4 gap-3 mb-3">
-                            <div class="md:col-span-2"><input type="text" id="newExamName" class="input-field"
-                                    data-key-placeholder="newAssignmentNameLabel" placeholder="اسم الامتحان "></div>
-                            <div class="md:col-span-1"><input type="number" id="newExamTotalMark" class="input-field"
-                                    placeholder="الدرجة النهائية"></div>
-                            <div><button id="addNewExamBtn" class="btn-primary-custom w-full"
-                                    data-key="addNewAssignmentButton">إنشاء</button></div>
-                        </div>
-                    </div>
-                    <div class="mb-4 flex flex-col md:flex-row gap-4">
-                        <div class="flex-1">
-                            <select id="examSelect" class="input-field"></select>
-                        </div>
-                        <div class="w-full md:w-40 relative group">
-                            <label
-                                class="absolute -top-2 right-3 px-2 bg-white dark:bg-darkSurface text-[10px] font-black text-brand z-10">الدرجة
-                                النهائية</label>
-                            <input type="number" id="examTotalMarkInput"
-                                class="input-field font-black text-center text-brand" placeholder="30">
-                        </div>
-                    </div>
-                    <div id="examGradesList"
-                        class="grid md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto custom-scrollbar"></div>
-
-                </section>
-            </div>
-
-            <div id="tab-payments" class="tab-content hidden">
-                <section class="card-container glass-panel p-6">
-                    <div
-                        class="bg-white dark:bg-darkSurface p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 mb-4 sticky top-20 z-10">
-                        <div class="flex flex-col md:flex-row gap-4 items-end">
-                            <div class="flex-1 w-full">
-                                <label class="label-custom" data-key="selectMonthLabel">شهر التحصيل</label>
-                                <input type="month" id="paymentMonthInput" class="input-field w-full">
-                            </div>
-
-                            <div class="w-full md:w-32">
-                                <label class="label-custom" data-key="amountLabel">قيمة المصاريف</label>
-
-                                <input type="number" id="defaultAmountInput"
-                                    class="input-field text-center font-bold text-green-600 dark:text-green-400"
-                                    data-key-placeholder="defaultAmountPlaceholder" placeholder="150">
-                            </div>
-
-                            <button id="scanPaymentsBtn"
-                                class="bg-gray-900 dark:bg-white text-white dark:text-black font-bold p-3 rounded-xl shadow-lg">
-                                <i class="ri-qr-scan-2-line text-xl"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 mb-4 animate-fade-up">
-                        <div
-                            class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 rounded-2xl text-center">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">تحصيل المجموعة</p>
-                            <h3 id="groupTotalDisplay" class="text-xl font-black text-green-600 dark:text-green-400">0
-                                ج.م</h3>
-                        </div>
-
-                        <div
-                            class="bg-brand/10 border border-brand/20 p-3 rounded-2xl text-center relative overflow-hidden">
-                            <div
-                                class="absolute top-0 right-0 w-8 h-8 bg-brand/20 rounded-bl-xl flex items-center justify-center">
-                                <i class="ri-wallet-3-fill text-brand text-xs"></i>
-                            </div>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">إجمالي الدخل (الشهر)</p>
-                            <h3 id="overallTotalDisplay"
-                                class="text-xl font-black text-gray-900 dark:text-white flex items-center justify-center gap-2">
-                                <span>--</span>
-                            </h3>
-                        </div>
-                    </div>
-                    <div id="paymentsList" class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar"></div>
-
-                </section>
-            </div>
-
-            <div id="tab-schedule" class="tab-content hidden">
-                <div class="grid lg:grid-cols-2 gap-6">
-                    <section class="card-container glass-panel p-6 h-fit">
-                        <div class="section-header">
-                            <i class="ri-calendar-event-line text-brand"></i>
-                            <h3 data-key="addRecurringScheduleTitle">إضافة موعد ثابت</h3>
-                        </div>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="label-custom" data-key="subjectLabel">المادة</label>
-                                <input type="text" id="recurringSubject" class="input-field"
-                                    data-key-placeholder="subjectPlaceholder">
-                            </div>
-                            <div>
-                                <label class="label-custom" data-key="timeLabel">الوقت</label>
-                                <div id="recurringTimeContainer" class="grid grid-cols-3 gap-2" dir="ltr"></div>
-                            </div>
-                            <div>
-                                <label class="label-custom" data-key="locationLabel">المكان</label>
-                                <input type="text" id="recurringLocation" class="input-field"
-                                    data-key-placeholder="locationPlaceholder" placeholder="سنتر كوليدج">
-                            </div>
-                            <div>
-                                <label class="label-custom" data-key="selectDaysLabel">الأيام</label>
-                                <div id="daysOfWeekContainer" class="flex flex-wrap gap-2 mt-2"></div>
-                            </div>
-                            <button id="addRecurringScheduleButton" class="btn-primary-custom w-full"
-                                data-key="saveRecurringScheduleButton">إضافة للجدول</button>
-                        </div>
-                    </section>
-
-                    <div class="space-y-6">
-                        <section class="card-container glass-panel p-6">
-                            <div class="section-header">
-                                <i class="ri-list-check text-brand"></i>
-                                <h3 data-key="mySchedulesLabel">مواعيدي</h3>
-                            </div>
-                            <div id="recurringSchedulesDisplay"
-                                class="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar"></div>
-                        </section>
-
-                        <section class="card-container glass-panel p-6 border-t-4 border-orange-500">
-                            <div class="section-header">
-                                <i class="ri-edit-circle-line text-orange-500"></i>
-                                <h3 data-key="modifySingleClassTitle">تعديل طارئ</h3>
-                            </div>
-                            <p class="text-xs text-gray-500 mb-4" data-key="modifyClassPrompt">تغيير أو إلغاء حصة
-                                محددة.</p>
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="label-custom" data-key="classDateLabel">تاريخ الحصة</label>
-                                    <input type="date" id="exceptionDate" class="input-field">
-                                </div>
-                                <div>
-                                    <label class="label-custom" data-key="newTimeLabel">الموعد الجديد</label>
-                                    <div id="exceptionNewTimeContainer" class="grid grid-cols-3 gap-2" dir="ltr">
-                                    </div>
-                                </div>
-                                <div class="flex gap-2 mt-2">
-                                    <button id="updateSingleClassButton"
-                                        class="btn-primary-custom flex-1 text-sm bg-orange-500 hover:bg-orange-600 text-white"
-                                        data-key="updateClassButton">تحديث</button>
-                                    <button id="cancelSingleClassButton"
-                                        class="btn-icon bg-red-100 text-red-500 hover:bg-red-500 hover:text-white dark:bg-red-900/20 dark:hover:bg-red-900"
-                                        title="إلغاء">
-                                        <i class="ri-close-circle-line text-xl"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Generic QR Cards Tab -->
-            <div id="tab-cards" class="tab-content hidden">
-                <div class="glass-panel p-6 border border-brand/20 dark:border-brand/10 bg-white/70 dark:bg-zinc-900/60 shadow-lg print:hidden">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand text-2xl">
-                            <i class="ri-printer-line"></i>
+                    <!-- Stats -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.5rem; margin-top:3.5rem; border-top:1px solid rgba(150,150,150,0.1); padding-top:2rem;">
+                        <div>
+                            <h4 style="font-size:2rem; font-weight:900; color:#F2CE5A;">50K+</h4>
+                            <p class="sub-text text-sm" data-i18n="stat_students">طالب مسجل</p>
                         </div>
                         <div>
-                            <h3 class="text-xl font-black text-gray-900 dark:text-white font-cairo">مولد كروت الطلاب (الذكية)</h3>
-                            <p class="text-sm text-gray-500 mt-1 font-bold">قم بتوليد كروت فارغة لربطها بالطلاب لاحقاً بكل سهولة.</p>
+                            <h4 style="font-size:2rem; font-weight:900; color:#F2CE5A;">2,000+</h4>
+                            <p class="sub-text text-sm" data-i18n="stat_teachers">معلم محترف</p>
+                        </div>
+                        <div>
+                            <h4 style="font-size:2rem; font-weight:900; color:#F2CE5A;">99.9%</h4>
+                            <p class="sub-text text-sm" data-i18n="stat_uptime">استقرار الخدمة</p>
                         </div>
                     </div>
+                </div>
 
-                    <div class="flex flex-col md:flex-row gap-4 items-end">
-                        <div class="flex-grow w-full">
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">عدد الكروت المطلوب توليدها (أقصى حد 200 في المرة)</label>
-                            <input type="number" id="cardsCountInput" min="1" max="200" value="9" 
-                                class="w-full px-4 py-3 bg-gray-50 dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all font-bold text-gray-900 dark:text-white"
-                                placeholder="أدخل العدد (مثال: 9)">
+                <!-- Pure HTML CSS Interactive Simulated Mockup Showcase -->
+                <div class="reveal-left relative z-10 hidden lg:block perspective-1000" style="display:block;">
+                    <!-- Floating Widget 1 -->
+                    <div id="attendanceAlertWidget" class="absolute -top-12 -left-12 glass-card p-3 rounded-xl shadow-xl transition-all duration-500 transform scale-95 opacity-0" style="z-index: 30; background:rgba(16,185,129,0.95); width: 220px; border:1px solid rgba(255,255,255,0.1); color:#fff;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:10px; font-weight:bold;">
+                            <span>🔔 إشعار الحضور الفوري</span>
+                            <span style="opacity:0.8;">الآن</span>
                         </div>
-                        <button onclick="generateGenericCards()" class="w-full md:w-auto px-6 py-3 bg-brand hover:bg-brand/90 text-black font-black rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
-                            <i class="ri-magic-line text-lg"></i>
-                            توليد الكروت
+                        <p style="font-size:11px; font-family:'Cairo'; font-weight:bold; text-align:right;" id="attendanceAlertText">حضر الطالب أحمد خالد الآن.</p>
+                    </div>
+
+                    <!-- Main Dashboard Frame -->
+                    <div class="hero-3d-card group relative">
+                        <div class="absolute -inset-1 bg-[#F2CE5A] rounded-[2rem] blur-xl opacity-20 transition duration-1000 group-hover:opacity-40"></div>
+                        
+                        <div class="html-mockup-window mockup-theme transform-gpu" style="height: 420px; display:flex; flex-direction:column;">
+                            <div class="html-mockup-header mockup-header-theme">
+                                <div style="width:12px; height:12px; border-radius:50%; background:#ef4444;"></div>
+                                <div style="width:12px; height:12px; border-radius:50%; background:#f59e0b;"></div>
+                                <div style="width:12px; height:12px; border-radius:50%; background:#10b981;"></div>
+                                <div class="mockup-title" style="margin-left:auto; margin-right:auto; font-size:12px; font-family:'Cairo';" data-i18n="mockup_dash_title">لوحة تحكم المعلم - الناظر</div>
+                            </div>
+                            
+                            <div style="display:flex; flex:1; overflow:hidden;">
+                                <div class="html-mockup-sidebar mockup-sidebar-theme">
+                                    <div class="html-mockup-sidebar-icon active"></div>
+                                    <div class="html-mockup-sidebar-icon mockup-icon-bg"></div>
+                                    <div class="html-mockup-sidebar-icon mockup-icon-bg"></div>
+                                </div>
+                                
+                                <div class="html-mockup-body mockup-body-theme" style="flex:1; padding:20px; display:flex; flex-direction:column; overflow:hidden;">
+                                    
+                                    <!-- Header Stat Row -->
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+                                        <div class="mockup-card-theme" style="padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+                                            <div>
+                                                <div style="color:#F2CE5A; font-family:'Cairo'; font-size:11px; margin-bottom:2px;" data-i18n="mockup_stat_1">حضور اليوم</div>
+                                                <div class="mockup-text" style="font-size:20px; font-weight:black;"><span id="heroAttendanceCount">124</span> طالب</div>
+                                            </div>
+                                            <div style="width:30px; height:30px; border-radius:50%; background:rgba(242,206,90,0.1); color:#F2CE5A; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-users"></i></div>
+                                        </div>
+                                        <div class="mockup-card-theme" style="padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+                                            <div>
+                                                <div style="color:#3b82f6; font-family:'Cairo'; font-size:11px; margin-bottom:2px;" data-i18n="mockup_stat_2">حالة الحصة</div>
+                                                <div class="mockup-text text-green-500 font-bold" style="font-size:14px; display:flex; align-items:center; gap:5px;"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> نشط الآن</div>
+                                            </div>
+                                            <div style="width:30px; height:30px; border-radius:50%; background:rgba(59,130,246,0.1); color:#3b82f6; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-satellite-dish"></i></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Live Simulated Student Feed -->
+                                    <div class="mockup-card-theme" style="flex:1; border-radius:12px; padding:15px; display:flex; flex-direction:column; overflow:hidden;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(150,150,150,0.1); padding-bottom:5px;">
+                                            <span style="font-size:11px; font-weight:bold; font-family:'Cairo';" class="mockup-text" data-i18n="hero_live_stream_label">بث الحضور المباشر (QR):</span>
+                                            <span style="font-size:9px; background:rgba(16,185,129,0.15); color:#10b981; padding:2px 8px; border-radius:50px; font-weight:bold; display:flex; align-items:center; gap:3px;"><span style="width:5px; height:5px; border-radius:50%; background:#10b981;"></span>Live</span>
+                                        </div>
+                                        <div id="heroStudentFeed" style="display:flex; flex-direction:column; gap:8px; flex:1; overflow:hidden;">
+                                            <div class="live-stream-item mockup-card-theme" style="padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:rgba(150,150,150,0.05);">
+                                                <span class="mockup-text text-xs font-bold" style="font-family:'Cairo';">أحمد خالد</span>
+                                                <span style="color:#10b981; font-size:10px; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> تم الحضور</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Floating Checkmark Status Box -->
+                        <div class="absolute -bottom-6 -right-6 p-4 rounded-xl shadow-2xl flex items-center gap-4 animate-float badge-glass" style="z-index:20;">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl" style="background:rgba(16, 185, 129, 0.2); color:#10b981;">
+                                <i class="ri-check-double-line"></i>
+                            </div>
+                            <div style="font-family:'Cairo'; text-align:right;">
+                                <h4 class="font-bold text-sm badge-text" data-i18n="mockup_alert_title">تم رصد الدرجات</h4>
+                                <p class="text-xs font-semibold badge-subtext" data-i18n="mockup_alert_desc">الصف الأول الثانوي</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section with Interactive Live Simulator (Clean European layout) -->
+    <section id="features" class="landing-py relative z-10 section-separator">
+        <div class="container mx-auto px-6">
+            <div class="text-center max-w-4xl mx-auto reveal-up" style="margin-bottom: 5rem;">
+                <span class="euro-badge mb-3">FEATURES</span>
+                <h2 class="landing-text-large font-black mb-4 heading-text" data-i18n="features_title_full">كل ما تحتاجه لإدارة حصصك <span class="text-[#F2CE5A]">بلمسة واحدة</span></h2>
+                <p class="landing-text-normal sub-text font-semibold" data-i18n="features_subtitle">بدلاً من الحديث النظري، تفاعل مع محاكي لوحة تحكم المعلم الفوري واكتشف سهولة وبساطة النظام.</p>
+            </div>
+
+            <!-- Tabs Showcase Grid -->
+            <div class="grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto reveal-up" style="display:grid; grid-template-columns: 1.1fr 1fr; gap: 4rem; align-items:center;">
+                
+                <!-- Tab Selectors (Left side) -->
+                <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                    <!-- Tab Button 1 -->
+                    <button id="featureTabBtn1" class="glass-card p-6 feature-card-theme hover-lift flex gap-5 items-start text-right w-100 active-feature-tab-gold" style="border-radius:20px; transition:all 0.3s; border: 2px solid transparent;">
+                        <div style="width:50px; height:50px; border-radius:14px; background:#F2CE5A; color:#000; display:flex; align-items:center; justify-content:center; font-size:24px;">
+                            <i class="fa-solid fa-users-rectangle"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <h3 class="text-lg font-bold heading-text mb-1" data-i18n="feature_tab_1_title">منظومة الحضور والغياب (QR)</h3>
+                            <p class="sub-text text-xs leading-relaxed" data-i18n="feature_tab_1_desc">اضغط لتجربة تسجيل غياب وحضور الطلاب يدوياً ومحاكاة إرسال الإشعار الفوري لولي الأمر.</p>
+                        </div>
+                    </button>
+
+                    <!-- Tab Button 2 -->
+                    <button id="featureTabBtn2" class="glass-card p-6 feature-card-theme hover-lift flex gap-5 items-start text-right w-100" style="border-radius:20px; transition:all 0.3s; border: 2px solid transparent;">
+                        <div style="width:50px; height:50px; border-radius:14px; background:#3b82f6; color:#fff; display:flex; align-items:center; justify-content:center; font-size:24px;">
+                            <i class="fa-solid fa-file-signature"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <h3 class="text-lg font-bold heading-text mb-1" data-i18n="feature_tab_2_title">الامتحانات والواجبات الرقمية</h3>
+                            <p class="sub-text text-xs leading-relaxed" data-i18n="feature_tab_2_desc">أنشئ بنك أسئلة واختبارات لطلابك، وصحح الإجابات ورصد الدرجات في ثوانٍ معدودة.</p>
+                        </div>
+                    </button>
+
+                    <!-- Tab Button 3 -->
+                    <button id="featureTabBtn3" class="glass-card p-6 feature-card-theme hover-lift flex gap-5 items-start text-right w-100" style="border-radius:20px; transition:all 0.3s; border: 2px solid transparent;">
+                        <div style="width:50px; height:50px; border-radius:14px; background:#a855f7; color:#fff; display:flex; align-items:center; justify-content:center; font-size:24px;">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <h3 class="text-lg font-bold heading-text mb-1" data-i18n="feature_tab_3_title">تحليل الدرجات والنسب</h3>
+                            <p class="sub-text text-xs leading-relaxed" data-i18n="feature_tab_3_desc">راقب مستوى مجموعاتك بنسب مئوية دقيقة ورسوم بيانية تنمو أمامك بشكل تفاعلي.</p>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Tab Interactive Screen Mockup (Right side) -->
+                <div class="relative flex justify-center" style="min-height: 380px; width: 100%;">
+                    <!-- Screen Container -->
+                    <div class="html-mockup-window mockup-theme w-full p-6 animate-float" id="featureInteractiveScreen" style="border-radius:24px; box-shadow:0 30px 60px rgba(0,0,0,0.15); display:flex; flex-direction:column; justify-content:space-between; height: 380px; width: 100%;">
+                        <!-- Content will be injected dynamically via JS switcher -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="landing-py relative z-10 section-separator">
+        <div class="container mx-auto px-6">
+            <div class="text-center max-w-3xl mx-auto reveal-up" style="margin-bottom: 5rem;">
+                <span class="euro-badge mb-3">PARTNERS</span>
+                <h2 class="landing-text-large font-black mb-4 heading-text" data-i18n="testimonials_title">ماذا يقول <span class="text-[#F2CE5A]">المعلمون</span> عنا؟</h2>
+            </div>
+            
+            <div class="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto items-start reveal-up" style="display:grid; grid-template-columns: 1fr 2fr; gap: 2.5rem;">
+                
+                <!-- Left Column: Submit Testimonial Interactive Form Widget -->
+                <div class="glass-card p-6 feature-card-theme" style="border-radius:24px; border:2px solid rgba(242,206,90,0.2);">
+                    <h3 class="text-lg font-bold heading-text mb-4" data-i18n="testi_form_title">شاركنا رأيك بالمنصة</h3>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div>
+                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text">الاسم الكامل:</label>
+                            <input type="text" id="reviewAuthorName" placeholder="أ. محمد أحمد" style="width:100%; padding:10px; border-radius:10px; background:rgba(150,150,150,0.05); border:1px solid rgba(150,150,150,0.1); font-size:12px; outline:none; color:inherit;">
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text">المادة الدراسية:</label>
+                            <input type="text" id="reviewSubject" placeholder="مدرس رياضيات" style="width:100%; padding:10px; border-radius:10px; background:rgba(150,150,150,0.05); border:1px solid rgba(150,150,150,0.1); font-size:12px; outline:none; color:inherit;">
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text">التقييم أو الرأي:</label>
+                            <textarea id="reviewContentText" rows="3" placeholder="اكتب كلمتك الطيبة هنا..." style="width:100%; padding:10px; border-radius:10px; background:rgba(150,150,150,0.05); border:1px solid rgba(150,150,150,0.1); font-size:12px; outline:none; resize:none; color:inherit;"></textarea>
+                        </div>
+                        <button id="submitReviewBtn" style="width:100%; padding:12px; border-radius:10px; background:#F2CE5A; color:#000; font-weight:black; border:none; cursor:pointer; font-size:12px; transition:all 0.3s;">
+                            أرسل رأيك للمنصة 🚀
                         </button>
                     </div>
                 </div>
 
-                <div id="cardsPreviewSection" class="mt-8 hidden print:hidden">
-                    <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                        <h4 class="text-lg font-bold text-gray-900 dark:text-white">معاينة الكروت</h4>
-                        <button onclick="window.print()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 w-full md:w-auto">
-                            <i class="ri-printer-fill"></i>
-                            طباعة الكل
+                <!-- Right Column: Interactive Grid Container -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem;" id="testimonialsGrid">
+                    <div class="glass-card p-6 feature-card-theme hover:-translate-y-2 transition-transform duration-300" style="border-radius:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <div style="display:flex; gap:3px; color:#F2CE5A;"><i class="fa-solid fa-star text-xs"></i><i class="fa-solid fa-star text-xs"></i><i class="fa-solid fa-star text-xs"></i><i class="fa-solid fa-star text-xs"></i><i class="fa-solid fa-star text-xs"></i></div>
+                            <span style="font-size:9px; background:rgba(242,206,90,0.15); color:#F2CE5A; padding:2px 8px; border-radius:50px; font-weight:bold;">فيزياء</span>
+                        </div>
+                        <p class="sub-text text-xs leading-relaxed mb-6 font-semibold" data-i18n="testimonial_1_quote">"منذ بدأت باستخدام الناظر، وفرت ما لا يقل عن 10 ساعات أسبوعياً كانت تضيع في رصد الغياب وتصحيح الواجبات."</p>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:36px; height:36px; border-radius:50%; background:#F2CE5A; color:#000; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px;">أ.م</div>
+                            <div>
+                                <h4 class="heading-text font-bold text-xs" data-i18n="testimonial_1_author">أ. محمد عادل</h4>
+                                <p class="sub-text text-[10px]" data-i18n="testimonial_1_sub">مدرس أول فيزياء</p>
+                            </div>
+                            <span style="margin-right:auto; font-size:9px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> موثق</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6 feature-card-theme hover:-translate-y-2 transition-transform duration-300" style="border-radius:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <div style="display:flex; gap:3px; color:#F2CE5A;"><i class="fa-solid fa-star text-xs"></i><i class="fa-solid fa-star text-xs"></i><i class="fa-solid fa-star text-xs"></i><i class="fa-solid fa-star text-xs"></i><i class="fa-solid fa-star text-xs"></i></div>
+                            <span style="font-size:9px; background:rgba(59,130,246,0.15); color:#3b82f6; padding:2px 8px; border-radius:50px; font-weight:bold;">كيمياء</span>
+                        </div>
+                        <p class="sub-text text-xs leading-relaxed mb-6 font-semibold" data-i18n="testimonial_2_quote">"التطبيق ممتاز جداً، وتجربة تواصل ولي الأمر مباشرة عند دخول الطالب المجموعات منحتنا مصداقية ضخمة."</p>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:36px; height:36px; border-radius:50%; background:#3b82f6; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px;">أ.س</div>
+                            <div>
+                                <h4 class="heading-text font-bold text-xs" data-i18n="testimonial_2_author">أ. سارة أحمد</h4>
+                                <p class="sub-text text-[10px]" data-i18n="testimonial_2_sub">مدرسة كيمياء</p>
+                            </div>
+                            <span style="margin-right:auto; font-size:9px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> موثق</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Parent App Section (Clean Minimalist Lists) -->
+    <section id="download" class="landing-py relative overflow-hidden app-section-theme">
+        <div class="container mx-auto px-6">
+            <div class="grid lg:grid-cols-2 items-center" style="display:grid; grid-template-columns: 1.15fr 1fr; gap: 5rem; align-items:center;">
+                
+                <!-- Text Content & Badges -->
+                <div class="reveal-right text-center lg:text-start" style="text-align: right;">
+                    <span class="euro-badge mb-3">PARENTS</span>
+                    <h2 class="landing-text-large font-black mb-6 heading-text" data-i18n="parent_app_title">تطبيق خاص لـ <span class="text-[#F2CE5A]">أولياء الأمور</span></h2>
+                    <p class="landing-text-normal sub-text mb-8" data-i18n="parent_app_desc">لا مزيد من التقارير الورقية! وفرنا تطبيقاً مستقلاً يربط ولي الأمر بك لحظة بلحظة لمتابعة مسيرة ابنه التعليمية بشفافية تامة.</p>
+                    
+                    <div style="display:flex; flex-direction:column; gap:1.2rem; margin-bottom:2.5rem;">
+                        <div style="display:flex; align-items:flex-start; gap:12px;">
+                            <div style="width:24px; height:24px; border-radius:50%; background:rgba(242,206,90,0.15); color:#F2CE5A; display:flex; align-items:center; justify-content:center; margin-top:3px;"><i class="fa-solid fa-bell"></i></div>
+                            <div>
+                                <h4 class="heading-text font-bold text-sm" data-i18n="parent_app_li1_title">متابعة الحضور والانصراف</h4>
+                                <p class="sub-text text-xs" data-i18n="parent_app_li1_desc">إشعار فوري عند وصول الطالب للحصة.</p>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:flex-start; gap:12px;">
+                            <div style="width:24px; height:24px; border-radius:50%; background:rgba(59,130,246,0.15); color:#3b82f6; display:flex; align-items:center; justify-content:center; margin-top:3px;"><i class="fa-solid fa-chart-simple"></i></div>
+                            <div>
+                                <h4 class="heading-text font-bold text-sm" data-i18n="parent_app_li2_title">تقارير الدرجات والامتحانات</h4>
+                                <p class="sub-text text-xs" data-i18n="parent_app_li2_desc">متابعة فورية لأداء الطالب في جميع الاختبارات الأسبوعية.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Store Badges -->
+                    <div style="display:flex; gap:12px; justify-content:flex-end;">
+                        <a href="https://apps.apple.com/eg/app/%D8%A7%D9%84%D9%86%D8%A7%D8%B8%D8%B1/id6788654041" target="_blank" class="store-badge-gold">
+                            <i class="fa-brands fa-apple text-2xl"></i>
+                            <div>
+                                <span class="text-[9px] uppercase block">Download on</span>
+                                <span class="text-xs font-bold block">App Store</span>
+                            </div>
+                        </a>
+                        <a href="https://play.google.com/store/apps/details?id=com.elnazeredu.elnazer&pcampaignid=web_share" target="_blank" class="store-badge-gold">
+                            <i class="fa-brands fa-google-play text-xl"></i>
+                            <div>
+                                <span class="text-[9px] uppercase block">Get it on</span>
+                                <span class="text-xs font-bold block">Google Play</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Side: Phone simulator -->
+                <div class="reveal-left relative flex justify-center">
+                    <!-- Floating Parent WhatsApp Alert Bubble -->
+                    <div class="absolute -top-10 -right-8 glass-card p-3 rounded-xl shadow-xl z-20 w-[240px] animate-float flex items-start gap-3 border" style="background:rgba(25,25,25,0.95); border-color:rgba(242,206,90,0.3);">
+                        <div style="width:30px; height:30px; border-radius:50%; background:#10b981; color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px;"><i class="fa-brands fa-whatsapp"></i></div>
+                        <div style="flex:1; text-align:right;">
+                            <div style="display:flex; justify-content:space-between; font-size:9px; font-weight:bold; color:#aaa; margin-bottom:2px;">
+                                <span>الناظر (إشعار)</span>
+                                <span>الآن</span>
+                            </div>
+                            <p style="font-size:10px; color:#fff; font-family:'Cairo';">حضر ابنكم أحمد خالد الآن الحصة.</p>
+                        </div>
+                    </div>
+
+                    <!-- Phone Frame -->
+                    <div class="animate-float-slow html-mockup-app mockup-theme" style="width:300px; height:520px; border-radius:38px; border:8px solid #27272a; padding:12px; position:relative; box-shadow: 0 25px 50px rgba(0,0,0,0.3); display:flex; flex-direction:column; justify-content:space-between;">
+                        <!-- Top Camera Notch -->
+                        <div style="width:100px; height:18px; background:#27272a; border-radius:0 0 10px 10px; position:absolute; top:0; left:50%; transform:translateX(-50%); z-index:40;"></div>
+                        
+                        <!-- Phone Screen Body -->
+                        <div style="width:100%; height:100%; border-radius:24px; padding:15px; display:flex; flex-direction:column; overflow:hidden;" class="mockup-body-theme relative z-10" id="parentPhoneScreen">
+                            <!-- Injected dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="landing-py relative z-10 section-separator">
+        <div class="container mx-auto px-6">
+            <div class="text-center max-w-3xl mx-auto reveal-up" style="margin-bottom: 5rem;">
+                <span class="euro-badge mb-3">FAQ</span>
+                <h2 class="landing-text-large font-black mb-4 heading-text" data-i18n="faq_title">هل لديك أي <span class="text-[#F2CE5A]">استفسارات؟</span></h2>
+                <p class="sub-text text-sm">إليك إجابات شاملة لأكثر الأسئلة تكراراً من قبل المعلمين والمدارس.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto reveal-up">
+                
+                <!-- Column 1 -->
+                <div style="display:flex; flex-direction:column; gap:1.2rem;">
+                    <div class="faq-item">
+                        <button class="faq-trigger font-cairo heading-text text-base">
+                            <span data-i18n="faq_1_q">كيف يسجل الطلاب حضورهم؟</span>
+                            <i class="fa-solid fa-plus faq-icon"></i>
                         </button>
-                    </div>
-                    <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
-                        <p class="text-gray-600 dark:text-gray-300 font-bold mb-4 text-lg">تم تجهيز <span id="cardsGeneratedCount" class="text-brand font-black mx-1">0</span> كارت للطباعة.</p>
-                        <div class="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-3">
-                            <i class="ri-printer-cloud-line text-3xl text-blue-500"></i>
+                        <div class="faq-content">
+                            <p class="sub-text text-xs leading-relaxed" data-i18n="faq_1_a">يسجل الطلاب حضورهم عبر كود مخصص، أو مسح رمز QR خاص عند الدخول.</p>
                         </div>
-                        <p class="text-sm mt-2 text-gray-500 font-bold">اضغط على زر الطباعة بالأعلى لعرض الكروت في شكل A4 وطباعتها فوراً.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- <div id="tab-bot" class="tab-content hidden">
-
-                <div class="grid lg:grid-cols-2 gap-6">
-
-                    <section class="card-container glass-panel p-6 h-fit">
-                        <div class="section-header">
-                            <i class="ri-upload-cloud-2-line text-brand"></i>
-                            <h3 data-key="botFeedTitle">تغذية البوت (الملازم)</h3>
-                        </div>
-
-                        <div class="space-y-4">
-                            <div
-                                class="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-700 rounded-xl text-sm text-gray-600 dark:text-gray-300">
-                                <i class="ri-information-line inline-block ml-1 text-yellow-600"></i>
-                                <span data-key="botFeedHint">أي ملف (PDF، صور، صوت) هترفع هنا، البوت هيذاكره فوراً
-                                    ويجاوب منه على أسئلة الطلاب.</span>
-                            </div>
-
-                            <div class="relative group">
-                                <input type="file" id="botFileInput"
-                                    accept="application/pdf, image/png, image/jpeg, image/webp, audio/mpeg, audio/wav, audio/mp4, audio/x-m4a, audio/aac"
-                                    class="hidden">
-                                <label for="botFileInput"
-                                    class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl cursor-pointer hover:border-brand hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
-                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <i
-                                            class="ri-cloud-upload-line text-3xl text-gray-400 mb-2 group-hover:text-brand transition-colors"></i>
-                                        <p class="mb-2 text-sm text-gray-500 font-bold" data-key="botDropArea">اضغط
-                                            للرفع</p>
-                                        <p class="text-xs text-gray-400" data-key="botFileHint">PDF, Images & Audio</p>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <div id="uploadProgressContainer" class="hidden">
-                                <div class="flex justify-between text-xs mb-1">
-                                    <span id="uploadFileName">filename.pdf</span>
-                                    <span id="uploadPercent">0%</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                    <div id="uploadProgressBar" class="bg-brand h-2.5 rounded-full" style="width: 0%">
-                                    </div>
-                                </div>
-                                <p class="text-xs text-center mt-2 text-gray-500 animate-pulse"
-                                    data-key="botProcessing">جاري المعالجة...</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="card-container glass-panel p-6">
-                        <div class="section-header">
-                            <i class="ri-database-2-line text-brand"></i>
-                            <h3 data-key="botLibraryTitle">مكتبة المعرفة</h3>
-                        </div>
-
-                        <div id="botFilesList" class="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-                            <p class="text-center text-gray-500 py-4" data-key="botLibraryEmpty">المكتبة فارغة</p>
-                        </div>
-                    </section>
-                </div>
-            </div> -->
-        </div>
-    </div>
-
-    <div id="scannerModal" class="hidden fixed inset-0 z-[2000] bg-black flex flex-col">
-
-        <div class="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
-
-            <video id="scannerVideo" class="absolute inset-0 w-full h-full object-cover opacity-60" playsinline></video>
-
-            <button id="toggleFlashBtn"
-                class="hidden absolute top-6 left-6 z-50 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 active:scale-95 transition-all shadow-lg">
-                <i class="ri-flashlight-line text-xl"></i>
-            </button>
-
-            <div
-                class="relative z-20 w-72 h-72 border-2 border-brand/50 rounded-3xl flex flex-col items-center justify-center box-content p-1">
-                <div
-                    class="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-brand rounded-tl-2xl -mt-1 -ml-1">
-                </div>
-                <div
-                    class="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-brand rounded-tr-2xl -mt-1 -mr-1">
-                </div>
-                <div
-                    class="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-brand rounded-bl-2xl -mb-1 -ml-1">
-                </div>
-                <div
-                    class="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-brand rounded-br-2xl -mb-1 -mr-1">
-                </div>
-                <div class="w-full h-0.5 bg-red-500 shadow-[0_0_20px_rgba(242,206,90,1)] animate-scan"></div>
-                <p class="absolute -bottom-10 text-white/80 font-bold text-sm tracking-wider"
-                    data-key="scanOverlayText">وجه الكود داخل الإطار</p>
-            </div>
-
-            <div id="scannerOverlay" class="absolute inset-0 transition-colors duration-300 pointer-events-none z-30">
-            </div>
-
-            <div class="absolute bottom-24 left-0 right-0 text-center z-40">
-                <div id="scannedStudentName"
-                    class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-white/90 backdrop-blur text-black font-black text-xl transform transition-all opacity-0 translate-y-10 scale-90 shadow-2xl">
-                    <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white"><i
-                            class="ri-check-line"></i></div>
-                    <span id="feedbackNameText">اسم الطالب</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="p-6 bg-black flex justify-center">
-            <button id="closeScannerModal"
-                class="bg-white/10 text-white border border-white/20 rounded-full px-8 py-3 font-bold hover:bg-white/20 transition-all backdrop-blur-md"
-                data-key="closeCamera">إغلاق الكاميرا</button>
-        </div>
-
-    </div>
-
-    <div id="hwConfirmModal"
-        class="hidden fixed inset-0 z-[2100] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity">
-        <div
-            class="bg-white dark:bg-darkSurface w-full md:w-96 rounded-t-3xl md:rounded-3xl p-8 shadow-2xl transform transition-transform animate-fadeInUp">
-            <div class="text-center mb-8">
-                <div
-                    class="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border border-blue-100 dark:border-blue-800">
-                    <i class="ri-book-open-line text-4xl"></i>
-                </div>
-                <h3 class="text-2xl font-black text-gray-900 dark:text-white mb-1" id="hwStudentName">اسم الطالب</h3>
-                <p class="text-gray-500 font-medium" data-key="homeworkQuestion">هل سلم الواجب؟</p>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <button id="hwNoBtn"
-                    class="py-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors text-lg"
-                    data-key="no">لا</button>
-                <button id="hwYesBtn"
-                    class="py-4 rounded-xl font-bold text-black bg-brand hover:bg-brandHover shadow-lg shadow-yellow-500/20 transition-colors text-lg"
-                    data-key="yes">نعم</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="qrCodeModal"
-        class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm transition-opacity duration-300">
-        <div class="w-full max-w-sm transform transition-all scale-100">
-
-            <div id="printableIdCard"
-                class="relative bg-white rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.1)] mb-6 mx-auto">
-                <div class="absolute top-0 w-full h-24 bg-brand/10"></div>
-
-                <div class="relative z-10 p-8 flex flex-col items-center text-center">
-                    <div
-                        class="w-20 h-20 bg-white rounded-full shadow-lg flex items-center justify-center mb-4 border-4 border-white relative -mt-4">
-                        <img src="assets/images/learnaria_logo.png" class="w-12 h-12 object-contain"
-                            crossorigin="anonymous">
                     </div>
 
-                    <h4 class="text-brandHover text-xs font-black tracking-[0.2em] uppercase mb-2">Nazer Student ID</h4>
-
-                    <h2 id="idStudentName" class="text-3xl font-black text-gray-900 mb-6 leading-tight">اسم الطالب</h2>
-
-                    <div class="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 mb-4">
-                        <div id="idQrcode" class="opacity-90"></div>
+                    <div class="faq-item">
+                        <button class="faq-trigger font-cairo heading-text text-base">
+                            <span>هل يتطلب التطبيق اتصالاً دائماً بالإنترنت؟</span>
+                            <i class="fa-solid fa-plus faq-icon"></i>
+                        </button>
+                        <div class="faq-content">
+                            <p class="sub-text text-xs leading-relaxed">نعم، يتطلب النظام اتصالاً بالإنترنت لتتم مزامنة بيانات حضور وغياب الطلاب مع لوحة التحكم السحابية وإرسال الإشعارات المباشرة لأولياء الأمور لحظياً.</p>
+                        </div>
                     </div>
 
-                    <p id="idStudentPhone" class="text-gray-400 font-mono text-sm tracking-wider font-bold"></p>
+                    <div class="faq-item">
+                        <button class="faq-trigger font-cairo heading-text text-base">
+                            <span data-i18n="faq_2_q">هل تطبيق أولياء الأمور مجاني؟</span>
+                            <i class="fa-solid fa-plus faq-icon"></i>
+                        </button>
+                        <div class="faq-content">
+                            <p class="sub-text text-xs leading-relaxed" data-i18n="faq_2_a">نعم، تطبيق أولياء الأمور مجاني بالكامل للتحميل والاستخدام على iOS و Android.</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="h-3 w-full bg-gradient-to-r from-brand to-yellow-600"></div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <button id="shareIdBtn"
-                    class="col-span-2 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
-                    <span class="text-lg">مشاركة واتساب / صورة</span>
-                    <i class="ri-whatsapp-line text-2xl"></i>
-                </button>
-
-                <button id="printIdButton"
-                    class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
-                    <span>طباعة</span> <i class="ri-printer-line"></i>
-                </button>
-
-                <button id="closeQrModal"
-                    class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-bold py-3 rounded-xl">
-                    إغلاق
-                </button>
-            </div>
-
-            <p class="text-center text-gray-500 text-xs mt-4">يمكن للطالب حفظ الصورة واستخدامها للدخول</p>
-        </div>
-    </div>
-
-    <div id="messageModal"
-        class="hidden fixed inset-0 z-[2200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div
-            class="bg-white dark:bg-darkSurface w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-100">
-            <div class="p-6">
-                <div class="flex items-center gap-3 mb-4">
-                    <div
-                        class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center">
-                        <i class="ri-chat-1-line text-xl"></i>
+                <!-- Column 2 -->
+                <div style="display:flex; flex-direction:column; gap:1.2rem;">
+                    <div class="faq-item">
+                        <button class="faq-trigger font-cairo heading-text text-base">
+                            <span>كيف يتم ربط حساب ولي الأمر بالطالب؟</span>
+                            <i class="fa-solid fa-plus faq-icon"></i>
+                        </button>
+                        <div class="faq-content">
+                            <p class="sub-text text-xs leading-relaxed">يولد النظام كود ربط فريد (Student Link Code) لكل طالب. ينسخه المعلم أو الإدارة ويسلمه لولي الأمر ليدخله في التطبيق الخاص به ليتم المزامنة تلقائياً.</p>
+                        </div>
                     </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger font-cairo heading-text text-base">
+                            <span>هل يمكنني إدارة أكثر من مجموعة دراسية؟</span>
+                            <i class="fa-solid fa-plus faq-icon"></i>
+                        </button>
+                        <div class="faq-content">
+                            <p class="sub-text text-xs leading-relaxed">بالتأكيد! يمكنك إنشاء وإدارة عدد لا محدود من المجموعات الدراسية والفصول والطلاب، وتصنيفهم وفق جداول زمنية مرنة للغاية.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger font-cairo heading-text text-base">
+                            <span>كيف يمكنني تصدير كشوف الدرجات والغياب؟</span>
+                            <i class="fa-solid fa-plus faq-icon"></i>
+                        </button>
+                        <div class="faq-content">
+                            <p class="sub-text text-xs leading-relaxed">بكبسة زر واحدة من لوحة التحكم، يمكنك تصدير تقارير الحضور والغياب وكشوف درجات الطلاب بالكامل لملفات Excel منسقة أو PDF لطباعتها أو حفظها في سجلاتك.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section with Slider -->
+    <section id="pricing" class="landing-py relative z-10 section-separator">
+        <div class="container mx-auto px-6">
+            <div class="text-center max-w-3xl mx-auto reveal-up" style="margin-bottom:4rem;">
+                <span class="euro-badge mb-3">PRICING</span>
+                <h2 class="landing-text-large font-black mb-4 heading-text" data-i18n="pricing_title">استثمار <span class="text-[#F2CE5A]">ذكي</span> لنجاحك</h2>
+                
+                <!-- Semester billing toggle switch -->
+                <div style="display:inline-flex; align-items:center; background:rgba(150,150,150,0.05); padding:4px; border-radius:50px; border:1px solid rgba(150,150,150,0.1); margin-top:1.5rem;" class="pricing-toggle-container">
+                    <button id="toggleSemesterSingle" class="pricing-toggle-btn active" style="padding:8px 20px; border-radius:50px; font-weight:bold; font-size:13px; border:none; cursor:pointer; background:#F2CE5A; color:#000; transition:all 0.3s;">الترم الواحد</button>
+                    <button id="toggleSemesterFull" class="pricing-toggle-btn" style="padding:8px 20px; border-radius:50px; font-weight:bold; font-size:13px; border:none; cursor:pointer; background:transparent; color:inherit; transition:all 0.3s;">العام الكامل (ترمين) <span style="font-size:9px; background:#ef4444; color:#fff; padding:2px 6px; border-radius:50px; margin-right:3px;">خصم 15%</span></button>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-12 items-center max-w-5xl mx-auto reveal-up" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 4rem; align-items: center;">
+                <div class="glass-card p-8 feature-card-theme" style="border-radius: 24px;">
+                    <h3 class="text-xl font-bold heading-text mb-2" data-i18n="calc_title">حاسبة الأسعار التفاعلية</h3>
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px;" class="heading-text">
+                            <span data-i18n="calc_student_count">عدد الطلاب:</span>
+                            <span style="color:#F2CE5A; font-size:18px;"><span id="sliderStudentCount">150</span> <span data-i18n="calc_student_unit">طالب</span></span>
+                        </div>
+                        <input type="range" id="pricingSlider" min="50" max="1000" step="10" value="150" class="pricing-slider">
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:1.5rem;">
+                        <div class="mockup-card-theme" style="padding:15px; border-radius:12px;">
+                            <div class="sub-text text-xs mb-1">السعر للطالب بالترم</div>
+                            <div style="font-size:24px; font-weight:900; color:#F2CE5A;">$<span id="calcStudentPrice">1.00</span></div>
+                        </div>
+                        <div class="mockup-card-theme" style="padding:15px; border-radius:12px;">
+                            <div class="sub-text text-xs mb-1" data-i18n="calc_savings">نسبة الخصم</div>
+                            <div style="font-size:24px; font-weight:900; color:#ef4444;" id="calcDiscountText">0%</div>
+                        </div>
+                    </div>
+                    <div class="mockup-card-theme" style="padding:20px; border-radius:16px; text-align:center;">
+                        <div class="sub-text text-sm mb-1">إجمالي الاشتراك للترم الواحد</div>
+                        <div style="font-size:36px; font-weight:900; color:#F2CE5A;">$<span id="calcTotalPrice">150</span></div>
+                    </div>
+                </div>
+
+                <div class="glass-card pricing-card-theme hover:scale-105 transition-transform duration-500 pricing-card-glow" style="padding:2.5rem; border:2px solid #F2CE5A; border-radius:24px; position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; min-height:420px;">
+                    <div style="position:absolute; top:25px; right:-45px; background:#F2CE5A; color:#000; font-weight:black; padding:8px 50px; transform:rotate(45deg); font-size:12px;" data-i18n="pricing_ribbon">عرض محدود</div>
+                    
                     <div>
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white" data-key="msgModalTitle">رسالة لولي
-                            الأمر</h3>
-                        <p id="msgStudentName" class="text-xs text-gray-500">الطالب: ...</p>
+                        <h3 class="text-2xl font-black heading-text mb-1" data-i18n="pricing_plan_name">الاشتراك الموحد</h3>
+                        <p class="sub-text text-xs mb-6">احصل على كل شيء بدون أي تكاليف مخفية.</p>
+                        
+                        <div style="display:flex; align-items:baseline; gap:5px; margin-bottom:2rem;">
+                            <span style="font-size:3.5rem; font-weight:900; color:#F2CE5A; line-height:1;" id="pricingCardTotalPrice">$150</span>
+                            <span class="sub-text text-sm" id="billingPeriodLabel">/ للترم الواحد</span>
+                        </div>
+
+                        <ul style="display:flex; flex-direction:column; gap:1.2rem; margin-bottom:2rem; list-style:none; padding:0;">
+                            <li style="display:flex; align-items:center; gap:0.75rem; font-size:0.95rem;" class="heading-text">
+                                <i class="ri-checkbox-circle-fill text-[#F2CE5A] text-xl"></i>
+                                <span data-i18n="pricing_feature_1">وصول كامل للوحة تحكم المعلم</span>
+                            </li>
+                            <li style="display:flex; align-items:center; gap:0.75rem; font-size:0.95rem;" class="heading-text">
+                                <i class="ri-checkbox-circle-fill text-[#F2CE5A] text-xl"></i>
+                                <span data-i18n="pricing_feature_2">تطبيقات أولياء الأمور (iOS & Android)</span>
+                            </li>
+                            <li style="display:flex; align-items:center; gap:0.75rem; font-size:0.95rem;" class="heading-text">
+                                <i class="ri-checkbox-circle-fill text-[#F2CE5A] text-xl"></i>
+                                <span data-i18n="pricing_feature_3">عدد لا محدود من الامتحانات والواجبات</span>
+                            </li>
+                            <li style="display:flex; align-items:center; gap:0.75rem; font-size:0.95rem;" class="heading-text">
+                                <i class="ri-checkbox-circle-fill text-[#F2CE5A] text-xl"></i>
+                                <span>تقارير ورسائل حضور وغياب فورية للآباء</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <a href="dashboard.html" class="btn-primary-custom btn-glowing-gold" style="width:100%; display:flex; justify-content:center; padding:14px; border-radius:12px; font-weight:bold; text-decoration:none;"><span data-i18n="pricing_btn">اغتنم العرض الآن</span></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Fancy Floating Footer -->
+    <footer class="footer-theme relative z-10 animate-float-slow">
+        <div class="container mx-auto px-6">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:4rem; padding-top: 4rem; padding-bottom:3rem; border-bottom:1px solid rgba(150,150,150,0.1);">
+                <div>
+                    <a href="#" class="flex items-center gap-3 text-2xl font-black mb-6" style="text-decoration:none;">
+                        <div class="logo-container">
+                            <div class="logo-box"><img src="assets/images/learnaria_logo.png" alt="الناظر"></div>
+                            <div class="logo-status-dot"></div>
+                        </div>
+                        <span class="font-cairo logo-text text-3xl">الناظر<span class="logo-dot">.</span></span>
+                    </a>
+                    <p class="sub-text text-sm mb-6 leading-relaxed" data-i18n="footer_desc">الناظر هو منصتك الشاملة لإدارة العملية التعليمية باحترافية.</p>
+                    
+                    <!-- Social Media Links -->
+                    <div style="display:flex; gap:12px;" class="social-links">
+                        <a href="#" class="social-icon"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#" class="social-icon"><i class="fa-brands fa-linkedin-in"></i></a>
+                        <a href="#" class="social-icon"><i class="fa-brands fa-twitter"></i></a>
+                        <a href="#" class="social-icon"><i class="fa-brands fa-instagram"></i></a>
                     </div>
                 </div>
-
-                <textarea id="customMessageInput" rows="4" class="w-full input-field resize-none"
-                    data-key-placeholder="msgPlaceholder"
-                    placeholder="اكتب ملاحظاتك هنا (مثلاً: الطالب تحسن مستواه، يرجى متابعة الواجب...)"></textarea>
-            </div>
-
-            <div class="bg-gray-50 dark:bg-black/20 p-4 flex gap-3 border-t border-gray-100 dark:border-gray-800">
-                <button id="confirmSendMsgBtn" class="flex-1 btn-primary-custom flex items-center justify-center gap-2">
-                    <span data-key="sendMsgBtn">إرسال</span> <i class="ri-send-plane-fill"></i>
-                </button>
-                <button id="closeMsgModal"
-                    class="px-6 py-2 rounded-xl font-bold text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 transition"
-                    data-key="cancelBtn">إلغاء</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="goldenTicketModal" class="golden-modal-overlay" style="display: none;">
-        <div class="golden-ticket-card">
-            <div class="ticket-header">
-                <span data-key="goldenModalTitle">🌟 مبروووووك! 🌟</span>
-            </div>
-            <div class="ticket-body">
-                <p data-key="goldenFoundMsg">لقد عثرت على تذكرة ذهبية!</p>
-                <div class="prize-box">
-                    <span id="prizeName">قلم هدية 🎁</span>
-                </div>
-            </div>
-            <button onclick="closeGoldenTicket()" class="claim-btn" data-key="goldenClaim">استلم الجائزة</button>
-        </div>
-    </div>
-    <div id="goldenSettingsModal"
-        class="fixed inset-0 bg-black/80 hidden z-[9999] flex items-center justify-center p-4">
-        <div
-            class="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 border-4 border-yellow-400 shadow-[0_0_30px_rgba(255,215,0,0.3)]">
-
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <i class="ri-vip-crown-fill text-yellow-500"></i>
-                    <span data-key="goldenSettingsTitle">إعدادات التذكرة الذهبية</span>
-                </h3>
-                <button id="closeGoldenSettings" class="text-gray-400 hover:text-red-500"><i
-                        class="ri-close-circle-fill text-2xl"></i></button>
-            </div>
-
-            <div class="space-y-6">
-                <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
-                    <span class="font-bold text-gray-700 dark:text-gray-300" data-key="goldenEnable">تفعيل النظام</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="goldenToggle" class="sr-only peer">
-                        <div
-                            class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500">
-                        </div>
-                    </label>
+                
+                <div>
+                    <h4 class="heading-text text-lg font-bold mb-6" data-i18n="footer_links_title">روابط سريعة</h4>
+                    <ul style="display:flex; flex-direction:column; gap:1.2rem; list-style:none; padding:0;">
+                        <li><a href="#about" class="sub-text text-sm hover:text-[#F2CE5A]" style="text-decoration:none;" data-i18n="nav_about">عن المنصة</a></li>
+                        <li><a href="#features" class="sub-text text-sm hover:text-[#F2CE5A]" style="text-decoration:none;" data-i18n="nav_features">المميزات</a></li>
+                        <li><a href="#pricing" class="sub-text text-sm hover:text-[#F2CE5A]" style="text-decoration:none;" data-i18n="nav_pricing">الأسعار</a></li>
+                        <li><a href="#download" class="sub-text text-sm hover:text-[#F2CE5A]" style="text-decoration:none;" data-i18n="nav_download">التطبيقات</a></li>
+                    </ul>
                 </div>
 
                 <div>
-                    <div class="flex justify-between mb-2">
-                        <span class="text-sm font-bold text-gray-600 dark:text-gray-400" data-key="goldenWinRate">نسبة
-                            الحظ (Win Rate)</span>
-                        <span id="winRateDisplay"
-                            class="text-sm font-bold text-yellow-600 bg-yellow-100 px-2 rounded">5%</span>
-                    </div>
-                    <input type="range" id="winRateInput" min="0" max="100" value="5"
-                        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-yellow-500">
-                    <p class="text-xs text-gray-400 mt-1" data-key="goldenHint">كلما زادت النسبة، زاد عدد الطلاب
-                        الفائزين.</p>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-bold text-gray-600 dark:text-gray-400 mb-2"
-                        data-key="goldenPrizesLabel">قائمة الجوائز (جائزة في كل سطر)</label>
-                    <textarea id="prizesInput" rows="5"
-                        class="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-yellow-400 outline-none text-sm"
-                        data-key-placeholder="goldenPrizesPlaceholder"
-                        placeholder="قلم هدية&#10;شوكولاتة&#10;خصم 10 جنيه"></textarea>
-                </div>
-
-                <button id="saveGoldenSettings"
-                    class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95"
-                    data-key="goldenSave">
-                    حفظ الإعدادات 💾
-                </button>
-            </div>
-        </div>
-    </div>
-    <style>
-        /* CSS للتذكرة الذهبية */
-        .golden-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 9999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.5s;
-        }
-
-        .golden-ticket-card {
-            background: linear-gradient(45deg, #FFD700, #FFC107, #FFD700);
-            border: 4px solid #FFF;
-            border-radius: 15px;
-            padding: 20px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 0 50px #FFD700;
-            transform: scale(0);
-            animation: popUp 0.6s cubic-bezier(0.17, 0.67, 0.33, 1.4) forwards;
-        }
-
-        .ticket-header {
-            font-size: 24px;
-            font-weight: bold;
-            color: #5c3c00;
-            margin-bottom: 10px;
-        }
-
-        .ticket-body p {
-            color: #333;
-            font-size: 18px;
-            font-weight: 500;
-        }
-
-        .prize-box {
-            background: #fff;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-            font-size: 22px;
-            font-weight: bold;
-            color: #d32f2f;
-            border: 2px dashed #5c3c00;
-        }
-
-        .claim-btn {
-            background: #5c3c00;
-            color: #FFD700;
-            border: none;
-            padding: 10px 25px;
-            font-size: 18px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        @keyframes popUp {
-            to {
-                transform: scale(1);
-            }
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-    </style>
-
-
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
-    <script src="js/script.js?v=14" defer></script>
-    <style>
-        .animate-scan {
-            animation: scan 2s infinite linear;
-        }
-
-        /* ✅ إضافة: عكس اتجاه السهم في الإنجليزي */
-        html[dir="ltr"] .login-arrow {
-            transform: scaleX(-1);
-        }
-    </style>
-    <!-- <div class="fixed bottom-8 left-8 z-[9999] group">
-        <div
-            class="absolute bottom-full left-0 mb-4 w-48 bg-white dark:bg-zinc-800 p-3 rounded-2xl rounded-bl-none shadow-xl border border-gray-100 dark:border-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none transform translate-y-2 group-hover:translate-y-0">
-            <p class="text-xs text-gray-600 dark:text-gray-300 font-bold">محتار في سؤال؟ 🤔<br><span
-                    class="text-yellow-600">الناظر AI</span> جاهز يساعدك!</p>
-        </div>
-
-        <button onclick="toggleSpotChat()"
-            class="relative w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-black shadow-[0_10px_25px_-5px_rgba(234,179,8,0.5)] hover:shadow-[0_10px_35px_-5px_rgba(234,179,8,0.6)] hover:scale-110 transition-all duration-300 flex items-center justify-center overflow-hidden border-2 border-white/20">
-
-            <div
-                class="absolute inset-0 bg-gradient-to-t from-transparent to-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            </div>
-
-            <i
-                class="ri-robot-2-fill text-3xl group-hover:rotate-12 transition-transform duration-300 drop-shadow-sm"></i>
-
-            <span class="absolute top-3 right-3 flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-red-600 border border-white"></span>
-            </span>
-        </button>
-    </div>
-
-    <div id="spotChatWindow"
-        class="fixed bottom-28 left-8 w-[380px] h-[550px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-gray-200 dark:border-zinc-700 rounded-3xl shadow-2xl z-[9998] flex flex-col transform origin-bottom-left scale-0 opacity-0 transition-all duration-300 pointer-events-none overflow-hidden">
-
-        <div class="bg-zinc-900 p-5 flex justify-between items-center text-white relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-
-            <div class="flex items-center gap-3 relative z-10">
-                <div
-                    class="w-11 h-11 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center text-black shadow-lg shadow-yellow-500/20 border border-white/10">
-                    <i class="ri-sparkling-2-fill text-xl"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-base tracking-wide font-sans text-white">الناظر AI</h3>
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                        <p class="text-[11px] text-gray-400 font-medium">Online Assistant</p>
-                    </div>
-                </div>
-            </div>
-
-            <button onclick="toggleSpotChat()"
-                class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors relative z-10 text-gray-400 hover:text-white">
-                <i class="ri-close-line text-lg"></i>
-            </button>
-        </div>
-
-        <div id="chatMessages"
-            class="flex-1 p-5 overflow-y-auto space-y-5 bg-gray-50/50 dark:bg-black/40 custom-scrollbar scroll-smooth">
-            <div class="flex gap-3 animate-fade-in-up">
-                <div
-                    class="w-8 h-8 bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 text-gray-600 dark:text-gray-300 text-xs">
-                    <i class="ri-robot-2-fill"></i>
-                </div>
-                <div
-                    class="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-700 text-sm text-gray-700 dark:text-gray-200 max-w-[85%] leading-relaxed">
-                    أهلاً يا مستر! 👋 <br> أنا المساعد الشخصي ليك، جاهز أساعدك في تحضير الامتحانات أو الرد على أسئلة من
-                    الملازم.
-                </div>
-            </div>
-        </div>
-
-        <div id="typingIndicator" class="hidden px-5 py-2">
-            <div
-                class="flex items-center gap-2 bg-gray-100 dark:bg-zinc-800 w-fit px-4 py-2.5 rounded-2xl rounded-tl-none">
-                <span class="text-[10px] text-yellow-600 font-bold ml-1 uppercase tracking-wider">الناظر AI</span>
-                <div class="flex gap-1">
-                    <div class="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-bounce"></div>
-                    <div class="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-bounce delay-75"></div>
-                    <div class="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-bounce delay-150"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="p-4 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800">
-            <div
-                class="relative flex items-end gap-2 bg-gray-100 dark:bg-zinc-800/50 rounded-xl transition-all border border-transparent focus-within:border-yellow-500/50 focus-within:bg-white dark:focus-within:bg-zinc-800 focus-within:shadow-sm p-2">
-                <textarea id="chatInput" placeholder="اكتب طلبك هنا..."
-                    class="flex-1 bg-transparent text-gray-800 dark:text-white text-sm px-2 py-2 focus:outline-none placeholder-gray-400 resize-none overflow-hidden min-h-[44px]"
-                    rows="1"
-                    onkeypress="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendSpotMessage(); }"
-                    oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
-
-                <button onclick="sendSpotMessage()"
-                    class="p-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95 hover:brightness-110 flex-shrink-0">
-                    <i class="ri-send-plane-fill text-lg"></i>
-                </button>
-            </div>
-            <p class="text-[10px] text-center text-gray-400 mt-2">Powered by Gemini AI ✨</p>
-        </div>
-    </div> -->
-    <!-- Print Container (Hidden normally, visible during print) -->
-    <div id="bulkQrPrintContainer" class="print-hide"></div>
-    <style>
-        @media print {
-            @page {
-                margin: 5mm;
-            }
-            body * { visibility: hidden !important; }
-            #bulkQrPrintContainer, #bulkQrPrintContainer * { visibility: visible !important; }
-            #bulkQrPrintContainer {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                display: flex !important;
-                flex-wrap: wrap;
-                gap: 10mm;
-                justify-content: center;
-                align-items: flex-start;
-                background: white;
-                padding: 10px;
-                box-sizing: border-box;
-            }
-            .print-hide { display: none !important; }
-            
-            /* Simplified Square QR Card */
-            .qr-card {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                box-sizing: border-box;
-                page-break-inside: avoid;
-                background-color: #ffffff;
-            }
-            .qr-card-code {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: #ffffff;
-            }
-        }
-        @media screen {
-            .print-hide { display: none !important; }
-        }
-    </style>
-    <div id="customInputModal" class="fixed inset-0 hidden overflow-y-auto" style="z-index: 9999;" role="dialog" aria-modal="true">
-        <div class="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" id="customInputOverlay"></div>
-        <div class="flex items-center justify-center min-h-screen px-4 py-6">
-            <div class="relative bg-white dark:bg-darkSurface rounded-3xl shadow-2xl w-full max-w-md transform transition-all border border-gray-100 dark:border-white/5 overflow-hidden scale-95 opacity-0"
-                id="customInputContent">
-                <div class="p-6 pb-0">
-                    <div class="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center mb-4">
-                        <i id="customInputIcon" class="ri-edit-line text-brand text-2xl"></i>
-                    </div>
-                    <h3 id="customInputTitle" class="text-2xl font-black text-gray-900 dark:text-white leading-tight">
-                        العنوان</h3>
-                    <p id="customInputDesc" class="text-sm text-gray-500 dark:text-gray-400 mt-2">الوصف</p>
-                </div>
-                <div class="p-6" id="customInputContainer">
-                    <input type="text" id="customInputField"
-                        class="input-field w-full py-4 px-5 bg-gray-50 dark:bg-black/40 border border-gray-100 dark:border-white/5 rounded-2xl outline-none focus:border-brand transition-all font-bold text-gray-800 dark:text-white text-lg">
-                </div>
-                <div class="p-6 pt-0 flex gap-3">
-                    <button id="customInputConfirmBtn"
-                        class="flex-1 bg-brand hover:bg-brandHover text-black font-black py-4 rounded-2xl shadow-lg shadow-brand/20 transition-all active:scale-95">حفظ</button>
-                    <button id="customInputCancelBtn"
-                        class="px-6 py-4 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold rounded-2xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all">إلغاء</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="absenceModal" class="fixed inset-0 hidden" style="z-index: 9999;" role="dialog" aria-modal="true">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity opacity-0"
-            id="absenceModalOverlay"></div>
-
-        <div class="flex items-center justify-center min-h-screen px-4 py-6">
-            <div class="relative bg-white dark:bg-gray-800 rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all w-full max-w-lg scale-95 opacity-0"
-                id="absenceModalContent">
-
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start sm:flex-row-reverse">
-                        <div
-                            class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0 sm:mr-3">
-                            <i class="ri-alarm-warning-line text-red-600 text-2xl"></i>
-                        </div>
-
-                        <div class="mt-3 text-center sm:mt-0 sm:mr-4 sm:text-right w-full">
-                            <h3 class="text-lg leading-6 font-bold text-gray-900 dark:text-white" id="modal-title">
-                                تأكيد إرسال تنبيهات الغياب
-                            </h3>
-                            <div class="mt-2">
-                                <p class="text-sm text-gray-500 dark:text-gray-300">
-                                    هل أنت متأكد من إرسال رسائل تنبيه لكل الطلاب الذين لم يتم تسجيل حضورهم اليوم؟
-                                    <br>
-                                    <span class="text-xs text-red-500 font-bold mt-1 block">⚠️ سيصل إشعار لولي الأمر
-                                        فوراً.</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
-                    <button type="button" id="confirmSendAbsenceBtn"
-                        class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:w-auto sm:text-sm transition-colors">
-                        نعم، أرسل التنبيهات
-                    </button>
-                    <button type="button" onclick="closeAbsenceModal()"
-                        class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm transition-colors">
-                        إلغاء
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div id="studentProfilePage"
-        class="fixed inset-0 bg-gray-50 dark:bg-darkBg hidden overflow-y-auto custom-scrollbar profile-grid-bg transition-colors duration-500"
-        style="z-index: 90;">
-
-        <!-- Premium Navbar for Profile -->
-        <div class="sticky top-0 z-50 p-4 transition-all duration-300">
-            <nav
-                class="max-w-6xl mx-auto rounded-2xl bg-white/90 dark:bg-darkSurface/90 backdrop-blur-xl shadow-lg px-6 py-3 flex justify-between items-center border border-gray-200 dark:border-gray-800 transition-all duration-300 animate-fade-down">
-                <!-- Right: Logo & Identity -->
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <img src="assets/images/learnaria_logo.png" alt="Logo"
-                            class="h-10 w-10 rounded-xl shadow-sm border border-brand p-1 bg-white dark:bg-darkBg">
-                        <div
-                            class="absolute -bottom-1 -right-1 bg-green-500 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-darkSurface">
-                        </div>
-                    </div>
-                    <h1 class="text-2xl font-black text-gray-900 dark:text-white font-cairo tracking-tight">
-                        الناظر<span class="text-brand">.</span></h1>
-                </div>
-
-                <!-- Left: Control Actions (Buttons) -->
-                <div class="flex items-center gap-2">
-                    <button onclick="closeStudentProfile()"
-                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm group"
-                        title="إغلاق">
-                        <i class="ri-logout-box-r-line text-xl transition-transform group-hover:-translate-x-1"></i>
-                    </button>
-                    <button onclick="toggleDarkMode()"
-                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-brand hover:text-black transition-all shadow-sm"
-                        title="تبديل الوضع">
-                        <i class="ri-sun-line dark:hidden text-xl"></i>
-                        <i class="ri-moon-line hidden dark:block text-xl"></i>
-                    </button>
-                    <button onclick="enableEditMode()"
-                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-brand hover:text-black transition-all shadow-sm"
-                        title="تعديل">
-                        <i class="ri-edit-2-line text-xl"></i>
-                    </button>
-                </div>
-            </nav>
-        </div>
-
-        <div class="max-w-4xl mx-auto px-6 text-center space-y-1 animate-fade-in-up">
-            <span class="text-[11px] uppercase tracking-[0.2em] font-black text-gray-500 dark:text-gray-400">لوحة
-                المتابعة</span>
-            <h2 class="text-3xl font-black text-gray-900 dark:text-white" id="profileHeaderTitle">الطالب <span
-                    class="text-brand">اسم الطالب</span></h2>
-        </div>
-
-        <div class="p-6 max-w-5xl mx-auto space-y-8 animate-fade-in-up pb-20">
-
-            <!-- Student Summary Header Card -->
-            <div class="glass-card p-8 border-l-4 border-l-brand relative overflow-hidden">
-                <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
-                    <!-- Avatar (Resized smaller as requested) -->
-                    <div class="relative shrink-0">
-                        <div
-                            class="w-16 h-16 rounded-xl bg-brand/10 border-2 border-brand/20 flex items-center justify-center text-2xl font-black text-brand shadow-inner">
-                            <span id="profileAvatar"></span>
-                        </div>
-                    </div>
-
-                    <!-- Info -->
-                    <div class="flex-1 text-center md:text-right">
-                        <div class="space-y-0.5 mb-4">
-                            <label
-                                class="text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">بيانات
-                                الطالب</label>
-                            <input type="text" id="profileName" disabled
-                                class="w-full bg-transparent text-3xl font-black text-gray-900 dark:text-white outline-none border-0 p-0 text-center md:text-right">
-                        </div>
-                        <div class="flex flex-wrap justify-center md:justify-start gap-4">
-                            <div
-                                class="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800">
-                                <i class="ri-whatsapp-line text-green-500"></i>
-                                <input type="tel" id="profileParentPhone" disabled
-                                    class="bg-transparent text-sm font-bold text-gray-600 dark:text-gray-300 w-32 outline-none">
-                            </div>
-                            <div id="profileCardBadgeContainer" onclick="openProfileCardLinkModal()"
-                                class="flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold cursor-pointer transition-all hover:scale-105">
-                                <i id="profileCardIcon" class="ri-qr-code-line"></i>
-                                <span id="profileCardText">كارت الطالب</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Main Metric (Attendance %) -->
-                    <div
-                        class="px-8 py-4 bg-brand rounded-2xl text-black shadow-xl shadow-brand/20 text-center min-w-[140px]">
-                        <span class="block text-[10px] font-black uppercase tracking-tighter opacity-70">نسبة
-                            الحضور</span>
-                        <span id="attendancePercentage" class="text-4xl font-black">0%</span>
-                    </div>
-                </div>
-
-                <!-- Subtle Background Accent -->
-                <i
-                    class="ri-user-star-line absolute -bottom-4 -left-4 text-9xl text-brand/5 -rotate-12 pointer-events-none"></i>
-
-                <!-- Edit Options (Hidden by default) -->
-                <div id="saveProfileBtn"
-                    class="hidden mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
-                    <button onclick="cancelEditMode()"
-                        class="px-6 py-2 text-sm font-bold text-gray-500 hover:text-red-500 transition-colors">إلغاء</button>
-                    <button onclick="saveStudentChanges()"
-                        class="px-6 py-2 bg-brand text-black text-sm font-black rounded-xl shadow-md">حفظ
-                        التغييرات</button>
-                </div>
-            </div>
-
-            <!-- Content Grid: Exams, Attendance, Payments -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                <!-- Section 1: Exams Grades -->
-                <div class="glass-card flex flex-col">
-                    <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                        <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2">
-                            <i class="ri-medal-fill text-purple-500"></i> درجات الامتحانات
-                        </h3>
-                        <span id="statExams"
-                            class="bg-purple-50 dark:bg-purple-900/20 text-purple-600 px-3 py-1 rounded-full text-xs font-black">0</span>
-                    </div>
-                    <div id="profileExamGradesList"
-                        class="p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar flex-1">
-                        <!-- Exam items will be injected here -->
-                        <div class="text-center py-10 text-gray-400 dark:text-gray-500 flex flex-col items-center">
-                            <i class="ri-inbox-line text-4xl block mb-2 opacity-50"></i>
-                            <p class="text-sm font-bold uppercase tracking-widest">لا يوجد امتحانات حالياً</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 2: Monthly Attendance -->
-                <div class="glass-card flex flex-col">
-                    <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                        <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2">
-                            <i class="ri-calendar-check-fill text-blue-500"></i> سجل الحضور الشهري
-                        </h3>
-                    </div>
-                    <div id="profileMonthlyAttendance"
-                        class="p-4 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar flex-1">
-                        <!-- Monthly attendance items will be injected here -->
-                    </div>
-                </div>
-
-                <!-- Section 3: Payments Status -->
-                <div class="glass-card flex flex-col">
-                    <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                        <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2">
-                            <i class="ri-bank-card-fill text-green-500"></i> حالة المصروفات
-                        </h3>
-                    </div>
-                    <div id="profilePaymentsStatus"
-                        class="p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar flex-1">
-                        <!-- Payment items will be injected here -->
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Detailed Log (Last Sessions) -->
-            <div class="glass-card overflow-hidden">
-                <div class="p-5 bg-gray-50/50 dark:bg-black/20 border-b border-gray-100 dark:border-gray-800">
-                    <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2 text-sm">
-                        <i class="ri-history-line text-brand"></i> سجل آخر 20 حصة
-                    </h3>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-right text-sm">
-                        <thead class="bg-gray-50/50 dark:bg-black/40 text-gray-500 dark:text-gray-300">
-                            <tr>
-                                <th class="p-4 font-black">التاريخ</th>
-                                <th class="p-4 font-black">الحالة</th>
-                                <th class="p-4 font-black">الواجب</th>
-                            </tr>
-                        </thead>
-                        <tbody id="profileAttendanceHistory"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div> <!-- Close p-6 pb-20 -->
-    </div> <!-- Close studentProfilePage -->
-            </div> <!-- Close main flex-grow content area -->
-        </div> <!-- Close outer flex layout -->
-    </div> <!-- Close mainContent -->
-
-    <!-- Notification Status Modal (Refined Glass) -->
-    <div id="notificationStatusModal" class="fixed inset-0 z-[2000] hidden items-center justify-center p-4">
-        <div class="absolute inset-0 bg-zinc-900/10 dark:bg-black/40 backdrop-blur-md"
-            onclick="closeNotificationStatusModal()"></div>
-
-        <div class="relative w-full max-w-2xl bg-white/95 dark:bg-zinc-900/90 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] overflow-hidden transform scale-95 opacity-0 transition-all duration-300 border border-white dark:border-white/10"
-            id="notificationStatusModalContent">
-
-            <!-- Subtle Grid Pattern Background -->
-            <div
-                class="absolute inset-0 -z-10 opacity-[0.15] dark:opacity-30 pointer-events-none bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:16px_16px]">
-            </div>
-
-            <div
-                class="p-8 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/40 dark:bg-white/5">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center text-brand border border-brand/20">
-                        <i class="ri-notification-3-line text-2xl"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-2xl font-black text-gray-900 dark:text-white tracking-tight">حالة الإشعارات</h3>
-                        <div class="flex items-center gap-2 mt-0.5">
-                            <span class="flex h-2 w-2 relative">
-                                <span
-                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                            </span>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">Live Monitoring
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <button onclick="closeNotificationStatusModal()"
-                    class="w-10 h-10 flex items-center justify-center rounded-2xl bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all group">
-                    <i class="ri-close-line text-2xl transition-transform group-hover:rotate-90"></i>
-                </button>
-            </div>
-
-            <div class="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                <!-- Stats Grid -->
-                <div class="grid grid-cols-2 gap-6">
-                    <div
-                        class="p-6 bg-green-50/50 dark:bg-white/5 border border-green-100 dark:border-white/10 rounded-[2rem] text-center shadow-sm relative overflow-hidden group">
-                        <div
-                            class="absolute top-0 right-0 w-16 h-16 bg-green-500/5 rounded-full blur-2xl -mr-8 -mt-8 px-2">
-                        </div>
-                        <p
-                            class="text-[11px] text-green-600/70 dark:text-gray-400 font-black uppercase tracking-widest mb-1">
-                            تم التفعيل</p>
-                        <h4 id="activatedCount" class="text-4xl font-black text-green-600 dark:text-green-400">0</h4>
-                    </div>
-                    <div
-                        class="p-6 bg-red-50/50 dark:bg-white/5 border border-red-100 dark:border-white/10 rounded-[2rem] text-center shadow-sm relative overflow-hidden group">
-                        <div
-                            class="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-full blur-2xl -mr-8 -mt-8 px-2">
-                        </div>
-                        <p
-                            class="text-[11px] text-red-600/70 dark:text-gray-400 font-black uppercase tracking-widest mb-1">
-                            لم يتم التفعيل</p>
-                        <h4 id="notActivatedCount" class="text-4xl font-black text-red-600 dark:text-red-400">0</h4>
-                    </div>
-                </div>
-
-                <div class="space-y-8">
-                    <div>
-                        <div class="flex items-center justify-between mb-4 px-2">
-                            <h4
-                                class="font-black text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest opacity-80">
-                                <i class="ri-checkbox-circle-fill text-green-500"></i>
-                                الطلاب النشطين
-                            </h4>
-                            <span class="h-[1px] flex-1 bg-gray-100 dark:bg-white/5 mx-4"></span>
-                        </div>
-                        <div id="activatedStudentsList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                    </div>
-
-                    <div>
-                        <div class="flex items-center justify-between mb-4 px-2">
-                            <h4
-                                class="font-black text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest opacity-80">
-                                <i class="ri-error-warning-fill text-red-500"></i>
-                                بحاجة لتفعيل
-                            </h4>
-                            <span class="h-[1px] flex-1 bg-gray-100 dark:bg-white/5 mx-4"></span>
-                        </div>
-                        <div id="notActivatedStudentsList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                class="p-5 bg-gray-50/80 dark:bg-white/5 border-t border-gray-100 dark:border-white/5 flex items-center justify-center gap-3">
-                <div class="flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
-                    <p class="text-[11px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-[0.3em]">Cloud
-                        Synchronization Active</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div id="celebrationOverlay"
-        class="fixed inset-0 z-[2000] pointer-events-none hidden flex items-center justify-center">
-        <div id="lottieContainer" class="w-[500px] h-[500px]"></div>
-    </div>
-
-    <!-- Lottie Script -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
-    <!-- 📝 مودال إعدادات الامتحان (Exam Settings Modal) -->
-    <div id="examSettingsModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" onclick="closeExamModal()"></div>
-        <div class="bg-white dark:bg-darkSurface w-full max-w-md rounded-3xl shadow-2xl relative z-10 overflow-hidden animate-fade-in-up border border-gray-100 dark:border-gray-800">
-            <div class="bg-brand p-6 text-black">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-black flex items-center gap-2">
-                        <i class="ri-settings-4-fill"></i> إعدادات الامتحان
-                    </h3>
-                    <button onclick="closeExamModal()" class="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center hover:bg-black/20">
-                        <i class="ri-close-line"></i>
-                    </button>
-                </div>
-                <p class="text-xs font-bold opacity-70 mt-1" id="examFileNameDisplay">اسم الملف</p>
-            </div>
-            
-            <div class="p-6 space-y-6">
-                <!-- مستوى الصعوبة -->
-                <div>
-                    <label class="block text-sm font-black mb-3 text-gray-700 dark:text-gray-300">مستوى الصعوبة:</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button onclick="setExamDifficulty('سهل')" class="difficulty-btn px-4 py-2 rounded-xl text-xs font-bold border-2 border-gray-100 dark:border-gray-800 hover:border-brand transition-all active bg-gray-50 dark:bg-black" data-val="سهل">سهل</button>
-                        <button onclick="setExamDifficulty('متوسط')" class="difficulty-btn px-4 py-2 rounded-xl text-xs font-bold border-2 border-gray-100 dark:border-gray-800 hover:border-brand transition-all" data-val="متوسط">متوسط</button>
-                        <button onclick="setExamDifficulty('صعب')" class="difficulty-btn px-4 py-2 rounded-xl text-xs font-bold border-2 border-gray-100 dark:border-gray-800 hover:border-brand transition-all" data-val="صعب">صعب جداً</button>
-                    </div>
-                </div>
-
-                <!-- النطاق (صفحات / وحدات) -->
-                <div>
-                    <label class="block text-sm font-black mb-3 text-gray-700 dark:text-gray-300">نطاق الأسئلة (اختياري):</label>
-                    <input type="text" id="examScopeInput" placeholder="مثلاً: من صـ 10 لـ 20 أو الوحدة الأولى" 
-                        class="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand outline-none transition-all">
-                </div>
-
-                <!-- اللغة -->
-                <div>
-                    <label class="block text-sm font-black mb-3 text-gray-700 dark:text-gray-300">لغة الامتحان والرياضيات:</label>
-                    <div class="flex gap-4">
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="radio" name="examLang" value="ar" checked class="w-4 h-4 accent-brand">
-                            <span class="text-sm font-bold text-gray-600 dark:text-gray-400 group-hover:text-brand transition-colors">عربي (١٢٣، س ص)</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="radio" name="examLang" value="en" class="w-4 h-4 accent-brand">
-                            <span class="text-sm font-bold text-gray-600 dark:text-gray-400 group-hover:text-brand transition-colors">English (123, xyz)</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- عدد الأسئلة -->
-                <div>
-                    <label class="block text-sm font-black mb-3 text-gray-700 dark:text-gray-300">عدد الأسئلة:</label>
-                    <select id="examCountInput" class="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-brand">
-                        <option value="5">5 أسئلة</option>
-                        <option value="10" selected>10 أسئلة</option>
-                        <option value="15">15 سؤال</option>
-                        <option value="20">20 سؤال</option>
-                    </select>
-                </div>
-
-                <button onclick="confirmGenerateExam()" class="w-full bg-gray-900 dark:bg-brand dark:text-black text-white font-black py-4 rounded-2xl shadow-xl shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <i class="ri-magic-line text-lg"></i>
-                    ابدأ إنشاء الامتحان الآن
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bulk QR Print Modal -->
-    <div id="bulkQrPrintModal" class="fixed inset-0 z-[2000] hidden items-center justify-center p-4">
-        <div class="absolute inset-0 bg-zinc-900/10 dark:bg-black/40 backdrop-blur-md" onclick="closeBulkPrintModal()"></div>
-        <div class="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2rem] shadow-2xl overflow-hidden p-8 text-center animate-fade-in-up border border-gray-100 dark:border-white/10">
-            <div class="w-16 h-16 bg-brand/20 text-brand rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="ri-printer-fill text-3xl"></i>
-            </div>
-            <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">طباعة كروت الطلاب</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">يمكنك طباعة كروت الـ QR بضغطة واحدة.</p>
-            
-            <div class="space-y-3">
-                <button onclick="startBulkPrint('new')" class="w-full bg-brand text-black font-black py-3 rounded-xl shadow-md hover:scale-[1.02] transition-transform flex justify-center items-center gap-2">
-                    <i class="ri-user-add-line"></i> طباعة للطلاب الجدد فقط
-                </button>
-                <button onclick="startBulkPrint('all')" class="w-full bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white font-bold py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex justify-center items-center gap-2">
-                    <i class="ri-group-line"></i> طباعة لجميع طلاب المجموعة
-                </button>
-                <button onclick="closeBulkPrintModal()" class="w-full bg-transparent text-gray-500 font-bold py-3 rounded-xl hover:text-gray-700 transition-colors">
-                    إلغاء
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bulk QR Print Success Modal -->
-    <div id="bulkQrPrintSuccessModal" class="fixed inset-0 z-[2050] hidden items-center justify-center p-4">
-        <div class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60 backdrop-blur-sm" onclick="closeBulkQrPrintSuccessModal(false)"></div>
-        <div class="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-[2rem] shadow-2xl overflow-hidden p-8 text-center animate-fade-in-up border border-gray-100 dark:border-white/10">
-            <div class="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="ri-checkbox-circle-fill text-4xl"></i>
-            </div>
-            <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">هل تمت الطباعة بنجاح؟</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                موافقتك ستمنع هؤلاء الطلاب من الظهور مرة أخرى عند اختيار الطباعة "للطلاب الجدد فقط".
-            </p>
-            
-            <div class="flex gap-3">
-                <button onclick="closeBulkQrPrintSuccessModal(true)" class="flex-1 bg-green-500 text-white font-black py-3 rounded-xl shadow-md hover:bg-green-600 transition-colors">
-                    نعم، تمت الطباعة
-                </button>
-                <button onclick="closeBulkQrPrintSuccessModal(false)" class="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
-                    لا، حدثت مشكلة
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Change Password Modal -->
-    <div id="changePasswordModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeChangePasswordModal()"></div>
-        <div class="relative bg-white dark:bg-gray-900 w-full max-w-sm rounded-3xl shadow-2xl p-6 border border-gray-100 dark:border-gray-800 transform transition-all overflow-hidden">
-            <!-- Decorative Background -->
-            <div class="absolute -top-24 -right-24 w-48 h-48 bg-yellow-400 opacity-10 rounded-full pointer-events-none"></div>
-            
-            <div class="flex items-center gap-3 mb-6 relative">
-                <div class="w-12 h-12 rounded-2xl bg-yellow-100 text-yellow-600 flex items-center justify-center text-xl shadow-inner border border-yellow-200">
-                    <i class="ri-lock-password-fill"></i>
-                </div>
-                <div>
-                    <h3 class="text-xl font-black text-gray-900 dark:text-white tracking-tight">تغيير كلمة المرور</h3>
-                    <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">تأمين الحساب</p>
-                </div>
-            </div>
-
-            <div class="space-y-4 relative">
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">كلمة المرور الحالية</label>
-                    <div class="relative">
-                        <i class="ri-lock-line absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="password" id="currentPasswordInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-yellow-400 transition-colors" placeholder="أدخل كلمة المرور الحالية">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">كلمة المرور الجديدة</label>
-                    <div class="relative">
-                        <i class="ri-key-2-line absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="password" id="newPasswordInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-yellow-400 transition-colors" placeholder="أدخل كلمة المرور الجديدة">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">تأكيد كلمة المرور الجديدة</label>
-                    <div class="relative">
-                        <i class="ri-check-double-line absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="password" id="confirmNewPasswordInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-yellow-400 transition-colors" placeholder="أعد إدخال كلمة المرور الجديدة">
-                    </div>
+                    <h4 class="heading-text text-lg font-bold mb-6">الدعم والمساعدة</h4>
+                    <ul style="display:flex; flex-direction:column; gap:1.2rem; list-style:none; padding:0;">
+                        <li><a href="#" class="sub-text text-sm hover:text-[#F2CE5A]" style="text-decoration:none;">مركز المساعدة</a></li>
+                        <li><a href="mailto:support@learnaria.com" class="sub-text text-sm hover:text-[#F2CE5A]" style="text-decoration:none;">support@learnaria.com</a></li>
+                    </ul>
                 </div>
             </div>
             
-            <div class="flex gap-3 mt-8 relative">
-                <button onclick="handleChangePassword()" class="flex-1 btn-primary-custom text-black font-black py-3 rounded-xl shadow-lg transform hover:scale-105 transition-all">
-                    تأكيد وتغيير
-                </button>
-                <button onclick="closeChangePasswordModal()" class="px-6 bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-bold py-3 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors">
-                    إلغاء
-                </button>
+            <div style="padding-top:1.5rem; padding-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+                <p class="sub-text font-bold text-sm m-0" data-i18n="footer_copy">&copy; 2026 جميع الحقوق محفوظة لمنصة الناظر التعليمية.</p>
+                <div style="display:flex; gap:20px;">
+                    <a href="#" class="sub-text text-xs hover:text-[#F2CE5A]" style="text-decoration:none;">سياسة الخصوصية</a>
+                    <a href="#" class="sub-text text-xs hover:text-[#F2CE5A]" style="text-decoration:none;">شروط الاستخدام</a>
+                </div>
             </div>
         </div>
-    </div>
+    </footer>
 
-    <!-- 🔗 Card Link Modal -->
-    <div id="cardLinkModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCardLinkModal()"></div>
-        <div class="relative bg-white dark:bg-darkSurface rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all border border-gray-100 dark:border-white/5 overflow-hidden">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-3xl -z-10"></div>
-            
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 rounded-full bg-brand/10 text-brand text-3xl flex items-center justify-center mx-auto mb-3 shadow-inner">
-                    <i class="ri-links-line"></i>
-                </div>
-                <h3 class="text-xl font-black text-gray-900 dark:text-white">ربط كارت ذكي</h3>
-                <p class="text-sm font-bold text-gray-500 mt-1">الطالب: <span id="cardLinkStudentName" class="text-brand"></span></p>
-            </div>
-
-            <div class="space-y-3">
-                <button onclick="startCardLinkScanner()" class="w-full flex items-center justify-center gap-3 px-5 py-3.5 bg-brand text-black font-black rounded-xl shadow-lg hover:shadow-brand/30 hover:scale-[1.02] transition-all">
-                    <i class="ri-qr-scan-2-line text-lg"></i>
-                    مسح كارت بالكاميرا الآن
-                </button>
-                <div class="relative flex items-center py-2">
-                    <div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
-                    <span class="flex-shrink-0 mx-4 text-xs font-bold text-gray-400">أو إدخال يدوي</span>
-                    <div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
-                </div>
-                <div class="flex gap-2">
-                    <input type="text" id="manualCardIdInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-brand uppercase" placeholder="NAZ-XXXXXX" maxlength="12">
-                    <button onclick="submitManualCardLink()" class="px-4 bg-gray-800 dark:bg-gray-700 text-white rounded-xl hover:bg-gray-900 transition-colors font-bold">
-                        <i class="ri-check-line"></i>
-                    </button>
-                </div>
-                <button onclick="closeCardLinkModal()" class="w-full mt-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline underline-offset-4">
-                    تخطي الآن
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 🖨️ Print Container -->
-    <div id="printCardsContainer"></div>
-
-    <style>
-        /* Card Generator Print Styles */
-        @media screen {
-            #printCardsContainer { display: none !important; }
-        }
-        @media print {
-            #printCardsContainer, #printCardsContainer * { visibility: visible !important; }
-            #printCardsContainer {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                display: flex !important;
-                flex-wrap: wrap;
-                gap: 5mm;
-                padding: 10mm;
-                justify-content: center;
-            }
-            .generic-card {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                box-sizing: border-box;
-                page-break-inside: avoid;
-                background-color: #ffffff;
-            }
-        }
-    </style>
+    <script src="js/landing.js"></script>
 </body>
-
 </html>
