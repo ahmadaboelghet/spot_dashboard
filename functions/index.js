@@ -1719,3 +1719,48 @@ exports.autoAbsenceReminder = onSchedule({
     console.error("Auto Absence Error:", error);
   }
 });
+
+// ===================================================================
+// (إعادة تعيين كلمة المرور للمستخدمين)
+// ===================================================================
+exports.resetPassword = onCall(async (request) => {
+  const { phoneNumber, newPassword } = request.data;
+
+  if (!phoneNumber || !newPassword) {
+    throw new HttpsError(
+      "invalid-argument",
+      "The function must be called with phoneNumber and newPassword arguments."
+    );
+  }
+
+  // Normalize email from phone number (preserves '+' as used in auth_service.dart)
+  const normalizedPhone = phoneNumber.trim();
+  const email = `${normalizedPhone}@learnaria.app`;
+
+  try {
+    // Find user by email
+    const userRecord = await admin.auth().getUserByEmail(email);
+    const uid = userRecord.uid;
+
+    // Update password
+    await admin.auth().updateUser(uid, {
+      password: newPassword
+    });
+
+    return { status: "success", message: "Password updated successfully." };
+  } catch (error) {
+    console.error("Error updating user password:", error);
+    
+    if (error.code === "auth/user-not-found") {
+      throw new HttpsError(
+        "not-found",
+        "User not found with this phone number."
+      );
+    }
+    
+    throw new HttpsError(
+      "internal",
+      error.message || "An error occurred while resetting the password."
+    );
+  }
+});
