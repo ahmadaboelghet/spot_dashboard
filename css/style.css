@@ -940,3 +940,30 @@ body.desktop-device video {
     contain-intrinsic-size: 50px;
     will-change: transform;
 }
+
+/* 🔍 تنسيق حقول وأيقونات البحث لضمان عدم التلامس ودعم الاتجاهين */
+.search-container {
+    position: relative;
+    width: 100%;
+}
+.search-input {
+    padding-right: 3rem !important;
+    padding-left: 1rem !important;
+}
+[dir="ltr"] .search-input {
+    padding-left: 3rem !important;
+    padding-right: 1rem !important;
+}
+.search-icon {
+    position: absolute;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    right: 1rem !important;
+    left: auto !important;
+    pointer-events: none;
+    font-size: 1.1rem;
+}
+[dir="ltr"] .search-icon {
+    right: auto !important;
+    left: 1rem !important;
+}
