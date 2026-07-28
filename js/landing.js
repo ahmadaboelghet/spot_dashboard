@@ -213,10 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
             faq_4_a: 'بالتأكيد! يمكنك إنشاء وإدارة عدد لا محدود من المجموعات الدراسية والفصول والطلاب، وتصنيفهم وفق جداول زمنية مرنة للغاية.',
             faq_5_q: 'كيف يمكنني تصدير كشوف الدرجات والغياب؟',
             faq_5_a: 'بكبسة زر واحدة من لوحة التحكم، يمكنك تصدير تقارير الحضور والغياب وكشوف درجات الطلاب بالكامل لملفات Excel منسقة أو PDF لطباعتها أو حفظها في سجلاتك.',
-            pricing_toggle_single: 'الترم الواحد',
-            pricing_toggle_full: 'العام الكامل (ترمين)',
-            pricing_toggle_discount: 'خصم 15%',
-            pricing_feature_4: 'تقارير ورسائل حضور وغياب فورية للآباء'
+            pricing_feature_4: 'تقارير ورسائل حضور وغياب فورية للآباء',
+            hero_notif_title: '🔔 إشعار الحضور الفوري',
+            hero_notif_now: 'الآن',
+            parent_alert_app_title: 'الناظر (إشعار)',
+            parent_alert_text: 'حضر ابنكم أحمد خالد الآن الحصة.'
         },
         en: {
             page_title: 'الناظر - Smart Teacher',
@@ -337,10 +338,11 @@ document.addEventListener('DOMContentLoaded', () => {
             faq_4_a: 'Absolutely! You can create and manage unlimited study groups, classes, and students, categorized according to highly flexible timetables.',
             faq_5_q: 'How can I export grades and attendance sheets?',
             faq_5_a: 'With a single click from the dashboard, you can export full student attendance reports and grade sheets to formatted Excel or PDF files to print or save in your records.',
-            pricing_toggle_single: 'Single Semester',
-            pricing_toggle_full: 'Full Year (2 Semesters)',
-            pricing_toggle_discount: '15% Off',
-            pricing_feature_4: 'Instant attendance & absence reports for parents'
+            pricing_feature_4: 'Instant attendance & absence reports for parents',
+            hero_notif_title: '🔔 Live Check-in alert',
+            hero_notif_now: 'Just Now',
+            parent_alert_app_title: 'Elnazer (Alert)',
+            parent_alert_text: 'Your son Ahmed Khaled checked in now to the class.'
         }
     };
 
@@ -880,8 +882,8 @@ document.addEventListener('DOMContentLoaded', () => {
             parentPhoneScreen.innerHTML = `
                 <!-- Phone Top Bar -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; font-size:11px; font-weight:bold;" class="mockup-text">
-                    <span>الناظر - ولي الأمر</span>
-                    <span style="font-size:9px; background:rgba(16,185,129,0.15); color:#10b981; padding:2px 8px; border-radius:50px;">مباشر</span>
+                    <span>${currentLang === 'ar' ? 'الناظر - ولي الأمر' : 'Elnazer - Parent App'}</span>
+                    <span style="font-size:9px; background:rgba(16,185,129,0.15); color:#10b981; padding:2px 8px; border-radius:50px;">${currentLang === 'ar' ? 'مباشر' : 'Live'}</span>
                 </div>
 
                 <!-- Page Content (Attendance Timeline) -->
@@ -891,7 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mockup-card-theme" style="padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <div class="mockup-text text-[11px] font-bold">${currentLang === 'ar' ? 'حصة الفيزياء (الأحد)' : 'Physics Class (Sun)'}</div>
-                            <div style="font-size:9px; color:#aaa;">25 يوليو - 6:02 مساءً</div>
+                            <div style="font-size:9px; color:#aaa;">${currentLang === 'ar' ? '25 يوليو - 6:02 مساءً' : 'July 25 - 6:02 PM'}</div>
                         </div>
                         <span style="font-size:10px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> ${currentLang === 'ar' ? 'حضور' : 'Present'}</span>
                     </div>
@@ -899,7 +901,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mockup-card-theme" style="padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <div class="mockup-text text-[11px] font-bold">${currentLang === 'ar' ? 'حصة الكيمياء (الثلاثاء)' : 'Chemistry Class (Tue)'}</div>
-                            <div style="font-size:9px; color:#aaa;">20 يوليو - 4:15 مساءً</div>
+                            <div style="font-size:9px; color:#aaa;">${currentLang === 'ar' ? '20 يوليو - 4:15 مساءً' : 'July 20 - 4:15 PM'}</div>
                         </div>
                         <span style="font-size:10px; color:#ef4444; font-weight:bold;"><i class="fa-solid fa-circle-xmark"></i> ${currentLang === 'ar' ? 'غياب' : 'Absent'}</span>
                     </div>
@@ -907,7 +909,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mockup-card-theme" style="padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <div class="mockup-text text-[11px] font-bold">${currentLang === 'ar' ? 'حصة الفيزياء (الأحد)' : 'Physics Class (Sun)'}</div>
-                            <div style="font-size:9px; color:#aaa;">18 يوليو - 6:00 مساءً</div>
+                            <div style="font-size:9px; color:#aaa;">${currentLang === 'ar' ? '18 يوليو - 6:00 مساءً' : 'July 18 - 6:00 PM'}</div>
                         </div>
                         <span style="font-size:10px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> ${currentLang === 'ar' ? 'حضور' : 'Present'}</span>
                     </div>
@@ -934,8 +936,8 @@ document.addEventListener('DOMContentLoaded', () => {
             parentPhoneScreen.innerHTML = `
                 <!-- Phone Top Bar -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; font-size:11px; font-weight:bold;" class="mockup-text">
-                    <span>كشف الدرجات الأسبوعي</span>
-                    <span style="font-size:9px; background:rgba(59,130,246,0.15); color:#3b82f6; padding:2px 8px; border-radius:50px;">محدث</span>
+                    <span>${currentLang === 'ar' ? 'كشف الدرجات الأسبوعي' : 'Weekly Grade Report'}</span>
+                    <span style="font-size:9px; background:rgba(59,130,246,0.15); color:#3b82f6; padding:2px 8px; border-radius:50px;">${currentLang === 'ar' ? 'محدث' : 'Updated'}</span>
                 </div>
 
                 <!-- Page Content (Grades Timeline) -->
@@ -945,7 +947,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mockup-card-theme" style="padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <div class="mockup-text text-[11px] font-bold">${currentLang === 'ar' ? 'اختبار الفيزياء الأول' : 'Physics Exam 1'}</div>
-                            <div style="font-size:9px; color:#aaa;">درجة كاملة</div>
+                            <div style="font-size:9px; color:#aaa;">${currentLang === 'ar' ? 'درجة كاملة' : 'Full Mark'}</div>
                         </div>
                         <span style="font-size:12px; color:#10b981; font-weight:black;">20/20</span>
                     </div>
@@ -953,7 +955,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mockup-card-theme" style="padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <div class="mockup-text text-[11px] font-bold">${currentLang === 'ar' ? 'اختبار الكيمياء الشهري' : 'Chemistry Monthly Exam'}</div>
-                            <div style="font-size:9px; color:#aaa;">تقدير ممتاز</div>
+                            <div style="font-size:9px; color:#aaa;">${currentLang === 'ar' ? 'تقدير ممتاز' : 'Excellent'}</div>
                         </div>
                         <span style="font-size:12px; color:#F2CE5A; font-weight:black;">18/20</span>
                     </div>
@@ -961,7 +963,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mockup-card-theme" style="padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <div class="mockup-text text-[11px] font-bold">${currentLang === 'ar' ? 'اختبار الفيزياء الأسبوعي' : 'Physics Weekly Quiz'}</div>
-                            <div style="font-size:9px; color:#aaa;">درجة كاملة</div>
+                            <div style="font-size:9px; color:#aaa;">${currentLang === 'ar' ? 'درجة كاملة' : 'Full Mark'}</div>
                         </div>
                         <span style="font-size:12px; color:#10b981; font-weight:black;">10/10</span>
                     </div>
@@ -988,8 +990,8 @@ document.addEventListener('DOMContentLoaded', () => {
             parentPhoneScreen.innerHTML = `
                 <!-- Phone Top Bar -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; font-size:11px; font-weight:bold;" class="mockup-text">
-                    <span>جدول الحصص القادمة</span>
-                    <span style="font-size:9px; background:rgba(168,85,247,0.15); color:#a855f7; padding:2px 8px; border-radius:50px;">منظم</span>
+                    <span>${currentLang === 'ar' ? 'جدول الحصص القادمة' : 'Upcoming Classes'}</span>
+                    <span style="font-size:9px; background:rgba(168,85,247,0.15); color:#a855f7; padding:2px 8px; border-radius:50px;">${currentLang === 'ar' ? 'منظم' : 'Scheduled'}</span>
                 </div>
 
                 <!-- Page Content (Calendar timeline) -->
@@ -999,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mockup-card-theme" style="padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-right:4px solid #F2CE5A;">
                         <div>
                             <div class="mockup-text text-[11px] font-bold">${currentLang === 'ar' ? 'مجموعة الأحد (فيزياء)' : 'Sunday Group (Physics)'}</div>
-                            <div style="font-size:9px; color:#aaa;">غداً - الساعة 6:00 مساءً</div>
+                            <div style="font-size:9px; color:#aaa;">${currentLang === 'ar' ? 'غداً - الساعة 6:00 مساءً' : 'Tomorrow - 6:00 PM'}</div>
                         </div>
                         <i class="fa-solid fa-chevron-left text-xs text-gray-500"></i>
                     </div>
@@ -1007,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mockup-card-theme" style="padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-right:4px solid #3b82f6;">
                         <div>
                             <div class="mockup-text text-[11px] font-bold">${currentLang === 'ar' ? 'مجموعة الثلاثاء (كيمياء)' : 'Tuesday Group (Chemistry)'}</div>
-                            <div style="font-size:9px; color:#aaa;">الساعة 4:00 مساءً</div>
+                            <div style="font-size:9px; color:#aaa;">${currentLang === 'ar' ? 'الساعة 4:00 مساءً' : '4:00 PM'}</div>
                         </div>
                         <i class="fa-solid fa-chevron-left text-xs text-gray-500"></i>
                     </div>

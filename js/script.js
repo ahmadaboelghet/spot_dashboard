@@ -1780,6 +1780,7 @@ async function loginTeacher() {
 
         document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
+        document.getElementById('navHomeButton')?.classList.add('hidden');
 
         if (data) {
             document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${data.name || ''}`;
@@ -3999,6 +4000,7 @@ async function loadPreferences() {
         updateHomeLinks();
         document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
+        document.getElementById('navHomeButton')?.classList.add('hidden');
 
         // محاولة جلب بيانات المعلم من الداتابيز المحلية لتعبئة البروفايل
         let teacherData = null;
