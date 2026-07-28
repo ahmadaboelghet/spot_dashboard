@@ -1,3 +1,8 @@
+// Check if teacher is already logged in and redirect to dashboard instantly
+if (localStorage.getItem('learnaria-remember') === 'true' && (localStorage.getItem('learnaria-tid') || sessionStorage.getItem('learnaria-tid'))) {
+    window.location.replace('dashboard.html');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     
     // --- 0. Element & State Declarations (Top of file to prevent hoisting ReferenceErrors) ---
@@ -30,6 +35,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const reviewContentText = document.getElementById('reviewContentText');
     const submitReviewBtn = document.getElementById('submitReviewBtn');
     const testimonialsGrid = document.getElementById('testimonialsGrid');
+    const starRatingSelector = document.getElementById('starRatingSelector');
+    let selectedRating = 5;
+
+    if (starRatingSelector) {
+        const stars = starRatingSelector.querySelectorAll('.star-btn');
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                selectedRating = parseInt(star.getAttribute('data-value'));
+                stars.forEach(s => {
+                    const val = parseInt(s.getAttribute('data-value'));
+                    if (val <= selectedRating) {
+                        s.className = 'fa-solid fa-star star-btn text-yellow-400';
+                    } else {
+                        s.className = 'fa-regular fa-star star-btn text-gray-300 dark:text-zinc-700';
+                    }
+                });
+            });
+        });
+    }
 
     // Parent App elements
     const parentPhoneScreen = document.getElementById('parentPhoneScreen');
@@ -76,15 +100,15 @@ document.addEventListener('DOMContentLoaded', () => {
             nav_features: 'المميزات',
             nav_pricing: 'الأسعار',
             nav_download: 'التطبيقات',
-            nav_enroll: 'ابدأ الآن',
+            nav_enroll: 'تسجيل الدخول',
             nav_status: 'متصل',
             hero_badge: '✨ الإصدار الجديد 2.0',
             hero_live_teachers: '4,210 معلماً متصل الآن يباشرون أعمالهم',
             hero_title_1: 'منصة الناظر<span class="logo-dot">.</span> لإدارة التعليم',
             hero_title_2: 'وداعاً للأعباء الورقية واليدوية',
             hero_subtitle: 'المعلم المحترف يستحق نظاماً محترفاً. منصة الناظر تمنحك القوة والتحكم المطلق لإدارة مجموعاتك الدراسية وحصصك، وإعداد وتصحيح الامتحانات، ومتابعة درجات وغياب الطلاب تلقائياً، مع ربط أولياء الأمور فوريًا بكل التفاصيل لتتفرغ تماماً للتدريس والإبداع.',
-            hero_btn_primary: 'ابدأ مجاناً الآن',
-            hero_btn_secondary: 'شاهد المميزات',
+            hero_btn_primary: 'تسجيل الدخول',
+            hero_btn_secondary: 'ابدأ الآن',
             stat_students: 'طالب مسجل',
             stat_teachers: 'معلم محترف',
             stat_uptime: 'استقرار الخدمة',
@@ -169,7 +193,30 @@ document.addEventListener('DOMContentLoaded', () => {
             footer_terms: 'شروط الاستخدام',
             hero_live_stream_label: 'بث الحضور المباشر (QR):',
             live_status_checkin: 'تم الحضور',
-            testi_form_title: 'شاركنا رأيك بالمنصة'
+            testi_form_title: 'شاركنا رأيك بالمنصة',
+            hero_students_unit: 'طالب',
+            hero_active_now: 'نشط الآن',
+            testi_label_name: 'الاسم الكامل:',
+            testi_label_subject: 'المادة الدراسية:',
+            testi_label_content: 'التقييم أو الرأي:',
+            testi_placeholder_name: 'أ. محمد أحمد',
+            testi_placeholder_subject: 'مدرس رياضيات',
+            testi_placeholder_content: 'اكتب كلمتك الطيبة هنا...',
+            testi_btn_submit: 'أرسل رأيك للمنصة 🚀',
+            testimonial_verified: 'موثق',
+            faq_subtitle: 'إليك إجابات شاملة لأكثر الأسئلة تكراراً من قبل المعلمين والمدارس.',
+            faq_net_q: 'هل يتطلب التطبيق اتصالاً دائماً بالإنترنت؟',
+            faq_net_a: 'نعم، يتطلب النظام اتصالاً بالإنترنت لتتم مزامنة بيانات حضور وغياب الطلاب مع لوحة التحكم السحابية وإرسال الإشعارات المباشرة لأولياء الأمور لحظياً.',
+            faq_3_q: 'كيف يتم ربط حساب ولي الأمر بالطالب؟',
+            faq_3_a: 'يولد النظام كود ربط فريد (Student Link Code) لكل طالب. ينسخه المعلم أو الإدارة ويسلمه لولي الأمر ليدخله في التطبيق الخاص به ليتم المزامنة تلقائياً.',
+            faq_4_q: 'هل يمكنني إدارة أكثر من مجموعة دراسية؟',
+            faq_4_a: 'بالتأكيد! يمكنك إنشاء وإدارة عدد لا محدود من المجموعات الدراسية والفصول والطلاب، وتصنيفهم وفق جداول زمنية مرنة للغاية.',
+            faq_5_q: 'كيف يمكنني تصدير كشوف الدرجات والغياب؟',
+            faq_5_a: 'بكبسة زر واحدة من لوحة التحكم، يمكنك تصدير تقارير الحضور والغياب وكشوف درجات الطلاب بالكامل لملفات Excel منسقة أو PDF لطباعتها أو حفظها في سجلاتك.',
+            pricing_toggle_single: 'الترم الواحد',
+            pricing_toggle_full: 'العام الكامل (ترمين)',
+            pricing_toggle_discount: 'خصم 15%',
+            pricing_feature_4: 'تقارير ورسائل حضور وغياب فورية للآباء'
         },
         en: {
             page_title: 'الناظر - Smart Teacher',
@@ -177,15 +224,15 @@ document.addEventListener('DOMContentLoaded', () => {
             nav_features: 'Features',
             nav_pricing: 'Pricing',
             nav_download: 'Apps',
-            nav_enroll: 'Get Started',
+            nav_enroll: 'Log In',
             nav_status: 'Online',
             hero_badge: '✨ New Version 2.0',
             hero_live_teachers: '4,210 teachers online right now managing their classes',
             hero_title_1: 'Elnazer<span class="logo-dot">.</span> Platform for Education',
             hero_title_2: 'Say Goodbye to Paper & Manual Tasks',
             hero_subtitle: 'Professional teachers deserve a professional system. الناظر platform grants you absolute control to manage your schedules, groups, create and grade exams, and automatically track student performance, while keeping parents updated in real-time so you can focus entirely on teaching.',
-            hero_btn_primary: 'Start Free Now',
-            hero_btn_secondary: 'See Features',
+            hero_btn_primary: 'Log In',
+            hero_btn_secondary: 'Get Started',
             stat_students: 'Students Registered',
             stat_teachers: 'Professional Teachers',
             stat_uptime: 'Service Uptime',
@@ -270,7 +317,30 @@ document.addEventListener('DOMContentLoaded', () => {
             footer_terms: 'Terms of Use',
             hero_live_stream_label: 'Live Check-in Stream (QR):',
             live_status_checkin: 'Checked in',
-            testi_form_title: 'Share your feedback'
+            testi_form_title: 'Share your feedback',
+            hero_students_unit: 'Students',
+            hero_active_now: 'Active Now',
+            testi_label_name: 'Full Name:',
+            testi_label_subject: 'Teaching Subject:',
+            testi_label_content: 'Review or Feedback:',
+            testi_placeholder_name: 'e.g. Mr. John Doe',
+            testi_placeholder_subject: 'Math Teacher',
+            testi_placeholder_content: 'Write your kind feedback here...',
+            testi_btn_submit: 'Submit Feedback 🚀',
+            testimonial_verified: 'Verified',
+            faq_subtitle: 'Here are comprehensive answers to the most common questions from teachers and schools.',
+            faq_net_q: 'Does the app require a permanent internet connection?',
+            faq_net_a: 'Yes, the system requires internet connection to sync student attendance data with the cloud dashboard and send instant notifications to parents in real-time.',
+            faq_3_q: 'How is the parent\'s account linked to the student?',
+            faq_3_a: 'The system generates a unique Student Link Code for each student. The teacher or admin copies it and hands it to the parent, who enters it in their app for automatic syncing.',
+            faq_4_q: 'Can I manage more than one study group?',
+            faq_4_a: 'Absolutely! You can create and manage unlimited study groups, classes, and students, categorized according to highly flexible timetables.',
+            faq_5_q: 'How can I export grades and attendance sheets?',
+            faq_5_a: 'With a single click from the dashboard, you can export full student attendance reports and grade sheets to formatted Excel or PDF files to print or save in your records.',
+            pricing_toggle_single: 'Single Semester',
+            pricing_toggle_full: 'Full Year (2 Semesters)',
+            pricing_toggle_discount: '15% Off',
+            pricing_feature_4: 'Instant attendance & absence reports for parents'
         }
     };
 
@@ -298,6 +368,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const key = el.getAttribute('data-i18n');
             if (i18n[lang] && i18n[lang][key]) {
                 el.innerHTML = i18n[lang][key];
+            }
+        });
+
+        const placeholderElements = document.querySelectorAll('[data-i18n-placeholder]');
+        placeholderElements.forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (i18n[lang] && i18n[lang][key]) {
+                el.setAttribute('placeholder', i18n[lang][key]);
             }
         });
         
@@ -403,6 +481,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const cardTotal = document.getElementById('pricingCardTotalPrice');
         if (cardTotal) {
             cardTotal.textContent = `$${roundedTotal}`;
+        }
+
+        const priceLabel = document.getElementById('calcTotalPriceLabel');
+        if (priceLabel) {
+            if (billingCycle === 'year') {
+                priceLabel.textContent = currentLang === 'ar' ? 'إجمالي الاشتراك للعام الكامل' : 'Total Subscription for Full Year';
+            } else {
+                priceLabel.textContent = currentLang === 'ar' ? 'إجمالي الاشتراك للترم الواحد' : 'Total Subscription for One Term';
+            }
         }
     }
 
@@ -736,14 +823,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const newCard = document.createElement('div');
             newCard.className = 'glass-card p-6 feature-card-theme hover:-translate-y-2 transition-transform duration-300 live-stream-item';
             newCard.style.borderRadius = '20px';
+
+            let starsHTML = '';
+            for (let k = 1; k <= 5; k++) {
+                if (k <= selectedRating) {
+                    starsHTML += '<i class="fa-solid fa-star text-xs"></i> ';
+                } else {
+                    starsHTML += '<i class="fa-regular fa-star text-xs text-gray-300 dark:text-zinc-600"></i> ';
+                }
+            }
+
             newCard.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
                     <div style="display:flex; gap:3px; color:#F2CE5A;">
-                        <i class="fa-solid fa-star text-xs"></i>
-                        <i class="fa-solid fa-star text-xs"></i>
-                        <i class="fa-solid fa-star text-xs"></i>
-                        <i class="fa-solid fa-star text-xs"></i>
-                        <i class="fa-solid fa-star text-xs"></i>
+                        ${starsHTML}
                     </div>
                     <span style="font-size:9px; background:rgba(242,206,90,0.15); color:#F2CE5A; padding:2px 8px; border-radius:50px; font-weight:bold;">${currentLang === 'ar' ? 'رأي جديد' : 'New Review'}</span>
                 </div>
@@ -754,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4 class="heading-text font-bold text-xs">${author}</h4>
                         <p class="sub-text text-[10px]">${subject}</p>
                     </div>
-                    <span style="margin-right:auto; font-size:9px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> موثق</span>
+                    <span style="margin-right:auto; font-size:9px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> <span data-i18n="testimonial_verified">موثق</span></span>
                 </div>
             `;
 
@@ -765,7 +858,14 @@ document.addEventListener('DOMContentLoaded', () => {
             reviewSubject.value = '';
             reviewContentText.value = '';
 
-            alert(currentLang === 'ar' ? "تم إرسال رأيك بنناح وظهر أول الكروت التقييمية! 🎉" : "Review submitted successfully and added to the top! 🎉");
+            // Reset stars rating to default (5)
+            selectedRating = 5;
+            if (starRatingSelector) {
+                const stars = starRatingSelector.querySelectorAll('.star-btn');
+                stars.forEach(s => s.className = 'fa-solid fa-star star-btn text-yellow-400');
+            }
+
+            alert(currentLang === 'ar' ? "تم إرسال رأيك بنجاح وظهر أول الكروت التقييمية! 🎉" : "Review submitted successfully and added to the top! 🎉");
         });
     }
 

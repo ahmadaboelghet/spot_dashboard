@@ -100,7 +100,7 @@
 
     <nav
         class="app-bar fixed top-4 left-4 right-4 md:left-10 md:right-10 rounded-2xl bg-white dark:bg-darkSurface shadow-lg z-50 px-6 py-3 flex justify-between items-center border border-gray-200 dark:border-gray-800 transition-colors duration-300">
-        <a href="index.html" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+        <a href="index.html" data-nav-home class="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div class="relative">
                 <img src="assets/images/learnaria_logo.png" alt="Logo"
                     class="h-10 w-10 rounded-xl shadow-sm border border-brand">
@@ -122,6 +122,13 @@
             </div>
 
             <div class="flex items-center gap-2">
+                <a href="index.html" data-nav-home
+                    class="h-10 px-4 rounded-full bg-gray-100 dark:bg-black hover:bg-brand dark:hover:bg-brand hover:text-black transition-all font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 dark:text-gray-200 dark:hover:text-black"
+                    title="العودة للرئيسية" style="text-decoration: none;">
+                    <i class="ri-home-4-line text-sm"></i>
+                    <span class="hidden sm:inline">الرئيسية</span>
+                </a>
+
                 <button id="languageToggleButton"
                     class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black hover:bg-brand dark:hover:bg-brand hover:text-black transition-all font-bold text-sm shadow-sm dark:text-gray-200 dark:hover:text-black">EN</button>
 
@@ -320,6 +327,12 @@
                             <span data-key="loginButton">تسجيل الدخول</span>
                             <i class="ri-arrow-left-line group-hover:-translate-x-1 transition-transform login-arrow"></i>
                         </button>
+
+                        <a href="https://wa.me/201001133246" target="_blank"
+                            class="w-full border border-gray-200 dark:border-gray-700 bg-transparent hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-200 font-bold text-sm py-3.5 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center" style="text-decoration: none;">
+                            <i class="ri-whatsapp-line text-lg text-green-500"></i>
+                            <span>ليس لديك حساب؟ تواصل لإنشاء حساب جديد</span>
+                        </a>
                     </div>
 
                     <!-- Helpful System Hint Box to Fill Empty Space -->
@@ -352,7 +365,7 @@
             <div class="absolute -bottom-20 -right-20 w-72 h-72 bg-blue-500/20 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
             <div class="relative z-10 text-center mb-10 max-w-xl mx-auto space-y-4">
-                <a href="index.html" class="flex items-center justify-center gap-3 mb-2 hover:opacity-80 transition-opacity w-fit mx-auto">
+                <a href="index.html" data-nav-home class="flex items-center justify-center gap-3 mb-2 hover:opacity-80 transition-opacity w-fit mx-auto">
                     <img src="assets/images/favicon.png" alt="Logo" class="h-12 w-12 rounded-xl shadow-lg border border-brand/30">
                     <h1 class="text-3xl font-black text-gray-900 dark:text-white font-cairo tracking-tight">الناظر<span class="text-brand">.</span></h1>
                 </a>

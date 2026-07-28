@@ -408,11 +408,11 @@ const translations = {
         writeMsgFirst: "الرجاء كتابة رسالة",
         msgSentSuccess: "تم إرسال الرسالة بنجاح",
         msgSendFail: "فشل الإرسال. تأكد من الإنترنت",
-        wrongPassword: "كلمة المرور خاطئة! حاول مرة أخرى.",
+        wrongPassword: "عفواً، رقم الهاتف أو كلمة المرور غير صحيحة.",
         present: "حاضر",
         absent: "غائب",
         late: "متأخر",
-        accountNotRegistered: "هذا الحساب غير مسجل! يرجى التواصل مع الإدارة.",
+        accountNotRegistered: "عفواً، رقم الهاتف أو كلمة المرور غير صحيحة.",
         offlineFirstLogin: "يجب الاتصال بالإنترنت لتسجيل الدخول لأول مرة",
         selectGroupFirst: "الرجاء اختيار مجموعة أولاً",
         newStudentPlaceholder: "اسم الطالب",
@@ -592,11 +592,11 @@ const translations = {
         writeMsgFirst: "Please write a message",
         msgSentSuccess: "Message sent successfully",
         msgSendFail: "Sending failed. Check internet.",
-        wrongPassword: "Wrong Password! Try again.",
+        wrongPassword: "Sorry, incorrect phone number or password.",
         present: "Present",
         absent: "Absent",
         late: "Late",
-        accountNotRegistered: "Account not registered! Please contact admin.",
+        accountNotRegistered: "Sorry, incorrect phone number or password.",
         offlineFirstLogin: "Internet connection required for first login",
         selectGroupFirst: "Please select a group first",
         newStudentPlaceholder: "Student Name",
@@ -1680,6 +1680,10 @@ async function loginTeacher() {
     const fmt = formatPhoneNumber(phone);
     if (!fmt) return showToast(translations[currentLang].phonePlaceholder, 'error');
 
+    if (!password) {
+        return showToast(currentLang === 'ar' ? 'يرجى إدخال كلمة المرور أولاً!' : 'Please enter your password first!', 'error');
+    }
+
     const btn = document.getElementById('setTeacherButton');
     const originalText = btn.innerHTML;
     btn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> ${translations[currentLang].loginVerifying}`;
@@ -1744,9 +1748,14 @@ async function loginTeacher() {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 return;
+            } else if (authErr.code === 'auth/network-request-failed' || !navigator.onLine) {
+                showToast(currentLang === 'ar' ? 'لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة والمحاولة مجدداً.' : 'No internet connection. Please check your network and try again.', "error");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
             } else {
                 console.error(authErr);
-                showToast("خطأ في تسجيل الدخول: " + authErr.message, "error");
+                showToast(currentLang === 'ar' ? 'حدث خطأ أثناء تسجيل الدخول. يرجى المحاولة مرة أخرى.' : 'Login error. Please try again.', "error");
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 return;
@@ -1767,6 +1776,7 @@ async function loginTeacher() {
         TEACHER_ID = fmt;
         localStorage.setItem('learnaria-remember', 'true');
         localStorage.setItem('learnaria-tid', TEACHER_ID);
+        updateHomeLinks();
 
         document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
@@ -1797,7 +1807,11 @@ async function loginTeacher() {
         btn.disabled = false;
     }
 }
-function logout() {
+async function logout() {
+    const confirmMsg = currentLang === 'ar' ? 'هل أنت متأكد من تسجيل الخروج؟' : 'Are you sure you want to log out?';
+    const confirmed = await showCustomConfirm(confirmMsg, '', 'ri-logout-box-r-line');
+    if (!confirmed) return;
+
     localStorage.removeItem('learnaria-remember');
     removeSessionItem('learnaria-tid');
     removeSessionItem('learnaria-gid');
@@ -3982,6 +3996,7 @@ async function loadPreferences() {
     if (storedID) {
         // لو لقينا ID، نرجعه للمتغير ونخفي شاشة الدخول فوراً
         TEACHER_ID = storedID;
+        updateHomeLinks();
         document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
 
@@ -5917,3 +5932,15 @@ document.addEventListener('keydown', async (e) => {
         hwScannerBuffer += e.key.toUpperCase();
     }
 });
+
+// ✅ تحديث روابط الشعار والرئيسية للمستخدم المسجل دخوله
+function updateHomeLinks() {
+    const isTeacherLoggedIn = localStorage.getItem('learnaria-tid') || sessionStorage.getItem('learnaria-tid');
+    document.querySelectorAll('[data-nav-home]').forEach(el => {
+        if (isTeacherLoggedIn) {
+            el.setAttribute('href', 'dashboard.html');
+        } else {
+            el.setAttribute('href', 'index.html');
+        }
+    });
+}

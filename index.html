@@ -138,8 +138,8 @@
                             <span data-i18n="hero_btn_primary">ابدأ مجاناً الآن</span>
                             <i class="ri-arrow-left-line nav-arrow"></i>
                         </a>
-                        <a href="#features" class="btn-secondary-custom font-bold hover:-translate-y-1 transition-transform" style="padding:14px 28px; font-size:1.1rem; display:flex; align-items:center; gap:10px; border-radius:12px; text-decoration:none;">
-                            <i class="ri-play-circle-line text-2xl"></i>
+                        <a href="https://wa.me/201001133246" target="_blank" class="btn-secondary-custom font-bold hover:-translate-y-1 transition-transform" style="padding:14px 28px; font-size:1.1rem; display:flex; align-items:center; gap:10px; border-radius:12px; text-decoration:none;">
+                            <i class="ri-whatsapp-line text-2xl text-green-500"></i>
                             <span data-i18n="hero_btn_secondary">شاهد المميزات</span>
                         </a>
                     </div>
@@ -320,19 +320,29 @@
                     <h3 class="text-lg font-bold heading-text mb-4" data-i18n="testi_form_title">شاركنا رأيك بالمنصة</h3>
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <div>
-                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text">الاسم الكامل:</label>
-                            <input type="text" id="reviewAuthorName" placeholder="أ. محمد أحمد" style="width:100%; padding:10px; border-radius:10px; background:rgba(150,150,150,0.05); border:1px solid rgba(150,150,150,0.1); font-size:12px; outline:none; color:inherit;">
+                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text" data-i18n="testi_label_name">الاسم الكامل:</label>
+                            <input type="text" id="reviewAuthorName" placeholder="أ. محمد أحمد" data-i18n-placeholder="testi_placeholder_name" style="width:100%; padding:10px; border-radius:10px; background:rgba(150,150,150,0.05); border:1px solid rgba(150,150,150,0.1); font-size:12px; outline:none; color:inherit;">
                         </div>
                         <div>
-                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text">المادة الدراسية:</label>
-                            <input type="text" id="reviewSubject" placeholder="مدرس رياضيات" style="width:100%; padding:10px; border-radius:10px; background:rgba(150,150,150,0.05); border:1px solid rgba(150,150,150,0.1); font-size:12px; outline:none; color:inherit;">
+                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text" data-i18n="testi_label_subject">المادة الدراسية:</label>
+                            <input type="text" id="reviewSubject" placeholder="مدرس رياضيات" data-i18n-placeholder="testi_placeholder_subject" style="width:100%; padding:10px; border-radius:10px; background:rgba(150,150,150,0.05); border:1px solid rgba(150,150,150,0.1); font-size:12px; outline:none; color:inherit;">
                         </div>
                         <div>
-                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text">التقييم أو الرأي:</label>
-                            <textarea id="reviewContentText" rows="3" placeholder="اكتب كلمتك الطيبة هنا..." style="width:100%; padding:10px; border-radius:10px; background:rgba(150,150,150,0.05); border:1px solid rgba(150,150,150,0.1); font-size:12px; outline:none; resize:none; color:inherit;"></textarea>
+                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text" data-i18n="testi_label_stars">التقييم:</label>
+                            <div id="starRatingSelector" style="display:flex; gap:6px; font-size:20px; cursor:pointer;" class="mb-1">
+                                <i class="fa-solid fa-star star-btn text-yellow-400" data-value="1"></i>
+                                <i class="fa-solid fa-star star-btn text-yellow-400" data-value="2"></i>
+                                <i class="fa-solid fa-star star-btn text-yellow-400" data-value="3"></i>
+                                <i class="fa-solid fa-star star-btn text-yellow-400" data-value="4"></i>
+                                <i class="fa-solid fa-star star-btn text-yellow-400" data-value="5"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;" class="mockup-text" data-i18n="testi_label_content">التقييم أو الرأي:</label>
+                            <textarea id="reviewContentText" rows="3" placeholder="اكتب كلمتك الطيبة هنا..." data-i18n-placeholder="testi_placeholder_content" style="width:100%; padding:10px; border-radius:10px; background:rgba(150,150,150,0.05); border:1px solid rgba(150,150,150,0.1); font-size:12px; outline:none; resize:none; color:inherit;"></textarea>
                         </div>
                         <button id="submitReviewBtn" style="width:100%; padding:12px; border-radius:10px; background:#F2CE5A; color:#000; font-weight:black; border:none; cursor:pointer; font-size:12px; transition:all 0.3s;">
-                            أرسل رأيك للمنصة 🚀
+                            <span data-i18n="testi_btn_submit">أرسل رأيك للمنصة 🚀</span>
                         </button>
                     </div>
                 </div>
@@ -351,7 +361,7 @@
                                 <h4 class="heading-text font-bold text-xs" data-i18n="testimonial_1_author">أ. محمد عادل</h4>
                                 <p class="sub-text text-[10px]" data-i18n="testimonial_1_sub">مدرس أول فيزياء</p>
                             </div>
-                            <span style="margin-right:auto; font-size:9px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> موثق</span>
+                            <span style="margin-right:auto; font-size:9px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> <span data-i18n="testimonial_verified">موثق</span></span>
                         </div>
                     </div>
 
@@ -367,7 +377,7 @@
                                 <h4 class="heading-text font-bold text-xs" data-i18n="testimonial_2_author">أ. سارة أحمد</h4>
                                 <p class="sub-text text-[10px]" data-i18n="testimonial_2_sub">مدرسة كيمياء</p>
                             </div>
-                            <span style="margin-right:auto; font-size:9px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> موثق</span>
+                            <span style="margin-right:auto; font-size:9px; color:#10b981; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> <span data-i18n="testimonial_verified">موثق</span></span>
                         </div>
                     </div>
                 </div>
@@ -459,7 +469,7 @@
             <div class="text-center max-w-3xl mx-auto reveal-up" style="margin-bottom: 5rem;">
                 <span class="euro-badge mb-3">FAQ</span>
                 <h2 class="landing-text-large font-black mb-4 heading-text" data-i18n="faq_title">هل لديك أي <span class="text-[#F2CE5A]">استفسارات؟</span></h2>
-                <p class="sub-text text-sm">إليك إجابات شاملة لأكثر الأسئلة تكراراً من قبل المعلمين والمدارس.</p>
+                <p class="sub-text text-sm" data-i18n="faq_subtitle">إليك إجابات شاملة لأكثر الأسئلة تكراراً من قبل المعلمين والمدارس.</p>
             </div>
             
             <div class="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto reveal-up">
@@ -478,11 +488,11 @@
 
                     <div class="faq-item">
                         <button class="faq-trigger font-cairo heading-text text-base">
-                            <span>هل يتطلب التطبيق اتصالاً دائماً بالإنترنت؟</span>
+                            <span data-i18n="faq_net_q">هل يتطلب التطبيق اتصالاً دائماً بالإنترنت؟</span>
                             <i class="fa-solid fa-plus faq-icon"></i>
                         </button>
                         <div class="faq-content">
-                            <p class="sub-text text-xs leading-relaxed">نعم، يتطلب النظام اتصالاً بالإنترنت لتتم مزامنة بيانات حضور وغياب الطلاب مع لوحة التحكم السحابية وإرسال الإشعارات المباشرة لأولياء الأمور لحظياً.</p>
+                            <p class="sub-text text-xs leading-relaxed" data-i18n="faq_net_a">نعم، يتطلب النظام اتصالاً بالإنترنت لتتم مزامنة بيانات حضور وغياب الطلاب مع لوحة التحكم السحابية وإرسال الإشعارات المباشرة لأولياء الأمور لحظياً.</p>
                         </div>
                     </div>
 
@@ -501,31 +511,31 @@
                 <div style="display:flex; flex-direction:column; gap:1.2rem;">
                     <div class="faq-item">
                         <button class="faq-trigger font-cairo heading-text text-base">
-                            <span>كيف يتم ربط حساب ولي الأمر بالطالب؟</span>
+                            <span data-i18n="faq_3_q">كيف يتم ربط حساب ولي الأمر بالطالب؟</span>
                             <i class="fa-solid fa-plus faq-icon"></i>
                         </button>
                         <div class="faq-content">
-                            <p class="sub-text text-xs leading-relaxed">يولد النظام كود ربط فريد (Student Link Code) لكل طالب. ينسخه المعلم أو الإدارة ويسلمه لولي الأمر ليدخله في التطبيق الخاص به ليتم المزامنة تلقائياً.</p>
+                            <p class="sub-text text-xs leading-relaxed" data-i18n="faq_3_a">يولد النظام كود ربط فريد (Student Link Code) لكل طالب. ينسخه المعلم أو الإدارة ويسلمه لولي الأمر ليدخله في التطبيق الخاص به ليتم المزامنة تلقائياً.</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <button class="faq-trigger font-cairo heading-text text-base">
-                            <span>هل يمكنني إدارة أكثر من مجموعة دراسية؟</span>
+                            <span data-i18n="faq_4_q">هل يمكنني إدارة أكثر من مجموعة دراسية؟</span>
                             <i class="fa-solid fa-plus faq-icon"></i>
                         </button>
                         <div class="faq-content">
-                            <p class="sub-text text-xs leading-relaxed">بالتأكيد! يمكنك إنشاء وإدارة عدد لا محدود من المجموعات الدراسية والفصول والطلاب، وتصنيفهم وفق جداول زمنية مرنة للغاية.</p>
+                            <p class="sub-text text-xs leading-relaxed" data-i18n="faq_4_a">بالتأكيد! يمكنك إنشاء وإدارة عدد لا محدود من المجموعات الدراسية والفصول والطلاب، وتصنيفهم وفق جداول زمنية مرنة للغاية.</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <button class="faq-trigger font-cairo heading-text text-base">
-                            <span>كيف يمكنني تصدير كشوف الدرجات والغياب؟</span>
+                            <span data-i18n="faq_5_q">كيف يمكنني تصدير كشوف الدرجات والغياب؟</span>
                             <i class="fa-solid fa-plus faq-icon"></i>
                         </button>
                         <div class="faq-content">
-                            <p class="sub-text text-xs leading-relaxed">بكبسة زر واحدة من لوحة التحكم، يمكنك تصدير تقارير الحضور والغياب وكشوف درجات الطلاب بالكامل لملفات Excel منسقة أو PDF لطباعتها أو حفظها في سجلاتك.</p>
+                            <p class="sub-text text-xs leading-relaxed" data-i18n="faq_5_a">بكبسة زر واحدة من لوحة التحكم، يمكنك تصدير تقارير الحضور والغياب وكشوف درجات الطلاب بالكامل لملفات Excel منسقة أو PDF لطباعتها أو حفظها في سجلاتك.</p>
                         </div>
                     </div>
                 </div>
@@ -543,8 +553,8 @@
                 
                 <!-- Semester billing toggle switch -->
                 <div style="display:inline-flex; align-items:center; background:rgba(150,150,150,0.05); padding:4px; border-radius:50px; border:1px solid rgba(150,150,150,0.1); margin-top:1.5rem;" class="pricing-toggle-container">
-                    <button id="toggleSemesterSingle" class="pricing-toggle-btn active" style="padding:8px 20px; border-radius:50px; font-weight:bold; font-size:13px; border:none; cursor:pointer; background:#F2CE5A; color:#000; transition:all 0.3s;">الترم الواحد</button>
-                    <button id="toggleSemesterFull" class="pricing-toggle-btn" style="padding:8px 20px; border-radius:50px; font-weight:bold; font-size:13px; border:none; cursor:pointer; background:transparent; color:inherit; transition:all 0.3s;">العام الكامل (ترمين) <span style="font-size:9px; background:#ef4444; color:#fff; padding:2px 6px; border-radius:50px; margin-right:3px;">خصم 15%</span></button>
+                    <button id="toggleSemesterSingle" class="pricing-toggle-btn active" style="padding:8px 20px; border-radius:50px; font-weight:bold; font-size:13px; border:none; cursor:pointer; background:#F2CE5A; color:#000; transition:all 0.3s;" data-i18n="pricing_toggle_single">الترم الواحد</button>
+                    <button id="toggleSemesterFull" class="pricing-toggle-btn" style="padding:8px 20px; border-radius:50px; font-weight:bold; font-size:13px; border:none; cursor:pointer; background:transparent; color:inherit; transition:all 0.3s;"><span data-i18n="pricing_toggle_full">العام الكامل (ترمين)</span> <span style="font-size:9px; background:#ef4444; color:#fff; padding:2px 6px; border-radius:50px; margin-right:3px;" data-i18n="pricing_toggle_discount">خصم 15%</span></button>
                 </div>
             </div>
 
@@ -569,7 +579,7 @@
                         </div>
                     </div>
                     <div class="mockup-card-theme" style="padding:20px; border-radius:16px; text-align:center;">
-                        <div class="sub-text text-sm mb-1">إجمالي الاشتراك للترم الواحد</div>
+                        <div class="sub-text text-sm mb-1" id="calcTotalPriceLabel">إجمالي الاشتراك للترم الواحد</div>
                         <div style="font-size:36px; font-weight:900; color:#F2CE5A;">$<span id="calcTotalPrice">150</span></div>
                     </div>
                 </div>
@@ -601,12 +611,12 @@
                             </li>
                             <li style="display:flex; align-items:center; gap:0.75rem; font-size:0.95rem;" class="heading-text">
                                 <i class="ri-checkbox-circle-fill text-[#F2CE5A] text-xl"></i>
-                                <span>تقارير ورسائل حضور وغياب فورية للآباء</span>
+                                <span data-i18n="pricing_feature_4">تقارير ورسائل حضور وغياب فورية للآباء</span>
                             </li>
                         </ul>
                     </div>
 
-                    <a href="dashboard.html" class="btn-primary-custom btn-glowing-gold" style="width:100%; display:flex; justify-content:center; padding:14px; border-radius:12px; font-weight:bold; text-decoration:none;"><span data-i18n="pricing_btn">اغتنم العرض الآن</span></a>
+                    <a href="https://wa.me/201001133246" target="_blank" class="btn-primary-custom btn-glowing-gold" style="width:100%; display:flex; justify-content:center; padding:14px; border-radius:12px; font-weight:bold; text-decoration:none;"><span data-i18n="pricing_btn">اغتنم العرض الآن</span></a>
                 </div>
             </div>
         </div>
