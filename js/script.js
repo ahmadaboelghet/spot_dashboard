@@ -3549,7 +3549,7 @@ async function addNewStudent() {
 
     const nameInput = document.getElementById('newStudentName');
     const phoneInput = document.getElementById('newParentPhoneNumber');
-    const name = nameInput.value;
+    const name = nameInput.value.trim();
     let phone = phoneInput.value.trim();
     if (phone) {
         if (phone.startsWith('01') && phone.length === 11) {
@@ -3559,8 +3559,64 @@ async function addNewStudent() {
         }
     }
     if (!name) return;
+
+    // Check for duplicate student name and phone in the current group
+    const normName = name.trim().toLowerCase();
+    const isDuplicate = allStudents.some(s => {
+        const sName = (s.name || '').trim().toLowerCase();
+        if (phone) {
+            return sName === normName && s.parentPhoneNumber === phone;
+        } else {
+            return sName === normName && (!s.parentPhoneNumber || s.parentPhoneNumber === '');
+        }
+    });
+
+    if (isDuplicate) {
+        showToast(currentLang === 'ar' ? 'عفواً، هذا الطالب مسجل بالفعل بنفس الاسم ورقم الهاتف في هذه المجموعة!' : 'Sorry, this student is already registered with the same name and phone number in this group!', "error");
+        return;
+    }
+
+    // Check if phone number is associated with existing students across the database
+    let existingStudentsOfParent = [];
+    if (phone) {
+        try {
+            const allLocalStudents = await getAllFromDB('students');
+            const seenChildIds = new Set();
+            allLocalStudents.forEach(s => {
+                const cId = s.childId || s.id;
+                if (s.parentPhoneNumber === phone && !seenChildIds.has(cId)) {
+                    seenChildIds.add(cId);
+                    existingStudentsOfParent.push({
+                        id: s.id,
+                        childId: cId,
+                        name: s.name,
+                        cardId: s.cardId,
+                        parentPhoneNumber: s.parentPhoneNumber
+                    });
+                }
+            });
+        } catch (e) {
+            console.error("Error querying local students for parent phone check", e);
+        }
+    }
+
+    let childId = 'ST-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+    let nameToUse = name;
+    let cardIdToUse = null;
+
+    if (existingStudentsOfParent.length > 0) {
+        const result = await showStudentLinkModal(name, phone, existingStudentsOfParent);
+        if (result.action === 'cancel') {
+            return;
+        } else if (result.action === 'link') {
+            childId = result.student.childId;
+            nameToUse = result.student.name;
+            cardIdToUse = result.student.cardId || null;
+        }
+    }
+
     const id = generateUniqueId();
-    const data = { id, groupId: SELECTED_GROUP_ID, name, parentPhoneNumber: phone, cardId: null };
+    const data = { id, groupId: SELECTED_GROUP_ID, name: nameToUse, parentPhoneNumber: phone, cardId: cardIdToUse, childId };
     await putToDB('students', data);
     await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`, id, data });
     nameInput.value = ''; phoneInput.value = '';
@@ -3569,6 +3625,70 @@ async function addNewStudent() {
     
     // Instead of just a toast, let's open the card link modal
     openCardLinkModal(data);
+}
+
+function showStudentLinkModal(name, phone, existingStudents) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('studentLinkSelectorModal');
+        const overlay = document.getElementById('studentLinkSelectorOverlay');
+        const content = document.getElementById('studentLinkSelectorContent');
+        const listContainer = document.getElementById('existingStudentsSelectorList');
+        const addNewBtn = document.getElementById('addNewChildConfirmBtn');
+        const cancelBtn = document.getElementById('cancelChildSelectionBtn');
+
+        // Render existing students
+        listContainer.innerHTML = '';
+        existingStudents.forEach(est => {
+            const btn = document.createElement('button');
+            btn.className = "w-full text-right p-4 rounded-2xl bg-gray-50 dark:bg-white/5 hover:bg-brand/10 dark:hover:bg-brand/10 border border-gray-100 dark:border-white/5 hover:border-brand/30 dark:hover:border-brand/30 transition-all flex items-center justify-between group";
+            btn.innerHTML = `
+                <div class="flex flex-col text-right">
+                    <span class="font-bold text-gray-900 dark:text-white group-hover:text-brand transition-colors">${est.name}</span>
+                    <span class="text-xs text-gray-400 mt-1">ID: ${est.childId}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-brand px-3 py-1.5 rounded-xl bg-brand/10">ربط وتحديد ✔️</span>
+                </div>
+            `;
+            btn.onclick = () => {
+                closeModal();
+                resolve({ action: 'link', student: est });
+            };
+            listContainer.appendChild(btn);
+        });
+
+        const closeModal = () => {
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        };
+
+        // Open animation
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
+        addNewBtn.onclick = () => {
+            closeModal();
+            resolve({ action: 'create_new' });
+        };
+
+        cancelBtn.onclick = () => {
+            closeModal();
+            resolve({ action: 'cancel' });
+        };
+
+        overlay.onclick = () => {
+            closeModal();
+            resolve({ action: 'cancel' });
+        };
+    });
 }
 
 let studentPendingCardLink = null;

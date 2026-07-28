@@ -217,7 +217,14 @@ document.addEventListener('DOMContentLoaded', () => {
             hero_notif_title: '🔔 إشعار الحضور الفوري',
             hero_notif_now: 'الآن',
             parent_alert_app_title: 'الناظر (إشعار)',
-            parent_alert_text: 'حضر ابنكم أحمد خالد الآن الحصة.'
+            parent_alert_text: 'حضر ابنكم أحمد خالد الآن الحصة.',
+            pricing_toggle_single: 'الترم الواحد',
+            pricing_toggle_full: 'العام الكامل (ترمين)',
+            pricing_toggle_discount: 'خصم 15%',
+            pricing_plan_desc: 'احصل على كل شيء بدون أي تكاليف مخفية.',
+            calc_unit_price_label: 'السعر للطالب بالترم',
+            footer_support_title: 'الدعم والمساعدة',
+            footer_help_center: 'مركز المساعدة'
         },
         en: {
             page_title: 'الناظر - Smart Teacher',
@@ -342,7 +349,14 @@ document.addEventListener('DOMContentLoaded', () => {
             hero_notif_title: '🔔 Live Check-in alert',
             hero_notif_now: 'Just Now',
             parent_alert_app_title: 'Elnazer (Alert)',
-            parent_alert_text: 'Your son Ahmed Khaled checked in now to the class.'
+            parent_alert_text: 'Your son Ahmed Khaled checked in now to the class.',
+            pricing_toggle_single: 'Single Semester',
+            pricing_toggle_full: 'Full Year (2 Semesters)',
+            pricing_toggle_discount: '15% Off',
+            pricing_plan_desc: 'Get everything with no hidden fees.',
+            calc_unit_price_label: 'Price per Student / Term',
+            footer_support_title: 'Support & Help',
+            footer_help_center: 'Help Center'
         }
     };
 
@@ -491,6 +505,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 priceLabel.textContent = currentLang === 'ar' ? 'إجمالي الاشتراك للعام الكامل' : 'Total Subscription for Full Year';
             } else {
                 priceLabel.textContent = currentLang === 'ar' ? 'إجمالي الاشتراك للترم الواحد' : 'Total Subscription for One Term';
+            }
+        }
+
+        const billingPeriodLabel = document.getElementById('billingPeriodLabel');
+        if (billingPeriodLabel) {
+            if (billingCycle === 'year') {
+                billingPeriodLabel.textContent = currentLang === 'ar' ? '/ للعام الكامل (ترمين)' : '/ full academic year';
+            } else {
+                billingPeriodLabel.textContent = currentLang === 'ar' ? '/ للترم الواحد' : '/ per semester';
             }
         }
     }
