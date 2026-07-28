@@ -428,6 +428,10 @@ exports.notifyOnNewGrades = onDocumentWritten(
     const snapAfter = event.data.after;
     if (!snapAfter || !snapAfter.exists) return;
 
+    const snapBefore = event.data.before;
+    const beforeData = (snapBefore && snapBefore.exists) ? snapBefore.data() : {};
+    const scoresBefore = beforeData.scores || {};
+
     const afterData = snapAfter.data();
     const assignmentName = afterData.name || "واجب/امتحان";
     const scoresAfter = afterData.scores || {};
@@ -441,10 +445,12 @@ exports.notifyOnNewGrades = onDocumentWritten(
 
         if (scoreData) {
           const processStudent = async () => {
-            // ✅ الشرط الجديد: نرسل فقط إذا كان هناك "درجة" مرصودة
+            // ✅ الشرط الجديد: نرسل فقط إذا كان هناك "درجة" مرصودة ومختلفة عن الدرجة السابقة (لمنع تكرار الإشعار)
+            const scoreBefore = scoresBefore[studentId] ? scoresBefore[studentId].score : null;
             const hasScore = scoreData.score !== "" && scoreData.score != null;
+            const isNewOrChanged = hasScore && (scoreData.score != scoreBefore); // Use != to handle loose string vs number comparison safely
 
-            if (hasScore) {
+            if (isNewOrChanged) {
               const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
 
               if (sDoc.exists) {
