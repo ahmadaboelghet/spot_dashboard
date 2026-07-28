@@ -281,7 +281,7 @@ async function deleteFromDB(store, key) {
 // ==========================================
 // 3. STATE & TRANSLATIONS
 // ==========================================
-let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = 'ar';
+let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = localStorage.getItem('lang') || 'ar';
 let isSyncing = false;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
 let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
@@ -487,7 +487,20 @@ const translations = {
         overviewUnpaidCount: "متبقي",
         portalGroupDesc: "من فضلك اختر المجموعة الدراسية التي ترغب في إدارتها الآن للبدء، أو يمكنك إضافة مجموعة جديدة للعمل عليها.",
         portalGroupsHeader: "المجموعات الدراسية",
-        portalAddGroupBtn: "إضافة مجموعة جديدة"
+        portalAddGroupBtn: "إضافة مجموعة جديدة",
+        loginRememberMe: "تذكرني",
+        loginForgotPassword: "نسيت كلمة المرور؟",
+        loginNoAccountContact: "ليس لديك حساب؟ تواصل لإنشاء حساب جديد",
+        loginOfflineHint: "لوحة التحكم تدعم المزامنة السريعة للغياب والدرجات بدون إنترنت وتحديثها فور استرجاع الاتصال.",
+        loginSupportText: "تواجه مشكلة؟ <a href=\"https://wa.me/+201001133246\" target=\"_blank\" class=\"text-brand hover:underline font-bold\">تواصل مع الدعم الفني</a>",
+        widgetSmartAttendance: "حضور ذكي",
+        widgetSmartAttendanceDesc: "تم رصد حضور أحمد ممدوح ✅",
+        widgetAttendanceRate: "نسبة الحضور اليوم",
+        widgetAttendanceRateDesc: "96.4% (مستقر)",
+        widgetInstantNotifications: "إشعارات فورية",
+        widgetInstantNotificationsDesc: "تم إرسال غياب الطالب لولي الأمر 📱",
+        widgetFeeCollection: "تحصيل المصروفات",
+        widgetFeeCollectionDesc: "تم تسديد شهر يونيو 💳"
     },
     en: {
         pageTitle: "Elnazer - Teacher Dashboard",
@@ -672,7 +685,20 @@ const translations = {
         overviewUnpaidCount: "Remaining",
         portalGroupDesc: "Please select the group you wish to manage now to start, or you can add a new group to work on.",
         portalGroupsHeader: "Study Groups",
-        portalAddGroupBtn: "Add New Group"
+        portalAddGroupBtn: "Add New Group",
+        loginRememberMe: "Remember Me",
+        loginForgotPassword: "Forgot Password?",
+        loginNoAccountContact: "Don't have an account? Contact to create one",
+        loginOfflineHint: "The dashboard supports fast offline sync of attendance and grades, updating instantly when connection is restored.",
+        loginSupportText: "Having trouble? <a href=\"https://wa.me/+201001133246\" target=\"_blank\" class=\"text-brand hover:underline font-bold\">Contact Technical Support</a>",
+        widgetSmartAttendance: "Smart Attendance",
+        widgetSmartAttendanceDesc: "Ahmed Mamdouh's attendance recorded ✅",
+        widgetAttendanceRate: "Today's Attendance Rate",
+        widgetAttendanceRateDesc: "96.4% (Stable)",
+        widgetInstantNotifications: "Instant Notifications",
+        widgetInstantNotificationsDesc: "Student absence sent to parent 📱",
+        widgetFeeCollection: "Fee Collection",
+        widgetFeeCollectionDesc: "June fee successfully paid 💳"
     }
 };
 
@@ -4093,8 +4119,9 @@ async function handleChangePassword() {
 }
 
 function toggleDarkMode() {
-    document.body.classList.toggle('dark-mode');
-    localStorage.setItem('learnaria-dark', document.body.classList.contains('dark-mode'));
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('learnaria-dark', isDark);
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
     updateThemeIcon();
 }
 function updateThemeIcon() {
@@ -4104,9 +4131,14 @@ function updateThemeIcon() {
 }
 // ✅ دالة استرجاع الإعدادات وتسجيل الدخول التلقائي
 async function loadPreferences() {
-    // 1. استرجاع الوضع الليلي
-    if (localStorage.getItem('learnaria-dark') === 'true') {
+    // 1. استرجاع الوضع الليلي (فحص كلا المفتاحين للمزامنة بين الهوم واللوحة)
+    const savedTheme = localStorage.getItem('theme') || localStorage.getItem('learnaria-dark');
+    const isDark = (savedTheme === 'dark' || savedTheme === 'true');
+    if (isDark) {
         document.body.classList.add('dark-mode');
+        updateThemeIcon();
+    } else {
+        document.body.classList.remove('dark-mode');
         updateThemeIcon();
     }
 
@@ -5351,6 +5383,9 @@ async function openStudentProfile(studentId) {
     const student = allStudents.find(s => s.id === studentId);
     if (!student) return;
 
+    // Push history state to enable browser back button support
+    history.pushState({ view: 'student-profile', studentId }, '');
+
     // إظهار الصفحة
     document.getElementById('studentProfilePage').classList.remove('hidden');
     document.body.style.overflow = 'hidden'; // منع السكرول في الخلفية
@@ -5396,14 +5431,26 @@ async function openStudentProfile(studentId) {
 }
 
 // 2. إغلاق البروفايل
-function closeStudentProfile() {
+function closeStudentProfile(fromPopState = false) {
     document.getElementById('studentProfilePage').classList.add('hidden');
     document.body.style.overflow = 'auto';
 
     // إظهار الهيدر الرئيسي مرة أخرى
     const mainNav = document.querySelector('.app-bar');
     if (mainNav) mainNav.classList.remove('hidden');
+
+    if (!fromPopState) {
+        history.back();
+    }
 }
+
+// Listen to browser back button to close student profile
+window.addEventListener('popstate', (event) => {
+    const profilePage = document.getElementById('studentProfilePage');
+    if (profilePage && !profilePage.classList.contains('hidden')) {
+        closeStudentProfile(true);
+    }
+});
 
 // 3. تفعيل وضع التعديل
 function enableEditMode() {
