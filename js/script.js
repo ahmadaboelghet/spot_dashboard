@@ -312,6 +312,7 @@ const translations = {
         welcomeTeacherGreeting: "أهلاً بك، مستر ",
         teacherLoginTitle: "بوابة الناظر التعليمية",
         teacherLoginPrompt: "سجل دخولك الآن للبدء في إدارة صفوفك الذكية",
+        loginBrandingTitle: 'إدارتك كلها في <span class="text-brand">مكان واحد.</span>',
         loginButton: "دخول",
         loginVerifying: "جاري التحقق...",
         passwordLabel: "كلمة المرور",
@@ -507,6 +508,7 @@ const translations = {
         welcomeTeacherGreeting: "Welcome, Mr. ",
         teacherLoginTitle: "Elnazer Portal",
         teacherLoginPrompt: "Login to start managing your smart classes",
+        loginBrandingTitle: 'All your class management in <span class="text-brand">one place.</span>',
         loginButton: "Login",
         loginVerifying: "Verifying...",
         passwordLabel: "Password",
@@ -1445,6 +1447,30 @@ function setupListeners() {
         }, 300);
     });
 
+    let dailySearchTimeout;
+    document.getElementById('dailyStudentSearchInput')?.addEventListener('input', (e) => {
+        clearTimeout(dailySearchTimeout);
+        dailySearchTimeout = setTimeout(() => {
+            renderDailyList(e.target.value);
+        }, 300);
+    });
+
+    let examSearchTimeout;
+    document.getElementById('examStudentSearchInput')?.addEventListener('input', (e) => {
+        clearTimeout(examSearchTimeout);
+        examSearchTimeout = setTimeout(() => {
+            renderExamGrades(e.target.value);
+        }, 300);
+    });
+
+    let paymentSearchTimeout;
+    document.getElementById('paymentStudentSearchInput')?.addEventListener('input', (e) => {
+        clearTimeout(paymentSearchTimeout);
+        paymentSearchTimeout = setTimeout(() => {
+            renderPaymentsList(e.target.value);
+        }, 300);
+    });
+
     document.getElementById('addRecurringScheduleButton')?.addEventListener('click', saveRecurringSchedule);
     document.getElementById('updateSingleClassButton')?.addEventListener('click', updateSingleClass);
     document.getElementById('cancelSingleClassButton')?.addEventListener('click', cancelSingleClass);
@@ -2032,6 +2058,13 @@ async function editCurrentGroupName() {
 // ------------------------------------------------------------------
 async function loadGroupData() {
     allStudents = []; // 🔄 إعادة تعيين القائمة فوراً لمنع التداخل
+
+    // Clear all student search inputs when switching groups
+    ['studentSearchInput', 'dailyStudentSearchInput', 'examStudentSearchInput', 'paymentStudentSearchInput'].forEach(id => {
+        const inp = document.getElementById(id);
+        if (inp) inp.value = '';
+    });
+
     if (window.groupAnalyticsChartInstance) { window.groupAnalyticsChartInstance.destroy(); window.groupAnalyticsChartInstance = null; }
     if (window.groupHomeworkChartInstance) { window.groupHomeworkChartInstance.destroy(); window.groupHomeworkChartInstance = null; }
 
@@ -2541,7 +2574,7 @@ function switchTab(tabId) {
 // ==========================================
 // 8. DAILY & SCANNER
 // ==========================================
-async function renderDailyList() {
+async function renderDailyList(filter = "") {
     try {
         const dateInput = document.getElementById('dailyDateInput');
         if (dateInput && !dateInput.value) {
@@ -2572,6 +2605,18 @@ async function renderDailyList() {
 
         if (!allStudents || !allStudents.length) {
             list.innerHTML = `<p class="text-center text-gray-500 py-4">${translations[currentLang].noStudentsInGroup}</p>`;
+            return;
+        }
+
+        const normalizedFilter = filter.trim().toLowerCase();
+        const studentsToRender = allStudents.filter(s => 
+            (s.name || "").toLowerCase().includes(normalizedFilter) ||
+            (s.parentPhoneNumber || "").includes(normalizedFilter) ||
+            ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter))
+        );
+
+        if (studentsToRender.length === 0) {
+            list.innerHTML = `<p class="text-center text-gray-500 py-4">${currentLang === 'ar' ? 'لا يوجد نتائج للبحث' : 'No search results found'}</p>`;
             return;
         }
 
@@ -2613,7 +2658,7 @@ async function renderDailyList() {
         let presentCount = 0;
         const fragment = document.createDocumentFragment();
 
-        allStudents.forEach(s => {
+        studentsToRender.forEach(s => {
             const status = attMap[s.id] || 'absent'; // الافتراضي غائب لو مفيش تسجيل
             if (status === 'present') presentCount++;
 
@@ -3578,10 +3623,25 @@ async function addNewStudent() {
     const name = nameInput.value.trim();
     let phone = phoneInput.value.trim();
     if (phone) {
-        if (phone.startsWith('01') && phone.length === 11) {
-            phone = '+2' + phone;
-        } else if (!phone.startsWith('+')) {
-            phone = '+2' + phone;
+        // Remove spaces, dashes, or parentheses
+        const cleanDigits = phone.replace(/[\s\-\(\)]/g, '');
+        
+        // Regex to check Egyptian format: 010, 011, 012, 015 followed by 8 digits
+        const egRegex = /^01[0125]\d{8}$/;
+        // Regex to check international Egyptian format: +2010, +2011, +2012, +2015 followed by 8 digits
+        const egIntRegex = /^\+201[0125]\d{8}$/;
+        // General international format: starts with + followed by 7-15 digits
+        const intRegex = /^\+\d{7,15}$/;
+
+        if (egRegex.test(cleanDigits)) {
+            phone = '+2' + cleanDigits;
+        } else if (egIntRegex.test(cleanDigits)) {
+            phone = cleanDigits;
+        } else if (cleanDigits.startsWith('+') && intRegex.test(cleanDigits)) {
+            phone = cleanDigits;
+        } else {
+            showToast(currentLang === 'ar' ? 'عفواً، رقم هاتف ولي الأمر غير صالح. يرجى إدخال رقم صحيح (مثال: 01xxxxxxxxx)' : 'Sorry, the parent phone number is invalid. Please enter a valid number (e.g. 01xxxxxxxxx)', 'error');
+            return;
         }
     }
     if (!name) return;
@@ -3770,7 +3830,7 @@ async function deleteStudent(id) {
 }
 
 // --- Payments ---
-async function renderPaymentsList() {
+async function renderPaymentsList(filter = "") {
     const month = document.getElementById('paymentMonthInput').value;
     const defaultAmountInput = document.getElementById('defaultAmountInput');
     const container = document.getElementById('paymentsList');
@@ -3798,9 +3858,21 @@ async function renderPaymentsList() {
     groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
     calculateOverallIncome(currentGroupTotal); // ✅ بنبعت الرقم المبدئي
 
+    const normalizedFilter = filter.trim().toLowerCase();
+    const studentsToRender = allStudents.filter(s => 
+        (s.name || "").toLowerCase().includes(normalizedFilter) ||
+        (s.parentPhoneNumber || "").includes(normalizedFilter) ||
+        ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter))
+    );
+
+    if (studentsToRender.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-4">${currentLang === 'ar' ? 'لا يوجد نتائج للبحث' : 'No search results found'}</p>`;
+        return;
+    }
+
     // 2. رسم القائمة
     const fragment = document.createDocumentFragment();
-    allStudents.forEach(s => {
+    studentsToRender.forEach(s => {
         let amount = map[s.id];
         const isPaid = amount && amount > 0;
 
@@ -3934,7 +4006,7 @@ async function addNewExam() {
 
     showToast(translations[currentLang].examCreatedSuccess);
 }
-async function renderExamGrades() {
+async function renderExamGrades(filter = "") {
     const examId = document.getElementById('examSelect').value;
     const container = document.getElementById('examGradesList');
     const totalMarkInput = document.getElementById('examTotalMarkInput');
@@ -3965,8 +4037,20 @@ async function renderExamGrades() {
         saveTimeout = setTimeout(saveExamGrades, 1000);
     };
 
+    const normalizedFilter = filter.trim().toLowerCase();
+    const studentsToRender = allStudents.filter(s => 
+        (s.name || "").toLowerCase().includes(normalizedFilter) ||
+        (s.parentPhoneNumber || "").includes(normalizedFilter) ||
+        ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter))
+    );
+
+    if (studentsToRender.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-4 col-span-2">${currentLang === 'ar' ? 'لا يوجد نتائج للبحث' : 'No search results found'}</p>`;
+        return;
+    }
+
     const fragment = document.createDocumentFragment();
-    allStudents.forEach(s => {
+    studentsToRender.forEach(s => {
         const val = scores[s.id]?.score || '';
         const div = document.createElement('div');
         div.className = "flex items-center gap-2 p-2 bg-white dark:bg-darkSurface border dark:border-gray-700 rounded-lg cursor-pointer hover:border-brand transition-colors";

@@ -246,7 +246,7 @@
                             <div class="inline-block bg-brand/20 text-brand px-3 py-1 rounded-full text-xs font-bold border border-brand/20" data-key="landingNewVersion">
                                 🚀 الإصدار الجديد متاح الآن
                             </div>
-                            <h2 class="text-3xl lg:text-4xl font-extrabold font-cairo leading-tight">
+                            <h2 class="text-3xl lg:text-4xl font-extrabold font-cairo leading-tight" data-key="loginBrandingTitle">
                                 إدارتك كلها في <span class="text-brand">مكان واحد.</span>
                             </h2>
                             <p class="text-sm text-gray-400 leading-relaxed font-medium" data-key="landingHeroSubtitle">
@@ -693,6 +693,13 @@
                             </div>
                         </div>
 
+                        <!-- Search Box for Daily Attendance -->
+                        <div class="relative mb-4">
+                            <i class="ri-search-line absolute top-3 right-3 ltr:left-3 ltr:right-auto rtl:right-3 rtl:left-auto text-gray-400"></i>
+                            <input type="search" id="dailyStudentSearchInput" class="input-field pr-10 ltr:pl-10 ltr:pr-4 rtl:pr-10 rtl:pl-4"
+                                data-key-placeholder="searchPlaceholder" placeholder="بحث عن طالب...">
+                        </div>
+
                         <div
                             class="grid grid-cols-12 gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 px-2">
                             <div id="headerStudent" class="col-span-6 transition-all duration-300"
@@ -802,8 +809,8 @@
                     </div>
 
                     <div class="relative mb-4">
-                        <i class="ri-search-line absolute top-3 right-3 text-gray-400"></i>
-                        <input type="search" id="studentSearchInput" class="input-field pr-10"
+                        <i class="ri-search-line absolute top-3 right-3 ltr:left-3 ltr:right-auto rtl:right-3 rtl:left-auto text-gray-400"></i>
+                        <input type="search" id="studentSearchInput" class="input-field pr-10 ltr:pl-10 ltr:pr-4 rtl:pr-10 rtl:pl-4"
                             data-key-placeholder="searchPlaceholder" placeholder="بحث عن طالب...">
                     </div>
 
@@ -861,6 +868,12 @@
                                 class="input-field font-black text-center text-brand" placeholder="30">
                         </div>
                     </div>
+                    <!-- Search Box for Exam Grades -->
+                    <div class="relative mb-4">
+                        <i class="ri-search-line absolute top-3 right-3 ltr:left-3 ltr:right-auto rtl:right-3 rtl:left-auto text-gray-400"></i>
+                        <input type="search" id="examStudentSearchInput" class="input-field pr-10 ltr:pl-10 ltr:pr-4 rtl:pr-10 rtl:pl-4"
+                            data-key-placeholder="searchPlaceholder" placeholder="بحث عن طالب...">
+                    </div>
                     <div id="examGradesList"
                         class="grid md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto custom-scrollbar"></div>
 
@@ -911,6 +924,12 @@
                                 <span>--</span>
                             </h3>
                         </div>
+                    </div>
+                    <!-- Search Box for Payments -->
+                    <div class="relative mb-4">
+                        <i class="ri-search-line absolute top-3 right-3 ltr:left-3 ltr:right-auto rtl:right-3 rtl:left-auto text-gray-400"></i>
+                        <input type="search" id="paymentStudentSearchInput" class="input-field pr-10 ltr:pl-10 ltr:pr-4 rtl:pr-10 rtl:pl-4"
+                            data-key-placeholder="searchPlaceholder" placeholder="بحث عن طالب...">
                     </div>
                     <div id="paymentsList" class="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar"></div>
 
