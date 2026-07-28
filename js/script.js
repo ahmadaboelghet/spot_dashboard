@@ -2575,6 +2575,7 @@ function switchTab(tabId) {
 // 8. DAILY & SCANNER
 // ==========================================
 async function renderDailyList(filter = "") {
+    if (typeof filter !== 'string') filter = "";
     try {
         const dateInput = document.getElementById('dailyDateInput');
         if (dateInput && !dateInput.value) {
@@ -3831,6 +3832,7 @@ async function deleteStudent(id) {
 
 // --- Payments ---
 async function renderPaymentsList(filter = "") {
+    if (typeof filter !== 'string') filter = "";
     const month = document.getElementById('paymentMonthInput').value;
     const defaultAmountInput = document.getElementById('defaultAmountInput');
     const container = document.getElementById('paymentsList');
@@ -4007,6 +4009,7 @@ async function addNewExam() {
     showToast(translations[currentLang].examCreatedSuccess);
 }
 async function renderExamGrades(filter = "") {
+    if (typeof filter !== 'string') filter = "";
     const examId = document.getElementById('examSelect').value;
     const container = document.getElementById('examGradesList');
     const totalMarkInput = document.getElementById('examTotalMarkInput');
@@ -6125,7 +6128,7 @@ let hwScannerLastKeyTime = Date.now();
 
 document.addEventListener('keydown', async (e) => {
     // إحنا مهتمين بالحروف وزرار الـ Enter بس
-    if (e.key !== 'Enter' && e.key.length !== 1) return;
+    if (!e.key || (e.key !== 'Enter' && e.key.length !== 1)) return;
 
     const currentTime = Date.now();
     
