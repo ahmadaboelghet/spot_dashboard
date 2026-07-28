@@ -364,7 +364,8 @@ const translations = {
         no: "لا",
         examsTitle: "الامتحانات والدرجات",
         newAssignmentNameLabel: "اسم الامتحان / الواجب",
-        addNewAssignmentButton: "إنشاء",
+        addNewExamSectionTitle: "إضافة امتحان جديد",
+        addNewAssignmentButton: "إنشاء الامتحان",
         selectExamPlaceholder: "-- اختر الامتحان --",
         saveGradesButton: "حفظ الدرجات",
         gradePlaceholder: "الدرجة",
@@ -560,7 +561,8 @@ const translations = {
         no: "No",
         examsTitle: "Exams & Grades",
         newAssignmentNameLabel: "Exam / Assignment Name",
-        addNewAssignmentButton: "Create",
+        addNewExamSectionTitle: "Add New Exam",
+        addNewAssignmentButton: "Create Exam",
         selectExamPlaceholder: "-- Select Exam --",
         saveGradesButton: "Save Grades",
         gradePlaceholder: "Score",
@@ -5474,7 +5476,9 @@ async function openStudentProfile(studentId) {
     history.pushState({ view: 'student-profile', studentId }, '');
 
     // إظهار الصفحة
-    document.getElementById('studentProfilePage').classList.remove('hidden');
+    const profilePage = document.getElementById('studentProfilePage');
+    profilePage.classList.remove('hidden');
+    profilePage.scrollTop = 0; // ✅ Scroll to the top to fix scroll position issue
     document.body.style.overflow = 'hidden'; // منع السكرول في الخلفية
 
     // إخفاء الهيدر الرئيسي لتجنب التداخل
@@ -5547,6 +5551,7 @@ function enableEditMode() {
         el.disabled = false;
         el.classList.add('bg-white', 'dark:bg-darkSurface', 'ring-2', 'ring-brand/30', 'border-brand/50');
     });
+    document.getElementById('profileEditBtn')?.classList.add('hidden'); // ✅ Hide edit button during editing
     document.getElementById('saveProfileBtn').classList.remove('hidden');
     document.getElementById('profileName').focus();
 }
@@ -5559,6 +5564,7 @@ function cancelEditMode() {
         el.disabled = true;
         el.classList.remove('bg-white', 'dark:bg-darkSurface', 'ring-2', 'ring-brand/30', 'border-brand/50');
     });
+    document.getElementById('profileEditBtn')?.classList.remove('hidden'); // ✅ Show edit button back
     document.getElementById('saveProfileBtn').classList.add('hidden');
 }
 

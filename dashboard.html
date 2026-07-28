@@ -814,12 +814,8 @@
                             data-key-placeholder="searchPlaceholder" placeholder="بحث عن طالب...">
                     </div>
 
-                    <div id="studentsListDisplay"
-                        class="space-y-2 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar mb-6">
-                    </div>
-
                     <div
-                        class="bg-gray-50 dark:bg-black/40 p-5 rounded-2xl border-t-4 border-brand shadow-sm border-gray-100 dark:border-gray-700">
+                        class="bg-gray-50 dark:bg-black/40 p-5 rounded-2xl border-t-4 border-brand shadow-sm border-gray-100 dark:border-gray-700 mb-6">
                         <h4 class="font-bold text-sm mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
                             <i class="ri-add-circle-fill text-brand"></i>
                             <span data-key="addNewStudentSectionTitle">إضافة طالب جديد</span>
@@ -838,6 +834,10 @@
                         </button>
                     </div>
 
+                    <div id="studentsListDisplay"
+                        class="space-y-2 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar mb-6">
+                    </div>
+
                 </section>
             </div>
 
@@ -847,13 +847,17 @@
                         <h3 data-key="examsTitle">الامتحانات والدرجات</h3>
                     </div>
                     <div class="bg-yellow-50 dark:bg-yellow-900/10 p-5 rounded-2xl mb-6 border border-yellow-100">
-                        <div class="grid md:grid-cols-4 gap-3 mb-3">
+                        <h4 class="font-bold text-sm mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <i class="ri-add-circle-fill text-brand"></i>
+                            <span data-key="addNewExamSectionTitle">إضافة امتحان جديد</span>
+                        </h4>
+                        <div class="grid md:grid-cols-4 gap-3">
                             <div class="md:col-span-2"><input type="text" id="newExamName" class="input-field"
                                     data-key-placeholder="newAssignmentNameLabel" placeholder="اسم الامتحان "></div>
                             <div class="md:col-span-1"><input type="number" id="newExamTotalMark" class="input-field"
                                     placeholder="الدرجة النهائية"></div>
                             <div><button id="addNewExamBtn" class="btn-primary-custom w-full"
-                                    data-key="addNewAssignmentButton">إنشاء</button></div>
+                                    data-key="addNewAssignmentButton">إنشاء الامتحان</button></div>
                         </div>
                     </div>
                     <div class="mb-4 flex flex-col md:flex-row gap-4">
@@ -1118,6 +1122,9 @@
             </div> -->
         </div>
     </div>
+            </div> <!-- Close Right Main Content Area -->
+        </div> <!-- Close outer flex layout -->
+    </div> <!-- Close mainContent -->
 
     <div id="scannerModal" class="hidden fixed inset-0 z-[2000] bg-black flex flex-col">
 
@@ -1605,20 +1612,15 @@
                 <!-- Left: Control Actions (Buttons) -->
                 <div class="flex items-center gap-2">
                     <button onclick="closeStudentProfile()"
-                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm group"
-                        title="إغلاق">
-                        <i class="ri-logout-box-r-line text-xl transition-transform group-hover:-translate-x-1"></i>
+                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-red-500 hover:text-white transition-all shadow-sm group"
+                        title="رجوع">
+                        <i class="ri-arrow-right-line text-xl transition-transform group-hover:-translate-x-1 ltr:rotate-180"></i>
                     </button>
                     <button onclick="toggleDarkMode()"
                         class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-brand hover:text-black transition-all shadow-sm"
                         title="تبديل الوضع">
                         <i class="ri-sun-line dark:hidden text-xl"></i>
                         <i class="ri-moon-line hidden dark:block text-xl"></i>
-                    </button>
-                    <button onclick="enableEditMode()"
-                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-brand hover:text-black transition-all shadow-sm"
-                        title="تعديل">
-                        <i class="ri-edit-2-line text-xl"></i>
                     </button>
                 </div>
             </nav>
@@ -1650,8 +1652,15 @@
                             <label
                                 class="text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">بيانات
                                 الطالب</label>
-                            <input type="text" id="profileName" disabled
-                                class="w-full bg-transparent text-3xl font-black text-gray-900 dark:text-white outline-none border-0 p-0 text-center md:text-right">
+                            <div class="flex items-center justify-center md:justify-start gap-2">
+                                <input type="text" id="profileName" disabled
+                                    class="bg-transparent text-3xl font-black text-gray-900 dark:text-white outline-none border-0 p-0 text-center md:text-right flex-1">
+                                <button id="profileEditBtn" onclick="enableEditMode()"
+                                    class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-brand hover:text-black transition-all shadow-sm shrink-0"
+                                    title="تعديل">
+                                    <i class="ri-edit-2-line text-sm"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="flex flex-wrap justify-center md:justify-start gap-4">
                             <div
@@ -1764,9 +1773,6 @@
             </div>
         </div> <!-- Close p-6 pb-20 -->
     </div> <!-- Close studentProfilePage -->
-            </div> <!-- Close main flex-grow content area -->
-        </div> <!-- Close outer flex layout -->
-    </div> <!-- Close mainContent -->
 
     <div id="customInputModal" class="fixed inset-0 hidden overflow-y-auto" style="z-index: 9999;" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity" id="customInputOverlay"></div>
