@@ -1013,10 +1013,10 @@ body.desktop-device video {
         padding: 1rem !important;
     }
     #tab-overview .glass-card.min-h-\[350px\] {
-        min-height: 250px !important;
+        min-height: 330px !important;
     }
     #groupPerformanceChartContainer {
-        height: 160px !important;
+        height: 240px !important;
     }
     #tab-overview #topPerformersList,
     #tab-overview #atRiskStudentsList {

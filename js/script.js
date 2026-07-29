@@ -57,8 +57,8 @@ try {
         storage = firebase.storage();
         functions = firebase.functions(); // مهم عشان الشات بوت يشتغل
 
-        // تفعيل الكاش (Offline Persistence)
-        firestoreDB.enablePersistence().catch(err => {
+        // تفعيل الكاش (Offline Persistence) مع دعم التبويبات المتعددة لمنع الأخطاء
+        firestoreDB.enablePersistence({ synchronizeTabs: true }).catch(err => {
             if (err.code == 'failed-precondition') {
                 console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
             } else if (err.code == 'unimplemented') {
