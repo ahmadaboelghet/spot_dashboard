@@ -2073,6 +2073,21 @@ async function editCurrentGroupName() {
     }
 }
 
+function deduplicateStudents(students) {
+    if (!Array.isArray(students)) return [];
+    const seenIds = new Set();
+    const seenNames = new Set();
+    return students.filter(s => {
+        if (!s || !s.id) return false;
+        if (seenIds.has(s.id)) return false;
+        const nameKey = `${(s.name || '').trim().toLowerCase()}_${(s.parentPhoneNumber || '').trim()}`;
+        if (s.name && seenNames.has(nameKey)) return false;
+        seenIds.add(s.id);
+        if (s.name) seenNames.add(nameKey);
+        return true;
+    });
+}
+
 // ------------------------------------------------------------------
 // ✅✅ NEW LOAD GROUP DATA WITH SAFE SYNC & FAIL-SAFE LOGIC ✅✅
 // ------------------------------------------------------------------
@@ -2109,7 +2124,7 @@ async function loadGroupData() {
     try {
         const localData = await getAllFromDB('students', 'groupId', SELECTED_GROUP_ID);
         if (localData && Array.isArray(localData) && localData.length > 0) {
-            allStudents = localData;
+            allStudents = deduplicateStudents(localData);
             refreshCurrentTab(); // تحديث سريع
         }
     } catch (error) {
@@ -2129,7 +2144,7 @@ async function loadGroupData() {
 
             // أ. الطلاب
             const remoteStudents = sSnap.docs.map(d => ({ id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() }));
-            allStudents = remoteStudents;
+            allStudents = deduplicateStudents(remoteStudents);
             await saveStudentsToLocalDB(remoteStudents);
             refreshCurrentTab();
 
