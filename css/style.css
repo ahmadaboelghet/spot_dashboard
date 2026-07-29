@@ -1004,6 +1004,46 @@ body.desktop-device video {
         padding-bottom: 6rem !important; /* give extra space at the bottom so buttons aren't cut off */
     }
 
+    /* Tighten Overview Tab on Desktop to fit on a single screen without scrolling */
+    #tab-overview .grid.gap-6 {
+        gap: 1rem !important;
+        margin-bottom: 1rem !important;
+    }
+    #tab-overview .glass-card {
+        padding: 1rem !important;
+    }
+    #tab-overview .glass-card.min-h-\[350px\] {
+        min-height: 250px !important;
+    }
+    #groupPerformanceChartContainer {
+        height: 160px !important;
+    }
+    #tab-overview #topPerformersList,
+    #tab-overview #atRiskStudentsList {
+        min-height: auto !important;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+    #tab-overview #topPerformersList > div,
+    #tab-overview #atRiskStudentsList > div {
+        padding: 0.5rem 0.75rem !important;
+    }
+    #monthlyCollectionSummary {
+        margin-top: 0.25rem !important;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+    #monthlyCollectionSummary .flex-col {
+        padding-top: 0 !important;
+        padding-bottom: 0.25rem !important;
+    }
+    #monthlyCollectionSummary i.text-6xl {
+        font-size: 2.5rem !important;
+        margin-bottom: 0 !important;
+    }
+
     /* Hide scrollbar completely for sidebar and main content */
     aside::-webkit-scrollbar,
     #rightMainContent::-webkit-scrollbar {
