@@ -6281,6 +6281,7 @@ function generateAndPrintGenericCards() {
         card.className = 'generic-card';
         card.innerHTML = `
             <div id="generic-qr-${cardId}"></div>
+            <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; margin-top: 6px; color: #000000; letter-spacing: 1px; text-align: center;">${cardId}</div>
         `;
         container.appendChild(card);
 
