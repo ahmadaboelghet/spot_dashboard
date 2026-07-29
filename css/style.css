@@ -998,26 +998,14 @@ body.desktop-device video {
         padding-bottom: 2rem;
     }
 
+    /* Hide scrollbar completely for sidebar and main content */
     aside::-webkit-scrollbar,
     #rightMainContent::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        display: none !important;
     }
-    aside::-webkit-scrollbar-track,
-    #rightMainContent::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    aside::-webkit-scrollbar-thumb,
-    #rightMainContent::-webkit-scrollbar-thumb {
-        background-color: #cbd5e1;
-        border-radius: 20px;
-    }
-    .dark-mode aside::-webkit-scrollbar-thumb,
-    .dark-mode #rightMainContent::-webkit-scrollbar-thumb {
-        background-color: #475569;
-    }
-    aside::-webkit-scrollbar-thumb:hover,
-    #rightMainContent::-webkit-scrollbar-thumb:hover {
-        background-color: var(--primary);
+    aside,
+    #rightMainContent {
+        -ms-overflow-style: none !important; /* IE and Edge */
+        scrollbar-width: none !important; /* Firefox */
     }
 }
