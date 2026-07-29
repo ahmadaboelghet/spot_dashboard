@@ -975,27 +975,33 @@ body.desktop-device video {
     }
     
     #mainContent {
-        height: calc(100vh - 112px);
-        overflow: hidden;
+        height: 100vh !important;
+        padding-top: 6.5rem !important; /* pt-26 equivalent */
+        padding-bottom: 1rem !important;
+        box-sizing: border-box;
     }
 
     #mainContent > .flex {
-        height: 100%;
+        height: calc(100vh - 8rem);
         overflow: hidden;
+        gap: 1.5rem !important; /* reduce gap between sidebar and content */
     }
     
     aside {
-        height: 100%;
+        height: auto !important;
         max-height: 100%;
         overflow-y: auto !important;
-        padding-bottom: 2rem;
+        padding-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem !important; /* reduce spacing between cards */
     }
     
     #rightMainContent {
         height: 100%;
         max-height: 100%;
         overflow-y: auto !important;
-        padding-bottom: 2rem;
+        padding-bottom: 6rem !important; /* give extra space at the bottom so buttons aren't cut off */
     }
 
     /* Hide scrollbar completely for sidebar and main content */
