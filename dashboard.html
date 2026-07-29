@@ -414,13 +414,13 @@
                     </div>
                     <div class="grid grid-cols-3 gap-1">
                         <button id="addNewGroupButton" class="flex flex-col items-center justify-center gap-1 py-2 bg-brand/10 hover:bg-brand/20 text-brand rounded-xl font-bold text-[10px] transition-all border border-brand/20" title="Add Group">
-                            <i class="ri-add-line text-sm"></i><span>جديد</span>
+                            <i class="ri-add-line text-sm"></i><span data-key="btnNew">جديد</span>
                         </button>
                         <button id="editGroupButton" class="flex flex-col items-center justify-center gap-1 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-xl font-bold text-[10px] transition-all border border-blue-500/20" title="Edit Group Name">
-                            <i class="ri-edit-line text-sm"></i><span>تعديل</span>
+                            <i class="ri-edit-line text-sm"></i><span data-key="btnEdit">تعديل</span>
                         </button>
                         <button id="deleteGroupButton" class="flex flex-col items-center justify-center gap-1 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-bold text-[10px] transition-all border border-red-500/20" title="Delete Group">
-                            <i class="ri-delete-bin-line text-sm"></i><span>حذف</span>
+                            <i class="ri-delete-bin-line text-sm"></i><span data-key="btnDelete">حذف</span>
                         </button>
                     </div>
                 </div>
@@ -466,7 +466,7 @@
                         </a>
                         <a href="#cards" class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="cards">
                             <i class="ri-printer-line text-lg"></i>
-                            <span class="font-bold text-sm">كروت الطلاب</span>
+                            <span data-key="tabCards" class="font-bold text-sm">كروت الطلاب</span>
                         </a>
                     </div>
                 </div>
@@ -773,7 +773,7 @@
                             
                             <button id="openChangePasswordBtn" class="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 rounded-xl font-bold transition-colors">
                                 <i class="ri-lock-password-line text-brand"></i>
-                                <span>تغيير كلمة المرور</span>
+                                <span data-key="changePasswordButtonLabel">تغيير كلمة المرور</span>
                             </button>
 
                             <button id="saveProfileButton" class="btn-primary-custom w-full mt-2"
@@ -861,7 +861,7 @@
                             <div class="md:col-span-2"><input type="text" id="newExamName" class="input-field"
                                     data-key-placeholder="newAssignmentNameLabel" placeholder="اسم الامتحان "></div>
                             <div class="md:col-span-1"><input type="number" id="newExamTotalMark" class="input-field"
-                                    placeholder="الدرجة النهائية"></div>
+                                    data-key-placeholder="newExamTotalMarkPlaceholder" placeholder="الدرجة النهائية"></div>
                             <div><button id="addNewExamBtn" class="btn-primary-custom w-full"
                                     data-key="addNewAssignmentButton">إنشاء الامتحان</button></div>
                         </div>
@@ -872,7 +872,7 @@
                         </div>
                         <div class="w-full md:w-40 relative group">
                             <label
-                                class="absolute -top-2 right-3 px-2 bg-white dark:bg-darkSurface text-[10px] font-black text-brand z-10">الدرجة
+                                class="absolute -top-2 right-3 px-2 bg-white dark:bg-darkSurface text-[10px] font-black text-brand z-10" data-key="totalMarkLabel">الدرجة
                                 النهائية</label>
                             <input type="number" id="examTotalMarkInput"
                                 class="input-field font-black text-center text-brand" placeholder="30">
@@ -917,7 +917,7 @@
                     <div class="grid grid-cols-2 gap-3 mb-4 animate-fade-up">
                         <div
                             class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 rounded-2xl text-center">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">تحصيل المجموعة</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1" data-key="paymentsGroupCollection">تحصيل المجموعة</p>
                             <h3 id="groupTotalDisplay" class="text-xl font-black text-green-600 dark:text-green-400">0
                                 ج.م</h3>
                         </div>
@@ -928,7 +928,7 @@
                                 class="absolute top-0 right-0 w-8 h-8 bg-brand/20 rounded-bl-xl flex items-center justify-center">
                                 <i class="ri-wallet-3-fill text-brand text-xs"></i>
                             </div>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">إجمالي الدخل (الشهر)</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1" data-key="paymentsTotalMonthlyIncome">إجمالي الدخل (الشهر)</p>
                             <h3 id="overallTotalDisplay"
                                 class="text-xl font-black text-gray-900 dark:text-white flex items-center justify-center gap-2">
                                 <span>--</span>
@@ -1033,21 +1033,21 @@
                             <i class="ri-printer-line"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-black text-gray-900 dark:text-white font-cairo">مولد كروت الطلاب (الذكية)</h3>
-                            <p class="text-sm text-gray-500 mt-1 font-bold">قم بتوليد كروت فارغة لربطها بالطلاب لاحقاً بكل سهولة.</p>
+                            <h3 class="text-xl font-black text-gray-900 dark:text-white font-cairo" data-key="cardsTitle">مولد كروت الطلاب (الذكية)</h3>
+                            <p class="text-sm text-gray-500 mt-1 font-bold" data-key="cardsSubtitle">قم بتوليد كروت فارغة لربطها بالطلاب لاحقاً بكل سهولة.</p>
                         </div>
                     </div>
 
                     <div class="flex flex-col md:flex-row gap-4 items-end">
                         <div class="flex-grow w-full">
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">عدد الكروت المطلوب توليدها (أقصى حد 200 في المرة)</label>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2" data-key="cardsCountLabel">عدد الكروت المطلوب توليدها (أقصى حد 200 في المرة)</label>
                             <input type="number" id="cardsCountInput" min="1" max="200" value="9" 
                                 class="w-full px-4 py-3 bg-gray-50 dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all font-bold text-gray-900 dark:text-white"
-                                placeholder="أدخل العدد (مثال: 9)">
+                                data-key-placeholder="cardsCountPlaceholder" placeholder="أدخل العدد (مثال: 9)">
                         </div>
                         <button onclick="generateAndPrintGenericCards()" class="w-full md:w-auto px-6 py-3 bg-brand hover:bg-brand/90 text-black font-black rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
                             <i class="ri-printer-fill text-lg"></i>
-                            توليد وطباعة الكروت
+                            <span data-key="cardsGenerateAndPrintBtn">توليد وطباعة الكروت</span>
                         </button>
                     </div>
                 </div>
@@ -1059,15 +1059,15 @@
                                 <i class="ri-checkbox-circle-fill text-xl"></i>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-gray-800 dark:text-gray-200">
+                                <p class="text-sm font-bold text-gray-800 dark:text-gray-200" data-key="cardsGeneratedSuccess">
                                     تم توليد كروت الطلاب بنجاح! 🎉
                                 </p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    العدد الإجمالي: <span id="cardsGeneratedCount" class="font-black text-brand">0</span> كارت. تم فتح نافذة الطباعة تلقائياً.
+                                    <span data-key="cardsTotalGeneratedPrefix">العدد الإجمالي:</span> <span id="cardsGeneratedCount" class="font-black text-brand">0</span> <span data-key="cardsTotalGeneratedSuffix">كارت. تم فتح نافذة الطباعة تلقائياً.</span>
                                 </p>
                             </div>
                         </div>
-                        <button onclick="window.print()" class="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-black font-bold rounded-xl shadow-md hover:opacity-90 transition-all flex items-center justify-center gap-2 w-full md:w-auto">
+                        <button onclick="window.print()" class="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-black font-bold rounded-xl shadow-md hover:opacity-90 transition-all flex items-center justify-center gap-2 w-full md:w-auto" data-key="cardsReprintBtn">
                             <i class="ri-printer-line"></i>
                             إعادة طباعة نفس الكروت 🖨️
                         </button>
@@ -1666,7 +1666,7 @@
                     <div class="flex-1 text-center md:text-right">
                         <div class="space-y-0.5 mb-4">
                             <label
-                                class="text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">بيانات
+                                class="text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400" data-key="profileStudentDetailsLabel">بيانات
                                 الطالب</label>
                             <div class="flex items-center justify-center md:justify-start gap-2">
                                 <input type="text" id="profileName" disabled
@@ -1688,7 +1688,7 @@
                             <div id="profileCardBadgeContainer" onclick="openProfileCardLinkModal()"
                                 class="flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold cursor-pointer transition-all hover:scale-105">
                                 <i id="profileCardIcon" class="ri-qr-code-line"></i>
-                                <span id="profileCardText">كارت الطالب</span>
+                                <span id="profileCardText" data-key="profileStudentCard">كارت الطالب</span>
                             </div>
                         </div>
                     </div>
@@ -1696,7 +1696,7 @@
                     <!-- Main Metric (Attendance %) -->
                     <div
                         class="px-8 py-4 bg-brand rounded-2xl text-black shadow-xl shadow-brand/20 text-center min-w-[140px]">
-                        <span class="block text-[10px] font-black uppercase tracking-tighter opacity-70">نسبة
+                        <span class="block text-[10px] font-black uppercase tracking-tighter opacity-70" data-key="profileAttendancePercentageLabel">نسبة
                             الحضور</span>
                         <span id="attendancePercentage" class="text-4xl font-black">0%</span>
                     </div>
@@ -1724,7 +1724,7 @@
                 <div class="glass-card flex flex-col">
                     <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                         <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2">
-                            <i class="ri-medal-fill text-purple-500"></i> درجات الامتحانات
+                            <i class="ri-medal-fill text-purple-500"></i> <span data-key="profileExamsGradesTitle">درجات الامتحانات</span>
                         </h3>
                         <span id="statExams"
                             class="bg-purple-50 dark:bg-purple-900/20 text-purple-600 px-3 py-1 rounded-full text-xs font-black">0</span>
@@ -1734,7 +1734,7 @@
                         <!-- Exam items will be injected here -->
                         <div class="text-center py-10 text-gray-400 dark:text-gray-500 flex flex-col items-center">
                             <i class="ri-inbox-line text-4xl block mb-2 opacity-50"></i>
-                            <p class="text-sm font-bold uppercase tracking-widest">لا يوجد امتحانات حالياً</p>
+                            <p class="text-sm font-bold uppercase tracking-widest" data-key="profileNoExamsYet">لا يوجد امتحانات حالياً</p>
                         </div>
                     </div>
                 </div>
@@ -1743,7 +1743,7 @@
                 <div class="glass-card flex flex-col">
                     <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                         <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2">
-                            <i class="ri-calendar-check-fill text-blue-500"></i> سجل الحضور الشهري
+                            <i class="ri-calendar-check-fill text-blue-500"></i> <span data-key="profileMonthlyAttendanceRecord">سجل الحضور الشهري</span>
                         </h3>
                     </div>
                     <div id="profileMonthlyAttendance"
@@ -1756,7 +1756,7 @@
                 <div class="glass-card flex flex-col">
                     <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                         <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2">
-                            <i class="ri-bank-card-fill text-green-500"></i> حالة المصروفات
+                            <i class="ri-bank-card-fill text-green-500"></i> <span data-key="profilePaymentsStatusTitle">حالة المصروفات</span>
                         </h3>
                     </div>
                     <div id="profilePaymentsStatus"
@@ -1771,7 +1771,7 @@
             <div class="glass-card overflow-hidden">
                 <div class="p-5 bg-gray-50/50 dark:bg-black/20 border-b border-gray-100 dark:border-gray-800">
                     <h3 class="font-black text-gray-800 dark:text-white flex items-center gap-2 text-sm">
-                        <i class="ri-history-line text-brand"></i> سجل آخر 20 حصة
+                        <i class="ri-history-line text-brand"></i> <span data-key="profileLastSessionsLog">سجل آخر 20 حصة</span>
                     </h3>
                 </div>
                 <div class="overflow-x-auto">
@@ -2126,42 +2126,42 @@
                     <i class="ri-lock-password-fill"></i>
                 </div>
                 <div>
-                    <h3 class="text-xl font-black text-gray-900 dark:text-white tracking-tight">تغيير كلمة المرور</h3>
-                    <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">تأمين الحساب</p>
+                    <h3 class="text-xl font-black text-gray-900 dark:text-white tracking-tight" data-key="changePasswordModalTitle">تغيير كلمة المرور</h3>
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1" data-key="changePasswordModalSub">تأمين الحساب</p>
                 </div>
             </div>
 
             <div class="space-y-4 relative">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">كلمة المرور الحالية</label>
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2" data-key="changePasswordCurrentLabel">كلمة المرور الحالية</label>
                     <div class="relative">
                         <i class="ri-lock-line absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="password" id="currentPasswordInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-yellow-400 transition-colors" placeholder="أدخل كلمة المرور الحالية">
+                        <input type="password" id="currentPasswordInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-yellow-400 transition-colors" data-key-placeholder="changePasswordCurrentPlaceholder" placeholder="أدخل كلمة المرور الحالية">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">كلمة المرور الجديدة</label>
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2" data-key="changePasswordNewLabel">كلمة المرور الجديدة</label>
                     <div class="relative">
                         <i class="ri-key-2-line absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="password" id="newPasswordInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-yellow-400 transition-colors" placeholder="أدخل كلمة المرور الجديدة">
+                        <input type="password" id="newPasswordInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-yellow-400 transition-colors" data-key-placeholder="changePasswordNewPlaceholder" placeholder="أدخل كلمة المرور الجديدة">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">تأكيد كلمة المرور الجديدة</label>
+                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2" data-key="changePasswordConfirmLabel">تأكيد كلمة المرور الجديدة</label>
                     <div class="relative">
                         <i class="ri-check-double-line absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="password" id="confirmNewPasswordInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-yellow-400 transition-colors" placeholder="أعد إدخال كلمة المرور الجديدة">
+                        <input type="password" id="confirmNewPasswordInput" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-yellow-400 transition-colors" data-key-placeholder="changePasswordConfirmPlaceholder" placeholder="أعد إدخال كلمة المرور الجديدة">
                     </div>
                 </div>
             </div>
             
             <div class="flex gap-3 mt-8 relative">
                 <button onclick="handleChangePassword()" class="flex-1 btn-primary-custom text-black font-black py-3 rounded-xl shadow-lg transform hover:scale-105 transition-all">
-                    تأكيد وتغيير
+                    <span data-key="changePasswordSubmitBtn">تأكيد وتغيير</span>
                 </button>
-                <button onclick="closeChangePasswordModal()" class="px-6 bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-bold py-3 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors">
+                <button onclick="closeChangePasswordModal()" class="px-6 bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-bold py-3 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors" data-key="cancelBtn">
                     إلغاء
                 </button>
             </div>
@@ -2169,7 +2169,7 @@
     </div>
 
     <!-- 🔗 Card Link Modal -->
-    <div id="cardLinkModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div id="cardLinkModal" class="fixed inset-0 hidden flex items-center justify-center p-4" style="z-index: 100;">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCardLinkModal()"></div>
         <div class="relative bg-white dark:bg-darkSurface rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all border border-gray-100 dark:border-white/5 overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-3xl -z-10"></div>

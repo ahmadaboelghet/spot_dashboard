@@ -502,7 +502,52 @@ const translations = {
         widgetInstantNotifications: "إشعارات فورية",
         widgetInstantNotificationsDesc: "تم إرسال غياب الطالب لولي الأمر 📱",
         widgetFeeCollection: "تحصيل المصروفات",
-        widgetFeeCollectionDesc: "تم تسديد شهر يونيو 💳"
+        widgetFeeCollectionDesc: "تم تسديد شهر يونيو 💳",
+        btnNew: "جديد",
+        btnEdit: "تعديل",
+        btnDelete: "حذف",
+        changePasswordButtonLabel: "تغيير كلمة المرور",
+        newExamTotalMarkPlaceholder: "الدرجة النهائية",
+        totalMarkLabel: "الدرجة النهائية",
+        paymentsGroupCollection: "تحصيل المجموعة",
+        paymentsTotalMonthlyIncome: "إجمالي الدخل (الشهر)",
+        tabCards: "كروت الطلاب",
+        cardsTitle: "مولد كروت الطلاب (الذكية)",
+        cardsSubtitle: "قم بتوليد كروت فارغة لربطها بالطلاب لاحقاً بكل سهولة.",
+        cardsCountLabel: "عدد الكروت المطلوب توليدها (أقصى حد 200 في المرة)",
+        cardsCountPlaceholder: "أدخل العدد (مثال: 9)",
+        cardsGenerateAndPrintBtn: "توليد وطباعة الكروت",
+        cardsGeneratedSuccess: "تم توليد كروت الطلاب بنجاح! 🎉",
+        cardsTotalGeneratedPrefix: "العدد الإجمالي: ",
+        cardsTotalGeneratedSuffix: " كارت. تم فتح نافذة الطباعة تلقائياً.",
+        cardsReprintBtn: "إعادة طباعة نفس الكروت 🖨️",
+        profileFollowUpPanel: "لوحة المتابعة",
+        profileStudentTitlePrefix: "الطالب",
+        profileStudentDetailsLabel: "بيانات الطالب",
+        profileStudentCard: "كارت الطالب",
+        profileAttendancePercentageLabel: "نسبة الحضور",
+        profileExamsGradesTitle: "درجات الامتحانات",
+        profileNoExamsYet: "لا يوجد امتحانات حالياً",
+        profileMonthlyAttendanceRecord: "سجل الحضور الشهري",
+        profilePaymentsStatusTitle: "حالة المصروفات",
+        profileLastSessionsLog: "سجل آخر 20 حصة",
+        profileHistoryTableDate: "التاريخ",
+        profileHistoryTableStatus: "الحالة",
+        profileHistoryTableHomework: "الواجب",
+        studentsNoResults: "لم يتم العثور على طلاب",
+        studentsStartAdding: "ابدأ بإضافة أول بطل لمجموعتك من الأسفل ✨",
+        fcmEnabledTitle: "الإشعارات مفعلة",
+        fcmDisabledTitle: "الإشعارات لسه مش مفعلة",
+        sendMessageTooltip: "إرسال رسالة",
+        changePasswordModalTitle: "تغيير كلمة المرور",
+        changePasswordModalSub: "تأمين الحساب",
+        changePasswordCurrentLabel: "كلمة المرور الحالية",
+        changePasswordCurrentPlaceholder: "أدخل كلمة المرور الحالية",
+        changePasswordNewLabel: "كلمة المرور الجديدة",
+        changePasswordNewPlaceholder: "أدخل كلمة المرور الجديدة",
+        changePasswordConfirmLabel: "تأكيد كلمة المرور الجديدة",
+        changePasswordConfirmPlaceholder: "أعد إدخال كلمة المرور الجديدة",
+        changePasswordSubmitBtn: "تأكيد وتغيير"
     },
     en: {
         pageTitle: "Elnazer - Teacher Dashboard",
@@ -702,7 +747,52 @@ const translations = {
         widgetInstantNotifications: "Instant Notifications",
         widgetInstantNotificationsDesc: "Student absence sent to parent 📱",
         widgetFeeCollection: "Fee Collection",
-        widgetFeeCollectionDesc: "June fee successfully paid 💳"
+        widgetFeeCollectionDesc: "June fee successfully paid 💳",
+        btnNew: "New",
+        btnEdit: "Edit",
+        btnDelete: "Delete",
+        changePasswordButtonLabel: "Change Password",
+        newExamTotalMarkPlaceholder: "Total Score",
+        totalMarkLabel: "Total Mark",
+        paymentsGroupCollection: "Group Payments",
+        paymentsTotalMonthlyIncome: "Total Monthly Income",
+        tabCards: "Student Cards",
+        cardsTitle: "Smart Student Cards Generator",
+        cardsSubtitle: "Generate empty cards to link to students later with ease.",
+        cardsCountLabel: "Number of cards to generate (max 200 at once)",
+        cardsCountPlaceholder: "Enter quantity (e.g. 9)",
+        cardsGenerateAndPrintBtn: "Generate & Print Cards",
+        cardsGeneratedSuccess: "Student cards generated successfully! 🎉",
+        cardsTotalGeneratedPrefix: "Total cards: ",
+        cardsTotalGeneratedSuffix: " cards. Print window opened automatically.",
+        cardsReprintBtn: "Reprint same cards 🖨️",
+        profileFollowUpPanel: "Follow-up Panel",
+        profileStudentTitlePrefix: "Student",
+        profileStudentDetailsLabel: "Student Details",
+        profileStudentCard: "Student Card",
+        profileAttendancePercentageLabel: "Attendance Rate",
+        profileExamsGradesTitle: "Exam Grades",
+        profileNoExamsYet: "No exams recorded yet",
+        profileMonthlyAttendanceRecord: "Monthly Attendance Record",
+        profilePaymentsStatusTitle: "Payments Status",
+        profileLastSessionsLog: "Last 20 Sessions Log",
+        profileHistoryTableDate: "Date",
+        profileHistoryTableStatus: "Status",
+        profileHistoryTableHomework: "Homework",
+        studentsNoResults: "No students found",
+        studentsStartAdding: "Start by adding the first hero to your group below ✨",
+        fcmEnabledTitle: "Notifications active",
+        fcmDisabledTitle: "Notifications not active yet",
+        sendMessageTooltip: "Send Message",
+        changePasswordModalTitle: "Change Password",
+        changePasswordModalSub: "Secure Account",
+        changePasswordCurrentLabel: "Current Password",
+        changePasswordCurrentPlaceholder: "Enter current password",
+        changePasswordNewLabel: "New Password",
+        changePasswordNewPlaceholder: "Enter new password",
+        changePasswordConfirmLabel: "Confirm New Password",
+        changePasswordConfirmPlaceholder: "Re-enter new password",
+        changePasswordSubmitBtn: "Confirm & Change"
     }
 };
 
@@ -3498,8 +3588,8 @@ function renderStudents(filter = "") {
         container.innerHTML = `
             <div class="flex flex-col items-center justify-center py-10 opacity-40 animate-fade-in text-center">
                 <i class="ri-user-search-line text-6xl mb-2 text-gray-400"></i>
-                <p class="font-black text-gray-500 tracking-widest uppercase text-xs">لم يتم العثور على طلاب</p>
-                <p class="text-[10px] text-gray-400 mt-1">ابدأ بإضافة أول بطل لمجموعتك من الأسفل ✨</p>
+                <p class="font-black text-gray-500 tracking-widest uppercase text-xs">${translations[currentLang].studentsNoResults}</p>
+                <p class="text-[10px] text-gray-400 mt-1">${translations[currentLang].studentsStartAdding}</p>
             </div>
         `;
         return;
@@ -3516,16 +3606,18 @@ function renderStudents(filter = "") {
         div.onclick = (e) => {
             if (!e.target.closest('button')) openStudentProfile(s.id);
         };
+        const fcmTitle = s.parentFcmToken ? translations[currentLang].fcmEnabledTitle : translations[currentLang].fcmDisabledTitle;
+        const msgTitle = translations[currentLang].sendMessageTooltip;
         div.innerHTML = `
             <div class="flex-1">
                 <div class="flex items-center gap-2">
                     <p class="font-bold text-gray-800 dark:text-white"> ${s.name}</p>
-                    <i class="ri-notification-3-fill ${s.parentFcmToken ? 'text-green-500' : 'text-red-500'}" title="${s.parentFcmToken ? 'الإشعارات مفعلة' : 'الإشعارات لسه مش مفعلة'}"></i>
+                    <i class="ri-notification-3-fill ${s.parentFcmToken ? 'text-green-500' : 'text-red-500'}" title="${fcmTitle}"></i>
                 </div>
                 <p class="text-xs text-gray-500">${s.parentPhoneNumber ? (s.parentPhoneNumber.startsWith('+2') ? s.parentPhoneNumber.substring(2) : s.parentPhoneNumber) : ''}</p>
             </div>
             <div class="flex gap-2">
-                <button class="btn-icon w-10 h-10 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 msg-btn" title="إرسال رسالة">
+                <button class="btn-icon w-10 h-10 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 msg-btn" title="${msgTitle}">
                     <i class="ri-chat-1-line"></i>
                 </button>
                 <button class="btn-icon w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 qr-btn">
@@ -3880,7 +3972,9 @@ async function deleteStudent(id) {
 }
 
 // --- Payments ---
+let _paymentsRenderVersion = 0; // ✅ عداد لمنع تكرار الطلاب عند التحميل المتوازي (Race Condition Guard)
 async function renderPaymentsList(filter = "") {
+    const thisRenderVersion = ++_paymentsRenderVersion;
     if (typeof filter !== 'string') filter = "";
     const month = document.getElementById('paymentMonthInput').value;
     const defaultAmountInput = document.getElementById('defaultAmountInput');
@@ -3894,6 +3988,8 @@ async function renderPaymentsList(filter = "") {
 
     const payId = `${SELECTED_GROUP_ID}_PAY_${month}`;
     const doc = await getFromDB('payments', payId);
+    // ✅ فحص: لو نداء جديد بدأ أثناء الانتظار، نوقف النداء القديم فوراً
+    if (thisRenderVersion !== _paymentsRenderVersion) return;
     const map = {};
     if (doc?.records) {
         doc.records.forEach(r => map[r.studentId] = r.amount);
@@ -3987,6 +4083,9 @@ async function renderPaymentsList(filter = "") {
 
         fragment.appendChild(div);
     });
+    // ✅ فحص نهائي قبل الإضافة: لو نداء أحدث بدأ، نتجاهل هذا النداء القديم
+    if (thisRenderVersion !== _paymentsRenderVersion) return;
+    container.innerHTML = ''; // مسح القائمة مباشرة قبل الإضافة لمنع التكرار
     container.appendChild(fragment);
 }
 
