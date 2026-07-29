@@ -997,4 +997,27 @@ body.desktop-device video {
         overflow-y: auto !important;
         padding-bottom: 2rem;
     }
+
+    aside::-webkit-scrollbar,
+    #rightMainContent::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    aside::-webkit-scrollbar-track,
+    #rightMainContent::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    aside::-webkit-scrollbar-thumb,
+    #rightMainContent::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 20px;
+    }
+    .dark-mode aside::-webkit-scrollbar-thumb,
+    .dark-mode #rightMainContent::-webkit-scrollbar-thumb {
+        background-color: #475569;
+    }
+    aside::-webkit-scrollbar-thumb:hover,
+    #rightMainContent::-webkit-scrollbar-thumb:hover {
+        background-color: var(--primary);
+    }
 }
