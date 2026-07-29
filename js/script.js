@@ -2617,7 +2617,9 @@ function switchTab(tabId) {
 // ==========================================
 // 8. DAILY & SCANNER
 // ==========================================
+let _dailyRenderVersion = 0; // ✅ عداد لمنع تكرار الطلاب عند التحميل المتوازي (Race Condition Guard)
 async function renderDailyList(filter = "") {
+    const thisRenderVersion = ++_dailyRenderVersion;
     if (typeof filter !== 'string') filter = "";
     try {
         const dateInput = document.getElementById('dailyDateInput');
@@ -2674,6 +2676,8 @@ async function renderDailyList(filter = "") {
                 getFromDB('attendance', attId).catch(err => { console.warn("Failed fetching att:", err); return null; }),
                 getFromDB('assignments', hwId).catch(err => { console.warn("Failed fetching hw:", err); return null; })
             ]);
+            // ✅ فحص: لو نداء جديد بدأ أثناء الانتظار، نوقف النداء القديم فوراً
+            if (thisRenderVersion !== _dailyRenderVersion) return;
             attDoc = results[0];
             hwDoc = results[1];
         } catch (dbErr) {
@@ -2792,7 +2796,9 @@ async function renderDailyList(filter = "") {
             }
             fragment.appendChild(row);
         });
-
+        // ✅ فحص نهائي قبل الإضافة: لو نداء أحدث بدأ، نتجاهل هذا النداء القديم
+        if (thisRenderVersion !== _dailyRenderVersion) return;
+        list.innerHTML = ''; // مسح القائمة مباشرة قبل الإضافة لمنع التكرار
         list.appendChild(fragment);
 
         // دالة صغيرة لتحديث العداد
