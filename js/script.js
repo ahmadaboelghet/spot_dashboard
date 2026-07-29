@@ -1336,6 +1336,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         window.addEventListener('online', updateOnlineStatus);
         window.addEventListener('offline', updateOnlineStatus);
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash.replace('#', '');
+            if (hash && ['overview', 'daily', 'students', 'exams', 'payments', 'schedule', 'profile', 'cards'].includes(hash)) {
+                if (SELECTED_GROUP_ID || hash === 'profile' || hash === 'cards') {
+                    switchTab(hash);
+                }
+            }
+        });
 
         // Check actual internet connectivity periodically (every 15s) to recover from ISP disconnects
         setInterval(updateOnlineStatus, 15000);
@@ -1360,11 +1368,20 @@ function setupListeners() {
     
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn?.addEventListener('click', (e) => {
+            // Allow Ctrl+Click, Cmd+Click, Shift+Click, or Middle-click to behave naturally (open in new tab)
+            if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) {
+                return;
+            }
+
             const tab = e.currentTarget.dataset.tab;
-            if (!SELECTED_GROUP_ID && tab !== 'profile') {
+            if (!SELECTED_GROUP_ID && tab !== 'profile' && tab !== 'cards') {
+                e.preventDefault();
                 showToast(translations[currentLang].selectGroupPlaceholder, 'error');
                 return;
             }
+
+            e.preventDefault();
+            window.location.hash = tab;
             switchTab(tab);
         });
     });
@@ -1479,6 +1496,7 @@ function setupListeners() {
 
     document.getElementById('scanPaymentsBtn')?.addEventListener('click', () => startScanner('payments'));
     document.getElementById('paymentMonthInput')?.addEventListener('change', renderPaymentsList);
+    document.getElementById('savePaymentsBtn')?.addEventListener('click', savePayments);
 
     document.getElementById('addNewExamBtn')?.addEventListener('click', addNewExam);
     document.getElementById('examSelect')?.addEventListener('change', renderExamGrades);
@@ -2245,7 +2263,11 @@ async function renderOverview() {
                 (e.type === 'exam' || !e.type) &&
                 !(e.name || '').includes("واجب") &&
                 e.scores && Object.keys(e.scores).length > 0
-            ).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            ).sort((a, b) => {
+                const dateDiff = new Date(b.date || 0) - new Date(a.date || 0);
+                if (dateDiff !== 0) return dateDiff;
+                return (b.id || '').localeCompare(a.id || '');
+            });
 
             if (exams.length > 0) {
                 const lastExam = exams[0]; // Get the LATEST one
@@ -2529,6 +2551,10 @@ function switchTab(tabId) {
     
     const targetEl = document.getElementById(`tab-${tabId}`);
     if (targetEl) targetEl.classList.remove('hidden');
+    
+    // Reset right main content scroll position to top on tab switch
+    const rightContent = document.getElementById('rightMainContent');
+    if (rightContent) rightContent.scrollTop = 0;
     
     const btn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
     if (btn) btn.classList.add('active');
@@ -3586,8 +3612,8 @@ function showStudentQR(student) {
     // 1. عرض اسم الطالب
     document.getElementById('idStudentName').innerText = student.name;
 
-    // 2. تجهيز البيانات (رقم التليفون)
-    const qrContent = student.parentPhoneNumber ? student.parentPhoneNumber.trim() : student.id;
+    // 2. تجهيز البيانات (معرّف الطالب الفريد لضمان الاستقلالية بين الإخوة)
+    const qrContent = student.id;
 
     // 3. عرض الرقم تحت الـ QR (عشان لو الكاميرا معلجة المدرس يكتبه)
     const randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
@@ -3912,9 +3938,6 @@ async function renderPaymentsList(filter = "") {
                 calculateOverallIncome(currentGroupTotal);
             }
             oldVal = newVal;
-            // Auto-save payments
-            if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(savePayments, 1000);
         });
 
         checkbox.addEventListener('change', (e) => {
@@ -3939,10 +3962,6 @@ async function renderPaymentsList(filter = "") {
             }
             groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
             calculateOverallIncome(currentGroupTotal);
-
-            // Auto-save payments
-            if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(savePayments, 500);
         });
 
         fragment.appendChild(div);
@@ -3953,14 +3972,31 @@ async function renderPaymentsList(filter = "") {
 async function savePayments() {
     const month = document.getElementById('paymentMonthInput').value;
     if (!month) return showToast(translations[currentLang].paymentMonthMissing, 'error');
-    const records = [];
-    document.querySelectorAll('#paymentsList > div').forEach(div => {
-        const val = div.querySelector('.payment-input').value;
-        const amount = val ? parseFloat(val) : 0;
-        records.push({ studentId: div.dataset.sid, amount: amount, paid: amount > 0 });
-    });
-    await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${month}`, month, records });
-    await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, data: { month, records } });
+    
+    const btn = document.getElementById('savePaymentsBtn');
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="ri-loader-4-line animate-spin text-lg"></i> <span>جاري الحفظ وإرسال الإشعارات...</span>`;
+
+    try {
+        const records = [];
+        document.querySelectorAll('#paymentsList > div').forEach(div => {
+            const val = div.querySelector('.payment-input').value;
+            const amount = val ? parseFloat(val) : 0;
+            records.push({ studentId: div.dataset.sid, amount: amount, paid: amount > 0 });
+        });
+        
+        await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${month}`, month, records });
+        await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, data: { month, records } });
+        
+        showToast(translations[currentLang].saved || "تم حفظ التحصيل بنجاح");
+    } catch (err) {
+        console.error("Error saving payments:", err);
+        showToast("حدث خطأ أثناء حفظ عملية التحصيل", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+    }
 }
 
 // --- Exams, Schedules & Settings ---
@@ -4111,9 +4147,35 @@ async function saveExamGrades() {
 }
 
 function saveProfile() {
-    const name = document.getElementById('teacherNameInput').value;
-    const subject = document.getElementById('teacherSubjectInput').value;
-    if (!name) return;
+    const nameInput = document.getElementById('teacherNameInput');
+    const subjectInput = document.getElementById('teacherSubjectInput');
+    const nameError = document.getElementById('teacherNameError');
+    const subjectError = document.getElementById('teacherSubjectError');
+
+    // Reset validation states
+    nameInput.classList.remove('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+    subjectInput.classList.remove('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+    nameError.classList.add('hidden');
+    subjectError.classList.add('hidden');
+
+    const name = nameInput.value.trim();
+    const subject = subjectInput.value.trim();
+    let hasError = false;
+
+    if (!name) {
+        nameInput.classList.add('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+        nameError.innerText = currentLang === 'ar' ? 'اسم المدرس مطلوب' : 'Teacher name is required';
+        nameError.classList.remove('hidden');
+        hasError = true;
+    }
+    if (!subject) {
+        subjectInput.classList.add('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+        subjectError.innerText = currentLang === 'ar' ? 'اسم المادة مطلوب' : 'Subject name is required';
+        subjectError.classList.remove('hidden');
+        hasError = true;
+    }
+
+    if (hasError) return;
     
     // الاحتفاظ بالباسورد القديم كما هو في قاعدة البيانات المحلية لتجنب فقدانه أو مسحه عن طريق الخطأ
     getFromDB('teachers', TEACHER_ID).then(existingTeacher => {
@@ -4197,7 +4259,7 @@ async function handleChangePassword() {
         btn.innerText = "تأكيد وتغيير";
         btn.disabled = false;
         
-        if (error.code === 'auth/wrong-password') {
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
             showToast("كلمة المرور الحالية غير صحيحة", "error");
         } else if (error.code === 'auth/too-many-requests') {
             showToast("محاولات كثيرة خاطئة، يرجى المحاولة لاحقاً", "error");
@@ -4275,8 +4337,10 @@ async function loadPreferences() {
             // Load data for this group
             await loadGroupData();
 
-            // Restore last active tab
-            const savedTabId = getSessionItem('learnaria-tab');
+            // Restore last active tab (prioritize hash tab if valid)
+            const hashTab = window.location.hash.replace('#', '');
+            const isValidHash = ['overview', 'daily', 'students', 'exams', 'payments', 'schedule', 'profile', 'cards'].includes(hashTab);
+            const savedTabId = isValidHash ? hashTab : getSessionItem('learnaria-tab');
             if (savedTabId) {
                 switchTab(savedTabId);
             } else {
@@ -4284,6 +4348,11 @@ async function loadPreferences() {
             }
             checkGroupSelectionPortal();
         } else {
+            // Even if no group is selected, check if hash points to profile or cards which don't require group selection
+            const hashTab = window.location.hash.replace('#', '');
+            if (hashTab === 'profile' || hashTab === 'cards') {
+                switchTab(hashTab);
+            }
             checkGroupSelectionPortal();
         }
 
@@ -6007,7 +6076,7 @@ window.startBulkPrint = async function(mode) {
 
     // Generate cards
     targetStudents.forEach(s => {
-        const qrContent = s.parentPhoneNumber ? s.parentPhoneNumber.trim() : s.id;
+        const qrContent = s.id;
         
         let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
         // إزالة الـ Emojis والإبقاء على الحروف والأرقام والمسافات
@@ -6069,7 +6138,7 @@ window.startBulkPrint = async function(mode) {
 // 🖨️ Generic QR Cards Logic
 // ==========================================
 
-function generateGenericCards() {
+function generateAndPrintGenericCards() {
     const countInput = document.getElementById('cardsCountInput');
     let count = parseInt(countInput.value) || 10;
     
@@ -6109,7 +6178,11 @@ function generateGenericCards() {
     // Update UI
     document.getElementById('cardsGeneratedCount').innerText = count;
     document.getElementById('cardsPreviewSection').classList.remove('hidden');
-    showToast(`تم تجهيز ${count} كارت للطباعة`, 'success');
+    
+    // Open print window directly
+    setTimeout(() => {
+        window.print();
+    }, 300);
 }
 
 async function submitManualCardLink() {
