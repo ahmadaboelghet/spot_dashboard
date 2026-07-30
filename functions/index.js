@@ -445,21 +445,38 @@ exports.notifyOnNewGrades = onDocumentWritten(
 
         if (scoreData) {
           const processStudent = async () => {
-            // ✅ الشرط الجديد: نرسل فقط إذا كان هناك "درجة" مرصودة ومختلفة عن الدرجة السابقة (لمنع تكرار الإشعار)
             const scoreBefore = scoresBefore[studentId] ? scoresBefore[studentId].score : null;
+            const submittedBefore = scoresBefore[studentId] ? scoresBefore[studentId].submitted : false;
+            
             const hasScore = scoreData.score !== "" && scoreData.score != null;
-            const isNewOrChanged = hasScore && (scoreData.score != scoreBefore); // Use != to handle loose string vs number comparison safely
+            const isScoreChanged = hasScore && (scoreData.score != scoreBefore);
+            
+            // تحقق إذا تم تغيير حالة تسليم الواجب بمعزل عن الدرجة
+            const isSubmittedChanged = (scoreData.submitted !== submittedBefore);
 
-            if (isNewOrChanged) {
+            if (isScoreChanged || isSubmittedChanged) {
               const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
 
               if (sDoc.exists) {
                 const sData = sDoc.data();
+                let title = "تحديث من المدرس 📝";
+                let body = `تم تحديث بيانات "${assignmentName}" للطالب ${sData.name}.`;
+
+                if (isScoreChanged) {
+                  title = "تم رصد درجة جديدة 📝";
+                  body = `حصل الطالب ${sData.name} على ${scoreData.score} من ${afterData.totalMark || 30} في "${assignmentName}" لمادة ${subjectName}.`;
+                } else if (isSubmittedChanged) {
+                  if (scoreData.submitted) {
+                    title = "تأكيد تسليم الواجب ✅";
+                    body = `تم استلام "${assignmentName}" من الطالب ${sData.name} في مادة ${subjectName}.`;
+                  } else {
+                    title = "إلغاء تسليم الواجب ❌";
+                    body = `تم إلغاء تسليم "${assignmentName}" للطالب ${sData.name} في مادة ${subjectName}.`;
+                  }
+                }
+
                 const payload = {
-                  notification: {
-                    title: "تم رصد درجة جديدة 📝",
-                    body: `حصل الطالب ${sData.name} على ${scoreData.score} من ${afterData.totalMark || 30} في "${assignmentName}" لمادة ${subjectName}.`,
-                  },
+                  notification: { title, body },
                   data: { "screen": "grades", "assignmentId": assignmentId },
                 };
                 await sendNotificationToParent(sData, payload, "notifyOnNewGrades", studentId, teacherId, groupId);
@@ -1546,10 +1563,12 @@ exports.notifyOnPresence = onDocumentWritten(
       return isPresentNow && !wasPresent;
     });
 
-    if (newlyPresentStudents.length === 0) return;
-
-    // ✅ حفظ وقت أول "سكان" لو مش موجود (عشان نحسب الساعة بالضبط من أول واحد)
-    if (!afterData.firstScanAt) {
+    if (newlyPresentStudents.length === 0 && afterRecords.length > 0) {
+      // ✅ حفظ وقت أول "سكان" لو مش موجود (عشان نحسب الساعة بالضبط من أول واحد)
+      if (!afterData.firstScanAt && afterRecords.some(r => r.status === 'present')) {
+        await snapAfter.ref.update({ firstScanAt: admin.firestore.FieldValue.serverTimestamp() });
+      }
+    } else if (newlyPresentStudents.length > 0 && !afterData.firstScanAt) {
       await snapAfter.ref.update({ firstScanAt: admin.firestore.FieldValue.serverTimestamp() });
     }
 
@@ -1576,51 +1595,73 @@ exports.notifyOnPresence = onDocumentWritten(
       homeworkName = hwData.name || "الواجب";
     }
 
-    // 4. إرسال الإشعارات لكل طالب تم تسجيله
-    const notifications = newlyPresentStudents.map(async (record) => {
-      const studentId = record.studentId;
-
-      // جلب بيانات الطالب (الاسم + التوكن)
-      const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
-      if (!sDoc.exists) return;
-
-      const sData = sDoc.data();
-
-      // 5. تحديد نص الرسالة بناءً على الواجب
-      let title = "تم تسجيل الحضور ✅";
-      let body = `تم تسجيل حضور الطالب ${sData.name} اليوم في حصة ${subjectName}.`;
-
-      if (hasHomeworkToday) {
-        const studentHw = hwScores[studentId];
-        // التحقق: هل سلم الواجب؟ (submitted = true)
-        const isSubmitted = studentHw && studentHw.submitted === true;
-
-        if (isSubmitted) {
-          title = "حضور + تسليم واجب 🌟";
-          body = `ممتاز! حضر الطالب ${sData.name} حصة ${subjectName} وقام بتسليم "${homeworkName}" بنجاح.`;
-        } else {
-          title = "تنبيه واجب ⚠️";
-          body = `تم تسجيل حضور ${sData.name} في حصة ${subjectName}، ولكن لم يتم تسليم "${homeworkName}".`;
-        }
-      }
-
-      const payload = {
-        notification: {
-          title: title,
-          body: body,
-        },
-        data: {
-          "screen": "attendance",
-          "date": date,
-          "studentId": studentId,
-        },
-      };
-
-      // استخدام الدالة المساعدة الموجودة في ملفك لإرسال الإشعار
-      return sendNotificationToParent(sData, payload, "notifyOnPresence", studentId, teacherId, groupId);
+    // استخراج الطلاب الذين تم تحويلهم من حاضر إلى غائب (لتصحيح الخطأ)
+    const newlyAbsentStudents = afterRecords.filter((rAfter) => {
+      const isAbsentNow = rAfter.status === "absent";
+      const wasPresent = beforeRecords.some((rBefore) =>
+        rBefore.studentId === rAfter.studentId && rBefore.status === "present",
+      );
+      return isAbsentNow && wasPresent;
     });
 
-    await Promise.all(notifications);
+    const allNotifications = [];
+
+    // 4. إرسال الإشعارات لكل طالب تم تسجيله كـ "حاضر"
+    newlyPresentStudents.forEach((record) => {
+      const studentId = record.studentId;
+      const processPresent = async () => {
+        const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
+        if (!sDoc.exists) return;
+        const sData = sDoc.data();
+
+        let title = "تم تسجيل الحضور ✅";
+        let body = `تم تسجيل حضور الطالب ${sData.name} اليوم في حصة ${subjectName}.`;
+
+        if (hasHomeworkToday) {
+          const studentHw = hwScores[studentId];
+          const isSubmitted = studentHw && studentHw.submitted === true;
+
+          if (isSubmitted) {
+            title = "حضور + تسليم واجب 🌟";
+            body = `ممتاز! حضر الطالب ${sData.name} حصة ${subjectName} وقام بتسليم "${homeworkName}" بنجاح.`;
+          } else {
+            title = "تنبيه واجب ⚠️";
+            body = `تم تسجيل حضور ${sData.name} في حصة ${subjectName}، ولكن لم يتم تسليم "${homeworkName}".`;
+          }
+        }
+
+        const payload = {
+          notification: { title, body },
+          data: { "screen": "attendance", "date": date, "studentId": studentId },
+        };
+
+        return sendNotificationToParent(sData, payload, "notifyOnPresence", studentId, teacherId, groupId);
+      };
+      allNotifications.push(processPresent());
+    });
+
+    // 5. إرسال الإشعارات لمن تم إعادته كـ "غائب" (تصحيح الخطأ)
+    newlyAbsentStudents.forEach((record) => {
+      const studentId = record.studentId;
+      const processAbsent = async () => {
+        const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
+        if (!sDoc.exists) return;
+        const sData = sDoc.data();
+
+        const payload = {
+          notification: {
+            title: "تعديل: تسجيل غياب ❌",
+            body: `تم تعديل الحالة إلى غياب للطالب ${sData.name} في حصة ${subjectName} اليوم.`
+          },
+          data: { "screen": "attendance", "date": date, "studentId": studentId },
+        };
+
+        return sendNotificationToParent(sData, payload, "notifyOnAbsenceUpdate", studentId, teacherId, groupId);
+      };
+      allNotifications.push(processAbsent());
+    });
+
+    await Promise.all(allNotifications);
   },
 );
 
