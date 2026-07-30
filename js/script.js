@@ -1359,16 +1359,21 @@ async function processSyncQueue(isRecovering = false) {
                 });
 
                 // Detect unrecoverable errors (permissions, quota, invalid args) so we don't get stuck in a loop forever
-                const isUnrecoverable = message.includes('permission-denied') || 
+                let isUnrecoverable = message.includes('permission-denied') || 
                                         message.includes('Missing or insufficient permissions') || 
                                         message.includes('INVALID_ARGUMENT') ||
                                         message.includes('Quota exceeded');
+
+                // ✅ إذا كان الخطأ بسبب الصلاحيات ولم يتم تهيئة Auth بعد، فلا نعتبره خطأ نهائي (سنحاول لاحقاً)
+                if ((message.includes('permission-denied') || message.includes('Missing or insufficient permissions')) && !firebase.auth().currentUser) {
+                    isUnrecoverable = false;
+                }
 
                 const updated = {
                     ...action,
                     attempts: attempts + 1,
                     lastError: message,
-                    failed: isUnrecoverable // True if unrecoverable, false if network error
+                    failed: isUnrecoverable // True if unrecoverable, false if network error or waiting for Auth
                 };
 
                 try {
@@ -4439,6 +4444,23 @@ async function loadPreferences() {
         if (teacherData) {
             const portalWelcome = document.getElementById('portalWelcomeTeacher');
             if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''} 👋`;
+            
+            // ✅ Silent Firebase Auth Login if bypassed
+            if (teacherData.password) {
+                firebase.auth().onAuthStateChanged(async (user) => {
+                    if (!user && navigator.onLine) {
+                        const fakeEmail = `${TEACHER_ID.substring(1)}@spot.com`;
+                        try {
+                            await firebase.auth().signInWithEmailAndPassword(fakeEmail, teacherData.password.toString().trim());
+                            console.log("✅ Silently restored Firebase Auth session.");
+                            // بعد ما يعمل لوج إن، خليه يجرب يرفع الحاجات اللي كانت واقفة
+                            processSyncQueue();
+                        } catch (e) {
+                            console.error("❌ Failed silent auth restoration:", e);
+                        }
+                    }
+                });
+            }
         }
 
         // تحميل المجموعات والذهاب للمتابعة الذكية
@@ -5828,13 +5850,10 @@ async function loadStudentStats(studentId) {
             }
         });
 
-        // 1. جلب الحضور (جلب آخر 50 بدون orderBy لتجنب الـ Index)
-        const attSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`)
-            .limit(100)
-            .get();
+        // 1. جلب الحضور (من القاعدة المحلية لضمان العمل أوفلاين وسرعة العرض)
+        const allAttendance = await getAllFromDB('attendance', 'groupId', SELECTED_GROUP_ID);
 
-        const sortedAttDocs = attSnap.docs
-            .map(d => d.data())
+        const sortedAttDocs = allAttendance
             .sort((a, b) => new Date(b.date) - new Date(a.date)) // تنازلي (الأحدث أولاً)
             .slice(0, 50);
 
