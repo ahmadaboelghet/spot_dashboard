@@ -3645,6 +3645,9 @@ function renderStudents(filter = "") {
                 <button class="btn-icon w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 qr-btn">
                     <i class="ri-qr-code-line"></i>
                 </button>
+                <button class="btn-icon w-10 h-10 bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400 act-btn" title="تفعيل حساب الأب (باسورد: elnazer@123456)">
+                    <i class="ri-user-add-line"></i>
+                </button>
                 <button class="btn-icon w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/20 del-btn">
                     <i class="ri-delete-bin-line"></i>
                 </button>
@@ -3652,6 +3655,7 @@ function renderStudents(filter = "") {
         `;
         div.querySelector('.msg-btn').onclick = () => openMessageModal(s);
         div.querySelector('.qr-btn').onclick = () => showStudentQR(s);
+        div.querySelector('.act-btn').onclick = () => activateParentAccountUI(s.parentPhoneNumber);
         div.querySelector('.del-btn').onclick = () => deleteStudent(s.id);
 
         fragment.appendChild(div);
@@ -3990,6 +3994,27 @@ async function deleteStudent(id) {
     await addToSyncQueue({ type: 'delete', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${id}` });
     allStudents = allStudents.filter(s => s.id !== id);
     renderStudents();
+}
+
+async function activateParentAccountUI(phone) {
+    if (!phone) {
+        showToast("لا يوجد رقم هاتف مسجل لهذا الطالب!", "error");
+        return;
+    }
+    const confirmed = await showCustomConfirm("هل أنت متأكد من تفعيل حساب الأب لكبار السن؟ كلمة المرور ستكون elnazer@123456", "تفعيل الحساب", "ri-user-add-line");
+    if (!confirmed) return;
+    
+    showToast("جاري التفعيل...", "info");
+    try {
+        const activateFunc = firebase.functions().httpsCallable('activateParentAccount');
+        const res = await activateFunc({ phone: phone });
+        if (res.data.success) {
+            showToast(res.data.message, "success");
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("حدث خطأ أثناء التفعيل: " + e.message, "error");
+    }
 }
 
 // --- Payments ---

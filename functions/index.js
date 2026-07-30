@@ -1820,3 +1820,60 @@ exports.resetPassword = onCall(async (request) => {
     );
   }
 });
+
+// ============================================================================
+// دالة لتفعيل حساب الأب (إنشاء أو إعادة تعيين الباسورد) لكبار السن
+// ============================================================================
+exports.activateParentAccount = onCall(async (request) => {
+  // التأكد من أن المدرس مسجل دخول
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "يجب تسجيل الدخول أولاً.");
+  }
+
+  const phone = request.data.phone;
+  if (!phone) {
+    throw new HttpsError("invalid-argument", "يجب توفير رقم هاتف ولي الأمر.");
+  }
+
+  let cleanPhone = phone.replace(/\s+/g, "").trim();
+  let phoneWithPlus = cleanPhone;
+
+  // تحويل الرقم للصيغة الدولية +20
+  if (cleanPhone.startsWith("01") && cleanPhone.length === 11) {
+    phoneWithPlus = "+20" + cleanPhone.substring(1);
+  } else if (!cleanPhone.startsWith("+")) {
+    phoneWithPlus = "+2" + cleanPhone;
+  }
+
+  const email = `${phoneWithPlus}@learnaria.app`;
+  const password = "elnazer@123456";
+
+  try {
+    // 1. محاولة إنشاء حساب جديد
+    await admin.auth().createUser({
+      uid: phoneWithPlus,
+      email: email,
+      password: password,
+      displayName: "Parent Account",
+    });
+
+    // إضافة المستند في parents
+    await admin.firestore().collection("parents").doc(phoneWithPlus).set({
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      activatedByAdmin: true
+    }, { merge: true });
+
+    return { success: true, message: "تم إنشاء حساب الأب بنجاح. الباسورد الافتراضي هو: elnazer@123456" };
+
+  } catch (error) {
+    if (error.code === "auth/email-already-exists" || error.code === "auth/uid-already-exists") {
+      // 2. إذا كان الحساب موجوداً بالفعل، نقوم بإعادة تعيين الباسورد
+      const userRecord = await admin.auth().getUserByEmail(email);
+      await admin.auth().updateUser(userRecord.uid, { password: password });
+      return { success: true, message: "هذا الحساب كان مسجلاً بالفعل، وتم إعادة تعيين كلمة المرور بنجاح إلى: elnazer@123456" };
+    }
+    
+    console.error("Error activating parent account:", error);
+    throw new HttpsError("internal", error.message || "حدث خطأ غير متوقع.");
+  }
+});
