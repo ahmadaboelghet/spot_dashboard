@@ -3872,7 +3872,6 @@ function showStudentLinkModal(name, phone, existingStudents) {
             btn.innerHTML = `
                 <div class="flex flex-col text-right">
                     <span class="font-bold text-gray-900 dark:text-white group-hover:text-brand transition-colors">${est.name}</span>
-                    <span class="text-xs text-gray-400 mt-1">ID: ${est.childId}</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-bold text-brand px-3 py-1.5 rounded-xl bg-brand/10">ربط وتحديد ✔️</span>
