@@ -455,6 +455,15 @@ exports.notifyOnNewGrades = onDocumentWritten(
             const isSubmittedChanged = (scoreData.submitted !== submittedBefore);
 
             if (isScoreChanged || isSubmittedChanged) {
+              
+              // ✅✅ التعديل السحري لمنع التكرار ✅✅
+              // لو الواجب يومي، وتم تأكيد تسليمه لأول مرة (أو تعديله)، وفي نفس اللحظة المدرس كان بيغير الغياب لحضور
+              // فهنتجاهل الإشعار ده، لأن دالة notifyOnPresence هتبعت إشعار (حضور + تسليم واجب) يغني عنه.
+              // أما لو المدرس غير الواجب بس (بمعزل عن الحضور)، هنبعت الإشعار عادي.
+              if (isSubmittedChanged && afterData.type === 'daily' && scoreData._attChanged) {
+                  return; // تخطي إرسال هذا الإشعار لمنع التكرار
+              }
+
               const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
 
               if (sDoc.exists) {

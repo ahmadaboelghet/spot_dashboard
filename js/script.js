@@ -2853,6 +2853,7 @@ async function renderDailyList(filter = "") {
 
             attSelect.addEventListener('change', (e) => {
                 const val = e.target.value;
+                row.dataset.attendanceJustChanged = 'true'; // ✅ تتبع التغيير
 
                 // 1. تغيير ألوان الصف
                 if (val === 'present') {
@@ -2882,6 +2883,7 @@ async function renderDailyList(filter = "") {
             });
             if (hwCheck) {
                 hwCheck.addEventListener('change', () => {
+                    row.dataset.homeworkJustChanged = 'true'; // ✅ تتبع التغيير
                     // ✅✅ الإضافة السحرية: حفظ تلقائي للواجب اليدوي ✅✅
                     clearTimeout(saveTimeout);
                     saveTimeout = setTimeout(() => {
@@ -3109,8 +3111,13 @@ async function saveDailyData(isSilent = false) {
                     if (chk) {
                         scores[div.dataset.sid] = {
                             submitted: chk.checked,
-                            score: null
+                            score: null,
+                            _attChanged: div.dataset.attendanceJustChanged === 'true',
+                            _hwChanged: div.dataset.homeworkJustChanged === 'true'
                         };
+                        // مسح التتبع بعد الحفظ عشان لو عدل حاجة تانية بعدين
+                        delete div.dataset.attendanceJustChanged;
+                        delete div.dataset.homeworkJustChanged;
                     }
                 });
 
