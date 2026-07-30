@@ -2783,19 +2783,29 @@ async function renderDailyList(filter = "") {
         if (attDoc?.records) attDoc.records.forEach(r => { if (r) attMap[r.studentId] = r.status; });
 
         const hwMap = {};
+        let hasAnySubmitted = false;
         if (hwDoc?.scores) {
             Object.entries(hwDoc.scores).forEach(([sid, val]) => {
                 hwMap[sid] = (val && typeof val === 'object') ? val.submitted : false;
+                if (hwMap[sid]) hasAnySubmitted = true;
             });
-            // تفعيل الواجب تلقائياً لو فيه داتا محفوظة
-            if (!hasHomeworkToday) {
+            
+            const hwToggle = document.getElementById('homeworkToggle');
+            if (hwToggle) {
+                hwToggle.disabled = hasAnySubmitted; // ✅ تجميد الزرار فقط لو فيه أي حد مسلم الواجب فعلياً
+            }
+
+            // تفعيل الواجب تلقائياً لو فيه داتا محفوظة حقيقية
+            if (!hasHomeworkToday && hasAnySubmitted) {
                 hasHomeworkToday = true;
-                const hwToggle = document.getElementById('homeworkToggle');
                 if (hwToggle) hwToggle.checked = true;
                 if (hStudent) hStudent.className = "col-span-6 transition-all duration-300";
                 if (hAtt) hAtt.className = "col-span-3 text-center transition-all duration-300";
                 if (hHw) hHw.classList.remove('hidden');
             }
+        } else {
+            const hwToggle = document.getElementById('homeworkToggle');
+            if (hwToggle) hwToggle.disabled = false;
         }
 
         let presentCount = 0;
