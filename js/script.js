@@ -4554,6 +4554,7 @@ function applyLanguage() {
 
 function toggleLang() {
     currentLang = currentLang === 'ar' ? 'en' : 'ar';
+    localStorage.setItem('lang', currentLang);
     applyLanguage();
 
     if (SELECTED_GROUP_ID && !document.getElementById('tab-overview').classList.contains('hidden')) renderOverview();
