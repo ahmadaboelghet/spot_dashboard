@@ -3958,6 +3958,65 @@ function closeCardLinkModal() {
 }
 
 async function linkCardToStudent(student, cardId) {
+    // ⛔ CRITICAL: Check if this cardId is already assigned to another student
+    // Check across ALL groups under this teacher (not just current group)
+    try {
+        const allGroups = await getAllFromDB('groups');
+        const allStudentsFromDB = await getAllFromDB('students');
+        
+        const conflictStudent = allStudentsFromDB.find(s => 
+            s.cardId && s.cardId === cardId && s.id !== student.id
+        );
+        
+        if (conflictStudent) {
+            // Find the group name for better error message
+            const conflictGroup = allGroups.find(g => g.id === conflictStudent.groupId);
+            const groupName = conflictGroup ? conflictGroup.name : '';
+            const errorMsg = currentLang === 'ar' 
+                ? `⛔ هذا الكارت مربوط بالفعل بالطالب "${conflictStudent.name}"${groupName ? ` في مجموعة "${groupName}"` : ''}! لا يمكن ربط نفس الكارت بأكثر من طالب.`
+                : `⛔ This card is already linked to student "${conflictStudent.name}"${groupName ? ` in group "${groupName}"` : ''}! Cannot link the same card to multiple students.`;
+            showToast(errorMsg, 'error');
+            closeCardLinkModal();
+            return;
+        }
+
+        // Also check Firestore directly for extra safety (in case local DB is out of sync)
+        const groupsSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups`).get();
+        
+        for (const groupDoc of groupsSnap.docs) {
+            const studentsSnap = await firestoreDB
+                .collection(`teachers/${TEACHER_ID}/groups/${groupDoc.id}/students`)
+                .where('cardId', '==', cardId)
+                .get();
+            
+            if (!studentsSnap.empty) {
+                const existingDoc = studentsSnap.docs[0];
+                const existingStudent = existingDoc.data();
+                // If it's the same student, allow (re-linking same card)
+                if (existingDoc.id === student.id) continue;
+                
+                const errorMsg = currentLang === 'ar'
+                    ? `⛔ هذا الكارت مربوط بالفعل بالطالب "${existingStudent.name}" في مجموعة "${groupDoc.data().name || groupDoc.id}"! لا يمكن ربط نفس الكارت بأكثر من طالب.`
+                    : `⛔ This card is already linked to "${existingStudent.name}" in group "${groupDoc.data().name || groupDoc.id}"! Cannot link the same card to multiple students.`;
+                showToast(errorMsg, 'error');
+                closeCardLinkModal();
+                return;
+            }
+        }
+    } catch (err) {
+        console.error('Card uniqueness check error:', err);
+        // If the check fails (e.g. offline), still do the local check at minimum
+        const localConflict = allStudents.find(s => s.cardId && s.cardId === cardId && s.id !== student.id);
+        if (localConflict) {
+            const errorMsg = currentLang === 'ar'
+                ? `⛔ هذا الكارت مربوط بالفعل بالطالب "${localConflict.name}"! لا يمكن ربط نفس الكارت بأكثر من طالب.`
+                : `⛔ This card is already linked to "${localConflict.name}"! Cannot link the same card to multiple students.`;
+            showToast(errorMsg, 'error');
+            closeCardLinkModal();
+            return;
+        }
+    }
+
     student.cardId = cardId;
     
     // Update local DB
