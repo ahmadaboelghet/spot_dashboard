@@ -464,10 +464,7 @@
                             <i class="ri-user-settings-line text-lg"></i>
                             <span data-key="tabProfile" class="font-bold text-sm">الملف الشخصي</span>
                         </a>
-                        <a href="#cards" class="tab-button w-full justify-start py-2.5 px-3 rounded-xl font-cairo" data-tab="cards">
-                            <i class="ri-printer-line text-lg"></i>
-                            <span data-key="tabCards" class="font-bold text-sm">كروت الطلاب</span>
-                        </a>
+
                     </div>
                 </div>
             </aside>
@@ -801,11 +798,7 @@
                             <h3 data-key="manageStudentsTitle">الطلاب</h3>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button id="bulkPrintQrBtn" onclick="openBulkPrintModal()"
-                                class="btn-icon bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 shadow-sm"
-                                title="طباعة كروت الطلاب">
-                                <i class="ri-printer-line text-xl"></i>
-                            </button>
+
                             <button id="showNotificationStatusBtn" onclick="openNotificationStatusModal()"
                                 class="btn-icon bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-800 shadow-sm"
                                 title="حالة الإشعارات">
@@ -1025,55 +1018,7 @@
                 </div>
             </div>
 
-            <!-- Generic QR Cards Tab -->
-            <div id="tab-cards" class="tab-content hidden">
-                <div class="glass-panel p-6 border border-brand/20 dark:border-brand/10 bg-white/70 dark:bg-zinc-900/60 shadow-lg print:hidden">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand text-2xl">
-                            <i class="ri-printer-line"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-black text-gray-900 dark:text-white font-cairo" data-key="cardsTitle">مولد كروت الطلاب (الذكية)</h3>
-                            <p class="text-sm text-gray-500 mt-1 font-bold" data-key="cardsSubtitle">قم بتوليد كروت فارغة لربطها بالطلاب لاحقاً بكل سهولة.</p>
-                        </div>
-                    </div>
 
-                    <div class="flex flex-col md:flex-row gap-4 items-end">
-                        <div class="flex-grow w-full">
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2" data-key="cardsCountLabel">عدد الكروت المطلوب توليدها (أقصى حد 200 في المرة)</label>
-                            <input type="number" id="cardsCountInput" min="1" max="200" value="9" 
-                                class="w-full px-4 py-3 bg-gray-50 dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all font-bold text-gray-900 dark:text-white"
-                                data-key-placeholder="cardsCountPlaceholder" placeholder="أدخل العدد (مثال: 9)">
-                        </div>
-                        <button onclick="generateAndPrintGenericCards()" class="w-full md:w-auto px-6 py-3 bg-brand hover:bg-brand/90 text-black font-black rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
-                            <i class="ri-printer-fill text-lg"></i>
-                            <span data-key="cardsGenerateAndPrintBtn">توليد وطباعة الكروت</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="cardsPreviewSection" class="mt-8 hidden print:hidden">
-                    <div class="bg-gray-50 dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-500">
-                                <i class="ri-checkbox-circle-fill text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-bold text-gray-800 dark:text-gray-200" data-key="cardsGeneratedSuccess">
-                                    تم توليد كروت الطلاب بنجاح! 🎉
-                                </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    <span data-key="cardsTotalGeneratedPrefix">العدد الإجمالي:</span> <span id="cardsGeneratedCount" class="font-black text-brand">0</span> <span data-key="cardsTotalGeneratedSuffix">كارت. تم فتح نافذة الطباعة تلقائياً.</span>
-                                </p>
-                            </div>
-                        </div>
-                        <button onclick="window.print()" class="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-black font-bold rounded-xl shadow-md hover:opacity-90 transition-all flex items-center justify-center gap-2 w-full md:w-auto" data-key="cardsReprintBtn">
-                            <i class="ri-printer-line"></i>
-                            إعادة طباعة نفس الكروت 🖨️
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             <!-- <div id="tab-bot" class="tab-content hidden">
 
@@ -2067,52 +2012,7 @@
         </div>
     </div>
 
-    <!-- Bulk QR Print Modal -->
-    <div id="bulkQrPrintModal" class="fixed inset-0 z-[2000] hidden items-center justify-center p-4">
-        <div class="absolute inset-0 bg-zinc-900/10 dark:bg-black/40 backdrop-blur-md" onclick="closeBulkPrintModal()"></div>
-        <div class="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2rem] shadow-2xl overflow-hidden p-8 text-center animate-fade-in-up border border-gray-100 dark:border-white/10">
-            <div class="w-16 h-16 bg-brand/20 text-brand rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="ri-printer-fill text-3xl"></i>
-            </div>
-            <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">طباعة كروت الطلاب</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">يمكنك طباعة كروت الـ QR بضغطة واحدة.</p>
-            
-            <div class="space-y-3">
-                <button onclick="startBulkPrint('new')" class="w-full bg-brand text-black font-black py-3 rounded-xl shadow-md hover:scale-[1.02] transition-transform flex justify-center items-center gap-2">
-                    <i class="ri-user-add-line"></i> طباعة للطلاب الجدد فقط
-                </button>
-                <button onclick="startBulkPrint('all')" class="w-full bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white font-bold py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex justify-center items-center gap-2">
-                    <i class="ri-group-line"></i> طباعة لجميع طلاب المجموعة
-                </button>
-                <button onclick="closeBulkPrintModal()" class="w-full bg-transparent text-gray-500 font-bold py-3 rounded-xl hover:text-gray-700 transition-colors">
-                    إلغاء
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Bulk QR Print Success Modal -->
-    <div id="bulkQrPrintSuccessModal" class="fixed inset-0 z-[2050] hidden items-center justify-center p-4">
-        <div class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60 backdrop-blur-sm" onclick="closeBulkQrPrintSuccessModal(false)"></div>
-        <div class="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-[2rem] shadow-2xl overflow-hidden p-8 text-center animate-fade-in-up border border-gray-100 dark:border-white/10">
-            <div class="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="ri-checkbox-circle-fill text-4xl"></i>
-            </div>
-            <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">هل تمت الطباعة بنجاح؟</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                موافقتك ستمنع هؤلاء الطلاب من الظهور مرة أخرى عند اختيار الطباعة "للطلاب الجدد فقط".
-            </p>
-            
-            <div class="flex gap-3">
-                <button onclick="closeBulkQrPrintSuccessModal(true)" class="flex-1 bg-green-500 text-white font-black py-3 rounded-xl shadow-md hover:bg-green-600 transition-colors">
-                    نعم، تمت الطباعة
-                </button>
-                <button onclick="closeBulkQrPrintSuccessModal(false)" class="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
-                    لا، حدثت مشكلة
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- Change Password Modal -->
     <div id="changePasswordModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">

@@ -3642,9 +3642,6 @@ function renderStudents(filter = "") {
                 <button class="btn-icon w-10 h-10 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 msg-btn" title="${msgTitle}">
                     <i class="ri-chat-1-line"></i>
                 </button>
-                <button class="btn-icon w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 qr-btn">
-                    <i class="ri-qr-code-line"></i>
-                </button>
                 <button class="btn-icon w-10 h-10 bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400 act-btn" title="تفعيل حساب الأب (باسورد: elnazer@123456)">
                     <i class="ri-user-add-line"></i>
                 </button>
@@ -3654,7 +3651,6 @@ function renderStudents(filter = "") {
             </div>
         `;
         div.querySelector('.msg-btn').onclick = () => openMessageModal(s);
-        div.querySelector('.qr-btn').onclick = () => showStudentQR(s);
         div.querySelector('.act-btn').onclick = () => activateParentAccountUI(s.parentPhoneNumber);
         div.querySelector('.del-btn').onclick = () => deleteStudent(s.id);
 
@@ -3747,37 +3743,7 @@ async function shareCardAction() {
     }
 }
 
-function showStudentQR(student) {
-    // 1. عرض اسم الطالب
-    document.getElementById('idStudentName').innerText = student.name;
 
-    // 2. تجهيز البيانات (معرّف الطالب الفريد لضمان الاستقلالية بين الإخوة)
-    const qrContent = student.id;
-
-    // 3. عرض الرقم تحت الـ QR (عشان لو الكاميرا معلجة المدرس يكتبه)
-    const randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
-
-    // ب. الإمساك بالعنصر وتغيير محتواه
-    const quoteElement = document.getElementById('idStudentPhone');
-    quoteElement.innerText = randomQuote;
-
-    quoteElement.classList.remove('font-mono', 'tracking-wider', 'text-gray-400');
-    // quoteElement.classList.add('text-gray-600', 'italic', 'text-sm');
-    quoteElement.classList.add('text-gray-600', 'font-bold');
-    // 4. توليد الـ QR Code
-    document.getElementById('idQrcode').innerHTML = '';
-    new QRCode(document.getElementById('idQrcode'), {
-        text: qrContent,
-        width: 180, // صغرته سنة عشان يبان أشيك
-        height: 180,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-    });
-
-    // 5. فتح المودال
-    document.getElementById('qrCodeModal').classList.remove('hidden');
-}
 
 async function addNewStudent() {
     // ✅ زيادة أمان: التأكد من وجود مجموعة
@@ -6264,167 +6230,7 @@ function togglePasswordVisibility() {
     }
 }
 
-// --- Bulk QR Print Feature ---
-window.openBulkPrintModal = function() {
-    if (!allStudents || allStudents.length === 0) {
-        showToast(translations[currentLang].noDataMsg || "لا يوجد طلاب في المجموعة", "error");
-        return;
-    }
-    document.getElementById('bulkQrPrintModal').classList.remove('hidden');
-    document.getElementById('bulkQrPrintModal').classList.add('flex');
-}
 
-window.closeBulkPrintModal = function() {
-    document.getElementById('bulkQrPrintModal').classList.add('hidden');
-    document.getElementById('bulkQrPrintModal').classList.remove('flex');
-}
-
-let currentBulkPrintTargetStudents = [];
-
-window.closeBulkQrPrintSuccessModal = async function(success) {
-    document.getElementById('bulkQrPrintSuccessModal').classList.add('hidden');
-    document.getElementById('bulkQrPrintSuccessModal').classList.remove('flex');
-    if (success && currentBulkPrintTargetStudents.length > 0) {
-        for (const s of currentBulkPrintTargetStudents) {
-            s.qrPrinted = true;
-            await putToDB('students', s);
-            await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${s.id}`, data: { qrPrinted: true } });
-        }
-        showToast("تم حفظ حالة الطباعة بنجاح!");
-    }
-    document.getElementById('bulkQrPrintContainer').innerHTML = ''; // Clean up
-    currentBulkPrintTargetStudents = [];
-}
-
-window.startBulkPrint = async function(mode) {
-    let targetStudents = [];
-    if (mode === 'new') {
-        targetStudents = allStudents.filter(s => !s.qrPrinted);
-    } else {
-        targetStudents = allStudents;
-    }
-
-    if (targetStudents.length === 0) {
-        showToast("لا يوجد طلاب في هذه الفئة لطباعة كروت لهم", "error");
-        closeBulkPrintModal();
-        return;
-    }
-
-    currentBulkPrintTargetStudents = targetStudents; // store globally for the modal
-    const container = document.getElementById('bulkQrPrintContainer');
-    container.innerHTML = '';
-
-    // Generate cards
-    targetStudents.forEach(s => {
-        const qrContent = s.id;
-        
-        let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
-        // إزالة الـ Emojis والإبقاء على الحروف والأرقام والمسافات
-        randomQuote = randomQuote.replace(/[^\u0600-\u06FF\u0020-\u007E\s]/g, '').trim();
-        
-        const card = document.createElement('div');
-        card.className = 'qr-card';
-        card.innerHTML = `
-            <div class="qr-card-code" id="bulk-qr-${s.id}"></div>
-        `;
-        container.appendChild(card);
-
-        // Generate QR code inside the card
-        new QRCode(card.querySelector(`#bulk-qr-${s.id}`), {
-            text: qrContent,
-            width: 120,
-            height: 120,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
-    });
-
-    closeBulkPrintModal();
-
-    // Small delay to allow QR codes to render before printing
-    setTimeout(() => {
-        window.print();
-        
-        // Ask for confirmation after printing dialog closes using our custom modal
-        const checkSuccess = () => {
-            document.getElementById('bulkQrPrintSuccessModal').classList.remove('hidden');
-            document.getElementById('bulkQrPrintSuccessModal').classList.add('flex');
-        };
-        
-        // Some browsers support onafterprint nicely
-        window.onafterprint = () => {
-            window.onafterprint = null;
-            setTimeout(checkSuccess, 500);
-        };
-        
-        // Safari / older browsers fallback
-        if (window.matchMedia) {
-            let mediaQueryList = window.matchMedia('print');
-            mediaQueryList.addListener(function(mql) {
-                if (!mql.matches) {
-                    if (window.onafterprint !== null) {
-                        window.onafterprint = null;
-                        setTimeout(checkSuccess, 500);
-                    }
-                }
-            });
-        }
-        
-    }, 500);
-}
-
-// ==========================================
-// 🖨️ Generic QR Cards Logic
-// ==========================================
-
-function generateAndPrintGenericCards() {
-    const countInput = document.getElementById('cardsCountInput');
-    let count = parseInt(countInput.value) || 10;
-    
-    // limit max count to prevent browser hanging
-    if (count > 200) count = 200;
-    if (count < 1) count = 1;
-    countInput.value = count;
-
-    const container = document.getElementById('printCardsContainer');
-    container.innerHTML = '';
-
-    for (let i = 0; i < count; i++) {
-        const cardId = generateCardId();
-        
-        let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
-        // إزالة الـ Emojis والإبقاء على الحروف والأرقام والمسافات
-        randomQuote = randomQuote.replace(/[^\u0600-\u06FF\u0020-\u007E\s]/g, '').trim();
-
-        const card = document.createElement('div');
-        card.className = 'generic-card';
-        card.innerHTML = `
-            <div id="generic-qr-${cardId}"></div>
-            <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; margin-top: 6px; color: #000000; letter-spacing: 1px; text-align: center;">${cardId}</div>
-        `;
-        container.appendChild(card);
-
-        // Generate QR code inside the card
-        new QRCode(card.querySelector(`#generic-qr-${cardId}`), {
-            text: cardId,
-            width: 90,
-            height: 90,
-            colorDark: "#0f172a",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
-    }
-
-    // Update UI
-    document.getElementById('cardsGeneratedCount').innerText = count;
-    document.getElementById('cardsPreviewSection').classList.remove('hidden');
-    
-    // Open print window directly
-    setTimeout(() => {
-        window.print();
-    }, 300);
-}
 
 async function submitManualCardLink() {
     const input = document.getElementById('manualCardIdInput');
