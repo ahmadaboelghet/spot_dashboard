@@ -1461,6 +1461,9 @@ function setupListeners() {
     setupPhoneInput('newParentPhoneNumber');
     setupPhoneInput('profileParentPhone');
     
+    // Setup Premium Filters
+    setupFilters();
+    
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn?.addEventListener('click', (e) => {
             // Allow Ctrl+Click, Cmd+Click, Shift+Click, or Middle-click to behave naturally (open in new tab)
@@ -1551,6 +1554,38 @@ function setupListeners() {
     document.getElementById('saveDailyBtn')?.addEventListener('click', saveDailyData);
     document.getElementById('hwYesBtn')?.addEventListener('click', () => resolveHomework(true));
     document.getElementById('hwNoBtn')?.addEventListener('click', () => resolveHomework(false));
+
+    let currentDailyFilter = 'all';
+    let currentExamFilter = 'all';
+    let currentPaymentFilter = 'all';
+
+    function setupFilters() {
+        const handleFilterClick = (containerId, filterVarSetter, renderFunc, searchInputId) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const buttons = container.querySelectorAll('.filter-chip');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Update active state visually
+                    buttons.forEach(b => {
+                        b.classList.remove('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
+                        b.classList.add('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                    });
+                    btn.classList.add('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
+                    btn.classList.remove('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                    
+                    // Update filter variable and re-render
+                    filterVarSetter(btn.dataset.filter);
+                    const currentSearch = document.getElementById(searchInputId)?.value || '';
+                    renderFunc(currentSearch);
+                });
+            });
+        };
+
+        handleFilterClick('dailyFilterChips', val => currentDailyFilter = val, renderDailyList, 'dailyStudentSearchInput');
+        handleFilterClick('examFilterChips', val => currentExamFilter = val, renderExamGrades, 'examStudentSearchInput');
+        handleFilterClick('paymentFilterChips', val => currentPaymentFilter = val, renderPaymentsList, 'paymentStudentSearchInput');
+    }
 
     document.getElementById('addNewStudentButton')?.addEventListener('click', addNewStudent);
     let studentSearchTimeout;
@@ -2811,7 +2846,19 @@ async function renderDailyList(filter = "") {
         let presentCount = 0;
         const fragment = document.createDocumentFragment();
 
-        studentsToRender.forEach(s => {
+        let finalStudents = studentsToRender.filter(s => {
+            if (currentDailyFilter === 'all') return true;
+            const status = attMap[s.id] || 'absent';
+            const hwSubmitted = hwMap[s.id];
+            
+            if (currentDailyFilter === 'present') return status === 'present';
+            if (currentDailyFilter === 'absent') return status === 'absent';
+            if (currentDailyFilter === 'hw_done') return hwSubmitted === true;
+            if (currentDailyFilter === 'hw_missing') return !hwSubmitted;
+            return true;
+        });
+
+        finalStudents.forEach(s => {
             const status = attMap[s.id] || 'absent'; // الافتراضي غائب لو مفيش تسجيل
             if (status === 'present') presentCount++;
 
@@ -4090,7 +4137,23 @@ async function renderPaymentsList(filter = "") {
 
     // 2. رسم القائمة
     const fragment = document.createDocumentFragment();
-    studentsToRender.forEach(s => {
+
+    let finalStudents = studentsToRender.filter(s => {
+        if (currentPaymentFilter === 'all') return true;
+        let amount = map[s.id];
+        const isPaid = amount && amount > 0;
+        
+        if (currentPaymentFilter === 'paid') return isPaid;
+        if (currentPaymentFilter === 'unpaid') return !isPaid;
+        return true;
+    });
+
+    if (finalStudents.length === 0 && studentsToRender.length > 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-4">${currentLang === 'ar' ? 'لا يوجد نتائج للفلتر' : 'No results for filter'}</p>`;
+        return;
+    }
+
+    finalStudents.forEach(s => {
         let amount = map[s.id];
         const isPaid = amount && amount > 0;
 
@@ -4282,7 +4345,23 @@ async function renderExamGrades(filter = "") {
     }
 
     const fragment = document.createDocumentFragment();
-    studentsToRender.forEach(s => {
+
+    let finalStudents = studentsToRender.filter(s => {
+        if (currentExamFilter === 'all') return true;
+        const val = scores[s.id]?.score;
+        const isGraded = val !== undefined && val !== null && val !== '';
+        
+        if (currentExamFilter === 'graded') return isGraded;
+        if (currentExamFilter === 'ungraded') return !isGraded;
+        return true;
+    });
+
+    if (finalStudents.length === 0 && studentsToRender.length > 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-4 col-span-2">${currentLang === 'ar' ? 'لا يوجد نتائج للفلتر' : 'No results for filter'}</p>`;
+        return;
+    }
+
+    finalStudents.forEach(s => {
         const val = scores[s.id]?.score || '';
         const div = document.createElement('div');
         div.className = "flex items-center gap-2 p-2 bg-white dark:bg-darkSurface border dark:border-gray-700 rounded-lg cursor-pointer hover:border-brand transition-colors";
