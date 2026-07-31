@@ -2892,16 +2892,10 @@ async function renderDailyList(filter = "") {
             row.dataset.sid = s.id;
 
             // تنسيق الصف حسب الحالة
-            row.className = `daily-student-row grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 cursor-pointer ${status === 'present'
+            row.className = `daily-student-row grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 ${status === 'present'
                 ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
                 : 'bg-white dark:bg-darkSurface border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
                 }`;
-
-            row.onclick = (e) => {
-                if (!e.target.closest('select') && !e.target.closest('input')) {
-                    openStudentProfile(s.id);
-                }
-            };
 
             let html = `
                 <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300"> ${s.name}</div>
