@@ -1463,11 +1463,11 @@ function setupFilters() {
         buttons.forEach(btn => {
             btn.addEventListener('click', () => {
                 buttons.forEach(b => {
-                    b.classList.remove('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
-                    b.classList.add('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                    b.classList.remove('active', 'bg-brand', 'text-black', 'shadow-glow', 'scale-105', 'border-transparent', 'font-bold');
+                    b.classList.add('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold');
                 });
-                btn.classList.add('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
-                btn.classList.remove('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                btn.classList.add('active', 'bg-brand', 'text-black', 'shadow-glow', 'scale-105', 'border-transparent', 'font-bold');
+                btn.classList.remove('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold');
                 
                 filterVarSetter(btn.dataset.filter);
                 const currentSearch = document.getElementById(searchInputId)?.value || '';
@@ -2787,13 +2787,13 @@ async function renderDailyList(filter = "") {
             if (currentDailyFilter === 'hw_done' || currentDailyFilter === 'hw_missing') {
                 currentDailyFilter = 'all';
                 document.querySelectorAll('#dailyFilterChips .filter-chip').forEach(c => {
-                    c.classList.remove('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
-                    c.classList.add('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                    c.classList.remove('active', 'bg-brand', 'text-black', 'shadow-glow', 'scale-105', 'border-transparent', 'font-bold');
+                    c.classList.add('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold');
                 });
                 const allChip = document.querySelector('#dailyFilterChips [data-filter="all"]');
                 if (allChip) {
-                    allChip.classList.add('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
-                    allChip.classList.remove('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                    allChip.classList.add('active', 'bg-brand', 'text-black', 'shadow-glow', 'scale-105', 'border-transparent', 'font-bold');
+                    allChip.classList.remove('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold');
                 }
                 filter = "";
             }
