@@ -6,10 +6,16 @@ service cloud.firestore {
     }
 
     function isTeacherOwner(teacherId) {
-      return request.auth != null && (
-        ('email' in request.auth.token && request.auth.token.email == teacherId.replace('[+]', '') + '@spot.com') ||
-        ('phone_number' in request.auth.token && request.auth.token.phone_number == teacherId)
+      let isEmailAuth = 'email' in request.auth.token;
+      let emailMatches = isEmailAuth && (
+        request.auth.token.email == teacherId[1:teacherId.size()] + '@spot.com' ||
+        request.auth.token.email == teacherId + '@spot.com'
       );
+      
+      let isPhoneAuth = 'phone_number' in request.auth.token;
+      let phoneMatches = isPhoneAuth && request.auth.token.phone_number == teacherId;
+      
+      return request.auth != null && (emailMatches || phoneMatches);
     }
     
     function isParent() {
