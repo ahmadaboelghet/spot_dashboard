@@ -1451,6 +1451,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+let currentDailyFilter = 'all';
+let currentExamFilter = 'all';
+let currentPaymentFilter = 'all';
+
+function setupFilters() {
+    const handleFilterClick = (containerId, filterVarSetter, renderFunc, searchInputId) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const buttons = container.querySelectorAll('.filter-chip');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                buttons.forEach(b => {
+                    b.classList.remove('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
+                    b.classList.add('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                });
+                btn.classList.add('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
+                btn.classList.remove('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                
+                filterVarSetter(btn.dataset.filter);
+                const currentSearch = document.getElementById(searchInputId)?.value || '';
+                renderFunc(currentSearch);
+            });
+        });
+    };
+
+    handleFilterClick('dailyFilterChips', val => currentDailyFilter = val, renderDailyList, 'dailyStudentSearchInput');
+    handleFilterClick('examFilterChips', val => currentExamFilter = val, renderExamGrades, 'examStudentSearchInput');
+    handleFilterClick('paymentFilterChips', val => currentPaymentFilter = val, renderPaymentsList, 'paymentStudentSearchInput');
+}
+
 function setupListeners() {
     document.getElementById('setTeacherButton')?.addEventListener('click', loginTeacher);
     document.getElementById('logoutButton')?.addEventListener('click', logout);
@@ -1555,37 +1585,6 @@ function setupListeners() {
     document.getElementById('hwYesBtn')?.addEventListener('click', () => resolveHomework(true));
     document.getElementById('hwNoBtn')?.addEventListener('click', () => resolveHomework(false));
 
-    let currentDailyFilter = 'all';
-    let currentExamFilter = 'all';
-    let currentPaymentFilter = 'all';
-
-    function setupFilters() {
-        const handleFilterClick = (containerId, filterVarSetter, renderFunc, searchInputId) => {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            const buttons = container.querySelectorAll('.filter-chip');
-            buttons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    // Update active state visually
-                    buttons.forEach(b => {
-                        b.classList.remove('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
-                        b.classList.add('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
-                    });
-                    btn.classList.add('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
-                    btn.classList.remove('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
-                    
-                    // Update filter variable and re-render
-                    filterVarSetter(btn.dataset.filter);
-                    const currentSearch = document.getElementById(searchInputId)?.value || '';
-                    renderFunc(currentSearch);
-                });
-            });
-        };
-
-        handleFilterClick('dailyFilterChips', val => currentDailyFilter = val, renderDailyList, 'dailyStudentSearchInput');
-        handleFilterClick('examFilterChips', val => currentExamFilter = val, renderExamGrades, 'examStudentSearchInput');
-        handleFilterClick('paymentFilterChips', val => currentPaymentFilter = val, renderPaymentsList, 'paymentStudentSearchInput');
-    }
 
     document.getElementById('addNewStudentButton')?.addEventListener('click', addNewStudent);
     let studentSearchTimeout;
