@@ -2768,14 +2768,35 @@ async function renderDailyList(filter = "") {
         if (hAtt) hAtt.innerText = translations[currentLang].tableHeaderAttendance;
         if (hHw) hHw.innerText = translations[currentLang].tableHeaderHomework;
 
+        const hwDoneFilter = document.querySelector('#dailyFilterChips [data-filter="hw_done"]');
+        const hwMissingFilter = document.querySelector('#dailyFilterChips [data-filter="hw_missing"]');
+
         if (hasHomeworkToday) {
             if (hStudent) hStudent.className = "col-span-6 transition-all duration-300";
             if (hAtt) hAtt.className = "col-span-3 text-center transition-all duration-300";
             if (hHw) hHw.classList.remove('hidden');
+            if (hwDoneFilter) hwDoneFilter.style.display = '';
+            if (hwMissingFilter) hwMissingFilter.style.display = '';
         } else {
             if (hStudent) hStudent.className = "col-span-8 transition-all duration-300";
             if (hAtt) hAtt.className = "col-span-4 text-center transition-all duration-300";
             if (hHw) hHw.classList.add('hidden');
+            if (hwDoneFilter) hwDoneFilter.style.display = 'none';
+            if (hwMissingFilter) hwMissingFilter.style.display = 'none';
+            
+            if (currentDailyFilter === 'hw_done' || currentDailyFilter === 'hw_missing') {
+                currentDailyFilter = 'all';
+                document.querySelectorAll('#dailyFilterChips .filter-chip').forEach(c => {
+                    c.classList.remove('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
+                    c.classList.add('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                });
+                const allChip = document.querySelector('#dailyFilterChips [data-filter="all"]');
+                if (allChip) {
+                    allChip.classList.add('active', 'bg-gray-900', 'text-white', 'dark:bg-brand', 'dark:text-black', 'shadow-md');
+                    allChip.classList.remove('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                }
+                filter = "";
+            }
         }
 
         if (!allStudents || !allStudents.length) {
