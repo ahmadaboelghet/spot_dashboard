@@ -1464,10 +1464,10 @@ function setupFilters() {
             btn.addEventListener('click', () => {
                 buttons.forEach(b => {
                     b.classList.remove('active', 'bg-brand', 'text-black', 'shadow-glow', 'scale-105', 'border-transparent', 'font-bold');
-                    b.classList.add('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold');
+                    b.classList.add('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold', 'hover:border-brand', 'hover:text-brand', 'dark:hover:border-brand', 'dark:hover:text-brand');
                 });
                 btn.classList.add('active', 'bg-brand', 'text-black', 'shadow-glow', 'scale-105', 'border-transparent', 'font-bold');
-                btn.classList.remove('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold');
+                btn.classList.remove('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold', 'hover:border-brand', 'hover:text-brand', 'dark:hover:border-brand', 'dark:hover:text-brand');
                 
                 filterVarSetter(btn.dataset.filter);
                 const currentSearch = document.getElementById(searchInputId)?.value || '';
@@ -2788,12 +2788,12 @@ async function renderDailyList(filter = "") {
                 currentDailyFilter = 'all';
                 document.querySelectorAll('#dailyFilterChips .filter-chip').forEach(c => {
                     c.classList.remove('active', 'bg-brand', 'text-black', 'shadow-glow', 'scale-105', 'border-transparent', 'font-bold');
-                    c.classList.add('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold');
+                    c.classList.add('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold', 'hover:border-brand', 'hover:text-brand', 'dark:hover:border-brand', 'dark:hover:text-brand');
                 });
                 const allChip = document.querySelector('#dailyFilterChips [data-filter="all"]');
                 if (allChip) {
                     allChip.classList.add('active', 'bg-brand', 'text-black', 'shadow-glow', 'scale-105', 'border-transparent', 'font-bold');
-                    allChip.classList.remove('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold');
+                    allChip.classList.remove('bg-white', 'dark:bg-darkSurface', 'text-gray-600', 'dark:text-gray-400', 'border-gray-200', 'dark:border-gray-700', 'shadow-sm', 'font-semibold', 'hover:border-brand', 'hover:text-brand', 'dark:hover:border-brand', 'dark:hover:text-brand');
                 }
                 filter = "";
             }
