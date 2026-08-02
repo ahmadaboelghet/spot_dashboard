@@ -1877,3 +1877,33 @@ exports.activateParentAccount = onCall(async (request) => {
     throw new HttpsError("internal", error.message || "حدث خطأ غير متوقع.");
   }
 });
+
+// دالة للتحقق مما إذا كان حساب ولي الأمر مسجلاً بالفعل في Auth
+exports.checkAuthUserExists = onCall(async (request) => {
+  const phone = request.data.phone;
+  if (!phone) {
+    throw new HttpsError("invalid-argument", "يجب توفير رقم هاتف ولي الأمر.");
+  }
+
+  let cleanPhone = phone.replace(/\s+/g, "").trim();
+  let phoneWithPlus = cleanPhone;
+
+  if (cleanPhone.startsWith("01") && cleanPhone.length === 11) {
+    phoneWithPlus = "+20" + cleanPhone.substring(1);
+  } else if (!cleanPhone.startsWith("+")) {
+    phoneWithPlus = "+2" + cleanPhone;
+  }
+
+  const email = `${phoneWithPlus}@learnaria.app`;
+
+  try {
+    await admin.auth().getUserByEmail(email);
+    return { exists: true };
+  } catch (error) {
+    if (error.code === "auth/user-not-found") {
+      return { exists: false };
+    }
+    console.error("Error checking auth user existence:", error);
+    throw new HttpsError("internal", error.message || "حدث خطأ غير متوقع.");
+  }
+});
