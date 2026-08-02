@@ -2805,11 +2805,13 @@ async function renderDailyList(filter = "") {
         }
 
         const normalizedFilter = filter.trim().toLowerCase();
-        const studentsToRender = allStudents.filter(s => 
-            (s.name || "").toLowerCase().includes(normalizedFilter) ||
-            (s.parentPhoneNumber || "").includes(normalizedFilter) ||
-            ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter))
-        );
+        const searchPhoneFilter = normalizedFilter.startsWith('+20') ? normalizedFilter.replace('+20', '0') : normalizedFilter;
+        const studentsToRender = allStudents.filter(s => {
+            const pPhone = (s.parentPhoneNumber || "").replace(/^\+20/, '0');
+            return (s.name || "").toLowerCase().includes(normalizedFilter) ||
+                   pPhone.includes(searchPhoneFilter) ||
+                   ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter));
+        });
 
         if (studentsToRender.length === 0) {
             list.innerHTML = `<p class="text-center text-gray-500 py-4">${currentLang === 'ar' ? 'لا يوجد نتائج للبحث' : 'No search results found'}</p>`;
@@ -3665,7 +3667,14 @@ function processPaymentScan(student) {
 function renderStudents(filter = "") {
     const container = document.getElementById('studentsListDisplay');
     container.innerHTML = '';
-    const filtered = allStudents.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
+    const normalizedFilter = filter.trim().toLowerCase();
+    const searchPhoneFilter = normalizedFilter.startsWith('+20') ? normalizedFilter.replace('+20', '0') : normalizedFilter;
+    const filtered = allStudents.filter(s => {
+        const pPhone = (s.parentPhoneNumber || "").replace(/^\+20/, '0');
+        return (s.name || "").toLowerCase().includes(normalizedFilter) ||
+               pPhone.includes(searchPhoneFilter) ||
+               ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter));
+    });
 
     if (filtered.length === 0) {
         container.innerHTML = `
@@ -4138,11 +4147,13 @@ async function renderPaymentsList(filter = "") {
     calculateOverallIncome(currentGroupTotal); // ✅ بنبعت الرقم المبدئي
 
     const normalizedFilter = filter.trim().toLowerCase();
-    const studentsToRender = allStudents.filter(s => 
-        (s.name || "").toLowerCase().includes(normalizedFilter) ||
-        (s.parentPhoneNumber || "").includes(normalizedFilter) ||
-        ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter))
-    );
+    const searchPhoneFilter = normalizedFilter.startsWith('+20') ? normalizedFilter.replace('+20', '0') : normalizedFilter;
+    const studentsToRender = allStudents.filter(s => {
+        const pPhone = (s.parentPhoneNumber || "").replace(/^\+20/, '0');
+        return (s.name || "").toLowerCase().includes(normalizedFilter) ||
+               pPhone.includes(searchPhoneFilter) ||
+               ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter));
+    });
 
     if (studentsToRender.length === 0) {
         container.innerHTML = `<p class="text-center text-gray-500 py-4">${currentLang === 'ar' ? 'لا يوجد نتائج للبحث' : 'No search results found'}</p>`;
@@ -4347,11 +4358,13 @@ async function renderExamGrades(filter = "") {
     };
 
     const normalizedFilter = filter.trim().toLowerCase();
-    const studentsToRender = allStudents.filter(s => 
-        (s.name || "").toLowerCase().includes(normalizedFilter) ||
-        (s.parentPhoneNumber || "").includes(normalizedFilter) ||
-        ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter))
-    );
+    const searchPhoneFilter = normalizedFilter.startsWith('+20') ? normalizedFilter.replace('+20', '0') : normalizedFilter;
+    const studentsToRender = allStudents.filter(s => {
+        const pPhone = (s.parentPhoneNumber || "").replace(/^\+20/, '0');
+        return (s.name || "").toLowerCase().includes(normalizedFilter) ||
+               pPhone.includes(searchPhoneFilter) ||
+               ((s.childId || s.id || "").toLowerCase().includes(normalizedFilter));
+    });
 
     if (studentsToRender.length === 0) {
         container.innerHTML = `<p class="text-center text-gray-500 py-4 col-span-2">${currentLang === 'ar' ? 'لا يوجد نتائج للبحث' : 'No search results found'}</p>`;
