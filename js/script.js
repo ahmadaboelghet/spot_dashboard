@@ -2002,7 +2002,11 @@ async function loginTeacher() {
     } catch (error) {
         if (error.message !== "Offline first login") {
             console.error("Login Error:", error);
-            showToast("خطأ: " + error.message, "error");
+            if (error.message.includes("Missing or insufficient permissions") || error.code === 'permission-denied') {
+                showToast(currentLang === 'ar' ? 'هذا الرقم غير مسجل لدينا. الرجاء التواصل مع الإدارة للاشتراك.' : 'This number is not registered. Please contact support.', "error");
+            } else {
+                showToast("خطأ: " + error.message, "error");
+            }
         }
     } finally {
         btn.innerHTML = originalText;
