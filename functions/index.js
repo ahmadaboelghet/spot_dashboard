@@ -1907,3 +1907,58 @@ exports.checkAuthUserExists = onCall(async (request) => {
     throw new HttpsError("internal", error.message || "حدث خطأ غير متوقع.");
   }
 });
+
+// دالة لجلب معلومات تواصل المدرس الخاص بولي الأمر بشكل آمن ومصرح به
+exports.getTeacherContactForParent = onCall(async (request) => {
+  const phone = request.data.phone;
+  if (!phone) {
+    throw new HttpsError("invalid-argument", "يجب توفير رقم هاتف ولي الأمر.");
+  }
+
+  let clean = phone.replace(/\s+/g, "").replace(/[^\d]/g, "").trim();
+  if (clean.startsWith("20")) {
+    clean = clean.substring(2);
+  }
+  if (clean.startsWith("0")) {
+    clean = clean.substring(1);
+  }
+  const phoneFormats = ["0" + clean, "+20" + clean];
+
+  try {
+    const studentDocs = await admin.firestore()
+      .collectionGroup("students")
+      .where("parentPhoneNumber", "in", phoneFormats)
+      .limit(1)
+      .get();
+
+    if (studentDocs.empty) {
+      return { found: false };
+    }
+
+    const studentDoc = studentDocs.docs[0];
+    const pathSegments = studentDoc.ref.path.split("/");
+    const teacherId = pathSegments[1];
+
+    if (!teacherId) {
+      return { found: false };
+    }
+
+    const teacherDoc = await admin.firestore().collection("teachers").doc(teacherId).get();
+    if (teacherDoc.exists) {
+      return {
+        found: true,
+        teacherPhone: teacherId, // teacherId هو رقم الهاتف
+        teacherName: teacherDoc.data().name || "المعلم",
+      };
+    }
+
+    return {
+      found: true,
+      teacherPhone: teacherId,
+      teacherName: "المعلم",
+    };
+  } catch (error) {
+    console.error("Error looking up teacher contact:", error);
+    throw new HttpsError("internal", error.message || "حدث خطأ أثناء جلب معلومات التواصل.");
+  }
+});
