@@ -108,20 +108,25 @@ const translations = {
 // 3. INITIALIZATION
 // ==========================================
 async function initCenterDashboard() {
+    console.log("initCenterDashboard started. CENTER_ID =", CENTER_ID);
     if (!CENTER_ID) {
+        alert("Debug: No CENTER_ID found. Redirecting to dashboard.");
         window.location.href = 'dashboard.html';
         return;
     }
 
     try {
+        console.log("Fetching center doc for:", CENTER_ID);
         const centerDoc = await firestoreDB.collection('centers').doc(CENTER_ID).get();
         if (!centerDoc.exists) {
+            alert("Debug: centerDoc does not exist for ID: " + CENTER_ID);
             localStorage.removeItem('learnaria-cid');
             window.location.href = 'dashboard.html';
             return;
         }
 
         centerData = { id: centerDoc.id, ...centerDoc.data() };
+        console.log("Center data loaded:", centerData);
         
         // Update UI with center info
         document.getElementById('centerNameTitle').innerText = centerData.name || 'لوحة تحكم السنتر';
@@ -608,6 +613,7 @@ function setupUIEventListeners() {
 
 // Start
 firebase.auth().onAuthStateChanged((user) => {
+    console.log("center_script: onAuthStateChanged fired. User:", user);
     setupUIEventListeners();
     if (user) {
         if (document.readyState === 'loading') {
@@ -618,6 +624,7 @@ firebase.auth().onAuthStateChanged((user) => {
     } else {
         // If not logged in, redirect
         console.error("No authenticated user found. Redirecting...");
+        alert("Debug: No authenticated user found in center_script.js. Redirecting...");
         localStorage.removeItem('learnaria-cid');
         localStorage.removeItem('learnaria-remember');
         window.location.href = 'dashboard.html';

@@ -28,12 +28,13 @@ service cloud.firestore {
     }
 
     match /teachers/{teacherId} {
-      allow read: if isTeacherOwner(teacherId) || isParent() || isAdmin() || (resource.data.centerId != null && isCenterOwner(resource.data.centerId));
+      allow read: if isTeacherOwner(teacherId) || isParent() || isAdmin() || (resource != null && 'centerId' in resource.data && isCenterOwner(resource.data.centerId));
       allow write: if isTeacherOwner(teacherId) || isAdmin();
       
       match /{allSubcollections=**} {
         allow read: if isTeacherOwner(teacherId) || isParent() || isAdmin() || 
-          (get(/databases/$(database)/documents/teachers/$(teacherId)).data.centerId != null && 
+          (exists(/databases/$(database)/documents/teachers/$(teacherId)) &&
+           get(/databases/$(database)/documents/teachers/$(teacherId)).data.centerId != null && 
            isCenterOwner(get(/databases/$(database)/documents/teachers/$(teacherId)).data.centerId));
         allow write: if isTeacherOwner(teacherId) || isAdmin();
       }

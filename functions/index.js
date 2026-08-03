@@ -721,7 +721,7 @@ exports.paymentReminder = onSchedule({
 // (الجزء الرابع: دوال لوحة التحكم والتطبيق)
 // ===================================================================
 
-exports.getDashboardData = onCall(async (request) => {
+exports.getDashboardData = onCall({ cors: true }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "You must be logged in.");
   }
@@ -887,7 +887,7 @@ exports.getDashboardData = onCall(async (request) => {
   }
 });
 
-exports.checkParentExists = onCall(async (request) => {
+exports.checkParentExists = onCall({ cors: true }, async (request) => {
   const parentPhoneNumber = request.data.phoneNumber;
   if (!parentPhoneNumber) {
     throw new HttpsError("invalid-argument", "The function must be called with a 'phoneNumber' argument.");
@@ -974,7 +974,7 @@ exports.notifyOnPayment = onDocumentWritten(
     }
   });
 
-exports.sendCustomMessage = onCall(async (request) => {
+exports.sendCustomMessage = onCall({ cors: true }, async (request) => {
   const { teacherId, groupId, studentId, messageBody } = request.data;
 
   try {
@@ -1781,7 +1781,7 @@ exports.autoAbsenceReminder = onSchedule({
 // ===================================================================
 // (إعادة تعيين كلمة المرور للمستخدمين)
 // ===================================================================
-exports.resetPassword = onCall(async (request) => {
+exports.resetPassword = onCall({ cors: true }, async (request) => {
   const { phoneNumber, newPassword } = request.data;
 
   if (!phoneNumber || !newPassword) {
@@ -1826,7 +1826,7 @@ exports.resetPassword = onCall(async (request) => {
 // ============================================================================
 // دالة لتفعيل حساب الأب (إنشاء أو إعادة تعيين الباسورد) لكبار السن
 // ============================================================================
-exports.activateParentAccount = onCall(async (request) => {
+exports.activateParentAccount = onCall({ cors: true }, async (request) => {
   // التأكد من أن المدرس مسجل دخول
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "يجب تسجيل الدخول أولاً.");
@@ -1881,7 +1881,7 @@ exports.activateParentAccount = onCall(async (request) => {
 });
 
 // دالة للتحقق مما إذا كان حساب ولي الأمر مسجلاً بالفعل في Auth
-exports.checkAuthUserExists = onCall(async (request) => {
+exports.checkAuthUserExists = onCall({ cors: true }, async (request) => {
   const phone = request.data.phone;
   if (!phone) {
     throw new HttpsError("invalid-argument", "يجب توفير رقم هاتف ولي الأمر.");
@@ -1911,7 +1911,7 @@ exports.checkAuthUserExists = onCall(async (request) => {
 });
 
 // دالة لجلب معلومات تواصل المدرس الخاص بولي الأمر بشكل آمن ومصرح به
-exports.getTeacherContactForParent = onCall(async (request) => {
+exports.getTeacherContactForParent = onCall({ cors: true }, async (request) => {
   const phone = request.data.phone;
   if (!phone) {
     throw new HttpsError("invalid-argument", "يجب توفير رقم هاتف ولي الأمر.");
@@ -1989,7 +1989,7 @@ exports.getTeacherContactForParent = onCall(async (request) => {
 // (نظام السناتر والهجرة)
 // ===================================================================
 
-exports.migrateExistingCards = onCall(async (request) => {
+exports.migrateExistingCards = onCall({ cors: true }, async (request) => {
   // Only allow admin
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can migrate cards.');
@@ -2025,7 +2025,7 @@ exports.migrateExistingCards = onCall(async (request) => {
   return { success: true, migratedCount };
 });
 
-exports.createCenter = onCall(async (request) => {
+exports.createCenter = onCall({ cors: true }, async (request) => {
   // Only allow admin
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can create centers.');
@@ -2065,7 +2065,7 @@ exports.createCenter = onCall(async (request) => {
   return { success: true };
 });
 
-exports.createTeacher = onCall(async (request) => {
+exports.createTeacher = onCall({ cors: true }, async (request) => {
   const db = admin.firestore();
   
   // Allow admin OR authenticated center
@@ -2137,7 +2137,7 @@ exports.createTeacher = onCall(async (request) => {
   return { success: true };
 });
 
-exports.addTeacherToCenter = onCall(async (request) => {
+exports.addTeacherToCenter = onCall({ cors: true }, async (request) => {
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can manage centers.');
   }
@@ -2164,7 +2164,7 @@ exports.addTeacherToCenter = onCall(async (request) => {
   return { success: true };
 });
 
-exports.removeTeacherFromCenter = onCall(async (request) => {
+exports.removeTeacherFromCenter = onCall({ cors: true }, async (request) => {
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can manage centers.');
   }
