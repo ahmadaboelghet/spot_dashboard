@@ -612,7 +612,7 @@ function setupUIEventListeners() {
 }
 
 // Start
-firebase.auth().onAuthStateChanged((user) => {
+firebase.auth().onAuthStateChanged(async (user) => {
     console.log("center_script: onAuthStateChanged fired. User:", user);
     setupUIEventListeners();
     if (user) {
@@ -622,10 +622,26 @@ firebase.auth().onAuthStateChanged((user) => {
             initCenterDashboard();
         }
     } else {
-        // If not logged in, redirect
+        // محاولة تسجيل الدخول الصامت إذا تم فقدان الجلسة أثناء التحويل (Silent Auth Restore)
+        const cid = localStorage.getItem('learnaria-cid');
+        const cpass = localStorage.getItem('learnaria-cpass');
+        
+        if (cid && cpass) {
+            console.log("🔑 Attempting silent auth restore for center...");
+            try {
+                const fakeEmail = `${cid.substring(1)}@spot.com`;
+                await firebase.auth().signInWithEmailAndPassword(fakeEmail, cpass);
+                console.log("✅ Silently restored Firebase Auth session for center.");
+                return; // The listener will fire again with the user!
+            } catch (err) {
+                console.error("Silent auth restore failed for center:", err);
+            }
+        }
+
+        // If not logged in and silent auth failed, redirect
         console.error("No authenticated user found. Redirecting...");
-        alert("Debug: No authenticated user found in center_script.js. Redirecting...");
         localStorage.removeItem('learnaria-cid');
+        localStorage.removeItem('learnaria-cpass');
         localStorage.removeItem('learnaria-remember');
         window.location.href = 'dashboard.html';
     }

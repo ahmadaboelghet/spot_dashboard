@@ -2025,6 +2025,7 @@ async function loginTeacher() {
             TEACHER_CENTER_ID = data.id;
             localStorage.setItem('learnaria-remember', 'true');
             localStorage.setItem('learnaria-cid', TEACHER_CENTER_ID);
+            localStorage.setItem('learnaria-cpass', password); // For silent auth restore
             // Clear any old teacher id just in case
             localStorage.removeItem('learnaria-tid');
             
