@@ -117,8 +117,20 @@ async function initCenterDashboard() {
 
     try {
         console.log("Fetching center doc for:", CENTER_ID);
-        const centerDoc = await firestoreDB.collection('centers').doc(CENTER_ID).get();
-        if (!centerDoc.exists) {
+        let centerDoc = null;
+        try {
+            centerDoc = await firestoreDB.collection('centers').doc(CENTER_ID).get();
+        } catch (e) {
+            if (e.code === 'permission-denied' || e.message.includes('permissions')) {
+                console.warn("Permission denied on first try, waiting for Auth propagation...");
+                await new Promise(r => setTimeout(r, 1000));
+                centerDoc = await firestoreDB.collection('centers').doc(CENTER_ID).get();
+            } else {
+                throw e;
+            }
+        }
+
+        if (!centerDoc || !centerDoc.exists) {
             alert("Debug: centerDoc does not exist for ID: " + CENTER_ID);
             localStorage.removeItem('learnaria-cid');
             window.location.href = 'dashboard.html';

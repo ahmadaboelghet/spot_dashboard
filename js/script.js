@@ -1992,8 +1992,21 @@ async function loginTeacher() {
         let data = null;
         let isCenter = false;
 
-        const doc = await firestoreDB.collection('teachers').doc(fmt).get();
-        if (doc.exists) {
+        // 🔄 Fix Race Condition: Wait for Auth token to propagate to Firestore
+        let doc = null;
+        try {
+            doc = await firestoreDB.collection('teachers').doc(fmt).get();
+        } catch (e) {
+            if (e.code === 'permission-denied' || e.message.includes('permissions')) {
+                console.warn("Permission denied on first try, waiting for Auth propagation...");
+                await new Promise(r => setTimeout(r, 1000));
+                doc = await firestoreDB.collection('teachers').doc(fmt).get();
+            } else {
+                throw e;
+            }
+        }
+
+        if (doc && doc.exists) {
             data = { id: doc.id, ...doc.data() };
             await putToDB('teachers', data);
         } else {
