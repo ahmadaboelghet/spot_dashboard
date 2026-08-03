@@ -6,27 +6,21 @@ service cloud.firestore {
     }
 
     function isTeacherOwner(teacherId) {
-      let isEmailAuth = 'email' in request.auth.token;
-      let emailMatches = isEmailAuth && (
-        request.auth.token.email == teacherId[1:teacherId.size()] + '@spot.com' ||
-        request.auth.token.email == teacherId + '@spot.com'
+      return request.auth != null && (
+        ('email' in request.auth.token && 
+         ('+' + request.auth.token.email.split('@')[0]) == teacherId) ||
+        ('phone_number' in request.auth.token && 
+         request.auth.token.phone_number == teacherId)
       );
-      
-      let isPhoneAuth = 'phone_number' in request.auth.token;
-      let phoneMatches = isPhoneAuth && request.auth.token.phone_number == teacherId;
-      
-      return request.auth != null && (emailMatches || phoneMatches);
     }
     
     function isCenterOwner(centerId) {
-      let isEmailAuth = 'email' in request.auth.token;
-      let emailMatches = isEmailAuth && (
-        request.auth.token.email == centerId[1:centerId.size()] + '@spot.com' ||
-        request.auth.token.email == centerId + '@spot.com'
+      return request.auth != null && (
+        ('email' in request.auth.token && 
+         ('+' + request.auth.token.email.split('@')[0]) == centerId) ||
+        ('phone_number' in request.auth.token && 
+         request.auth.token.phone_number == centerId)
       );
-      let isPhoneAuth = 'phone_number' in request.auth.token;
-      let phoneMatches = isPhoneAuth && request.auth.token.phone_number == centerId;
-      return request.auth != null && (emailMatches || phoneMatches);
     }
     
     function isParent() {

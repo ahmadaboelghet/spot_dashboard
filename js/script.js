@@ -1202,6 +1202,11 @@ async function processSyncQueue(isRecovering = false) {
         return;
     }
 
+    if (!firebase.auth().currentUser) {
+        console.warn("🔒 processSyncQueue aborted: no authenticated user. Will retry after login.");
+        return;
+    }
+
     isSyncing = true;
     try {
         const { items, keys } = await getAllSyncQueueItemsWithKeys();
@@ -2091,7 +2096,7 @@ async function loadGroups() {
     let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
     renderGroupsDropdown(groups);
 
-    if (navigator.onLine) {
+    if (navigator.onLine && firebase.auth().currentUser) {
         // Sync in background to not block UI loading
         (async () => {
             try {
@@ -2327,7 +2332,7 @@ async function loadGroupData() {
     }
 
     // 2. جلب البيانات من السيرفر (Sync)
-    if (navigator.onLine) {
+    if (navigator.onLine && firebase.auth().currentUser) {
         try {
             // جلب كل البيانات بالتوازي لتسريع العملية بشكل كبير جداً بدلاً من جلبها بالتتابع
             const [sSnap, aSnap, asSnap, pSnap] = await Promise.all([
@@ -4729,27 +4734,36 @@ async function loadPreferences() {
             
             // ✅ Silent Firebase Auth Login if bypassed
             if (teacherData.password) {
-                await new Promise((resolve) => {
+                const authUser = await new Promise((resolve) => {
                     const unsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
-                        unsubscribe(); // تأكد من تشغيلها مرة واحدة فقط لمنع الـ Loops
+                        unsubscribe(); // مرة واحدة فقط
                         if (user) {
-                            resolve(); // مسجل دخول بالفعل، لا داعي لعمل أي شيء
+                            console.log("✅ Firebase Auth session already active:", user.email);
+                            resolve(user);
                         } else if (navigator.onLine) {
                             const fakeEmail = `${TEACHER_ID.substring(1)}@spot.com`;
+                            console.log("🔑 Attempting silent auth restore for:", fakeEmail);
                             try {
-                                await firebase.auth().signInWithEmailAndPassword(fakeEmail, teacherData.password.toString().trim());
-                                console.log("✅ Silently restored Firebase Auth session.");
+                                const cred = await firebase.auth().signInWithEmailAndPassword(fakeEmail, teacherData.password.toString().trim());
+                                console.log("✅ Silently restored Firebase Auth session:", cred.user.email);
+                                resolve(cred.user);
                             } catch (e) {
-                                console.error("❌ Failed silent auth restoration:", e);
+                                console.error("❌ Failed silent auth restoration:", e.code, e.message);
+                                resolve(null);
                             }
-                            resolve();
                         } else {
-                            resolve();
+                            console.warn("⚠️ Offline, skipping auth restore");
+                            resolve(null);
                         }
                     });
                 });
+                
                 // بعد التأكد من وجود جلسة فايربيس، يمكننا رفع البيانات المعلقة بأمان
-                processSyncQueue();
+                if (authUser) {
+                    processSyncQueue();
+                } else {
+                    console.warn("⚠️ No auth session. Sync queue will wait for next login.");
+                }
             }
         }
 
