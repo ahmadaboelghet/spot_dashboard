@@ -18,16 +18,29 @@ service cloud.firestore {
       return request.auth != null && (emailMatches || phoneMatches);
     }
     
+    function isCenterOwner(centerId) {
+      let isEmailAuth = 'email' in request.auth.token;
+      let emailMatches = isEmailAuth && (
+        request.auth.token.email == centerId[1:centerId.size()] + '@spot.com' ||
+        request.auth.token.email == centerId + '@spot.com'
+      );
+      let isPhoneAuth = 'phone_number' in request.auth.token;
+      let phoneMatches = isPhoneAuth && request.auth.token.phone_number == centerId;
+      return request.auth != null && (emailMatches || phoneMatches);
+    }
+    
     function isParent() {
       return request.auth != null && 'email' in request.auth.token && request.auth.token.email.matches('.*@learnaria[.]app');
     }
 
     match /teachers/{teacherId} {
-      allow read: if isTeacherOwner(teacherId) || isParent() || isAdmin();
+      allow read: if isTeacherOwner(teacherId) || isParent() || isAdmin() || (resource.data.centerId != null && isCenterOwner(resource.data.centerId));
       allow write: if isTeacherOwner(teacherId) || isAdmin();
       
       match /{allSubcollections=**} {
-        allow read: if isTeacherOwner(teacherId) || isParent() || isAdmin();
+        allow read: if isTeacherOwner(teacherId) || isParent() || isAdmin() || 
+          (get(/databases/$(database)/documents/teachers/$(teacherId)).data.centerId != null && 
+           isCenterOwner(get(/databases/$(database)/documents/teachers/$(teacherId)).data.centerId));
         allow write: if isTeacherOwner(teacherId) || isAdmin();
       }
     }
@@ -40,6 +53,14 @@ service cloud.firestore {
     }
     
     match /{path=**}/students/{studentId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /cards/{cardId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /centers/{centerId} {
       allow read, write: if request.auth != null;
     }
   }

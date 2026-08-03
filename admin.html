@@ -1,20 +1,19 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>الناظر - لوحة الإدارة الآمنة</title>
+    <title>Admin Dashboard | Elnazer</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        brand: '#FFC800',
-                        darkBg: '#0f172a',
-                        darkSurface: '#1e293b'
+                        brand: '#F2CE5A',
+                        brandHover: '#e6c045',
+                        grayBg: '#f3f4f6', /* gray-100 */
                     },
                     fontFamily: {
                         cairo: ['Cairo', 'sans-serif'],
@@ -24,7 +23,7 @@
             }
         }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <!-- RemixIcons -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
     <!-- QRCode JS -->
@@ -33,10 +32,81 @@
     <!-- Firebase v8 Compat -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
-        .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(16px); }
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: #f3f4f6;
+            color: #1f2937;
+            /* Simple Grid Background matching dashboard */
+            background-image: 
+                linear-gradient(to right, rgba(128, 128, 128, 0.08) 1px, transparent 1px), 
+                linear-gradient(to bottom, rgba(128, 128, 128, 0.08) 1px, transparent 1px);
+            background-size: 24px 24px;
+            min-height: 100vh;
+        }
+        
+        .clean-panel { 
+            background: #ffffff; 
+            border-radius: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid #f3f4f6;
+        }
+        
+        .input-clean {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            color: #111827;
+            transition: all 0.2s ease;
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border-radius: 12px;
+        }
+        .input-clean:focus {
+            border-color: #F2CE5A;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(242, 206, 90, 0.15);
+            outline: none;
+        }
+        .input-clean::placeholder {
+            color: #9ca3af;
+        }
+        
+        .btn-brand {
+            background-color: #F2CE5A;
+            color: #000000;
+            font-weight: 800;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(242, 206, 90, 0.2);
+        }
+        .btn-brand:hover {
+            background-color: #e6c045;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(242, 206, 90, 0.3);
+        }
+        .btn-brand:active {
+            transform: scale(0.98);
+        }
+        .btn-brand:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
         
         /* Print Styles */
         @media print {
@@ -69,76 +139,171 @@
         #printCardsContainer { display: none; }
     </style>
 </head>
-<body class="text-gray-900 bg-gray-50 flex items-center justify-center min-h-screen p-4 relative">
+<body class="flex flex-col items-center justify-center p-4 relative">
     
-    <!-- Background Decoration -->
-    <div class="absolute inset-0 overflow-hidden pointer-events-none opacity-20 print:hidden">
-        <div class="absolute -top-32 -right-32 w-96 h-96 bg-brand rounded-full mix-blend-multiply filter blur-3xl opacity-70"></div>
-        <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-70"></div>
-    </div>
-
     <!-- Login Screen -->
-    <div id="loginScreen" class="w-full max-w-md relative z-10 glass-panel rounded-3xl shadow-2xl p-8 border border-gray-100 print:hidden text-center transition-all">
-        <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-red-200">
-            <i class="ri-shield-keyhole-fill text-3xl"></i>
+    <div id="loginScreen" class="w-full max-w-sm relative z-10 clean-panel p-8 print:hidden text-center transition-all my-auto">
+        <div class="relative w-20 h-20 mx-auto mb-5">
+            <img src="assets/images/learnaria_logo.png" alt="Logo" class="w-full h-full rounded-2xl shadow-sm border border-brand">
+            <div class="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full border-4 border-white"></div>
         </div>
-        <h2 class="text-2xl font-black mb-1">المنطقة المحظورة</h2>
-        <p class="text-gray-500 text-sm font-bold mb-6">تسجيل الدخول مسموح فقط لإدارة الناظر</p>
+        <h1 class="text-3xl font-black mb-1 text-gray-900 tracking-tight font-cairo">الناظر<span class="text-brand">.</span></h1>
+        <p class="text-gray-500 text-sm font-semibold mb-8">Admin Dashboard</p>
         
-        <div id="loginError" class="hidden mb-4 p-3 bg-red-50 text-red-600 text-sm font-bold border border-red-200 rounded-xl"></div>
+        <div id="loginError" class="hidden mb-5 p-3 bg-red-50 text-red-600 text-sm font-bold border border-red-100 rounded-xl"></div>
         
         <div class="space-y-4">
-            <input type="email" id="adminEmail" placeholder="البريد الإلكتروني" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white/50 focus:ring-2 focus:ring-red-500 outline-none text-left" dir="ltr" value="admin@elnazer-edu.com" readonly>
-            <input type="password" id="adminPassword" placeholder="كلمة المرور" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white/50 focus:ring-2 focus:ring-red-500 outline-none text-left" dir="ltr">
+            <div class="relative">
+                <i class="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="email" id="adminEmail" placeholder="Email Address" class="input-clean pl-11" dir="ltr" value="admin@elnazer-edu.com" readonly>
+            </div>
             
-            <button id="loginBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2">
-                <i class="ri-login-circle-line"></i> تسجيل الدخول
+            <div class="relative">
+                <i class="ri-lock-password-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="password" id="adminPassword" placeholder="Password" class="input-clean pl-11" dir="ltr">
+            </div>
+            
+            <button id="loginBtn" class="btn-brand w-full flex justify-center items-center gap-2 mt-2">
+                <i class="ri-login-circle-line text-lg"></i> Login
             </button>
         </div>
     </div>
 
     <!-- Admin Panel -->
-    <div id="adminPanel" class="hidden w-full max-w-2xl relative z-10 glass-panel rounded-3xl shadow-2xl p-8 border border-gray-100 print:hidden transition-all">
-        <div class="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-brand/20 text-brand rounded-xl flex items-center justify-center text-2xl">
-                    <i class="ri-printer-cloud-fill"></i>
-                </div>
-                <div>
-                    <h2 class="text-2xl font-black">مولد الكروت السيادية</h2>
-                    <p class="text-gray-500 text-xs font-bold mt-1">طباعة أكواد NAZ- عشوائية مسبقة الدفع</p>
-                </div>
+    <div id="adminPanel" class="hidden w-full max-w-6xl relative z-10 print:hidden transition-all pb-12 mt-6">
+        
+        <!-- Header Navbar (Matching Dashboard Style) -->
+        <nav class="clean-panel px-6 py-4 mb-8 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <a href="#" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                    <div class="relative">
+                        <img src="assets/images/learnaria_logo.png" alt="Logo" class="h-10 w-10 rounded-xl shadow-sm border border-brand">
+                        <div class="absolute -bottom-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white"></div>
+                    </div>
+                    <h1 class="text-2xl font-black text-gray-900 font-cairo tracking-tight">الناظر<span class="text-brand">.</span></h1>
+                </a>
+                <span class="text-gray-300">|</span>
+                <p class="text-gray-500 text-sm font-bold">Admin Dashboard</p>
             </div>
-            <button id="logoutBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-red-600 font-bold rounded-lg text-sm transition-colors flex items-center gap-2">
-                <i class="ri-logout-box-r-line"></i> خروج
+            <button id="logoutBtn" class="h-10 px-4 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white font-bold rounded-full text-sm transition-colors flex items-center gap-2">
+                <i class="ri-logout-circle-r-line"></i> Logout
             </button>
+        </nav>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- SECTION 1: Teacher Management -->
+            <div class="clean-panel p-6 flex flex-col h-full">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="icon-box bg-blue-50 text-blue-600">
+                        <i class="ri-user-star-fill"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-900">Create Teacher Account</h2>
+                </div>
+
+                <div class="space-y-4 flex-grow">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="teacherNameInput" placeholder="e.g. Mr. Ahmed" class="input-clean">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label>
+                            <input type="text" id="teacherSubjectInput" placeholder="e.g. Physics" class="input-clean">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
+                            <input type="text" id="teacherPhoneInput" placeholder="+2010..." class="input-clean" dir="ltr">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
+                        <input type="text" id="teacherPasswordInput" placeholder="Enter password" class="input-clean" dir="ltr">
+                    </div>
+                </div>
+
+                <button onclick="createNewTeacher()" class="btn-brand w-full mt-6 flex items-center justify-center gap-2">
+                    <i class="ri-user-add-line"></i> Create Teacher Account
+                </button>
+                <div id="teacherCreateStatus" class="mt-3 text-center text-sm font-semibold h-5"></div>
+            </div>
+
+            <!-- SECTION 2: Center Management -->
+            <div class="clean-panel p-6 flex flex-col h-full">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="icon-box bg-purple-50 text-purple-600">
+                        <i class="ri-building-4-fill"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-900">Create Center</h2>
+                </div>
+
+                <div class="space-y-4 flex-grow">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Center Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="centerNameInput" placeholder="e.g. Al Awael Center" class="input-clean">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
+                        <input type="text" id="centerPhoneInput" placeholder="+2010..." class="input-clean" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
+                        <input type="text" id="centerPasswordInput" placeholder="Enter password" class="input-clean" dir="ltr">
+                    </div>
+                </div>
+
+                <button onclick="createNewCenter()" class="btn-brand w-full mt-6 flex items-center justify-center gap-2">
+                    <i class="ri-building-add-line"></i> Create Center Account
+                </button>
+                <div id="centerCreateStatus" class="mt-3 text-center text-sm font-semibold h-5"></div>
+            </div>
+            
         </div>
 
-        <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 flex gap-3 text-blue-800 text-sm">
-            <i class="ri-information-fill text-xl"></i>
-            <div>
-                <strong class="block mb-1">كيفية العمل:</strong>
-                الكروت التي سيتم توليدها هنا هي مجرد "أكواد عشوائية فريدة" غير مرتبطة بأي طالب. يمكنك إعطائها للمدرسين، وسيقومون هم بربطها بطلابهم عبر أجهزة الـ Scanner الخاصة بهم بكل أمان.
+        <!-- SECTION 3: Smart Cards Generator -->
+        <div class="clean-panel p-6 mt-6">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="icon-box bg-brand/10 text-brand">
+                    <i class="ri-qr-code-line"></i>
+                </div>
+                <h2 class="text-lg font-bold text-gray-900">Generate QR Codes</h2>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Owner Phone Number <span class="text-red-500">*</span></label>
+                    <input type="text" id="cardOwnerInput" placeholder="+2010..." class="input-clean" dir="ltr">
+                </div>
+                
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Quantity <span class="text-red-500">*</span></label>
+                    <input type="number" id="cardsCountInput" min="10" max="1000" value="100" class="input-clean" dir="ltr">
+                </div>
+
+                <div class="md:col-span-1">
+                    <button onclick="generateAndAssignCards()" id="generateBtn" class="btn-brand w-full flex justify-center items-center gap-2">
+                        <i class="ri-printer-line"></i> Generate & Print
+                    </button>
+                </div>
+            </div>
+            
+            <div id="cardGenStatus" class="mt-4 text-center text-sm font-semibold h-5"></div>
         </div>
 
-        <div class="flex flex-col md:flex-row gap-4 items-end">
-            <div class="flex-grow w-full">
-                <label class="block text-sm font-bold text-gray-700 mb-2">العدد المطلوب (10 إلى 500)</label>
-                <input type="number" id="cardsCountInput" min="10" max="500" value="50" 
-                    class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand outline-none font-bold text-gray-900">
-            </div>
-            <button onclick="generateAndPrintGenericCards()" class="w-full md:w-auto px-8 py-3 bg-gray-900 hover:bg-black text-white font-black rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap">
-                <i class="ri-printer-fill text-lg"></i>
-                بدء التوليد والطباعة
-            </button>
-        </div>
     </div>
 
     <!-- Hidden Print Container -->
     <div id="printCardsContainer"></div>
 
     <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            alert('Global Error: ' + msg);
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            alert('Unhandled Promise Rejection: ' + (event.reason && event.reason.message ? event.reason.message : event.reason));
+        });
+
         // ==========================================
         // 1. FIREBASE CONFIG
         // ==========================================
@@ -151,15 +316,20 @@
             appId: "1:573038013067:web:db6a78e8370d33b07a828e",
             measurementId: "G-T68CEZS4YC"
         };
-        firebase.initializeApp(prodConfig);
         
-        if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-            firebase.auth().useEmulator('http://localhost:9099/');
-            // No firestore needed in admin.html for now, but keeping it consistent
+        // Initialize Firebase
+        const app = firebase.initializeApp(prodConfig);
+        const auth = firebase.auth();
+        const functions = firebase.functions();
+        const db = firebase.firestore();
+
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            auth.useEmulator(`http://${window.location.hostname}:9090`);
+            functions.useEmulator(window.location.hostname, 5011);
+            db.useEmulator(window.location.hostname, 8088);
             console.log("🔌 Connected to Firebase Local Emulators");
         }
         
-        const auth = firebase.auth();
         const ADMIN_EMAIL = 'admin@elnazer-edu.com';
 
         // ==========================================
@@ -174,18 +344,14 @@
             loginError.classList.remove('hidden');
         }
 
-        // Listen for Auth State
         auth.onAuthStateChanged((user) => {
             if (user) {
-                // FIREWALL CHECK
                 if (user.email === ADMIN_EMAIL) {
-                    // Allowed
                     loginScreen.classList.add('hidden');
                     adminPanel.classList.remove('hidden');
                 } else {
-                    // Blocked
                     auth.signOut();
-                    showError('Access Denied. Your email is not authorized.');
+                    showError('Unauthorized access.');
                 }
             } else {
                 loginScreen.classList.remove('hidden');
@@ -193,44 +359,135 @@
             }
         });
 
-        // Login Action
         document.getElementById('loginBtn').addEventListener('click', async () => {
             const email = document.getElementById('adminEmail').value.trim();
             const password = document.getElementById('adminPassword').value;
             loginError.classList.add('hidden');
             
-            if (!password) {
-                showError('يرجى إدخال كلمة المرور');
-                return;
-            }
-            if (email !== ADMIN_EMAIL) {
-                showError('غير مصرح لك بالدخول');
-                return;
-            }
+            if (!password) return showError('Please enter the password');
             
             const btn = document.getElementById('loginBtn');
-            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري التحقق...';
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
             btn.disabled = true;
 
             try {
                 await auth.signInWithEmailAndPassword(email, password);
-                // The onAuthStateChanged listener will handle the UI switch
             } catch (err) {
-                console.error(err);
-                showError('كلمة المرور غير صحيحة أو الحساب غير موجود.');
+                showError('Invalid password or access denied.');
             } finally {
-                btn.innerHTML = '<i class="ri-login-circle-line"></i> تسجيل الدخول';
+                btn.innerHTML = '<i class="ri-login-circle-line"></i> Login';
                 btn.disabled = false;
             }
         });
 
-        // Logout Action
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            auth.signOut();
-        });
+        document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
+
+        function restrictPhoneInput(e) {
+            let val = e.target.value;
+            // Only allow digits and '+'
+            val = val.replace(/[^\d+]/g, '');
+            // Limit based on startsWith '+'
+            if (val.startsWith('+')) {
+                if (val.length > 13) val = val.substring(0, 13);
+            } else {
+                if (val.length > 11) val = val.substring(0, 11);
+            }
+            e.target.value = val;
+        }
+
+        document.getElementById('teacherPhoneInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('centerPhoneInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('cardOwnerInput').addEventListener('input', restrictPhoneInput);
 
         // ==========================================
-        // 3. GENERATION & PRINTING LOGIC
+        // 3. ENTITY MANAGEMENT (Teachers & Centers)
+        // ==========================================
+        async function createNewTeacher() {
+            const statusDiv = document.getElementById('teacherCreateStatus');
+            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
+            statusDiv.innerText = 'Validating data...';
+            
+            const name = document.getElementById('teacherNameInput').value.trim();
+            const subject = document.getElementById('teacherSubjectInput').value.trim();
+            const phone = document.getElementById('teacherPhoneInput').value.trim();
+            const password = document.getElementById('teacherPasswordInput').value.trim();
+
+            if (!name || !subject || !phone || !password) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Please fill all fields.';
+                return;
+            }
+
+            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
+            if (!phoneRegex.test(phone)) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Invalid Egyptian phone number format.';
+                return;
+            }
+
+            try {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
+                statusDiv.innerText = 'Sending to server...';
+                
+                const createTeacherFn = functions.httpsCallable('createTeacher');
+                await createTeacherFn({ teacherName: name, teacherSubject: subject, teacherPhone: phone, password: password });
+                
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = 'Teacher account created successfully!';
+                document.getElementById('teacherNameInput').value = '';
+                document.getElementById('teacherSubjectInput').value = '';
+                document.getElementById('teacherPhoneInput').value = '';
+                document.getElementById('teacherPasswordInput').value = '';
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Error: ' + err.message;
+            }
+        }
+
+        async function createNewCenter() {
+            const statusDiv = document.getElementById('centerCreateStatus');
+            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
+            statusDiv.innerText = 'Validating data...';
+            
+            const name = document.getElementById('centerNameInput').value.trim();
+            const phone = document.getElementById('centerPhoneInput').value.trim();
+            const password = document.getElementById('centerPasswordInput').value.trim();
+
+            if (!name || !phone || !password) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Please fill all fields.';
+                return;
+            }
+
+            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
+            if (!phoneRegex.test(phone)) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Invalid Egyptian phone number format.';
+                return;
+            }
+
+            try {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
+                statusDiv.innerText = 'Sending to server...';
+                
+                const createCenterFn = functions.httpsCallable('createCenter');
+                await createCenterFn({ centerName: name, centerPhone: phone, password: password });
+                
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = 'Center account created successfully!';
+                document.getElementById('centerNameInput').value = '';
+                document.getElementById('centerPhoneInput').value = '';
+                document.getElementById('centerPasswordInput').value = '';
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Error: ' + err.message;
+            }
+        }
+
+        // ==========================================
+        // 4. SMART CARDS GENERATION
         // ==========================================
         const motivationQuotes = [
             "أنت بطل قصتك", "لا تستسلم أبداً", "استمر في التقدم", 
@@ -239,7 +496,6 @@
         ];
 
         function generateCardId() {
-            // Generates something like NAZ-7F2B9D4A
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let id = 'NAZ-';
             for (let i = 0; i < 8; i++) {
@@ -248,50 +504,118 @@
             return id;
         }
 
-        function generateAndPrintGenericCards() {
+        async function generateAndAssignCards() {
+            const ownerPhone = document.getElementById('cardOwnerInput').value.trim();
             const countInput = document.getElementById('cardsCountInput');
-            let count = parseInt(countInput.value) || 50;
-            
-            if (count > 1000) count = 1000;
+            let count = parseInt(countInput.value) || 100;
+            const statusDiv = document.getElementById('cardGenStatus');
+            const btn = document.getElementById('generateBtn');
+
+            if (!ownerPhone) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Owner phone number is required.';
+                return;
+            }
+
+            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
+            if (!phoneRegex.test(ownerPhone)) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Invalid Egyptian phone number format.';
+                return;
+            }
+
+            if (count > 2000) count = 2000;
             if (count < 1) count = 1;
             countInput.value = count;
 
-            const container = document.getElementById('printCardsContainer');
-            container.innerHTML = '';
-            
-            // Show it just for generating
-            container.style.display = 'grid';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Generating...';
+            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
+            statusDiv.innerText = 'Verifying owner identity...';
 
-            for (let i = 0; i < count; i++) {
-                const cardId = generateCardId();
-                let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
+            try {
+                // Verify owner exists (check both teachers and centers)
+                let isTeacher = false;
+                let isCenter = false;
+                
+                const tDoc = await db.collection('teachers').doc(ownerPhone).get();
+                if (tDoc.exists) isTeacher = true;
+                
+                if (!isTeacher) {
+                    const cDoc = await db.collection('centers').doc(ownerPhone).get();
+                    if (cDoc.exists) isCenter = true;
+                }
 
-                const card = document.createElement('div');
-                card.className = 'generic-card';
-                card.innerHTML = `
-                    <div id="generic-qr-${cardId}"></div>
-                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; margin-top: 6px; color: #000000; letter-spacing: 1px; text-align: center;">${cardId}</div>
-                    <div style="font-size: 9px; font-weight: bold; margin-top: 3px; color: #666; text-align: center;">${randomQuote}</div>
-                `;
-                container.appendChild(card);
+                if (!isTeacher && !isCenter) {
+                    throw new Error('No teacher or center found with this number.');
+                }
 
-                // Generate QR code inside the card
-                new QRCode(card.querySelector(`#generic-qr-${cardId}`), {
-                    text: cardId,
-                    width: 100,
-                    height: 100,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+                statusDiv.innerText = `Verified. Generating ${count} cards...`;
+
+                // Generate Card IDs and Prepare Batch
+                const generatedCards = [];
+                const batch = db.batch();
+                
+                const cardsRef = db.collection('smart_cards');
+                
+                for (let i = 0; i < count; i++) {
+                    const cardId = generateCardId();
+                    generatedCards.push(cardId);
+                    
+                    batch.set(cardsRef.doc(cardId), {
+                        ownerId: ownerPhone,
+                        ownerType: isTeacher ? 'teacher' : 'center',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        assignedToStudent: false
+                    });
+                }
+
+                await batch.commit();
+
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = 'Saved. Preparing print view...';
+
+                // Render HTML for Print
+                const container = document.getElementById('printCardsContainer');
+                container.innerHTML = '';
+                container.style.display = 'grid';
+
+                for (const cardId of generatedCards) {
+                    let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
+                    const card = document.createElement('div');
+                    card.className = 'generic-card';
+                    card.innerHTML = `
+                        <div id="generic-qr-${cardId}"></div>
+                        <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; margin-top: 6px; color: #000000; letter-spacing: 1px; text-align: center;">${cardId}</div>
+                        <div style="font-size: 9px; font-weight: bold; margin-top: 3px; color: #666; text-align: center;">${randomQuote}</div>
+                    `;
+                    container.appendChild(card);
+
+                    new QRCode(card.querySelector(`#generic-qr-${cardId}`), {
+                        text: cardId,
+                        width: 100,
+                        height: 100,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+
+                // Trigger Print
+                setTimeout(() => {
+                    window.print();
+                    container.style.display = 'none';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
+                }, 1000);
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = err.message;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
             }
-
-            // Open print window
-            setTimeout(() => {
-                window.print();
-                // Hide it back from DOM so it doesn't break normal flow if css fails
-                container.style.display = 'none';
-            }, 500);
         }
     </script>
 </body>

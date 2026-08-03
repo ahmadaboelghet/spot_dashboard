@@ -22,7 +22,7 @@ const prodConfig = {
 const devConfig = {
     apiKey: "AIzaSyAvWZpOmVqXxJhpcnuUod-kGn_JEFN7XFE",
     authDomain: "spot-dev-17336.firebaseapp.com",
-    projectId: "spot-dev-17336",
+    projectId: "learnaria-483e7",
     storageBucket: "spot-dev-17336.firebasestorage.app",
     messagingSenderId: "581004817275",
     appId: "1:581004817275:web:59c8d43a4c4aeae7fd43de",
@@ -54,9 +54,9 @@ try {
 
         // Connect to Emulators if on localhost
         if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-            firebase.auth().useEmulator('http://localhost:9099/');
-            firebase.firestore().useEmulator('localhost', 8080);
-            firebase.functions().useEmulator('localhost', 5001);
+            firebase.auth().useEmulator('http://localhost:9090/');
+            firebase.firestore().useEmulator('localhost', 8088);
+            firebase.functions().useEmulator('localhost', 5011);
             console.log("🔌 Connected to Firebase Local Emulators");
         }
 
@@ -289,7 +289,7 @@ async function deleteFromDB(store, key) {
 // ==========================================
 // 3. STATE & TRANSLATIONS
 // ==========================================
-let TEACHER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = localStorage.getItem('lang') || 'ar';
+let TEACHER_ID = null, TEACHER_CENTER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = localStorage.getItem('lang') || 'ar';
 let isSyncing = false;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
 let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
@@ -871,11 +871,19 @@ window.openAddNewGroupFlow = function() {
 // ✅ دالة لإصلاح المعرف المخزن لو كان بالصيغة القديمة (بدون +20)
 function migrateTeacherID() {
     let tid = localStorage.getItem('learnaria-tid');
+    let cid = localStorage.getItem('learnaria-cid');
+    
     if (tid && tid.startsWith('01')) {
         const migrated = `+20${tid.substring(1)}`;
         console.log(`🔄 Migrating Teacher ID in localStorage: ${tid} -> ${migrated}`);
         localStorage.setItem('learnaria-tid', migrated);
         TEACHER_ID = migrated;
+    } else if (tid) {
+        TEACHER_ID = tid;
+    }
+    
+    if (cid) {
+        TEACHER_CENTER_ID = cid;
     }
 }
 
@@ -1914,8 +1922,11 @@ async function loginTeacher() {
 
                 // التأكد من وجوده في الداتابيز القديمة
                 const doc = await firestoreDB.collection('teachers').doc(fmt).get();
+
                 if (!doc.exists) {
-                    showToast(translations[currentLang].accountNotRegistered, "error");
+                    // It's either an unregistered user OR a center owner who typed the wrong password
+                    // (since centers don't exist in teachers collection and Auth failed).
+                    showToast(currentLang === 'ar' ? 'كلمة المرور غير صحيحة أو الحساب غير موجود' : 'Wrong password or account not registered', "error");
                     passInput.value = '';
                     btn.innerHTML = originalText;
                     btn.disabled = false;
@@ -1923,6 +1934,7 @@ async function loginTeacher() {
                 }
 
                 const data = doc.data();
+
                 const storedPass = data.password ? data.password.toString().trim() : "";
 
                 // التحقق من الباسورد القديم
@@ -1971,20 +1983,62 @@ async function loginTeacher() {
             }
         }
 
-        // 3. تحديث البيانات محلياً بعد نجاح الدخول
-        let data = await getFromDB('teachers', fmt);
-        if (!data) {
-            const doc = await firestoreDB.collection('teachers').doc(fmt).get();
-            if (doc.exists) {
-                data = { id: doc.id, ...doc.data() };
-                await putToDB('teachers', data);
+        // 3. تحديث البيانات محلياً بعد نجاح الدخول (جلب مباشر من السيرفر لضمان التحقق من centerId)
+        let data = null;
+        let isCenter = false;
+
+        const doc = await firestoreDB.collection('teachers').doc(fmt).get();
+        if (doc.exists) {
+            data = { id: doc.id, ...doc.data() };
+            await putToDB('teachers', data);
+        } else {
+            // Check if it's a center
+            console.log("Checking if center exists for ID:", fmt);
+            const centerDoc = await firestoreDB.collection('centers').doc(fmt).get();
+            console.log("centerDoc.exists:", centerDoc.exists, "centerDoc.id:", centerDoc.id);
+            if (centerDoc.exists) {
+                data = { id: centerDoc.id, ...centerDoc.data() };
+                isCenter = true;
+                console.log("Center data loaded:", data);
+            } else {
+                console.error("centerDoc does NOT exist for ID:", fmt);
+                throw new Error("Account not found in Database");
             }
+        }
+
+        if (!isCenter && data && data.centerId) {
+            const centerDoc = await firestoreDB.collection('centers').doc(data.centerId).get();
+            const centerName = centerDoc.exists ? (centerDoc.data().name || data.centerId) : data.centerId;
+            showToast(currentLang === 'ar' ? `أنت مسجل كمعلم تابع لسنتر (${centerName}). يجب تسجيل الدخول من خلال لوحة تحكم السنتر الخاصة به.` : `You are registered as a teacher linked to center (${centerName}). You must login via its center dashboard.`, "error");
+            await firebase.auth().signOut();
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        if (isCenter) {
+            TEACHER_CENTER_ID = data.id;
+            localStorage.setItem('learnaria-remember', 'true');
+            localStorage.setItem('learnaria-cid', TEACHER_CENTER_ID);
+            // Clear any old teacher id just in case
+            localStorage.removeItem('learnaria-tid');
+            
+            showToast("مرحباً بك في لوحة تحكم السنتر!", "success");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            
+            setTimeout(() => {
+                window.location.href = 'center_dashboard.html';
+            }, 1000);
+            return;
         }
 
         // 4. تسجيل الدخول ناجح
         TEACHER_ID = fmt;
+        TEACHER_CENTER_ID = data && data.centerId ? data.centerId : null;
         localStorage.setItem('learnaria-remember', 'true');
         localStorage.setItem('learnaria-tid', TEACHER_ID);
+        if (TEACHER_CENTER_ID) localStorage.setItem('learnaria-cid', TEACHER_CENTER_ID);
         updateHomeLinks();
 
         document.getElementById('landingSection').classList.add('hidden');
@@ -3435,7 +3489,22 @@ async function handleScan(scannedText) {
 
             } else {
                 // كود غير معروف تماماً
-                // showToast("كود غير معروف", "error");
+                if (navigator.onLine && qrCode.startsWith('NAZ-')) {
+                    const cardSnap = await firestoreDB.collection('cards').doc(qrCode).get();
+                    if (cardSnap.exists) {
+                        const ownerId = TEACHER_CENTER_ID || TEACHER_ID;
+                        if (cardSnap.data().ownerId && cardSnap.data().ownerId !== ownerId) {
+                            showToast(currentLang === 'ar' ? "⛔ هذا الكارت مسجل في مؤسسة أخرى!" : "⛔ Card belongs to another organization!", "error");
+                        } else {
+                            showToast(currentLang === 'ar' ? "⚠️ هذا الكارت غير مربوط بأي طالب حتى الآن!" : "⚠️ Card is not linked to any student yet!", "warning");
+                        }
+                    } else {
+                        showToast(currentLang === 'ar' ? "❌ كود غير صحيح أو كارت مزيف!" : "❌ Invalid code or fake card!", "error");
+                    }
+                } else {
+                    // Offline or not a card format
+                    showToast(currentLang === 'ar' ? "الطالب غير موجود" : "Student not found", "error");
+                }
             }
 
         } catch (err) {
@@ -4026,6 +4095,34 @@ async function linkCardToStudent(student, cardId) {
             showToast(errorMsg, 'error');
             closeCardLinkModal();
             return;
+        }
+
+        // Global check in cards collection
+        const ownerId = TEACHER_CENTER_ID || TEACHER_ID;
+        if (navigator.onLine) {
+            const cardRef = firestoreDB.collection('cards').doc(cardId);
+            const cardSnap = await cardRef.get();
+            
+            if (cardSnap.exists) {
+                const cardData = cardSnap.data();
+                
+                // If it belongs to another organization/teacher
+                if (cardData.ownerId && cardData.ownerId !== ownerId) {
+                    const errorMsg = currentLang === 'ar'
+                        ? `⛔ هذا الكارت مسجل مسبقاً في سنتر أو عند مدرس آخر!`
+                        : `⛔ This card is registered to another center/teacher!`;
+                    showToast(errorMsg, 'error');
+                    closeCardLinkModal();
+                    return;
+                }
+            } else {
+                // Register the card for the first time
+                await cardRef.set({
+                    id: cardId,
+                    ownerId: ownerId,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
         }
 
         // Also check Firestore directly for extra safety (in case local DB is out of sync)
@@ -4689,6 +4786,10 @@ async function loadPreferences() {
                 amountInput.value = savedAmount;
             }
         }
+    } else {
+        // No ID found, make sure login screen is visible
+        document.documentElement.classList.remove('is-logged-in');
+        document.getElementById('landingSection').classList.remove('hidden');
     }
 }
 function applyLanguage() {

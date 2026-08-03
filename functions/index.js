@@ -4,8 +4,22 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const { onRequest } = require("firebase-functions/v2/https");
+const { onObjectFinalized } = require("firebase-functions/v2/storage");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getStorage } = require("firebase-admin/storage");
+const twilio = require("twilio");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleAIFileManager } = require("@google/generative-ai/server");
+const path = require("path");
+const os = require("os");
+const fs = require("fs");
+const PDFDocument = require("pdfkit");
 
-admin.initializeApp();
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
 // ===================================================================
 // (الجزء الأول: دوال مساعدة)
@@ -179,7 +193,7 @@ async function sendNotificationToParent(studentData, payload, context, studentId
     title: payload.notification.title,
     body: payload.notification.body,
     data: payload.data || {},
-    sentAt: admin.firestore.FieldValue.serverTimestamp(),
+    sentAt: FieldValue.serverTimestamp(),
     context: context,
     status: "failed", // القيمة الافتراضية
   };
@@ -247,10 +261,10 @@ async function sendNotificationToParent(studentData, payload, context, studentId
             if (studentData.parentPhoneNumber) {
               const cleanPhone = studentData.parentPhoneNumber.replace(/\s+/g, "").trim();
               await admin.firestore().collection("parents").doc(cleanPhone).update({
-                fcmTokens: admin.firestore.FieldValue.arrayRemove(badToken),
-                fcmToken: admin.firestore.FieldValue.delete(), // legacy cleanup
+                fcmTokens: FieldValue.arrayRemove(badToken),
+                fcmToken: FieldValue.delete(), // legacy cleanup
                 lastTokenError: "not-registered",
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                updatedAt: FieldValue.serverTimestamp()
               }).catch(() => { });
             }
 
@@ -259,7 +273,7 @@ async function sendNotificationToParent(studentData, payload, context, studentId
               await admin.firestore()
                 .doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`)
                 .update({
-                  parentFcmToken: admin.firestore.FieldValue.delete()
+                  parentFcmToken: FieldValue.delete()
                 }).catch(() => { });
             }
           }
@@ -988,26 +1002,14 @@ exports.sendCustomMessage = onCall(async (request) => {
   }
 });
 
-const { onRequest } = require("firebase-functions/v2/https");
-const { onObjectFinalized } = require("firebase-functions/v2/storage");
-const { initializeApp } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
-const { getStorage } = require("firebase-admin/storage");
-const twilio = require("twilio");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { GoogleAIFileManager } = require("@google/generative-ai/server");
-const path = require("path");
-const os = require("os");
-const fs = require("fs");
-const PDFDocument = require("pdfkit");
+
 const arabicReshaper = require("arabic-reshaper");
 const bidiFactory = require("bidi-js");
 const bidi = bidiFactory();
 const axios = require("axios");
 const SVGtoPDF = require("svg-to-pdfkit");
 
-initializeApp();
-
+// Removed duplicate initializeApp()
 // ==========================================
 // ⚙️ إعدادات المفاتيح
 // ==========================================
@@ -1575,10 +1577,10 @@ exports.notifyOnPresence = onDocumentWritten(
     if (newlyPresentStudents.length === 0 && afterRecords.length > 0) {
       // ✅ حفظ وقت أول "سكان" لو مش موجود (عشان نحسب الساعة بالضبط من أول واحد)
       if (!afterData.firstScanAt && afterRecords.some(r => r.status === 'present')) {
-        await snapAfter.ref.update({ firstScanAt: admin.firestore.FieldValue.serverTimestamp() });
+        await snapAfter.ref.update({ firstScanAt: FieldValue.serverTimestamp() });
       }
     } else if (newlyPresentStudents.length > 0 && !afterData.firstScanAt) {
-      await snapAfter.ref.update({ firstScanAt: admin.firestore.FieldValue.serverTimestamp() });
+      await snapAfter.ref.update({ firstScanAt: FieldValue.serverTimestamp() });
     }
 
     const teacherId = event.params.teacherId;
@@ -1859,7 +1861,7 @@ exports.activateParentAccount = onCall(async (request) => {
 
     // إضافة المستند في parents
     await admin.firestore().collection("parents").doc(phoneWithPlus).set({
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
       activatedByAdmin: true
     }, { merge: true });
 
@@ -1938,9 +1940,27 @@ exports.getTeacherContactForParent = onCall(async (request) => {
     const studentDoc = studentDocs.docs[0];
     const pathSegments = studentDoc.ref.path.split("/");
     const teacherId = pathSegments[1];
+    const groupId = pathSegments[3];
 
     if (!teacherId) {
       return { found: false };
+    }
+
+    let groupName = "المجموعة";
+    if (groupId) {
+      try {
+        const groupDoc = await admin.firestore()
+          .collection("teachers")
+          .doc(teacherId)
+          .collection("groups")
+          .doc(groupId)
+          .get();
+        if (groupDoc.exists) {
+          groupName = groupDoc.data().name || "المجموعة";
+        }
+      } catch (err) {
+        console.error("Error looking up group name:", err);
+      }
     }
 
     const teacherDoc = await admin.firestore().collection("teachers").doc(teacherId).get();
@@ -1949,6 +1969,7 @@ exports.getTeacherContactForParent = onCall(async (request) => {
         found: true,
         teacherPhone: teacherId, // teacherId هو رقم الهاتف
         teacherName: teacherDoc.data().name || "المعلم",
+        groupName: groupName,
       };
     }
 
@@ -1956,9 +1977,210 @@ exports.getTeacherContactForParent = onCall(async (request) => {
       found: true,
       teacherPhone: teacherId,
       teacherName: "المعلم",
+      groupName: groupName,
     };
   } catch (error) {
     console.error("Error looking up teacher contact:", error);
     throw new HttpsError("internal", error.message || "حدث خطأ أثناء جلب معلومات التواصل.");
   }
+});
+
+// ===================================================================
+// (نظام السناتر والهجرة)
+// ===================================================================
+
+exports.migrateExistingCards = onCall(async (request) => {
+  // Only allow admin
+  if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
+    throw new HttpsError('permission-denied', 'Only admin can migrate cards.');
+  }
+
+  const db = admin.firestore();
+  const teachersSnap = await db.collection("teachers").get();
+  let migratedCount = 0;
+
+  for (const teacherDoc of teachersSnap.docs) {
+    const teacherId = teacherDoc.id;
+    // Check if teacher is part of a center
+    const centerId = teacherDoc.data().centerId || teacherId; 
+
+    const groupsSnap = await teacherDoc.ref.collection("groups").get();
+    for (const groupDoc of groupsSnap.docs) {
+      const studentsSnap = await groupDoc.ref.collection("students").get();
+      for (const studentDoc of studentsSnap.docs) {
+        const student = studentDoc.data();
+        if (student.cardId) {
+          // Add to global cards collection
+          await db.collection("cards").doc(student.cardId).set({
+            id: student.cardId,
+            ownerId: centerId,
+            createdAt: FieldValue.serverTimestamp()
+          }, { merge: true });
+          migratedCount++;
+        }
+      }
+    }
+  }
+
+  return { success: true, migratedCount };
+});
+
+exports.createCenter = onCall(async (request) => {
+  // Only allow admin
+  if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
+    throw new HttpsError('permission-denied', 'Only admin can create centers.');
+  }
+
+  const { centerPhone, centerName, password } = request.data;
+  if (!centerPhone || !centerName || !password) {
+    throw new HttpsError('invalid-argument', 'Missing center phone, name, or password.');
+  }
+
+  const db = admin.firestore();
+  
+  // 1. Create Auth user for the center
+  const email = `${centerPhone.replace('+', '')}@spot.com`;
+  try {
+    await admin.auth().createUser({
+      uid: centerPhone,
+      email: email,
+      password: password,
+      displayName: centerName
+    });
+  } catch (error) {
+    if (error.code !== 'auth/uid-already-exists' && error.code !== 'auth/email-already-exists') {
+      throw new HttpsError('internal', error.message);
+    }
+  }
+
+  // 2. Create Center Profile
+  await db.collection('centers').doc(centerPhone).set({
+    name: centerName,
+    phone: centerPhone,
+    password: password,
+    createdAt: FieldValue.serverTimestamp(),
+    teachers: [] // Array of teacher IDs
+  });
+
+  return { success: true };
+});
+
+exports.createTeacher = onCall(async (request) => {
+  const db = admin.firestore();
+  
+  // Allow admin OR authenticated center
+  let isAuthorized = false;
+  let isCenterCaller = false;
+  let callerUid = null;
+
+  if (request.auth) {
+    if (request.auth.token.email === 'admin@elnazer-edu.com') {
+      isAuthorized = true;
+    } else {
+      callerUid = request.auth.uid;
+      const centerDoc = await db.collection('centers').doc(callerUid).get();
+      if (centerDoc.exists) {
+        isAuthorized = true;
+        isCenterCaller = true;
+      }
+    }
+  }
+
+  if (!isAuthorized) {
+    throw new HttpsError('permission-denied', 'Not authorized to create teachers.');
+  }
+
+  const { teacherPhone, teacherName, password, teacherSubject } = request.data;
+  if (!teacherPhone || !teacherName || !password) {
+    throw new HttpsError('invalid-argument', 'Missing teacher phone, name, or password.');
+  }
+  
+  // 1. Create Auth user for the teacher
+  const email = `${teacherPhone.replace('+', '')}@spot.com`;
+  try {
+    await admin.auth().createUser({
+      uid: teacherPhone,
+      email: email,
+      password: password,
+      displayName: teacherName
+    });
+  } catch (error) {
+    if (error.code !== 'auth/uid-already-exists' && error.code !== 'auth/email-already-exists') {
+      throw new HttpsError('internal', error.message);
+    }
+  }
+
+  // 2. Create Teacher Profile
+  const teacherData = {
+    name: teacherName, // for compatibility
+    password: password,
+    profile: {
+      teacherName: teacherName,
+      teacherSubject: teacherSubject || 'عام'
+    },
+    createdAt: FieldValue.serverTimestamp()
+  };
+
+  if (isCenterCaller) {
+    teacherData.centerId = callerUid;
+  }
+
+  await db.collection('teachers').doc(teacherPhone).set(teacherData, { merge: true });
+
+  if (isCenterCaller) {
+    // Add teacher to center list
+    await db.collection('centers').doc(callerUid).update({
+      teachers: FieldValue.arrayUnion(teacherPhone)
+    });
+  }
+
+  return { success: true };
+});
+
+exports.addTeacherToCenter = onCall(async (request) => {
+  if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
+    throw new HttpsError('permission-denied', 'Only admin can manage centers.');
+  }
+
+  const { centerId, teacherId } = request.data;
+  const db = admin.firestore();
+
+  const teacherRef = db.collection('teachers').doc(teacherId);
+  const teacherDoc = await teacherRef.get();
+  if (!teacherDoc.exists) {
+    throw new HttpsError('not-found', 'Teacher not found.');
+  }
+
+  // Add teacher to center
+  await db.collection('centers').doc(centerId).update({
+    teachers: FieldValue.arrayUnion(teacherId)
+  });
+
+  // Update teacher with centerId
+  await teacherRef.update({
+    centerId: centerId
+  });
+
+  return { success: true };
+});
+
+exports.removeTeacherFromCenter = onCall(async (request) => {
+  if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
+    throw new HttpsError('permission-denied', 'Only admin can manage centers.');
+  }
+
+  const { centerId, teacherId } = request.data;
+  const db = admin.firestore();
+
+  // Remove teacher from center
+  await db.collection('centers').doc(centerId).update({
+    teachers: FieldValue.arrayRemove(teacherId)
+  });
+
+  // Remove centerId from teacher
+  await db.collection('teachers').doc(teacherId).update({
+    centerId: FieldValue.delete()
+  });
+
+  return { success: true };
 });
