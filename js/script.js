@@ -52,6 +52,14 @@ try {
         // تشغيل التطبيق بالكونفيج المختار
         app = firebase.initializeApp(activeConfig);
 
+        // Connect to Emulators if on localhost
+        if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+            firebase.auth().useEmulator('http://localhost:9099/');
+            firebase.firestore().useEmulator('localhost', 8080);
+            firebase.functions().useEmulator('localhost', 5001);
+            console.log("🔌 Connected to Firebase Local Emulators");
+        }
+
         // تفعيل الخدمات
         firestoreDB = firebase.firestore();
         storage = firebase.storage();

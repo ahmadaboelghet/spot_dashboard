@@ -152,6 +152,13 @@
             measurementId: "G-T68CEZS4YC"
         };
         firebase.initializeApp(prodConfig);
+        
+        if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+            firebase.auth().useEmulator('http://localhost:9099/');
+            // No firestore needed in admin.html for now, but keeping it consistent
+            console.log("🔌 Connected to Firebase Local Emulators");
+        }
+        
         const auth = firebase.auth();
         const ADMIN_EMAIL = 'admin@elnazer-edu.com';
 
