@@ -34,7 +34,7 @@ service cloud.firestore {
       match /{allSubcollections=**} {
         allow read: if isTeacherOwner(teacherId) || isParent() || isAdmin() || 
           (exists(/databases/$(database)/documents/teachers/$(teacherId)) &&
-           get(/databases/$(database)/documents/teachers/$(teacherId)).data.centerId != null && 
+           'centerId' in get(/databases/$(database)/documents/teachers/$(teacherId)).data && 
            isCenterOwner(get(/databases/$(database)/documents/teachers/$(teacherId)).data.centerId));
         allow write: if isTeacherOwner(teacherId) || isAdmin();
       }

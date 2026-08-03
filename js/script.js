@@ -2071,7 +2071,7 @@ async function loginTeacher() {
         if (error.message !== "Offline first login") {
             console.error("Login Error:", error);
             if (error.message.includes("Missing or insufficient permissions") || error.code === 'permission-denied') {
-                showToast(currentLang === 'ar' ? 'هذا الرقم غير مسجل لدينا. الرجاء التواصل مع الإدارة للاشتراك.' : 'This number is not registered. Please contact support.', "error");
+                showToast(currentLang === 'ar' ? 'كلمة المرور غير صحيحة، أو الحساب غير مسجل لدينا.' : 'Wrong password, or account is not registered.', "error");
             } else {
                 showToast("خطأ: " + error.message, "error");
             }

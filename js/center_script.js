@@ -182,67 +182,66 @@ async function loadCenterData() {
     let teachersHTML = '';
 
     for (const tid of teacherRefs) {
-        const tDoc = await firestoreDB.collection('teachers').doc(tid).get();
-        if (tDoc.exists) {
-            const tData = { id: tDoc.id, ...tDoc.data() };
-            
-            // Calculate stats for this teacher
-            // Since we don't want to load every single student doc right now (could be huge),
-            // we will just count groups and approximate or if they store student count, use it.
-            // Let's fetch groups for this teacher to count students
-            const groupsSnapshot = await firestoreDB.collection(`teachers/${tid}/groups`).get();
-            let teacherStudentsCount = 0;
-            
-            for (const gDoc of groupsSnapshot.docs) {
-                // If they maintain a studentCount, use it. Else we have to query.
-                // Assuming we just query size for now.
-                const studentsSnap = await firestoreDB.collection(`teachers/${tid}/groups/${gDoc.id}/students`).get();
-                teacherStudentsCount += studentsSnap.size;
+        try {
+            const tDoc = await firestoreDB.collection('teachers').doc(tid).get();
+            if (tDoc.exists) {
+                const tData = { id: tDoc.id, ...tDoc.data() };
+                
+                // Calculate stats for this teacher
+                const groupsSnapshot = await firestoreDB.collection(`teachers/${tid}/groups`).get();
+                let teacherStudentsCount = 0;
+                
+                for (const gDoc of groupsSnapshot.docs) {
+                    const studentsSnap = await firestoreDB.collection(`teachers/${tid}/groups/${gDoc.id}/students`).get();
+                    teacherStudentsCount += studentsSnap.size;
+                }
+                
+                totalStudents += teacherStudentsCount;
+                centerTeachers.push({ ...tData, studentsCount: teacherStudentsCount, groupsCount: groupsSnapshot.size });
+
+                const teacherName = tData.profile?.teacherName || (currentLang === 'ar' ? 'مدرس غير مسمى' : 'Unnamed Teacher');
+                const teacherSubject = tData.profile?.teacherSubject || (currentLang === 'ar' ? 'مادة غير محددة' : 'No Subject');
+                const groupsLabel = currentLang === 'ar' ? 'المجموعات' : 'Groups';
+                const detailsLabel = currentLang === 'ar' ? 'التفاصيل والإحصائيات' : 'Details & Stats';
+                
+                teachersHTML += `
+                    <div class="glass-card p-6 rounded-[2rem] border border-white/40 dark:border-white/5 hover:border-brand/50 hover:shadow-2xl hover:shadow-brand/10 hover:-translate-y-1 transition-all duration-300 group cursor-pointer" onclick="showTeacherStats(${centerTeachers.length - 1})">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand/20 to-brand/5 dark:from-brand/30 dark:to-brand/10 text-brand flex items-center justify-center text-2xl font-black shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                                ${teacherName.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 class="font-black text-xl text-gray-900 dark:text-white mb-1 group-hover:text-brand transition-colors">${teacherName}</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-bold bg-gray-100 dark:bg-black/30 inline-block px-2 py-1 rounded-md">${teacherSubject}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-5">
+                            <div class="bg-gray-50/80 dark:bg-black/30 p-4 rounded-2xl text-center border border-gray-100 dark:border-white/5 inner-stat-card">
+                                <span class="block text-[10px] text-gray-400 font-bold uppercase mb-1 tracking-wider">${groupsLabel}</span>
+                                <span class="font-black text-2xl text-gray-800 dark:text-gray-200 inner-stat-card-text">${groupsSnapshot.size}</span>
+                            </div>
+                            <div class="bg-gray-50/80 dark:bg-black/30 p-4 rounded-2xl text-center border border-gray-100 dark:border-white/5 inner-stat-card">
+                                <span class="block text-[10px] text-gray-400 font-bold uppercase mb-1 tracking-wider">${translations[currentLang].student}</span>
+                                <span class="font-black text-2xl text-gray-800 dark:text-gray-200 inner-stat-card-text">${teacherStudentsCount}</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <button onclick="event.stopPropagation(); showTeacherStats(${centerTeachers.length - 1})" class="w-full py-2.5 bg-brand hover:bg-brandHover text-black rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95">
+                                <i class="ri-bar-chart-box-line text-sm"></i>
+                                <span>${detailsLabel}</span>
+                            </button>
+                            <button onclick="event.stopPropagation(); loginAsTeacher('${tData.id}')" class="w-full py-2.5 bg-black dark:bg-brand/10 hover:bg-zinc-900 dark:hover:bg-brand/20 text-brand border border-brand/30 hover:border-brand rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95">
+                                <i class="ri-login-box-line text-sm"></i>
+                                <span>${currentLang === 'ar' ? 'دخول كمعلم' : 'Login as Teacher'}</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
             }
-
-            totalStudents += teacherStudentsCount;
-            centerTeachers.push({ ...tData, studentsCount: teacherStudentsCount, groupsCount: groupsSnapshot.size });
-
-            const teacherName = tData.profile?.teacherName || (currentLang === 'ar' ? 'مدرس غير مسمى' : 'Unnamed Teacher');
-            const teacherSubject = tData.profile?.teacherSubject || (currentLang === 'ar' ? 'مادة غير محددة' : 'No Subject');
-            const groupsLabel = currentLang === 'ar' ? 'المجموعات' : 'Groups';
-            const detailsLabel = currentLang === 'ar' ? 'التفاصيل والإحصائيات' : 'Details & Stats';
-            
-            teachersHTML += `
-                <div class="glass-card p-6 rounded-[2rem] border border-white/40 dark:border-white/5 hover:border-brand/50 hover:shadow-2xl hover:shadow-brand/10 hover:-translate-y-1 transition-all duration-300 group cursor-pointer" onclick="showTeacherStats(${centerTeachers.length - 1})">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand/20 to-brand/5 dark:from-brand/30 dark:to-brand/10 text-brand flex items-center justify-center text-2xl font-black shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-300">
-                            ${teacherName.charAt(0)}
-                        </div>
-                        <div>
-                            <h3 class="font-black text-xl text-gray-900 dark:text-white mb-1 group-hover:text-brand transition-colors">${teacherName}</h3>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold bg-gray-100 dark:bg-black/30 inline-block px-2 py-1 rounded-md">${teacherSubject}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-4 mb-5">
-                        <div class="bg-gray-50/80 dark:bg-black/30 p-4 rounded-2xl text-center border border-gray-100 dark:border-white/5 inner-stat-card">
-                            <span class="block text-[10px] text-gray-400 font-bold uppercase mb-1 tracking-wider">${groupsLabel}</span>
-                            <span class="font-black text-2xl text-gray-800 dark:text-gray-200 inner-stat-card-text">${groupsSnapshot.size}</span>
-                        </div>
-                        <div class="bg-gray-50/80 dark:bg-black/30 p-4 rounded-2xl text-center border border-gray-100 dark:border-white/5 inner-stat-card">
-                            <span class="block text-[10px] text-gray-400 font-bold uppercase mb-1 tracking-wider">${translations[currentLang].student}</span>
-                            <span class="font-black text-2xl text-gray-800 dark:text-gray-200 inner-stat-card-text">${teacherStudentsCount}</span>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 mt-4">
-                        <button onclick="event.stopPropagation(); showTeacherStats(${centerTeachers.length - 1})" class="w-full py-2.5 bg-brand hover:bg-brandHover text-black rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95">
-                            <i class="ri-bar-chart-box-line text-sm"></i>
-                            <span>${detailsLabel}</span>
-                        </button>
-                        <button onclick="event.stopPropagation(); loginAsTeacher('${tData.id}')" class="w-full py-2.5 bg-black dark:bg-brand/10 hover:bg-zinc-900 dark:hover:bg-brand/20 text-brand border border-brand/30 hover:border-brand rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95">
-                            <i class="ri-login-box-line text-sm"></i>
-                            <span>${currentLang === 'ar' ? 'دخول كمعلم' : 'Login as Teacher'}</span>
-                        </button>
-                    </div>
-                </div>
-            `;
+        } catch (e) {
+            console.warn(`Could not fetch data for teacher ${tid}:`, e.message);
         }
     }
 
