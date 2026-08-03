@@ -4729,19 +4729,27 @@ async function loadPreferences() {
             
             // ✅ Silent Firebase Auth Login if bypassed
             if (teacherData.password) {
-                firebase.auth().onAuthStateChanged(async (user) => {
-                    if (!user && navigator.onLine) {
-                        const fakeEmail = `${TEACHER_ID.substring(1)}@spot.com`;
-                        try {
-                            await firebase.auth().signInWithEmailAndPassword(fakeEmail, teacherData.password.toString().trim());
-                            console.log("✅ Silently restored Firebase Auth session.");
-                            // بعد ما يعمل لوج إن، خليه يجرب يرفع الحاجات اللي كانت واقفة
-                            processSyncQueue();
-                        } catch (e) {
-                            console.error("❌ Failed silent auth restoration:", e);
+                await new Promise((resolve) => {
+                    const unsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
+                        unsubscribe(); // تأكد من تشغيلها مرة واحدة فقط لمنع الـ Loops
+                        if (user) {
+                            resolve(); // مسجل دخول بالفعل، لا داعي لعمل أي شيء
+                        } else if (navigator.onLine) {
+                            const fakeEmail = `${TEACHER_ID.substring(1)}@spot.com`;
+                            try {
+                                await firebase.auth().signInWithEmailAndPassword(fakeEmail, teacherData.password.toString().trim());
+                                console.log("✅ Silently restored Firebase Auth session.");
+                            } catch (e) {
+                                console.error("❌ Failed silent auth restoration:", e);
+                            }
+                            resolve();
+                        } else {
+                            resolve();
                         }
-                    }
+                    });
                 });
+                // بعد التأكد من وجود جلسة فايربيس، يمكننا رفع البيانات المعلقة بأمان
+                processSyncQueue();
             }
         }
 
