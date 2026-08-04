@@ -4753,51 +4753,76 @@ async function loadPreferences() {
         let teacherData = null;
         try {
             teacherData = await getFromDB('teachers', TEACHER_ID);
-            if (teacherData) {
-                document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''}`;
-                document.getElementById('teacherNameInput').value = teacherData.name || '';
-                document.getElementById('teacherSubjectInput').value = teacherData.subject || '';
-                document.getElementById('profilePasswordInput').value = teacherData.password || '';
-            }
         } catch (e) { console.log("Auto-login fetch error:", e); }
 
-        if (teacherData) {
-            const portalWelcome = document.getElementById('portalWelcomeTeacher');
-            if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''} 👋`;
-            
-            // ✅ Silent Firebase Auth Login if bypassed
-            if (teacherData.password) {
-                const authUser = await new Promise((resolve) => {
-                    const unsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
-                        unsubscribe(); // مرة واحدة فقط
-                        if (user) {
-                            console.log("✅ Firebase Auth session already active:", user.email);
-                            resolve(user);
-                        } else if (navigator.onLine) {
-                            const fakeEmail = `${TEACHER_ID.substring(1)}@spot.com`;
-                            console.log("🔑 Attempting silent auth restore for:", fakeEmail);
-                            try {
-                                const cred = await firebase.auth().signInWithEmailAndPassword(fakeEmail, teacherData.password.toString().trim());
-                                console.log("✅ Silently restored Firebase Auth session:", cred.user.email);
-                                resolve(cred.user);
-                            } catch (e) {
-                                console.error("❌ Failed silent auth restoration:", e.code, e.message);
-                                resolve(null);
-                            }
+        // ✅ Wait for Firebase Auth session to be ready before proceeding
+        const authUser = await new Promise((resolve) => {
+            if (typeof firebase.auth !== 'function') {
+                resolve(null);
+                return;
+            }
+            const unsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
+                unsubscribe(); // مرة واحدة فقط
+                if (user) {
+                    console.log("✅ Firebase Auth session already active:", user.email);
+                    resolve(user);
+                } else if (navigator.onLine) {
+                    const fakeEmail = `${TEACHER_ID.substring(1)}@spot.com`;
+                    console.log("🔑 Attempting silent auth restore for:", fakeEmail);
+                    try {
+                        const pass = teacherData ? teacherData.password : null;
+                        if (pass) {
+                            const cred = await firebase.auth().signInWithEmailAndPassword(fakeEmail, pass.toString().trim());
+                            console.log("✅ Silently restored Firebase Auth session:", cred.user.email);
+                            resolve(cred.user);
                         } else {
-                            console.warn("⚠️ Offline, skipping auth restore");
+                            // Without password locally, we can't silent auth. It will just fail to sync.
+                            // But if they came from center dashboard, they ALREADY signed in, so `user` would NOT be null above!
+                            console.warn("⚠️ No password found locally for silent auth");
                             resolve(null);
                         }
-                    });
-                });
-                
-                // بعد التأكد من وجود جلسة فايربيس، يمكننا رفع البيانات المعلقة بأمان
-                if (authUser) {
-                    processSyncQueue();
+                    } catch (e) {
+                        console.error("❌ Failed silent auth restoration:", e.code, e.message);
+                        resolve(null);
+                    }
                 } else {
-                    console.warn("⚠️ No auth session. Sync queue will wait for next login.");
+                    console.warn("⚠️ Offline, skipping auth restore");
+                    resolve(null);
                 }
+            });
+        });
+
+        // Now that Auth is ready, if we didn't have teacherData locally, fetch it from Firestore
+        if (!teacherData && navigator.onLine && authUser) {
+            try {
+                const tDoc = await firestoreDB.collection('teachers').doc(TEACHER_ID).get();
+                if (tDoc.exists) {
+                    teacherData = { id: tDoc.id, ...tDoc.data() };
+                    await saveToDB('teachers', teacherData);
+                }
+            } catch (e) {
+                console.error("Failed to fetch teacher from Firestore:", e);
             }
+        }
+
+        if (teacherData) {
+            document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''}`;
+            const nameInput = document.getElementById('teacherNameInput');
+            if (nameInput) nameInput.value = teacherData.name || '';
+            const subjectInput = document.getElementById('teacherSubjectInput');
+            if (subjectInput) subjectInput.value = teacherData.subject || '';
+            const passInput = document.getElementById('profilePasswordInput');
+            if (passInput) passInput.value = teacherData.password || '';
+
+            const portalWelcome = document.getElementById('portalWelcomeTeacher');
+            if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''} 👋`;
+        }
+
+        // بعد التأكد من وجود جلسة فايربيس، يمكننا رفع البيانات المعلقة بأمان
+        if (authUser) {
+            processSyncQueue();
+        } else {
+            console.warn("⚠️ No auth session. Sync queue will wait for next login.");
         }
 
         // تحميل المجموعات والذهاب للمتابعة الذكية

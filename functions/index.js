@@ -2184,3 +2184,46 @@ exports.removeTeacherFromCenter = onCall({ cors: true }, async (request) => {
 
   return { success: true };
 });
+
+exports.removeParentTokenOnLogout = onCall({ cors: true }, async (request) => {
+  const data = request.data;
+  const phoneFormats = data.phoneFormats;
+  const fcmToken = data.fcmToken;
+
+  if (!phoneFormats || !Array.isArray(phoneFormats) || !fcmToken) {
+    throw new HttpsError("invalid-argument", "Missing phoneFormats array or fcmToken");
+  }
+
+  try {
+    // 1. Remove from global parents collection
+    for (const phoneDocId of phoneFormats) {
+      await admin.firestore().collection('parents').doc(phoneDocId).update({
+        fcmToken: admin.firestore.FieldValue.delete(),
+        fcmTokens: admin.firestore.FieldValue.arrayRemove(fcmToken)
+      }).catch(() => {}); // ignore if doc doesn't exist
+    }
+
+    // 2. Remove from student documents (the new DB structure)
+    for (const phoneDocId of phoneFormats) {
+      const studentsSnapshot = await admin.firestore()
+        .collectionGroup("students")
+        .where("parentPhoneNumber", "==", phoneDocId)
+        .get();
+
+      if (!studentsSnapshot.empty) {
+        const batch = admin.firestore().batch();
+        studentsSnapshot.forEach((doc) => {
+          batch.update(doc.ref, {
+            parentFcmToken: admin.firestore.FieldValue.delete()
+          });
+        });
+        await batch.commit();
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error in removeParentTokenOnLogout:", error);
+    throw new HttpsError("internal", error.message);
+  }
+});

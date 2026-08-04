@@ -676,6 +676,9 @@ firebase.auth().onAuthStateChanged(async (user) => {
         
         if (cid && cpass) {
             console.log("🔑 Attempting silent auth restore for center...");
+            const landing = document.getElementById('landingSection');
+            if (landing) landing.classList.add('hidden');
+            
             try {
                 const fakeEmail = `${cid.substring(1)}@spot.com`;
                 await firebase.auth().signInWithEmailAndPassword(fakeEmail, cpass);
@@ -683,6 +686,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
                 return; // The listener will fire again with the user!
             } catch (err) {
                 console.error("Silent auth restore failed for center:", err);
+                if (landing) landing.classList.remove('hidden');
             }
         }
 
