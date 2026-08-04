@@ -474,7 +474,12 @@ async function submitNewTeacher() {
     }
 }
 
-function handleLogout() {
+async function handleLogout() {
+    try {
+        if (firebase.auth().currentUser) {
+            await firebase.auth().signOut();
+        }
+    } catch(e) {}
     localStorage.removeItem('learnaria-cid');
     window.location.href = 'dashboard.html';
 }

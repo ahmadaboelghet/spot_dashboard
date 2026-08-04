@@ -2099,10 +2099,23 @@ async function logout() {
     const confirmed = await showCustomConfirm(confirmMsg, '', 'ri-logout-box-r-line');
     if (!confirmed) return;
 
+    try {
+        if (firebase.auth().currentUser) {
+            await firebase.auth().signOut();
+        }
+    } catch(e) {
+        console.error("Firebase signout error:", e);
+    }
+
     localStorage.removeItem('learnaria-remember');
     removeSessionItem('learnaria-tid');
     removeSessionItem('learnaria-gid');
     removeSessionItem('learnaria-tab');
+
+    try {
+        indexedDB.deleteDatabase(DB_NAME);
+    } catch(e) {}
+
     location.reload();
 }
 
