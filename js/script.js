@@ -2121,7 +2121,7 @@ async function logout() {
     if (isCenterTeacher) {
         window.location.href = 'center_dashboard.html';
     } else {
-        window.location.href = 'index.html';
+        window.location.href = 'dashboard.html';
     }
 }
 

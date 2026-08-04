@@ -483,7 +483,7 @@ async function handleLogout() {
     localStorage.removeItem('learnaria-cid');
     localStorage.removeItem('learnaria-cpass');
     localStorage.removeItem('learnaria-remember');
-    window.location.href = 'index.html';
+    window.location.href = 'dashboard.html';
 }
 
 let pendingLoginTeacherId = null;
@@ -562,8 +562,7 @@ async function verifyTeacherPasswordAndLogin() {
 
         console.log("✅ Firebase Auth: Signed in as teacher", teacherPhone);
 
-        // Clear center session and set teacher session
-        localStorage.removeItem('learnaria-cid');
+        // Set teacher session (keep center session alive in localStorage for return)
         localStorage.setItem('learnaria-tid', teacherPhone);
         localStorage.setItem('learnaria-remember', 'true');
         window.location.href = 'dashboard.html';
