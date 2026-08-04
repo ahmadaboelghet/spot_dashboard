@@ -2099,6 +2099,8 @@ async function logout() {
     const confirmed = await showCustomConfirm(confirmMsg, '', 'ri-logout-box-r-line');
     if (!confirmed) return;
 
+    const isCenterTeacher = localStorage.getItem('learnaria-cid');
+
     try {
         if (firebase.auth().currentUser) {
             await firebase.auth().signOut();
@@ -2116,7 +2118,11 @@ async function logout() {
         indexedDB.deleteDatabase(DB_NAME);
     } catch(e) {}
 
-    location.reload();
+    if (isCenterTeacher) {
+        window.location.href = 'center_dashboard.html';
+    } else {
+        window.location.href = 'index.html';
+    }
 }
 
 async function loadGroups() {

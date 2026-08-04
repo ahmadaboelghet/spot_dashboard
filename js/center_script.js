@@ -481,7 +481,9 @@ async function handleLogout() {
         }
     } catch(e) {}
     localStorage.removeItem('learnaria-cid');
-    window.location.href = 'dashboard.html';
+    localStorage.removeItem('learnaria-cpass');
+    localStorage.removeItem('learnaria-remember');
+    window.location.href = 'index.html';
 }
 
 let pendingLoginTeacherId = null;
