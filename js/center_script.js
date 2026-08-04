@@ -525,8 +525,39 @@ async function verifyTeacherPasswordAndLogin() {
             return;
         }
 
-        // Login success, store session and redirect
-        localStorage.setItem('learnaria-tid', pendingLoginTeacherId);
+        statusDiv.innerText = currentLang === 'ar' ? 'جاري تسجيل الدخول...' : 'Signing in...';
+
+        // ✅ CRITICAL: Sign out the center first, then sign in as the teacher
+        // This ensures Firestore rules recognize the teacher's identity
+        await firebase.auth().signOut();
+
+        const teacherPhone = pendingLoginTeacherId; // e.g. "+201000113355"
+        const fakeEmail = `${teacherPhone.substring(1)}@spot.com`; // e.g. "201000113355@spot.com"
+
+        try {
+            await firebase.auth().signInWithEmailAndPassword(fakeEmail, password);
+        } catch (authErr) {
+            // If not yet migrated to Auth, create the account first
+            if (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-credential' || authErr.code === 'auth/invalid-login-credentials') {
+                try {
+                    await firebase.auth().createUserWithEmailAndPassword(fakeEmail, password);
+                } catch (createErr) {
+                    if (createErr.code !== 'auth/email-already-in-use') {
+                        throw createErr;
+                    }
+                    // If already exists but wrong password, throw original error
+                    throw authErr;
+                }
+            } else {
+                throw authErr;
+            }
+        }
+
+        console.log("✅ Firebase Auth: Signed in as teacher", teacherPhone);
+
+        // Clear center session and set teacher session
+        localStorage.removeItem('learnaria-cid');
+        localStorage.setItem('learnaria-tid', teacherPhone);
         localStorage.setItem('learnaria-remember', 'true');
         window.location.href = 'dashboard.html';
     } catch (err) {
