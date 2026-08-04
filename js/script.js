@@ -2168,7 +2168,7 @@ function renderGroupsDropdown(groupsList) {
                         
                         <!-- Bottom: Group Title & CTA -->
                         <div>
-                            <h4 class="font-black text-gray-800 dark:text-white text-base group-hover:text-brand transition-colors leading-tight truncate" title="${g.name}">${g.name}</h4>
+                            <h4 class="font-black text-gray-800 dark:text-white text-sm group-hover:text-brand transition-colors leading-tight line-clamp-2 break-words" title="${g.name}">${g.name}</h4>
                             <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 font-bold">${enterGroupMsg}</p>
                         </div>
                     </div>
