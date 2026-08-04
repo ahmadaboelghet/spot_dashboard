@@ -1202,8 +1202,8 @@ async function processSyncQueue(isRecovering = false) {
         return;
     }
 
-    if (!firebase.auth().currentUser) {
-        console.warn("🔒 processSyncQueue aborted: no authenticated user. Will retry after login.");
+    if (!firebase.auth || typeof firebase.auth !== 'function' || !firebase.auth().currentUser) {
+        console.warn("🔒 processSyncQueue aborted: no authenticated user or auth not ready. Will retry after login.");
         return;
     }
 
@@ -2129,7 +2129,7 @@ async function loadGroups() {
     let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
     renderGroupsDropdown(groups);
 
-    if (navigator.onLine && firebase.auth().currentUser) {
+    if (navigator.onLine && typeof firebase.auth === 'function' && firebase.auth().currentUser) {
         // Sync in background to not block UI loading
         (async () => {
             try {
@@ -2365,7 +2365,7 @@ async function loadGroupData() {
     }
 
     // 2. جلب البيانات من السيرفر (Sync)
-    if (navigator.onLine && firebase.auth().currentUser) {
+    if (navigator.onLine && typeof firebase.auth === 'function' && firebase.auth().currentUser) {
         try {
             // جلب كل البيانات بالتوازي لتسريع العملية بشكل كبير جداً بدلاً من جلبها بالتتابع
             const [sSnap, aSnap, asSnap, pSnap] = await Promise.all([
@@ -4665,7 +4665,7 @@ async function handleChangePassword() {
     }
 
     try {
-        const user = firebase.auth().currentUser;
+        const user = typeof firebase.auth === 'function' ? firebase.auth().currentUser : null;
         if (!user) {
             showToast("حدث خطأ في الجلسة، يرجى تسجيل الدخول مجدداً", "error");
             return;
