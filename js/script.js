@@ -4798,7 +4798,7 @@ async function loadPreferences() {
                 const tDoc = await firestoreDB.collection('teachers').doc(TEACHER_ID).get();
                 if (tDoc.exists) {
                     teacherData = { id: tDoc.id, ...tDoc.data() };
-                    await saveToDB('teachers', teacherData);
+                    await putToDB('teachers', teacherData); // Caching locally (not a sync write)
                 }
             } catch (e) {
                 console.error("Failed to fetch teacher from Firestore:", e);
