@@ -666,6 +666,11 @@ exports.paymentReminder = onSchedule({
   }
 
   const targetMonth = targetDate.toISOString().slice(0, 7); // Format: YYYY-MM
+  const targetMonthNum = parseInt(targetMonth.split("-")[1], 10);
+  if (targetMonthNum === 6 || targetMonthNum === 7) {
+    console.log(`Skipping payment reminders for summer vacation month: ${targetMonth}`);
+    return;
+  }
   console.log(`Checking Payments for: ${targetMonth} (Overdue: ${isOverdue})`);
 
   const teachersSnap = await admin.firestore().collection("teachers").get();
