@@ -6617,3 +6617,15 @@ document.addEventListener('keydown', async (e) => {
         hwScannerBuffer += e.key.toUpperCase();
     }
 });
+
+// ✅ تحديث روابط الشعار والرئيسية للمستخدم المسجل دخوله
+function updateHomeLinks() {
+    const isTeacherLoggedIn = localStorage.getItem('learnaria-tid') || sessionStorage.getItem('learnaria-tid');
+    document.querySelectorAll('[data-nav-home]').forEach(el => {
+        if (isTeacherLoggedIn) {
+            el.setAttribute('href', 'dashboard.html');
+        } else {
+            el.setAttribute('href', 'index.html');
+        }
+    });
+}
