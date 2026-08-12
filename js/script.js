@@ -2822,7 +2822,7 @@ function switchTab(tabId) {
         }
         renderDailyList();
         // 👉 بدء الـ scanner فوراً عند فتح تبّة الحصة اليومية
-        startScanner('daily');
+        // startScanner('daily');
         updateGroupAnalyticsChart();
     }
     if (tabId === 'students') renderStudents();
