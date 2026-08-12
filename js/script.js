@@ -1601,7 +1601,7 @@ function setupListeners() {
         hasHomeworkToday = e.target.checked;
         renderDailyList();
     });
-    document.getElementById('dailyDateInput')?.addEventListener('change', renderDailyList);
+    document.getElementById('dailyDateInput')?.addEventListener('change', (e) => { window.dailyRenderPromise = renderDailyList(); });
     document.getElementById('saveDailyBtn')?.addEventListener('click', saveDailyData);
     document.getElementById('hwYesBtn')?.addEventListener('click', () => resolveHomework(true));
     document.getElementById('hwNoBtn')?.addEventListener('click', () => resolveHomework(false));
@@ -2820,9 +2820,7 @@ function switchTab(tabId) {
         if (dailyInput) {
             dailyInput.valueAsDate = new Date();
         }
-        renderDailyList();
-        // 👉 بدء الـ scanner فوراً عند فتح تبّة الحصة اليومية
-        // startScanner('daily');
+        window.dailyRenderPromise = renderDailyList();
         updateGroupAnalyticsChart();
     }
     if (tabId === 'students') renderStudents();
@@ -3463,6 +3461,9 @@ function tickScanner() {
 // ==========================================
 
 async function handleScan(scannedText) {
+    if (window.dailyRenderPromise) {
+        await window.dailyRenderPromise; // ✅ انتظار تحميل قائمة الطلاب في حال كان يتم تحميلها
+    }
     const qrCode = scannedText.replace(/"/g, '').trim();
 
     // 🛑 الحالة: ربط الكارت
@@ -3480,13 +3481,13 @@ async function handleScan(scannedText) {
         return dbPhone.trim().replace(/^\+2/, '') === qrVal.trim().replace(/^\+2/, '');
     };
 
-    // const qrUpper = qrCode.toUpperCase();
+    const qrUpper = String(qrCode).toUpperCase();
 
     // 1. البحث في المجموعة الحالية (الأولوية)
     const matchedStudents = allStudents.filter(s =>
-        (s.cardId && s.cardId === qrCode) ||
+        (s.cardId && String(s.cardId).toUpperCase() === qrUpper) ||
         matchPhone(s.parentPhoneNumber, qrCode) ||
-        s.id === qrCode
+        String(s.id) === String(qrCode)
     );
 
     // 🛑 الحالة: الطالب مش في المجموعة دي (Cross-Group Logic)
@@ -3498,9 +3499,9 @@ async function handleScan(scannedText) {
             // بحث شامل في كل الطلاب (Global Search)
             const allLocalStudents = await getAllFromDB('students');
             const globalMatch = allLocalStudents.find(s =>
-                (s.cardId && s.cardId === qrCode) ||
+                (s.cardId && String(s.cardId).toUpperCase() === qrUpper) ||
                 matchPhone(s.parentPhoneNumber, qrCode) ||
-                s.id === qrCode
+                String(s.id) === String(qrCode)
             );
 
             if (globalMatch) {
