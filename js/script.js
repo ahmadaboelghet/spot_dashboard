@@ -3478,11 +3478,11 @@ async function handleScan(scannedText) {
         return dbPhone.trim().replace(/^\+2/, '') === qrVal.trim().replace(/^\+2/, '');
     };
 
-    const qrUpper = qrCode.toUpperCase();
+    // const qrUpper = qrCode.toUpperCase();
 
     // 1. البحث في المجموعة الحالية (الأولوية)
     const matchedStudents = allStudents.filter(s =>
-        (s.cardId && s.cardId.toUpperCase() === qrUpper) ||
+        (s.cardId && s.cardId === qrCode) ||
         matchPhone(s.parentPhoneNumber, qrCode) ||
         s.id === qrCode
     );
@@ -3496,7 +3496,7 @@ async function handleScan(scannedText) {
             // بحث شامل في كل الطلاب (Global Search)
             const allLocalStudents = await getAllFromDB('students');
             const globalMatch = allLocalStudents.find(s =>
-                (s.cardId && s.cardId.toUpperCase() === qrUpper) ||
+                (s.cardId && s.cardId === qrCode) ||
                 matchPhone(s.parentPhoneNumber, qrCode) ||
                 s.id === qrCode
             );
