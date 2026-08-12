@@ -2821,6 +2821,8 @@ function switchTab(tabId) {
             dailyInput.valueAsDate = new Date();
         }
         renderDailyList();
+        // 👉 بدء الـ scanner فوراً عند فتح تبّة الحصة اليومية
+        startScanner('daily');
         updateGroupAnalyticsChart();
     }
     if (tabId === 'students') renderStudents();
