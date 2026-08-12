@@ -1601,7 +1601,7 @@ function setupListeners() {
         hasHomeworkToday = e.target.checked;
         renderDailyList();
     });
-    document.getElementById('dailyDateInput')?.addEventListener('change', (e) => { window.dailyRenderPromise = renderDailyList(); });
+    document.getElementById('dailyDateInput')?.addEventListener('change', renderDailyList);
     document.getElementById('saveDailyBtn')?.addEventListener('click', saveDailyData);
     document.getElementById('hwYesBtn')?.addEventListener('click', () => resolveHomework(true));
     document.getElementById('hwNoBtn')?.addEventListener('click', () => resolveHomework(false));
@@ -2820,7 +2820,7 @@ function switchTab(tabId) {
         if (dailyInput) {
             dailyInput.valueAsDate = new Date();
         }
-        window.dailyRenderPromise = renderDailyList();
+        renderDailyList();
         updateGroupAnalyticsChart();
     }
     if (tabId === 'students') renderStudents();
@@ -3461,9 +3461,6 @@ function tickScanner() {
 // ==========================================
 
 async function handleScan(scannedText) {
-    if (window.dailyRenderPromise) {
-        await window.dailyRenderPromise; // ✅ انتظار تحميل قائمة الطلاب في حال كان يتم تحميلها
-    }
     const qrCode = scannedText.replace(/"/g, '').trim();
 
     // 🛑 الحالة: ربط الكارت
@@ -3481,13 +3478,13 @@ async function handleScan(scannedText) {
         return dbPhone.trim().replace(/^\+2/, '') === qrVal.trim().replace(/^\+2/, '');
     };
 
-    const qrUpper = String(qrCode).toUpperCase();
+    const qrUpper = qrCode.toUpperCase();
 
     // 1. البحث في المجموعة الحالية (الأولوية)
     const matchedStudents = allStudents.filter(s =>
-        (s.cardId && String(s.cardId).toUpperCase() === qrUpper) ||
+        (s.cardId && s.cardId === qrCode) ||
         matchPhone(s.parentPhoneNumber, qrCode) ||
-        String(s.id) === String(qrCode)
+        s.id === qrCode
     );
 
     // 🛑 الحالة: الطالب مش في المجموعة دي (Cross-Group Logic)
@@ -3499,9 +3496,9 @@ async function handleScan(scannedText) {
             // بحث شامل في كل الطلاب (Global Search)
             const allLocalStudents = await getAllFromDB('students');
             const globalMatch = allLocalStudents.find(s =>
-                (s.cardId && String(s.cardId).toUpperCase() === qrUpper) ||
+                (s.cardId && s.cardId === qrCode) ||
                 matchPhone(s.parentPhoneNumber, qrCode) ||
-                String(s.id) === String(qrCode)
+                s.id === qrCode
             );
 
             if (globalMatch) {
@@ -6562,22 +6559,20 @@ document.addEventListener('keydown', async (e) => {
 
     const currentTime = Date.now();
     
-    // تم زيادة الوقت لـ 150 ملي ثانية عشان يتوافق مع سرعة استجابة الـ USB في أجهزة Mac
-    if (currentTime - hwScannerLastKeyTime > 150) {
+    // ✅ تعديل 1: زيادة الوقت لـ 250 ملي ثانية لتجنب تفريغ الكود أثناء انشغال المتصفح برسم التابة
+    if (currentTime - hwScannerLastKeyTime > 250) {
         hwScannerBuffer = "";
     }
     
     hwScannerLastKeyTime = currentTime;
 
     if (e.key === "Enter") {
-        // لو السكانر داس انتر، نأخد الكود المكتوب
         const qrCode = hwScannerBuffer.trim();
         hwScannerBuffer = ""; // تصفير للعملية القادمة
         
-        // التأكد إن في كود فعلاً اتقرا (شيلنا شرط الـ NAZ- عشان يقبل أرقام التليفونات)
         if (qrCode.length >= 4) {
             
-            // 1. منع الـ Form من الإرسال لو المدرس كان واقف بالماوس جوا خانة بحث أو إدخال
+            // 1. منع الـ Form من الإرسال لو المدرس كان واقف بالماوس جوا خانة بحث
             const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
             const isInput = activeTag === 'input' || activeTag === 'textarea';
             if (isInput) {
@@ -6588,7 +6583,7 @@ document.addEventListener('keydown', async (e) => {
                 }
             }
 
-            // 2. تحديد وضع السكانر (هل إحنا بنربط كارت ولا بناخد غياب ولا بنحّصل مصاريف؟)
+            // 2. تحديد وضع السكانر
             const linkModal = document.getElementById('cardLinkModal');
             if (linkModal && !linkModal.classList.contains('hidden')) {
                 currentScannerMode = 'link-card';
@@ -6603,8 +6598,13 @@ document.addEventListener('keydown', async (e) => {
                 currentScannerMode = 'payments';
             } else {
                 currentScannerMode = 'daily';
+                
                 // لو المدرس مش واقف في شاشة الحصة، حوله عليها تلقائي
-                if (activeTab !== 'daily') switchTab('daily');
+                if (activeTab !== 'daily') {
+                    switchTab('daily');
+                    // ✅ تعديل 2 (السحري): إيقاف مؤقت لمدة 300 ملي ثانية لضمان اكتمال دالة renderDailyList ورسم الطلاب في الـ DOM
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
             }
 
             // 3. إرسال الكود لنفس الدالة اللي بتشغل كاميرا اللابتوب/الموبايل
@@ -6614,19 +6614,6 @@ document.addEventListener('keydown', async (e) => {
     }
 
     if (e.key.length === 1) {
-        // تحويل الحروف لكابيتال لتوحيد الصيغة
         hwScannerBuffer += e.key.toUpperCase();
     }
 });
-
-// ✅ تحديث روابط الشعار والرئيسية للمستخدم المسجل دخوله
-function updateHomeLinks() {
-    const isTeacherLoggedIn = localStorage.getItem('learnaria-tid') || sessionStorage.getItem('learnaria-tid');
-    document.querySelectorAll('[data-nav-home]').forEach(el => {
-        if (isTeacherLoggedIn) {
-            el.setAttribute('href', 'dashboard.html');
-        } else {
-            el.setAttribute('href', 'index.html');
-        }
-    });
-}
