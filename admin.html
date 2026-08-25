@@ -2317,11 +2317,17 @@
                         const data = doc.data();
                         const title = data.title || 'إشعار جديد';
                         const type = (data.context && data.context.type) || 'عام';
-                        const isSuccess = data.status === 'sent';
+                        const status = data.status || 'failed';
                         const time = data.sentAt ? data.sentAt.toDate().toLocaleTimeString('ar-EG') : '';
                         
-                        const icon = isSuccess ? '<i class="ri-check-line text-green-500 bg-green-100 dark:bg-green-500/20 p-2 rounded-lg"></i>' 
-                                               : '<i class="ri-close-line text-red-500 bg-red-100 dark:bg-red-500/20 p-2 rounded-lg"></i>';
+                        let icon;
+                        if (status === 'sent') {
+                            icon = '<i class="ri-check-line text-green-500 bg-green-100 dark:bg-green-500/20 p-2 rounded-lg"></i>';
+                        } else if (status === 'no_token') {
+                            icon = '<i class="ri-error-warning-line text-yellow-600 bg-yellow-100 dark:bg-yellow-600/20 p-2 rounded-lg"></i>';
+                        } else {
+                            icon = '<i class="ri-close-line text-red-500 bg-red-100 dark:bg-red-500/20 p-2 rounded-lg"></i>';
+                        }
 
                         feed.innerHTML += `
                             <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-white/5 animate-fade-in">
