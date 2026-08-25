@@ -7,330 +7,6 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            alert('Global Error: ' + msg);
-            return false;
-        };
-        window.addEventListener('unhandledrejection', function(event) {
-            alert('Unhandled Promise Rejection: ' + (event.reason && event.reason.message ? event.reason.message : event.reason));
-        });
-
-        // ==========================================
-        // 1. FIREBASE CONFIG
-        // ==========================================
-        const prodConfig = {
-            apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
-            authDomain: "learnaria-483e7.firebaseapp.com",
-            projectId: "learnaria-483e7",
-            storageBucket: "learnaria-483e7.firebasestorage.app",
-            messagingSenderId: "573038013067",
-            appId: "1:573038013067:web:db6a78e8370d33b07a828e",
-            measurementId: "G-T68CEZS4YC"
-        };
-        
-        // Initialize Firebase
-        const app = firebase.initializeApp(prodConfig);
-        const auth = firebase.auth();
-        const functions = firebase.functions();
-        const db = firebase.firestore();
-
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            auth.useEmulator(`http://${window.location.hostname}:9090`);
-            functions.useEmulator(window.location.hostname, 5011);
-            db.useEmulator(window.location.hostname, 8088);
-            console.log("🔌 Connected to Firebase Local Emulators");
-        }
-        
-        const ADMIN_EMAIL = 'admin@elnazer-edu.com';
-
-        // ==========================================
-        // 2. AUTHENTICATION LOGIC
-        // ==========================================
-        const loginScreen = document.getElementById('loginScreen');
-        const adminApp = document.getElementById('adminApp');
-        const loginError = document.getElementById('loginError');
-
-        function showError(msg) {
-            loginError.innerText = msg;
-            loginError.classList.remove('hidden');
-        }
-
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                if (user.email === ADMIN_EMAIL) {
-                    loginScreen.classList.add('hidden');
-                    adminApp.classList.remove('hidden');
-                    if(typeof loadOverviewData === 'function') loadOverviewData();
-                } else {
-                    auth.signOut();
-                    showError('Unauthorized access.');
-                }
-            } else {
-                loginScreen.classList.remove('hidden');
-                adminApp.classList.add('hidden');
-            }
-        });
-
-        document.getElementById('loginBtn').addEventListener('click', async () => {
-            const email = document.getElementById('adminEmail').value.trim();
-            const password = document.getElementById('adminPassword').value;
-            loginError.classList.add('hidden');
-            
-            if (!password) return showError('Please enter the password');
-            
-            const btn = document.getElementById('loginBtn');
-            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
-            btn.disabled = true;
-
-            try {
-                await auth.signInWithEmailAndPassword(email, password);
-            } catch (err) {
-                showError('Invalid password or access denied.');
-            } finally {
-                btn.innerHTML = '<i class="ri-login-circle-line"></i> Login';
-                btn.disabled = false;
-            }
-        });
-
-        document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
-        document.getElementById('logoutBtnMobile').addEventListener('click', () => auth.signOut());
-
-        function restrictPhoneInput(e) {
-            let val = e.target.value;
-            // Only allow digits and '+'
-            val = val.replace(/[^\d+]/g, '');
-            // Limit based on startsWith '+'
-            if (val.startsWith('+')) {
-                if (val.length > 13) val = val.substring(0, 13);
-            } else {
-                if (val.length > 11) val = val.substring(0, 11);
-            }
-            e.target.value = val;
-        }
-
-        document.getElementById('teacherPhoneInput').addEventListener('input', restrictPhoneInput);
-        document.getElementById('centerPhoneInput').addEventListener('input', restrictPhoneInput);
-        document.getElementById('cardOwnerInput').addEventListener('input', restrictPhoneInput);
-
-        // ==========================================
-        // 3. ENTITY MANAGEMENT (Teachers & Centers)
-        // ==========================================
-        async function createNewTeacher() {
-            const statusDiv = document.getElementById('teacherCreateStatus');
-            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
-            statusDiv.innerText = 'Validating data...';
-            
-            const name = document.getElementById('teacherNameInput').value.trim();
-            const subject = document.getElementById('teacherSubjectInput').value.trim();
-            const phone = document.getElementById('teacherPhoneInput').value.trim();
-            const password = document.getElementById('teacherPasswordInput').value.trim();
-
-            if (!name || !subject || !phone || !password) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Please fill all fields.';
-                return;
-            }
-
-            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
-            if (!phoneRegex.test(phone)) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Invalid Egyptian phone number format.';
-                return;
-            }
-
-            try {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
-                statusDiv.innerText = 'Sending to server...';
-                
-                const createTeacherFn = functions.httpsCallable('createTeacher');
-                await createTeacherFn({ teacherName: name, teacherSubject: subject, teacherPhone: phone, password: password });
-                
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
-                statusDiv.innerText = 'Teacher account created successfully!';
-                document.getElementById('teacherNameInput').value = '';
-                document.getElementById('teacherSubjectInput').value = '';
-                document.getElementById('teacherPhoneInput').value = '';
-                document.getElementById('teacherPasswordInput').value = '';
-            } catch (err) {
-                console.error(err);
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Error: ' + err.message;
-            }
-        }
-
-        async function createNewCenter() {
-            const statusDiv = document.getElementById('centerCreateStatus');
-            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
-            statusDiv.innerText = 'Validating data...';
-            
-            const name = document.getElementById('centerNameInput').value.trim();
-            const phone = document.getElementById('centerPhoneInput').value.trim();
-            const password = document.getElementById('centerPasswordInput').value.trim();
-
-            if (!name || !phone || !password) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Please fill all fields.';
-                return;
-            }
-
-            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
-            if (!phoneRegex.test(phone)) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Invalid Egyptian phone number format.';
-                return;
-            }
-
-            try {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
-                statusDiv.innerText = 'Sending to server...';
-                
-                const createCenterFn = functions.httpsCallable('createCenter');
-                await createCenterFn({ centerName: name, centerPhone: phone, password: password });
-                
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
-                statusDiv.innerText = 'Center account created successfully!';
-                document.getElementById('centerNameInput').value = '';
-                document.getElementById('centerPhoneInput').value = '';
-                document.getElementById('centerPasswordInput').value = '';
-            } catch (err) {
-                console.error(err);
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Error: ' + err.message;
-            }
-        }
-
-        // ==========================================
-        // 4. SMART CARDS GENERATION
-        // ==========================================
-        const motivationQuotes = [
-            "أنت بطل قصتك", "لا تستسلم أبداً", "استمر في التقدم", 
-            "النجاح يليق بك", "حلمك يستحق التعب", "إياك أن تيأس", 
-            "العلم نور دروبك", "المستقبل بانتظارك", "تعب اليوم راحة الغد"
-        ];
-
-        function generateCardId() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let id = 'NAZ-';
-            for (let i = 0; i < 8; i++) {
-                id += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return id;
-        }
-
-        async function generateAndAssignCards() {
-            const ownerPhone = document.getElementById('cardOwnerInput').value.trim();
-            const countInput = document.getElementById('cardsCountInput');
-            let count = parseInt(countInput.value) || 100;
-            const statusDiv = document.getElementById('cardGenStatus');
-            const btn = document.getElementById('generateBtn');
-
-            if (!ownerPhone) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Owner phone number is required.';
-                return;
-            }
-
-            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
-            if (!phoneRegex.test(ownerPhone)) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Invalid Egyptian phone number format.';
-                return;
-            }
-
-            if (count > 2000) count = 2000;
-            if (count < 1) count = 1;
-            countInput.value = count;
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Generating...';
-            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
-            statusDiv.innerText = 'Verifying owner identity...';
-
-            try {
-                // Verify owner exists (check both teachers and centers)
-                let isTeacher = false;
-                let isCenter = false;
-                
-                const tDoc = await db.collection('teachers').doc(ownerPhone).get();
-                if (tDoc.exists) isTeacher = true;
-                
-                if (!isTeacher) {
-                    const cDoc = await db.collection('centers').doc(ownerPhone).get();
-                    if (cDoc.exists) isCenter = true;
-                }
-
-                if (!isTeacher && !isCenter) {
-                    throw new Error('No teacher or center found with this number.');
-                }
-
-                statusDiv.innerText = `Verified. Generating ${count} cards...`;
-
-                // Generate Card IDs and Prepare Batch
-                const generatedCards = [];
-                const batch = db.batch();
-                
-                const cardsRef = db.collection('smart_cards');
-                
-                for (let i = 0; i < count; i++) {
-                    const cardId = generateCardId();
-                    generatedCards.push(cardId);
-                    
-                    batch.set(cardsRef.doc(cardId), {
-                        ownerId: ownerPhone,
-                        ownerType: isTeacher ? 'teacher' : 'center',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        assignedToStudent: false
-                    });
-                }
-
-                await batch.commit();
-
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
-                statusDiv.innerText = 'Saved. Preparing print view...';
-
-                // Render HTML for Print
-                const container = document.getElementById('printCardsContainer');
-                container.innerHTML = '';
-                container.style.display = 'grid';
-
-                for (const cardId of generatedCards) {
-                    let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
-                    const card = document.createElement('div');
-                    card.className = 'generic-card';
-                    card.innerHTML = `
-                        <div id="generic-qr-${cardId}"></div>
-                        <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; margin-top: 6px; color: #000000; letter-spacing: 1px; text-align: center;">${cardId}</div>
-                        <div style="font-size: 9px; font-weight: bold; margin-top: 3px; color: #666; text-align: center;">${randomQuote}</div>
-                    `;
-                    container.appendChild(card);
-
-                    new QRCode(card.querySelector(`#generic-qr-${cardId}`), {
-                        text: cardId,
-                        width: 100,
-                        height: 100,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                }
-
-                // Trigger Print
-                setTimeout(() => {
-                    window.print();
-                    container.style.display = 'none';
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
-                }, 1000);
-
-            } catch (err) {
-                console.error(err);
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = err.message;
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
-            }
-        }
-
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -543,6 +219,55 @@
             100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
     </style>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- QRCode JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Firebase v8 Compat -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            alert('Global Error: ' + msg);
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            alert('Unhandled Promise Rejection: ' + (event.reason && event.reason.message ? event.reason.message : event.reason));
+        });
+
+        // ==========================================
+        // 1. FIREBASE CONFIG
+        // ==========================================
+        const prodConfig = {
+            apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
+            authDomain: "learnaria-483e7.firebaseapp.com",
+            projectId: "learnaria-483e7",
+            storageBucket: "learnaria-483e7.firebasestorage.app",
+            messagingSenderId: "573038013067",
+            appId: "1:573038013067:web:db6a78e8370d33b07a828e",
+            measurementId: "G-T68CEZS4YC"
+        };
+        
+        // Initialize Firebase
+        const app = firebase.initializeApp(prodConfig);
+        const auth = firebase.auth();
+        const functions = firebase.functions();
+        const db = firebase.firestore();
+
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            auth.useEmulator(`http://${window.location.hostname}:9090`);
+            functions.useEmulator(window.location.hostname, 5011);
+            db.useEmulator(window.location.hostname, 8088);
+            console.log("🔌 Connected to Firebase Local Emulators");
+        }
+        
+        const ADMIN_EMAIL = 'admin@elnazer-edu.com';
+    </script>
 </head>
 <body class="antialiased">
 
@@ -672,6 +397,7 @@
                 </div>
             </div>
 
+            
             <!-- Tab Content: Overview -->
             <div id="tab-overview" class="tab-content block animate-fade-in">
                 <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -768,51 +494,9 @@
                     </div>
                 </div>
             </div>
+
             
-            
-            <!-- Tab Content: Data Explorer -->
-            <div id="tab-explorer" class="tab-content hidden animate-fade-in">
-                <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div>
-                        <h2 class="text-3xl font-black text-gray-900 dark:text-white font-cairo flex items-center gap-3">
-                            <i class="ri-folder-open-fill text-brand"></i> بيانات المدرسين والطلاب
-                        </h2>
-                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">استعراض هرمي للمدرسين، المجموعات، والطلاب.</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <input type="text" id="globalSearchInput" placeholder="بحث شامل (هاتف، اسم، كود)..." class="input-clean !py-2 !w-64">
-                        <button onclick="performGlobalSearch()" class="btn-brand flex items-center gap-2 py-2 px-4 rounded-xl text-sm">
-                            <i class="ri-search-line"></i> بحث
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Global Search Results -->
-                <div id="searchResultsContainer" class="hidden mb-6">
-                    <div class="glass-card overflow-hidden border border-brand/30">
-                        <div class="bg-brand/10 p-3 flex justify-between items-center border-b border-brand/20">
-                            <h3 class="font-bold text-brand flex items-center gap-2"><i class="ri-search-eye-line"></i> نتائج البحث الشامل</h3>
-                            <button onclick="closeSearchResults()" class="text-gray-500 hover:text-gray-700"><i class="ri-close-line text-xl"></i></button>
-                        </div>
-                        <div id="searchResultsContent" class="p-4 max-h-96 overflow-y-auto space-y-3"></div>
-                    </div>
-                </div>
-
-                <!-- Accordion Tree View -->
-                <div class="glass-card p-4">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ri-organization-chart"></i> شجرة البيانات</h3>
-                        <button onclick="loadExplorerData()" class="text-sm font-bold text-brand hover:text-brand-dark bg-brand/10 px-3 py-1.5 rounded-lg transition-colors">
-                            <i class="ri-refresh-line"></i> تحديث الكل
-                        </button>
-                    </div>
-                    <div id="explorerTree" class="space-y-2">
-                        <div class="text-center text-gray-500 p-8"><i class="ri-loader-4-line animate-spin text-3xl"></i></div>
-                    </div>
-                </div>
-            </div>
-
-<!-- Tab Content: Auth Users -->
+            <!-- Tab Content: Auth Users -->
             <div id="tab-auth_users" class="tab-content hidden animate-fade-in">
                 <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
@@ -1214,330 +898,6 @@
     <div id="printCardsContainer"></div>
 
     <script>
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            alert('Global Error: ' + msg);
-            return false;
-        };
-        window.addEventListener('unhandledrejection', function(event) {
-            alert('Unhandled Promise Rejection: ' + (event.reason && event.reason.message ? event.reason.message : event.reason));
-        });
-
-        // ==========================================
-        // 1. FIREBASE CONFIG
-        // ==========================================
-        const prodConfig = {
-            apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
-            authDomain: "learnaria-483e7.firebaseapp.com",
-            projectId: "learnaria-483e7",
-            storageBucket: "learnaria-483e7.firebasestorage.app",
-            messagingSenderId: "573038013067",
-            appId: "1:573038013067:web:db6a78e8370d33b07a828e",
-            measurementId: "G-T68CEZS4YC"
-        };
-        
-        // Initialize Firebase
-        const app = firebase.initializeApp(prodConfig);
-        const auth = firebase.auth();
-        const functions = firebase.functions();
-        const db = firebase.firestore();
-
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            auth.useEmulator(`http://${window.location.hostname}:9090`);
-            functions.useEmulator(window.location.hostname, 5011);
-            db.useEmulator(window.location.hostname, 8088);
-            console.log("🔌 Connected to Firebase Local Emulators");
-        }
-        
-        const ADMIN_EMAIL = 'admin@elnazer-edu.com';
-
-        // ==========================================
-        // 2. AUTHENTICATION LOGIC
-        // ==========================================
-        const loginScreen = document.getElementById('loginScreen');
-        const adminApp = document.getElementById('adminApp');
-        const loginError = document.getElementById('loginError');
-
-        function showError(msg) {
-            loginError.innerText = msg;
-            loginError.classList.remove('hidden');
-        }
-
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                if (user.email === ADMIN_EMAIL) {
-                    loginScreen.classList.add('hidden');
-                    adminApp.classList.remove('hidden');
-                    if(typeof loadOverviewData === 'function') loadOverviewData();
-                } else {
-                    auth.signOut();
-                    showError('Unauthorized access.');
-                }
-            } else {
-                loginScreen.classList.remove('hidden');
-                adminApp.classList.add('hidden');
-            }
-        });
-
-        document.getElementById('loginBtn').addEventListener('click', async () => {
-            const email = document.getElementById('adminEmail').value.trim();
-            const password = document.getElementById('adminPassword').value;
-            loginError.classList.add('hidden');
-            
-            if (!password) return showError('Please enter the password');
-            
-            const btn = document.getElementById('loginBtn');
-            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
-            btn.disabled = true;
-
-            try {
-                await auth.signInWithEmailAndPassword(email, password);
-            } catch (err) {
-                showError('Invalid password or access denied.');
-            } finally {
-                btn.innerHTML = '<i class="ri-login-circle-line"></i> Login';
-                btn.disabled = false;
-            }
-        });
-
-        document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
-        document.getElementById('logoutBtnMobile').addEventListener('click', () => auth.signOut());
-
-        function restrictPhoneInput(e) {
-            let val = e.target.value;
-            // Only allow digits and '+'
-            val = val.replace(/[^\d+]/g, '');
-            // Limit based on startsWith '+'
-            if (val.startsWith('+')) {
-                if (val.length > 13) val = val.substring(0, 13);
-            } else {
-                if (val.length > 11) val = val.substring(0, 11);
-            }
-            e.target.value = val;
-        }
-
-        document.getElementById('teacherPhoneInput').addEventListener('input', restrictPhoneInput);
-        document.getElementById('centerPhoneInput').addEventListener('input', restrictPhoneInput);
-        document.getElementById('cardOwnerInput').addEventListener('input', restrictPhoneInput);
-
-        // ==========================================
-        // 3. ENTITY MANAGEMENT (Teachers & Centers)
-        // ==========================================
-        async function createNewTeacher() {
-            const statusDiv = document.getElementById('teacherCreateStatus');
-            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
-            statusDiv.innerText = 'Validating data...';
-            
-            const name = document.getElementById('teacherNameInput').value.trim();
-            const subject = document.getElementById('teacherSubjectInput').value.trim();
-            const phone = document.getElementById('teacherPhoneInput').value.trim();
-            const password = document.getElementById('teacherPasswordInput').value.trim();
-
-            if (!name || !subject || !phone || !password) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Please fill all fields.';
-                return;
-            }
-
-            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
-            if (!phoneRegex.test(phone)) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Invalid Egyptian phone number format.';
-                return;
-            }
-
-            try {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
-                statusDiv.innerText = 'Sending to server...';
-                
-                const createTeacherFn = functions.httpsCallable('createTeacher');
-                await createTeacherFn({ teacherName: name, teacherSubject: subject, teacherPhone: phone, password: password });
-                
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
-                statusDiv.innerText = 'Teacher account created successfully!';
-                document.getElementById('teacherNameInput').value = '';
-                document.getElementById('teacherSubjectInput').value = '';
-                document.getElementById('teacherPhoneInput').value = '';
-                document.getElementById('teacherPasswordInput').value = '';
-            } catch (err) {
-                console.error(err);
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Error: ' + err.message;
-            }
-        }
-
-        async function createNewCenter() {
-            const statusDiv = document.getElementById('centerCreateStatus');
-            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
-            statusDiv.innerText = 'Validating data...';
-            
-            const name = document.getElementById('centerNameInput').value.trim();
-            const phone = document.getElementById('centerPhoneInput').value.trim();
-            const password = document.getElementById('centerPasswordInput').value.trim();
-
-            if (!name || !phone || !password) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Please fill all fields.';
-                return;
-            }
-
-            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
-            if (!phoneRegex.test(phone)) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Invalid Egyptian phone number format.';
-                return;
-            }
-
-            try {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
-                statusDiv.innerText = 'Sending to server...';
-                
-                const createCenterFn = functions.httpsCallable('createCenter');
-                await createCenterFn({ centerName: name, centerPhone: phone, password: password });
-                
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
-                statusDiv.innerText = 'Center account created successfully!';
-                document.getElementById('centerNameInput').value = '';
-                document.getElementById('centerPhoneInput').value = '';
-                document.getElementById('centerPasswordInput').value = '';
-            } catch (err) {
-                console.error(err);
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Error: ' + err.message;
-            }
-        }
-
-        // ==========================================
-        // 4. SMART CARDS GENERATION
-        // ==========================================
-        const motivationQuotes = [
-            "أنت بطل قصتك", "لا تستسلم أبداً", "استمر في التقدم", 
-            "النجاح يليق بك", "حلمك يستحق التعب", "إياك أن تيأس", 
-            "العلم نور دروبك", "المستقبل بانتظارك", "تعب اليوم راحة الغد"
-        ];
-
-        function generateCardId() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let id = 'NAZ-';
-            for (let i = 0; i < 8; i++) {
-                id += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return id;
-        }
-
-        async function generateAndAssignCards() {
-            const ownerPhone = document.getElementById('cardOwnerInput').value.trim();
-            const countInput = document.getElementById('cardsCountInput');
-            let count = parseInt(countInput.value) || 100;
-            const statusDiv = document.getElementById('cardGenStatus');
-            const btn = document.getElementById('generateBtn');
-
-            if (!ownerPhone) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Owner phone number is required.';
-                return;
-            }
-
-            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
-            if (!phoneRegex.test(ownerPhone)) {
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = 'Invalid Egyptian phone number format.';
-                return;
-            }
-
-            if (count > 2000) count = 2000;
-            if (count < 1) count = 1;
-            countInput.value = count;
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Generating...';
-            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
-            statusDiv.innerText = 'Verifying owner identity...';
-
-            try {
-                // Verify owner exists (check both teachers and centers)
-                let isTeacher = false;
-                let isCenter = false;
-                
-                const tDoc = await db.collection('teachers').doc(ownerPhone).get();
-                if (tDoc.exists) isTeacher = true;
-                
-                if (!isTeacher) {
-                    const cDoc = await db.collection('centers').doc(ownerPhone).get();
-                    if (cDoc.exists) isCenter = true;
-                }
-
-                if (!isTeacher && !isCenter) {
-                    throw new Error('No teacher or center found with this number.');
-                }
-
-                statusDiv.innerText = `Verified. Generating ${count} cards...`;
-
-                // Generate Card IDs and Prepare Batch
-                const generatedCards = [];
-                const batch = db.batch();
-                
-                const cardsRef = db.collection('smart_cards');
-                
-                for (let i = 0; i < count; i++) {
-                    const cardId = generateCardId();
-                    generatedCards.push(cardId);
-                    
-                    batch.set(cardsRef.doc(cardId), {
-                        ownerId: ownerPhone,
-                        ownerType: isTeacher ? 'teacher' : 'center',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        assignedToStudent: false
-                    });
-                }
-
-                await batch.commit();
-
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
-                statusDiv.innerText = 'Saved. Preparing print view...';
-
-                // Render HTML for Print
-                const container = document.getElementById('printCardsContainer');
-                container.innerHTML = '';
-                container.style.display = 'grid';
-
-                for (const cardId of generatedCards) {
-                    let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
-                    const card = document.createElement('div');
-                    card.className = 'generic-card';
-                    card.innerHTML = `
-                        <div id="generic-qr-${cardId}"></div>
-                        <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; margin-top: 6px; color: #000000; letter-spacing: 1px; text-align: center;">${cardId}</div>
-                        <div style="font-size: 9px; font-weight: bold; margin-top: 3px; color: #666; text-align: center;">${randomQuote}</div>
-                    `;
-                    container.appendChild(card);
-
-                    new QRCode(card.querySelector(`#generic-qr-${cardId}`), {
-                        text: cardId,
-                        width: 100,
-                        height: 100,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                }
-
-                // Trigger Print
-                setTimeout(() => {
-                    window.print();
-                    container.style.display = 'none';
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
-                }, 1000);
-
-            } catch (err) {
-                console.error(err);
-                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
-                statusDiv.innerText = err.message;
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
-            }
-        }
-
         // Check initial dark mode preference
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
@@ -1570,6 +930,7 @@
                     contentEl.classList.remove('hidden');
                 }
             });
+        });
         // ==========================================
         // 5. NEW TOOLS (Reset & Activate)
         // ==========================================
@@ -1704,6 +1065,313 @@
                 btnAdd.disabled = false;
                 btnRemove.disabled = false;
             }
+        }
+    </script>
+<script>
+
+        // ==========================================
+        // 2. AUTHENTICATION LOGIC
+        // ==========================================
+        const loginScreen = document.getElementById('loginScreen');
+        const adminApp = document.getElementById('adminApp');
+        const loginError = document.getElementById('loginError');
+
+        function showError(msg) {
+            loginError.innerText = msg;
+            loginError.classList.remove('hidden');
+        }
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                if (user.email === ADMIN_EMAIL) {
+                    loginScreen.classList.add('hidden');
+                    adminApp.classList.remove('hidden');
+                    if (typeof loadOverviewData === 'function') loadOverviewData();
+                } else {
+                    auth.signOut();
+                    showError('Unauthorized access.');
+                }
+            } else {
+                loginScreen.classList.remove('hidden');
+                adminApp.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value;
+            loginError.classList.add('hidden');
+            
+            if (!password) return showError('Please enter the password');
+            
+            const btn = document.getElementById('loginBtn');
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (err) {
+                showError('Invalid password or access denied.');
+            } finally {
+                btn.innerHTML = '<i class="ri-login-circle-line text-lg"></i> تسجيل الدخول';
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
+        document.getElementById('logoutBtnMobile').addEventListener('click', () => auth.signOut());
+
+        function restrictPhoneInput(e) {
+            let val = e.target.value;
+            val = val.replace(/[^\d+]/g, '');
+            if (val.startsWith('+')) {
+                if (val.length > 13) val = val.substring(0, 13);
+            } else {
+                if (val.length > 11) val = val.substring(0, 11);
+            }
+            e.target.value = val;
+        }
+
+        document.getElementById('teacherPhoneInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('centerPhoneInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('cardOwnerInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('resetPhoneInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('activateParentPhoneInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('manageCenterPhoneInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('manageTeacherPhoneInput').addEventListener('input', restrictPhoneInput);
+
+        // ==========================================
+        // 3. ENTITY MANAGEMENT (Teachers & Centers)
+        // ==========================================
+        async function createNewTeacher() {
+            const statusDiv = document.getElementById('teacherCreateStatus');
+            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
+            statusDiv.innerText = 'Validating data...';
+            
+            const name = document.getElementById('teacherNameInput').value.trim();
+            const subject = document.getElementById('teacherSubjectInput').value.trim();
+            const phone = document.getElementById('teacherPhoneInput').value.trim();
+            const password = document.getElementById('teacherPasswordInput').value.trim();
+
+            if (!name || !subject || !phone || !password) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Please fill all fields.';
+                return;
+            }
+
+            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
+            if (!phoneRegex.test(phone)) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Invalid Egyptian phone number format.';
+                return;
+            }
+
+            try {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
+                statusDiv.innerText = 'Sending to server...';
+                
+                const createTeacherFn = functions.httpsCallable('createTeacher');
+                await createTeacherFn({ teacherName: name, teacherSubject: subject, teacherPhone: phone, password: password });
+                
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = 'Teacher account created successfully!';
+                document.getElementById('teacherNameInput').value = '';
+                document.getElementById('teacherSubjectInput').value = '';
+                document.getElementById('teacherPhoneInput').value = '';
+                document.getElementById('teacherPasswordInput').value = '';
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Error: ' + err.message;
+            }
+        }
+
+        async function createNewCenter() {
+            const statusDiv = document.getElementById('centerCreateStatus');
+            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
+            statusDiv.innerText = 'Validating data...';
+            
+            const name = document.getElementById('centerNameInput').value.trim();
+            const phone = document.getElementById('centerPhoneInput').value.trim();
+            const password = document.getElementById('centerPasswordInput').value.trim();
+
+            if (!name || !phone || !password) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Please fill all fields.';
+                return;
+            }
+
+            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
+            if (!phoneRegex.test(phone)) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Invalid Egyptian phone number format.';
+                return;
+            }
+
+            try {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
+                statusDiv.innerText = 'Sending to server...';
+                
+                const createCenterFn = functions.httpsCallable('createCenter');
+                await createCenterFn({ centerName: name, centerPhone: phone, password: password });
+                
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = 'Center account created successfully!';
+                document.getElementById('centerNameInput').value = '';
+                document.getElementById('centerPhoneInput').value = '';
+                document.getElementById('centerPasswordInput').value = '';
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Error: ' + err.message;
+            }
+        }
+
+        // ==========================================
+        // 4. SMART CARDS GENERATION (QR CODES)
+        // ==========================================
+        function generateRandomCardId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let id = '';
+            for (let i = 0; i < 10; i++) {
+                id += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return id;
+        }
+
+        async function generateAndAssignCards() {
+            const statusDiv = document.getElementById('cardGenStatus');
+            const btn = document.getElementById('generateBtn');
+            
+            const ownerId = document.getElementById('cardOwnerInput').value.trim();
+            let count = parseInt(document.getElementById('cardsCountInput').value);
+
+            if (!ownerId || !count || count < 1 || count > 1000) {
+                statusDiv.className = 'mt-4 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Please provide valid owner ID and count (1-1000).';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Generating...';
+            statusDiv.className = 'mt-4 text-center text-sm font-semibold text-blue-600 h-5';
+            statusDiv.innerText = 'Generating unique card IDs...';
+
+            try {
+                const batchSize = 500;
+                let generatedCount = 0;
+                let newCards = [];
+
+                const printContainer = document.getElementById('printCardsContainer');
+                printContainer.innerHTML = '';
+                
+                while (generatedCount < count) {
+                    const batch = db.batch();
+                    const currentBatchSize = Math.min(batchSize, count - generatedCount);
+                    
+                    for (let i = 0; i < currentBatchSize; i++) {
+                        const cardId = generateRandomCardId();
+                        newCards.push(cardId);
+                        const cardRef = db.collection('smart_cards').doc(cardId);
+                        batch.set(cardRef, {
+                            ownerId: ownerId,
+                            studentId: null,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            isAssigned: false
+                        });
+                    }
+                    
+                    await batch.commit();
+                    generatedCount += currentBatchSize;
+                    statusDiv.innerText = `Saved ${generatedCount}/${count} cards to DB...`;
+                }
+
+                statusDiv.innerText = 'Rendering QR codes for printing...';
+                
+                let printHtml = `
+                <html>
+                <head>
+                    <title>Print Smart Cards - ${ownerId}</title>
+                    <style>
+                        @page { size: A4; margin: 10mm; }
+                        body { font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: flex-start; }
+                        .card-container {
+                            width: calc(25% - 4mm); 
+                            height: 60mm;
+                            margin: 2mm;
+                            border: 1px dashed #ccc;
+                            box-sizing: border-box;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            padding: 5mm;
+                            text-align: center;
+                            page-break-inside: avoid;
+                        }
+                        .qr-box { width: 35mm; height: 35mm; margin-bottom: 3mm; }
+                        .qr-box img { width: 100%; height: 100%; object-fit: contain; }
+                        .card-id { font-family: monospace; font-size: 11px; font-weight: bold; letter-spacing: 1px; color: #333; }
+                        .owner-id { font-size: 9px; color: #777; margin-top: 1mm;}
+                        @media print {
+                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        }
+                    </style>
+                </head>
+                <body>
+                `;
+
+                for (const cardId of newCards) {
+                    const tempDiv = document.createElement('div');
+                    new QRCode(tempDiv, {
+                        text: cardId,
+                        width: 128,
+                        height: 128,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    await new Promise(r => setTimeout(r, 5));
+                    
+                    const canvas = tempDiv.querySelector('canvas');
+                    const imgUrl = canvas.toDataURL("image/png");
+
+                    printHtml += `
+                        <div class="card-container">
+                            <div class="qr-box"><img src="${imgUrl}" /></div>
+                            <div class="card-id">${cardId}</div>
+                            <div class="owner-id">Prop: ${ownerId}</div>
+                        </div>
+                    `;
+                }
+
+                printHtml += '</body></html>';
+
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(printHtml);
+                printWindow.document.close();
+                
+                printWindow.onload = function() {
+                    printWindow.focus();
+                    setTimeout(() => printWindow.print(), 1000);
+                };
+
+                statusDiv.className = 'mt-4 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = `Successfully generated ${count} cards.`;
+                document.getElementById('cardsCountInput').value = '100';
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-4 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Error: ' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
+            }
+        }
+
+
         // ==========================================
         // 6. OVERVIEW TAB LOGIC
         // ==========================================
@@ -1776,7 +1444,7 @@
                     }
                 });
 
-                // Update Students Growth Chart (Mock data for now, ideally group students by createdAt)
+                // Update Students Growth Chart
                 const ctxGrowth = document.getElementById('studentsGrowthChart').getContext('2d');
                 if (studentsChart) studentsChart.destroy();
 
@@ -1811,8 +1479,226 @@
             }
         }
 
+
+        // ==========================================
+        // 9. DATA EXPLORER & GLOBAL SEARCH LOGIC
+        // ==========================================
         
-    
+        async function loadExplorerData() {
+            const tree = document.getElementById('explorerTree');
+            tree.innerHTML = '<div class="text-center text-gray-500 p-8"><i class="ri-loader-4-line animate-spin text-3xl"></i> جاري التحميل...</div>';
+            
+            try {
+                const teachersSnap = await db.collection('teachers').get();
+                if (teachersSnap.empty) {
+                    tree.innerHTML = '<div class="text-center text-gray-500 p-8">لا يوجد مدرسين مسجلين.</div>';
+                    return;
+                }
+                
+                tree.innerHTML = '';
+                
+                teachersSnap.docs.forEach(doc => {
+                    const data = doc.data();
+                    const teacherId = doc.id;
+                    const name = data.name || data.teacherName || 'مدرس بدون اسم';
+                    
+                    const item = document.createElement('div');
+                    item.className = 'border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden bg-gray-50 dark:bg-zinc-800/30 transition-all';
+                    item.innerHTML = `
+                        <button onclick="toggleExplorerNode('node-${teacherId}', '${teacherId}')" class="w-full p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center">
+                                    <i class="ri-user-star-fill"></i>
+                                </div>
+                                <div class="text-right">
+                                    <h4 class="font-bold text-gray-900 dark:text-white">${name}</h4>
+                                    <p class="text-xs text-gray-500 font-mono">${teacherId}</p>
+                                </div>
+                            </div>
+                            <i class="ri-arrow-down-s-line text-gray-400 transition-transform" id="icon-${teacherId}"></i>
+                        </button>
+                        <div id="node-${teacherId}" class="hidden p-4 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-900">
+                            <div class="text-center text-gray-400 text-sm py-2"><i class="ri-loader-4-line animate-spin"></i> جاري تحميل المجموعات...</div>
+                        </div>
+                    `;
+                    tree.appendChild(item);
+                });
+            } catch (err) {
+                console.error(err);
+                tree.innerHTML = `<div class="text-center text-red-500 p-8">خطأ: ${err.message}</div>`;
+            }
+        }
+
+        async function toggleExplorerNode(nodeId, teacherId) {
+            const node = document.getElementById(nodeId);
+            const icon = document.getElementById(`icon-${teacherId}`);
+            
+            if (node.classList.contains('hidden')) {
+                // Open
+                node.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+                
+                // Load groups if not loaded
+                if (node.getAttribute('data-loaded') !== 'true') {
+                    try {
+                        const groupsSnap = await db.collection('teachers').doc(teacherId).collection('groups').get();
+                        if (groupsSnap.empty) {
+                            node.innerHTML = '<div class="text-sm text-gray-500 text-center py-2">لا يوجد مجموعات.</div>';
+                        } else {
+                            node.innerHTML = '<div class="space-y-2"></div>';
+                            const container = node.querySelector('div');
+                            
+                            groupsSnap.docs.forEach(gDoc => {
+                                const gData = gDoc.data();
+                                const gId = gDoc.id;
+                                const gName = gData.name || 'مجموعة بدون اسم';
+                                
+                                const gItem = document.createElement('div');
+                                gItem.className = 'border border-gray-100 dark:border-white/5 rounded-lg overflow-hidden bg-gray-50 dark:bg-zinc-800/50';
+                                gItem.innerHTML = `
+                                    <button onclick="toggleExplorerGroup('${teacherId}', '${gId}')" class="w-full p-3 flex items-center justify-between hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+                                        <div class="flex items-center gap-2">
+                                            <i class="ri-group-fill text-blue-500"></i>
+                                            <span class="font-bold text-sm text-gray-800 dark:text-gray-200">${gName}</span>
+                                        </div>
+                                        <i class="ri-arrow-down-s-line text-gray-400 transition-transform" id="icon-${teacherId}-${gId}"></i>
+                                    </button>
+                                    <div id="node-${teacherId}-${gId}" class="hidden p-3 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-zinc-900/80 max-h-64 overflow-y-auto">
+                                        <div class="text-center text-gray-400 text-xs py-2"><i class="ri-loader-4-line animate-spin"></i> جاري تحميل الطلاب...</div>
+                                    </div>
+                                `;
+                                container.appendChild(gItem);
+                            });
+                        }
+                        node.setAttribute('data-loaded', 'true');
+                    } catch (err) {
+                        node.innerHTML = `<div class="text-xs text-red-500 py-2">خطأ: ${err.message}</div>`;
+                    }
+                }
+            } else {
+                // Close
+                node.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        async function toggleExplorerGroup(teacherId, groupId) {
+            const nodeId = `node-${teacherId}-${groupId}`;
+            const iconId = `icon-${teacherId}-${groupId}`;
+            const node = document.getElementById(nodeId);
+            const icon = document.getElementById(iconId);
+            
+            if (node.classList.contains('hidden')) {
+                node.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+                
+                if (node.getAttribute('data-loaded') !== 'true') {
+                    try {
+                        const studentsSnap = await db.collection('teachers').doc(teacherId).collection('groups').doc(groupId).collection('students').get();
+                        if (studentsSnap.empty) {
+                            node.innerHTML = '<div class="text-xs text-gray-500 text-center py-2">لا يوجد طلاب.</div>';
+                        } else {
+                            let html = '<ul class="space-y-1">';
+                            studentsSnap.docs.forEach(sDoc => {
+                                const sData = sDoc.data();
+                                html += `
+                                    <li class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 border border-transparent hover:border-gray-100 dark:hover:border-white/5 transition-colors">
+                                        <div>
+                                            <div class="text-sm font-bold text-gray-800 dark:text-gray-200">${sData.name || 'بدون اسم'}</div>
+                                            <div class="text-xs text-gray-500 font-mono">${sData.parentPhone || 'لا يوجد هاتف'}</div>
+                                        </div>
+                                        <span class="text-xs bg-gray-200 dark:bg-white/10 px-2 py-0.5 rounded font-mono">${sData.cardId || sData.oldCardId || 'لا يوجد كارت'}</span>
+                                    </li>
+                                `;
+                            });
+                            html += '</ul>';
+                            node.innerHTML = html;
+                        }
+                        node.setAttribute('data-loaded', 'true');
+                    } catch (err) {
+                        node.innerHTML = `<div class="text-xs text-red-500 py-2">خطأ: ${err.message}</div>`;
+                    }
+                }
+            } else {
+                node.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        async function performGlobalSearch() {
+            const query = document.getElementById('globalSearchInput').value.trim();
+            if (!query) return;
+
+            const container = document.getElementById('searchResultsContainer');
+            const content = document.getElementById('searchResultsContent');
+            
+            container.classList.remove('hidden');
+            content.innerHTML = '<div class="text-center text-brand py-4"><i class="ri-loader-4-line animate-spin text-2xl"></i> جاري البحث...</div>';
+
+            let resultsHTML = '';
+            let count = 0;
+
+            try {
+                // Determine search type
+                let searchField = 'name';
+                let isPhone = false;
+                if (/^(\+20|01)\d+$/.test(query)) {
+                    searchField = 'parentPhone';
+                    isPhone = true;
+                } else if (/^[a-zA-Z0-9-]{10,}$/.test(query)) {
+                    searchField = 'cardId';
+                }
+
+                const studentsSnap = await db.collectionGroup('students')
+                    .where(searchField, '>=', query)
+                    .where(searchField, '<=', query + '')
+                    .limit(10)
+                    .get();
+
+                studentsSnap.docs.forEach(doc => {
+                    const s = doc.data();
+                    const path = doc.ref.path;
+                    count++;
+                    resultsHTML += `
+                        <div class="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-gray-100 dark:border-white/5 flex flex-col gap-1">
+                            <div class="flex justify-between items-start">
+                                <strong class="text-sm text-gray-900 dark:text-white">${s.name || 'بدون اسم'}</strong>
+                                <span class="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded">طالب</span>
+                            </div>
+                            <div class="text-xs text-gray-500 font-mono">${path}</div>
+                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1 flex gap-3">
+                                <span><i class="ri-phone-line"></i> ${s.parentPhone || '-'}</span>
+                                <span><i class="ri-qr-code-line"></i> ${s.cardId || s.oldCardId || '-'}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                if (count === 0) {
+                    content.innerHTML = '<div class="text-center text-gray-500 py-4">لم يتم العثور على نتائج.</div>';
+                } else {
+                    content.innerHTML = resultsHTML;
+                }
+            } catch (err) {
+                console.error(err);
+                content.innerHTML = `<div class="text-center text-red-500 py-4">خطأ في البحث: ${err.message}</div>`;
+            }
+        }
+
+        function closeSearchResults() {
+            document.getElementById('searchResultsContainer').classList.add('hidden');
+        }
+
+        // Attach Explorer load on tab switch if empty
+        document.querySelector('[data-tab="explorer"]').addEventListener('click', () => {
+            const tree = document.getElementById('explorerTree');
+            if (tree.children.length === 1 && tree.innerText.includes('جاري التحميل')) {
+                loadExplorerData();
+            }
+        });
+
+
+
         // ==========================================
         // 7. AUTH USERS LOGIC
         // ==========================================
@@ -2123,225 +2009,6 @@
                 btn.innerHTML = '<i class="ri-search-line"></i> فحص';
             }
         }
-
-
-        // ==========================================
-        // 9. DATA EXPLORER & GLOBAL SEARCH LOGIC
-        // ==========================================
-        
-        async function loadExplorerData() {
-            const tree = document.getElementById('explorerTree');
-            tree.innerHTML = '<div class="text-center text-gray-500 p-8"><i class="ri-loader-4-line animate-spin text-3xl"></i> جاري التحميل...</div>';
-            
-            try {
-                const teachersSnap = await db.collection('teachers').get();
-                if (teachersSnap.empty) {
-                    tree.innerHTML = '<div class="text-center text-gray-500 p-8">لا يوجد مدرسين مسجلين.</div>';
-                    return;
-                }
-                
-                tree.innerHTML = '';
-                
-                teachersSnap.docs.forEach(doc => {
-                    const data = doc.data();
-                    const teacherId = doc.id;
-                    const name = data.name || data.teacherName || 'مدرس بدون اسم';
-                    
-                    const item = document.createElement('div');
-                    item.className = 'border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden bg-gray-50 dark:bg-zinc-800/30 transition-all';
-                    item.innerHTML = `
-                        <button onclick="toggleExplorerNode('node-${teacherId}', '${teacherId}')" class="w-full p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center">
-                                    <i class="ri-user-star-fill"></i>
-                                </div>
-                                <div class="text-right">
-                                    <h4 class="font-bold text-gray-900 dark:text-white">${name}</h4>
-                                    <p class="text-xs text-gray-500 font-mono">${teacherId}</p>
-                                </div>
-                            </div>
-                            <i class="ri-arrow-down-s-line text-gray-400 transition-transform" id="icon-${teacherId}"></i>
-                        </button>
-                        <div id="node-${teacherId}" class="hidden p-4 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-900">
-                            <div class="text-center text-gray-400 text-sm py-2"><i class="ri-loader-4-line animate-spin"></i> جاري تحميل المجموعات...</div>
-                        </div>
-                    `;
-                    tree.appendChild(item);
-                });
-            } catch (err) {
-                console.error(err);
-                tree.innerHTML = `<div class="text-center text-red-500 p-8">خطأ: ${err.message}</div>`;
-            }
-        }
-
-        async function toggleExplorerNode(nodeId, teacherId) {
-            const node = document.getElementById(nodeId);
-            const icon = document.getElementById(`icon-${teacherId}`);
-            
-            if (node.classList.contains('hidden')) {
-                // Open
-                node.classList.remove('hidden');
-                icon.style.transform = 'rotate(180deg)';
-                
-                // Load groups if not loaded
-                if (node.getAttribute('data-loaded') !== 'true') {
-                    try {
-                        const groupsSnap = await db.collection('teachers').doc(teacherId).collection('groups').get();
-                        if (groupsSnap.empty) {
-                            node.innerHTML = '<div class="text-sm text-gray-500 text-center py-2">لا يوجد مجموعات.</div>';
-                        } else {
-                            node.innerHTML = '<div class="space-y-2"></div>';
-                            const container = node.querySelector('div');
-                            
-                            groupsSnap.docs.forEach(gDoc => {
-                                const gData = gDoc.data();
-                                const gId = gDoc.id;
-                                const gName = gData.name || 'مجموعة بدون اسم';
-                                
-                                const gItem = document.createElement('div');
-                                gItem.className = 'border border-gray-100 dark:border-white/5 rounded-lg overflow-hidden bg-gray-50 dark:bg-zinc-800/50';
-                                gItem.innerHTML = `
-                                    <button onclick="toggleExplorerGroup('${teacherId}', '${gId}')" class="w-full p-3 flex items-center justify-between hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
-                                        <div class="flex items-center gap-2">
-                                            <i class="ri-group-fill text-blue-500"></i>
-                                            <span class="font-bold text-sm text-gray-800 dark:text-gray-200">${gName}</span>
-                                        </div>
-                                        <i class="ri-arrow-down-s-line text-gray-400 transition-transform" id="icon-${teacherId}-${gId}"></i>
-                                    </button>
-                                    <div id="node-${teacherId}-${gId}" class="hidden p-3 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-zinc-900/80 max-h-64 overflow-y-auto">
-                                        <div class="text-center text-gray-400 text-xs py-2"><i class="ri-loader-4-line animate-spin"></i> جاري تحميل الطلاب...</div>
-                                    </div>
-                                `;
-                                container.appendChild(gItem);
-                            });
-                        }
-                        node.setAttribute('data-loaded', 'true');
-                    } catch (err) {
-                        node.innerHTML = `<div class="text-xs text-red-500 py-2">خطأ: ${err.message}</div>`;
-                    }
-                }
-            } else {
-                // Close
-                node.classList.add('hidden');
-                icon.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        async function toggleExplorerGroup(teacherId, groupId) {
-            const nodeId = `node-${teacherId}-${groupId}`;
-            const iconId = `icon-${teacherId}-${groupId}`;
-            const node = document.getElementById(nodeId);
-            const icon = document.getElementById(iconId);
-            
-            if (node.classList.contains('hidden')) {
-                node.classList.remove('hidden');
-                icon.style.transform = 'rotate(180deg)';
-                
-                if (node.getAttribute('data-loaded') !== 'true') {
-                    try {
-                        const studentsSnap = await db.collection('teachers').doc(teacherId).collection('groups').doc(groupId).collection('students').get();
-                        if (studentsSnap.empty) {
-                            node.innerHTML = '<div class="text-xs text-gray-500 text-center py-2">لا يوجد طلاب.</div>';
-                        } else {
-                            let html = '<ul class="space-y-1">';
-                            studentsSnap.docs.forEach(sDoc => {
-                                const sData = sDoc.data();
-                                html += `
-                                    <li class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 border border-transparent hover:border-gray-100 dark:hover:border-white/5 transition-colors">
-                                        <div>
-                                            <div class="text-sm font-bold text-gray-800 dark:text-gray-200">${sData.name || 'بدون اسم'}</div>
-                                            <div class="text-xs text-gray-500 font-mono">${sData.parentPhone || 'لا يوجد هاتف'}</div>
-                                        </div>
-                                        <span class="text-xs bg-gray-200 dark:bg-white/10 px-2 py-0.5 rounded font-mono">${sData.cardId || sData.oldCardId || 'لا يوجد كارت'}</span>
-                                    </li>
-                                `;
-                            });
-                            html += '</ul>';
-                            node.innerHTML = html;
-                        }
-                        node.setAttribute('data-loaded', 'true');
-                    } catch (err) {
-                        node.innerHTML = `<div class="text-xs text-red-500 py-2">خطأ: ${err.message}</div>`;
-                    }
-                }
-            } else {
-                node.classList.add('hidden');
-                icon.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        async function performGlobalSearch() {
-            const query = document.getElementById('globalSearchInput').value.trim();
-            if (!query) return;
-
-            const container = document.getElementById('searchResultsContainer');
-            const content = document.getElementById('searchResultsContent');
-            
-            container.classList.remove('hidden');
-            content.innerHTML = '<div class="text-center text-brand py-4"><i class="ri-loader-4-line animate-spin text-2xl"></i> جاري البحث...</div>';
-
-            let resultsHTML = '';
-            let count = 0;
-
-            try {
-                // Determine search type
-                let searchField = 'name';
-                let isPhone = false;
-                if (/^(\+20|01)\d+$/.test(query)) {
-                    searchField = 'parentPhone';
-                    isPhone = true;
-                } else if (/^[a-zA-Z0-9-]{10,}$/.test(query)) {
-                    searchField = 'cardId';
-                }
-
-                const studentsSnap = await db.collectionGroup('students')
-                    .where(searchField, '>=', query)
-                    .where(searchField, '<=', query + '')
-                    .limit(10)
-                    .get();
-
-                studentsSnap.docs.forEach(doc => {
-                    const s = doc.data();
-                    const path = doc.ref.path;
-                    count++;
-                    resultsHTML += `
-                        <div class="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-gray-100 dark:border-white/5 flex flex-col gap-1">
-                            <div class="flex justify-between items-start">
-                                <strong class="text-sm text-gray-900 dark:text-white">${s.name || 'بدون اسم'}</strong>
-                                <span class="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded">طالب</span>
-                            </div>
-                            <div class="text-xs text-gray-500 font-mono">${path}</div>
-                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1 flex gap-3">
-                                <span><i class="ri-phone-line"></i> ${s.parentPhone || '-'}</span>
-                                <span><i class="ri-qr-code-line"></i> ${s.cardId || s.oldCardId || '-'}</span>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                if (count === 0) {
-                    content.innerHTML = '<div class="text-center text-gray-500 py-4">لم يتم العثور على نتائج.</div>';
-                } else {
-                    content.innerHTML = resultsHTML;
-                }
-            } catch (err) {
-                console.error(err);
-                content.innerHTML = `<div class="text-center text-red-500 py-4">خطأ في البحث: ${err.message}</div>`;
-            }
-        }
-
-        function closeSearchResults() {
-            document.getElementById('searchResultsContainer').classList.add('hidden');
-        }
-
-        // Attach Explorer load on tab switch if empty
-        document.querySelector('[data-tab="explorer"]').addEventListener('click', () => {
-            const tree = document.getElementById('explorerTree');
-            if (tree.children.length === 1 && tree.innerText.includes('جاري التحميل')) {
-                loadExplorerData();
-            }
-        });
-
 
 
         // ==========================================
