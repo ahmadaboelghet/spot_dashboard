@@ -1690,104 +1690,104 @@ exports.notifyOnPresence = onDocumentWritten(
 // ===================================================================
 // 6. الإرسال التلقائي للغياب (تحسين: بعد ساعة من البداية + ربع ساعة ركود)
 // ===================================================================
-exports.autoAbsenceReminder = onSchedule({
-  schedule: "*/15 * * * *", // تشتغل كل 15 دقيقة
-  timeZone: "Africa/Cairo",
-}, async (event) => {
-  const now = new Date();
+// exports.autoAbsenceReminder = onSchedule({
+//   schedule: "*/15 * * * *", // تشتغل كل 15 دقيقة
+//   timeZone: "Africa/Cairo",
+// }, async (event) => {
+//   const now = new Date();
 
-  // 1. حساب تاريخ "النهاردة" و "امبارح" في القاهرة لضمان التقاط الحصص المتأخرة
-  const dateOptions = { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" };
-  const todayStr = new Intl.DateTimeFormat("en-CA", dateOptions).format(now);
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const yesterdayStr = new Intl.DateTimeFormat("en-CA", dateOptions).format(yesterday);
+//   // 1. حساب تاريخ "النهاردة" و "امبارح" في القاهرة لضمان التقاط الحصص المتأخرة
+//   const dateOptions = { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" };
+//   const todayStr = new Intl.DateTimeFormat("en-CA", dateOptions).format(now);
+//   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+//   const yesterdayStr = new Intl.DateTimeFormat("en-CA", dateOptions).format(yesterday);
 
-  try {
-    // 2. جلب ملفات الحضور النشطة (امبارح والنهاردة)
-    const dailyAttSnap = await admin.firestore()
-      .collectionGroup("dailyAttendance")
-      .where("date", "in", [todayStr, yesterdayStr])
-      .get();
+//   try {
+//     // 2. جلب ملفات الحضور النشطة (امبارح والنهاردة)
+//     const dailyAttSnap = await admin.firestore()
+//       .collectionGroup("dailyAttendance")
+//       .where("date", "in", [todayStr, yesterdayStr])
+//       .get();
 
-    if (dailyAttSnap.empty) return;
+//     if (dailyAttSnap.empty) return;
 
-    for (const attDoc of dailyAttSnap.docs) {
-      const attendanceData = attDoc.data();
+//     for (const attDoc of dailyAttSnap.docs) {
+//       const attendanceData = attDoc.data();
 
-      // 3. تحديد "وقت البداية" (أول سكان أفضل، لو مش موجود نستخدم وقت الإنشاء)
-      const createTime = attDoc.createTime.toDate();
-      const firstScanAt = attendanceData.firstScanAt ? (attendanceData.firstScanAt.toDate ? attendanceData.firstScanAt.toDate() : new Date(attendanceData.firstScanAt)) : createTime;
-      const updateTime = attDoc.updateTime.toDate();
+//       // 3. تحديد "وقت البداية" (أول سكان أفضل، لو مش موجود نستخدم وقت الإنشاء)
+//       const createTime = attDoc.createTime.toDate();
+//       const firstScanAt = attendanceData.firstScanAt ? (attendanceData.firstScanAt.toDate ? attendanceData.firstScanAt.toDate() : new Date(attendanceData.firstScanAt)) : createTime;
+//       const updateTime = attDoc.updateTime.toDate();
 
-      const minutesSinceStart = (now.getTime() - firstScanAt.getTime()) / (1000 * 60);
-      const minutesSinceLastUpdate = (now.getTime() - updateTime.getTime()) / (1000 * 60);
+//       const minutesSinceStart = (now.getTime() - firstScanAt.getTime()) / (1000 * 60);
+//       const minutesSinceLastUpdate = (now.getTime() - updateTime.getTime()) / (1000 * 60);
 
-      const presentStudentIds = new Set(
-        (attendanceData.records || [])
-          .filter((r) => r.status === "present")
-          .map((r) => r.studentId),
-      );
+//       const presentStudentIds = new Set(
+//         (attendanceData.records || [])
+//           .filter((r) => r.status === "present")
+//           .map((r) => r.studentId),
+//       );
 
-      // --- الشروط الرسمية (الإنتاج) ---
-      // أ- عدى 60 دقيقة على الأقل من أول سكان
-      // ب- المدرس ملمسش القائمة بقاله 20 دقيقة (خلص رصد)
-      if (minutesSinceStart >= 60 && minutesSinceLastUpdate >= 20 && presentStudentIds.size > 0) {
-        // استخراج المسار
-        const pathSegments = attDoc.ref.path.split("/");
-        if (pathSegments.length < 5) continue;
+//       // --- الشروط الرسمية (الإنتاج) ---
+//       // أ- عدى 60 دقيقة على الأقل من أول سكان
+//       // ب- المدرس ملمسش القائمة بقاله 20 دقيقة (خلص رصد)
+//       if (minutesSinceStart >= 60 && minutesSinceLastUpdate >= 20 && presentStudentIds.size > 0) {
+//         // استخراج المسار
+//         const pathSegments = attDoc.ref.path.split("/");
+//         if (pathSegments.length < 5) continue;
 
-        const teacherId = pathSegments[1];
-        const groupId = pathSegments[3];
-        const groupRef = admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}`);
+//         const teacherId = pathSegments[1];
+//         const groupId = pathSegments[3];
+//         const groupRef = admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}`);
 
-        // 4. التأكد إن الغياب متبعتش (باستخدام تاريخ الملف نفسه مش "النهاردة")
-        const docDate = attendanceData.date || pathSegments[5];
-        const metaRef = groupRef.collection("attendanceMeta").doc(docDate);
-        const metaDoc = await metaRef.get();
+//         // 4. التأكد إن الغياب متبعتش (باستخدام تاريخ الملف نفسه مش "النهاردة")
+//         const docDate = attendanceData.date || pathSegments[5];
+//         const metaRef = groupRef.collection("attendanceMeta").doc(docDate);
+//         const metaDoc = await metaRef.get();
 
-        if (metaDoc.exists && metaDoc.data().absenceSent === true) {
-          continue;
-        }
+//         if (metaDoc.exists && metaDoc.data().absenceSent === true) {
+//           continue;
+//         }
 
-        const subjectName = await getTeacherSubject(teacherId);
+//         const subjectName = await getTeacherSubject(teacherId);
 
-        // 5. جلب كل الطلاب والبدء في الإرسال
-        const studentsSnap = await groupRef.collection("students").get();
-        const promises = [];
-        let sentCount = 0;
+//         // 5. جلب كل الطلاب والبدء في الإرسال
+//         const studentsSnap = await groupRef.collection("students").get();
+//         const promises = [];
+//         let sentCount = 0;
 
-        studentsSnap.docs.forEach((studentDoc) => {
-          if (!presentStudentIds.has(studentDoc.id)) {
-            const student = studentDoc.data();
-            const payload = {
-              notification: {
-                title: "تنبيه غياب ❌",
-                body: `نحيطكم علماً بأن الطالب ${student.name} تغيب عن حصة اليوم (${docDate}) في مادة ${subjectName}.`,
-              },
-              data: {
-                type: "absence_alert",
-                studentId: studentDoc.id,
-                date: docDate,
-              },
-            };
-            promises.push(
-              sendNotificationToParent(student, payload, "AutoAbsence", studentDoc.id, teacherId, groupId),
-            );
-            sentCount++;
-          }
-        });
+//         studentsSnap.docs.forEach((studentDoc) => {
+//           if (!presentStudentIds.has(studentDoc.id)) {
+//             const student = studentDoc.data();
+//             const payload = {
+//               notification: {
+//                 title: "تنبيه غياب ❌",
+//                 body: `نحيطكم علماً بأن الطالب ${student.name} تغيب عن حصة اليوم (${docDate}) في مادة ${subjectName}.`,
+//               },
+//               data: {
+//                 type: "absence_alert",
+//                 studentId: studentDoc.id,
+//                 date: docDate,
+//               },
+//             };
+//             promises.push(
+//               sendNotificationToParent(student, payload, "AutoAbsence", studentDoc.id, teacherId, groupId),
+//             );
+//             sentCount++;
+//           }
+//         });
 
-        await Promise.all(promises);
+//         await Promise.all(promises);
 
-        // 6. توثيق الإرسال لمنع التكرار
-        await metaRef.set({ absenceSent: true, sentAt: now, auto: true }, { merge: true });
-        console.log(`✅ Auto Absence Sent for ${teacherId}/${groupId}, count: ${sentCount}, date: ${docDate}`);
-      }
-    }
-  } catch (error) {
-    console.error("Auto Absence Error:", error);
-  }
-});
+//         // 6. توثيق الإرسال لمنع التكرار
+//         await metaRef.set({ absenceSent: true, sentAt: now, auto: true }, { merge: true });
+//         console.log(`✅ Auto Absence Sent for ${teacherId}/${groupId}, count: ${sentCount}, date: ${docDate}`);
+//       }
+//     }
+//   } catch (error) {
+//     console.error("Auto Absence Error:", error);
+//   }
+// });
 
 // ===================================================================
 // (إعادة تعيين كلمة المرور للمستخدمين)
