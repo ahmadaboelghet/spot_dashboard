@@ -496,7 +496,50 @@
             </div>
 
             
-            <!-- Tab Content: Auth Users -->
+            
+            <!-- Tab Content: Data Explorer -->
+            <div id="tab-explorer" class="tab-content hidden animate-fade-in">
+                <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-gray-900 dark:text-white font-cairo flex items-center gap-3">
+                            <i class="ri-folder-open-fill text-brand"></i> بيانات المدرسين والطلاب
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">استعراض هرمي للمدرسين، المجموعات، والطلاب.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="globalSearchInput" placeholder="بحث شامل (هاتف، اسم، كود)..." class="input-clean !py-2 !w-64">
+                        <button onclick="performGlobalSearch()" class="btn-brand flex items-center gap-2 py-2 px-4 rounded-xl text-sm">
+                            <i class="ri-search-line"></i> بحث
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Global Search Results -->
+                <div id="searchResultsContainer" class="hidden mb-6">
+                    <div class="glass-card overflow-hidden border border-brand/30">
+                        <div class="bg-brand/10 p-3 flex justify-between items-center border-b border-brand/20">
+                            <h3 class="font-bold text-brand flex items-center gap-2"><i class="ri-search-eye-line"></i> نتائج البحث الشامل</h3>
+                            <button onclick="closeSearchResults()" class="text-gray-500 hover:text-gray-700"><i class="ri-close-line text-xl"></i></button>
+                        </div>
+                        <div id="searchResultsContent" class="p-4 max-h-96 overflow-y-auto space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Accordion Tree View -->
+                <div class="glass-card p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ri-organization-chart"></i> شجرة البيانات</h3>
+                        <button onclick="loadExplorerData()" class="text-sm font-bold text-brand hover:text-brand-dark bg-brand/10 px-3 py-1.5 rounded-lg transition-colors">
+                            <i class="ri-refresh-line"></i> تحديث الكل
+                        </button>
+                    </div>
+                    <div id="explorerTree" class="space-y-2">
+                        <div class="text-center text-gray-500 p-8"><i class="ri-loader-4-line animate-spin text-3xl"></i></div>
+                    </div>
+                </div>
+            </div>
+
+<!-- Tab Content: Auth Users -->
             <div id="tab-auth_users" class="tab-content hidden animate-fade-in">
                 <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
@@ -1975,7 +2018,7 @@
 
                 // 2. Check Students (collectionGroup)
                 let sDataHTML = '';
-                const sSnap = await db.collectionGroup('students').where('parentPhone', '==', phone).get();
+                const sSnap = await db.collectionGroup('students').where('parentPhoneNumber', '==', phone).get();
                 
                 if (sSnap.empty) {
                     sDataHTML = `<div class="p-3 bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-xl border border-yellow-200 dark:border-yellow-500/20">لم يتم العثور على أي طالب مسجل برقم ولي الأمر هذا.</div>`;

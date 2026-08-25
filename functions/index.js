@@ -17,7 +17,12 @@ const os = require("os");
 const fs = require("fs");
 const PDFDocument = require("pdfkit");
 
+
+const { setGlobalOptions } = require("firebase-functions/v2");
+setGlobalOptions({ maxInstances: 1 });
+
 if (!admin.apps.length) {
+
   admin.initializeApp();
 }
 
@@ -1034,7 +1039,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
  */
 // const myBucket = "learnaria-483e7.firebasestorage.app";
 
-exports.processUploadedFile = onObjectFinalized({ region: "us-central1", cpu: 1, memory: "1GiB", timeoutSeconds: 540 }, async (event) => {
+exports.processUploadedFile = onObjectFinalized({ region: "europe-west1", cpu: 1, memory: "1GiB", timeoutSeconds: 540 }, async (event) => {
   const fileBucket = event.data.bucket;
   const filePath = event.data.name;
   const contentType = event.data.contentType; // نوع الملف الأصلي (المضمون 100%)
@@ -1236,6 +1241,7 @@ exports.chatWithSpot = onCall({
   cors: true,
   timeoutSeconds: 300,
   memory: "1GiB",
+  region: "europe-west1",
 }, async (request) => {
   try {
     const { message, teacherId, role, image } = request.data;
