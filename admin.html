@@ -601,8 +601,9 @@
                     <div class="flex items-center gap-2">
                         <select id="notifFilterSelect" class="input-clean !py-2 !w-40 font-bold text-sm">
                             <option value="all">كل الإشعارات</option>
-                            <option value="success">الناجحة فقط</option>
-                            <option value="error">الفاشلة فقط</option>
+                            <option value="sent">الناجحة فقط</option>
+                            <option value="failed">الفاشلة فقط</option>
+                            <option value="no_token">بدون توكن</option>
                         </select>
                         <button onclick="loadNotificationsHistory()" class="btn-brand flex items-center gap-2 py-2 px-4 rounded-xl text-sm">
                             <i class="ri-refresh-line"></i> تحديث
@@ -1928,11 +1929,16 @@
                         const dateStr = data.sentAt ? data.sentAt.toDate().toLocaleString('ar-EG') : '-';
                         const title = data.title || 'بدون عنوان';
                         const type = (data.context && data.context.type) || 'عام';
-                        const isSuccess = data.status === 'success';
+                        const status = data.status || 'unknown';
                         
-                        const statusBadge = isSuccess 
-                            ? '<span class="px-2 py-1 text-xs font-bold rounded-md bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">ناجح</span>'
-                            : '<span class="px-2 py-1 text-xs font-bold rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">فشل</span>';
+                        let statusBadge;
+                        if (status === 'sent') {
+                            statusBadge = '<span class="px-2 py-1 text-xs font-bold rounded-md bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">ناجح ✓</span>';
+                        } else if (status === 'no_token') {
+                            statusBadge = '<span class="px-2 py-1 text-xs font-bold rounded-md bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">بدون توكن</span>';
+                        } else {
+                            statusBadge = '<span class="px-2 py-1 text-xs font-bold rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">فشل ✗</span>';
+                        }
                         
                         let details = '';
                         if (data.tokensSummary) {
