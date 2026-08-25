@@ -6547,6 +6547,7 @@ async function submitManualCardLink() {
     }
 }
 
+/* 
 // ==========================================
 // 🚀 Hardware Scanner Global Listener (Auto-Capture) - MAC COMPATIBLE
 // ==========================================
@@ -6617,6 +6618,7 @@ document.addEventListener('keydown', async (e) => {
         hwScannerBuffer += e.key.toUpperCase();
     }
 });
+*/
 
 // ✅ تحديث روابط الشعار والرئيسية للمستخدم المسجل دخوله
 function updateHomeLinks() {
