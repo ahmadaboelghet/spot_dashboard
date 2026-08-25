@@ -621,12 +621,11 @@
                                     <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">الطالب</th>
                                     <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">النوع</th>
                                     <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">الحالة</th>
-                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">التفاصيل</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-white/5" id="notifsTbody">
                                 <tr>
-                                    <td colspan="6" class="p-8 text-center text-gray-500">
+                                    <td colspan="5" class="p-8 text-center text-gray-500">
                                         <i class="ri-inbox-line text-4xl mb-2 block"></i>
                                         اضغط على تحديث لعرض الإشعارات
                                     </td>
@@ -912,27 +911,210 @@
                     <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">شريط الأحداث المباشر وأدوات متقدمة.</p>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Real-time Activity Feed -->
-                    <div class="glass-card p-6">
-                        <div class="flex items-center gap-2 mb-4">
-                            <div class="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-                            <h3 class="font-bold text-gray-900 dark:text-white">النشاط المباشر (Real-Time Feed)</h3>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- SECTION 1: Teacher Management -->
+                    <div class="glass-card p-6 flex flex-col h-full">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl">
+                                <i class="ri-user-star-fill"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">إنشاء حساب مدرس</h2>
                         </div>
-                        <div id="activityFeed" class="space-y-3 h-96 overflow-y-auto pr-2">
-                            <div class="text-center text-gray-500 text-sm py-10">جاري الاتصال...</div>
+
+                        <div class="space-y-4 flex-grow">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">الاسم الكامل <span class="text-red-500">*</span></label>
+                                <input type="text" id="teacherNameInput" placeholder="مثال: أ. أحمد محمد" class="input-clean">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">المادة <span class="text-red-500">*</span></label>
+                                    <input type="text" id="teacherSubjectInput" placeholder="مثال: فيزياء" class="input-clean">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف <span class="text-red-500">*</span></label>
+                                    <input type="text" id="teacherPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">كلمة المرور <span class="text-red-500">*</span></label>
+                                <input type="text" id="teacherPasswordInput" placeholder="أدخل كلمة المرور" class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                        </div>
+
+                        <button onclick="createNewTeacher()" class="btn-brand w-full mt-6 flex items-center justify-center gap-2">
+                            <i class="ri-user-add-line"></i> إنشاء الحساب
+                        </button>
+                        <div id="teacherCreateStatus" class="mt-3 text-center text-sm font-semibold h-5"></div>
+                    </div>
+
+                    <!-- SECTION 2: Center Management -->
+                    <div class="glass-card p-6 flex flex-col h-full">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl">
+                                <i class="ri-building-4-fill"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">إنشاء حساب سنتر</h2>
+                        </div>
+
+                        <div class="space-y-4 flex-grow">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">اسم السنتر <span class="text-red-500">*</span></label>
+                                <input type="text" id="centerNameInput" placeholder="مثال: سنتر الأوائل" class="input-clean">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف <span class="text-red-500">*</span></label>
+                                <input type="text" id="centerPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">كلمة المرور <span class="text-red-500">*</span></label>
+                                <input type="text" id="centerPasswordInput" placeholder="أدخل كلمة المرور" class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                        </div>
+
+                        <button onclick="createNewCenter()" class="btn-brand w-full mt-6 flex items-center justify-center gap-2">
+                            <i class="ri-building-add-line"></i> إنشاء حساب السنتر
+                        </button>
+                        <div id="centerCreateStatus" class="mt-3 text-center text-sm font-semibold h-5"></div>
+                    </div>
+                    
+                </div>
+
+                <!-- SECTION 3: Smart Cards Generator -->
+                <div class="glass-card p-6 mt-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-brand/20 text-brand flex items-center justify-center text-xl">
+                            <i class="ri-qr-code-line text-black dark:text-brand"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-gray-900 dark:text-white">توليد وطباعة الكروت الذكية (QR)</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم هاتف المالك (المدرس/السنتر) <span class="text-red-500">*</span></label>
+                            <input type="text" id="cardOwnerInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                        </div>
+                        
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">العدد المطلوب <span class="text-red-500">*</span></label>
+                            <input type="number" id="cardsCountInput" min="10" max="1000" value="100" class="input-clean font-mono text-left" dir="ltr">
+                        </div>
+
+                        <div class="md:col-span-1">
+                            <button onclick="generateAndAssignCards()" id="generateBtn" class="btn-brand w-full flex justify-center items-center gap-2">
+                                <i class="ri-printer-line"></i> توليد وطباعة
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="cardGenStatus" class="mt-4 text-center text-sm font-semibold h-5"></div>
+                </div>
+
+                <!-- NEW SECTION: Reset & Activate -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    
+                    <!-- Reset Password -->
+                    <div class="glass-card p-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center text-xl">
+                                <i class="ri-key-line"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">إعادة تعيين كلمة مرور (أي مستخدم)</h2>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف <span class="text-red-500">*</span></label>
+                                <input type="text" id="resetPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">كلمة المرور الجديدة <span class="text-red-500">*</span></label>
+                                <input type="text" id="resetPasswordInput" placeholder="أدخل كلمة المرور الجديدة" class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <button onclick="resetUserPassword()" id="resetPassBtn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                <i class="ri-refresh-line"></i> تغيير كلمة المرور
+                            </button>
+                            <div id="resetPassStatus" class="mt-2 text-center text-sm font-semibold h-5"></div>
                         </div>
                     </div>
 
-                    <!-- Custom Analytics Placeholder -->
-                    <div class="glass-card p-6 flex flex-col items-center justify-center text-center">
-                        <div class="w-20 h-20 rounded-full bg-brand/10 text-brand flex items-center justify-center text-4xl mb-4">
-                            <i class="ri-bar-chart-2-fill"></i>
+                    <!-- Activate Parent -->
+                    <div class="glass-card p-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center text-xl">
+                                <i class="ri-parent-line"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">تفعيل حساب ولي أمر يدوياً</h2>
                         </div>
-                        <h3 class="font-bold text-gray-900 dark:text-white mb-2">تحليلات متقدمة قريباً</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-xs">سيتم إضافة المزيد من الرسوم البيانية المتقدمة هنا قريباً...</p>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم هاتف ولي الأمر <span class="text-red-500">*</span></label>
+                                <input type="text" id="activateParentPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">ستقوم هذه الأداة بإنشاء حساب لولي الأمر بكلمة المرور الافتراضية <code>elnazer@123456</code> أو إعادة تعيينها إذا كان موجوداً.</p>
+                            <button onclick="activateParentManual()" id="activateParentBtn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                <i class="ri-check-double-line"></i> تفعيل الحساب
+                            </button>
+                            <div id="activateParentStatus" class="mt-2 text-center text-sm font-semibold h-5"></div>
+                        </div>
                     </div>
-                </div>
+                <!-- NEW SECTION: Manage Center & Migrate Cards -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    
+                    <!-- Manage Center Teachers -->
+                    <div class="glass-card p-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl">
+                                <i class="ri-team-line"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">إدارة مدرسي السناتر</h2>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم السنتر <span class="text-red-500">*</span></label>
+                                <input type="text" id="manageCenterPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم المدرس <span class="text-red-500">*</span></label>
+                                <input type="text" id="manageTeacherPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="manageCenterTeacher('add')" id="addTeacherBtn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                    <i class="ri-user-add-line"></i> إضافة للسنتر
+                                </button>
+                                <button onclick="manageCenterTeacher('remove')" id="removeTeacherBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                    <i class="ri-user-unfollow-line"></i> إزالة من السنتر
+                                </button>
+                            </div>
+                            <div id="manageCenterStatus" class="mt-2 text-center text-sm font-semibold h-5"></div>
+                        </div>
+                    </div>
+
+                    <!-- Migrate Cards -->
+                    <div class="glass-card p-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center text-xl">
+                                <i class="ri-database-2-line"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">هجرة الكروت القديمة (Migration)</h2>
+                        </div>
+                        <div class="space-y-4">
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                هذه الأداة ستقوم بالبحث في جميع الطلاب الحاليين، وسحب الكروت القديمة وإضافتها إلى مجموعة الكروت العالمية <code>cards</code> لتجنب فقدانها.
+                            </p>
+                            <div class="p-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-xl text-orange-700 dark:text-orange-400 text-xs font-bold flex items-start gap-2">
+                                <i class="ri-alert-line text-lg mt-0.5"></i>
+                                <span>تأكد من عدم تشغيل هذه الأداة إلا عند الحاجة فقط تجنباً لاستهلاك العمليات.</span>
+                            </div>
+                            <button onclick="migrateCards()" id="migrateCardsBtn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                <i class="ri-database-forward-line"></i> بدء الهجرة
+                            </button>
+                            <div id="migrateCardsStatus" class="mt-2 text-center text-sm font-semibold h-5"></div>
+                        </div>
+                    </div>
+
+                
             </div>
 
 
@@ -1921,7 +2103,7 @@
                 if (!loadMore) tbody.innerHTML = '';
 
                 if (snap.empty) {
-                    if (!loadMore) tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500">لا توجد إشعارات.</td></tr>';
+                    if (!loadMore) tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">لا توجد إشعارات.</td></tr>';
                     btnMore.classList.add('hidden');
                 } else {
                     snap.docs.forEach(doc => {
@@ -1961,16 +2143,15 @@
                         const tr = document.createElement('tr');
                         tr.className = 'hover:bg-gray-50 dark:hover:bg-white/5 transition-colors';
                         tr.innerHTML = `
-                            <td class="p-4 text-xs font-mono text-gray-500 dark:text-gray-400" dir="ltr" style="text-align: right;">${dateStr}</td>
+                            <td class="p-4 text-sm font-bold font-cairo text-gray-800 dark:text-gray-200" dir="ltr" style="text-align: right;">${dateStr}</td>
                             <td class="p-4 text-sm font-bold text-gray-900 dark:text-white">${title}</td>
                             <td class="p-4 text-sm font-bold text-gray-700 dark:text-gray-300">
-                                <span id="${spanId}" class="flex items-center gap-2">
+                                <span id="${spanId}" class="flex items-center gap-2 justify-end">
                                     <i class="ri-loader-4-line animate-spin text-gray-400"></i> <span class="text-xs text-gray-500">${studentId}</span>
                                 </span>
                             </td>
                             <td class="p-4 text-xs text-gray-600 dark:text-gray-300">${type}</td>
                             <td class="p-4">${statusBadge}</td>
-                            <td class="p-4 text-xs text-gray-500 dark:text-gray-400" dir="ltr" style="text-align: right;">${details}</td>
                         `;
                         tbody.appendChild(tr);
 
