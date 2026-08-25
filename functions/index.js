@@ -2243,7 +2243,7 @@ exports.removeParentTokenOnLogout = onCall({ cors: true }, async (request) => {
 // (نظام الـ Super Admin)
 // ===================================================================
 
-exports.adminListUsers = onCall({ cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
+exports.adminListUsers = onCall({ invoker: 'public', cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
   // Only allow admin
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can list users.');
@@ -2251,7 +2251,7 @@ exports.adminListUsers = onCall({ cors: ['https://elnazer-edu.com', 'https://www
 
   const { pageToken } = request.data || {};
   try {
-    const listUsersResult = await admin.auth().listUsers(100, pageToken);
+    const listUsersResult = await admin.auth().listUsers(100, pageToken || undefined);
     
     // Add roles logic based on custom claims or collections (basic check for now)
     const users = listUsersResult.users.map((userRecord) => ({
@@ -2273,7 +2273,7 @@ exports.adminListUsers = onCall({ cors: ['https://elnazer-edu.com', 'https://www
   }
 });
 
-exports.adminDeleteUser = onCall({ cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
+exports.adminDeleteUser = onCall({ invoker: 'public', cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can delete users.');
   }
@@ -2294,7 +2294,7 @@ exports.adminDeleteUser = onCall({ cors: ['https://elnazer-edu.com', 'https://ww
   }
 });
 
-exports.adminSendNotification = onCall({ cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
+exports.adminSendNotification = onCall({ invoker: 'public', cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can send manual notifications.');
   }

@@ -618,6 +618,7 @@
                                 <tr>
                                     <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">التاريخ والوقت</th>
                                     <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">العنوان</th>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">الطالب</th>
                                     <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">النوع</th>
                                     <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">الحالة</th>
                                     <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">التفاصيل</th>
@@ -625,7 +626,7 @@
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-white/5" id="notifsTbody">
                                 <tr>
-                                    <td colspan="5" class="p-8 text-center text-gray-500">
+                                    <td colspan="6" class="p-8 text-center text-gray-500">
                                         <i class="ri-inbox-line text-4xl mb-2 block"></i>
                                         اضغط على تحديث لعرض الإشعارات
                                     </td>
@@ -1920,7 +1921,7 @@
                 if (!loadMore) tbody.innerHTML = '';
 
                 if (snap.empty) {
-                    if (!loadMore) tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">لا توجد إشعارات.</td></tr>';
+                    if (!loadMore) tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500">لا توجد إشعارات.</td></tr>';
                     btnMore.classList.add('hidden');
                 } else {
                     snap.docs.forEach(doc => {
@@ -1946,16 +1947,52 @@
                         }
                         if (data.error) details += `<br><span class="text-red-500 text-xs">${data.error}</span>`;
 
+                        let studentId = '';
+                        let studentRef = null;
+                        try {
+                            if (doc.ref.parent && doc.ref.parent.parent) {
+                                studentRef = doc.ref.parent.parent;
+                                studentId = studentRef.id;
+                            }
+                        } catch (e) {}
+
+                        const spanId = `notif-student-${doc.id}`;
+
                         const tr = document.createElement('tr');
                         tr.className = 'hover:bg-gray-50 dark:hover:bg-white/5 transition-colors';
                         tr.innerHTML = `
                             <td class="p-4 text-xs font-mono text-gray-500 dark:text-gray-400" dir="ltr" style="text-align: right;">${dateStr}</td>
                             <td class="p-4 text-sm font-bold text-gray-900 dark:text-white">${title}</td>
+                            <td class="p-4 text-sm font-bold text-gray-700 dark:text-gray-300">
+                                <span id="${spanId}" class="flex items-center gap-2">
+                                    <i class="ri-loader-4-line animate-spin text-gray-400"></i> <span class="text-xs text-gray-500">${studentId}</span>
+                                </span>
+                            </td>
                             <td class="p-4 text-xs text-gray-600 dark:text-gray-300">${type}</td>
                             <td class="p-4">${statusBadge}</td>
                             <td class="p-4 text-xs text-gray-500 dark:text-gray-400" dir="ltr" style="text-align: right;">${details}</td>
                         `;
                         tbody.appendChild(tr);
+
+                        if (studentRef) {
+                            studentRef.get().then(sDoc => {
+                                const span = document.getElementById(spanId);
+                                if (span) {
+                                    if (sDoc.exists) {
+                                        const sData = sDoc.data();
+                                        span.innerHTML = `<i class="ri-user-line text-brand"></i> ${sData.name || 'بدون اسم'}`;
+                                    } else {
+                                        span.innerHTML = `<i class="ri-error-warning-line text-red-500"></i> غير معروف`;
+                                    }
+                                }
+                            }).catch(err => {
+                                const span = document.getElementById(spanId);
+                                if (span) span.innerHTML = `<span class="text-xs text-red-500">خطأ</span>`;
+                            });
+                        } else {
+                            const span = document.getElementById(spanId);
+                            if (span) span.innerHTML = `-`;
+                        }
                     });
 
                     lastNotifDoc = snap.docs[snap.docs.length - 1];
