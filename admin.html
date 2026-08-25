@@ -1,300 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Admin Dashboard | Elnazer</title>
+    <title>Super Admin Dashboard | Elnazer</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: '#F2CE5A',
-                        brandHover: '#e6c045',
-                        grayBg: '#f3f4f6', /* gray-100 */
-                    },
-                    fontFamily: {
-                        cairo: ['Cairo', 'sans-serif'],
-                        mono: ['Courier New', 'Courier', 'monospace']
-                    }
-                }
-            }
-        }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- RemixIcons -->
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
-    <!-- QRCode JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-    <!-- Firebase v8 Compat -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
-    <style>
-        body { 
-            font-family: 'Cairo', sans-serif; 
-            background-color: #f3f4f6;
-            color: #1f2937;
-            /* Simple Grid Background matching dashboard */
-            background-image: 
-                linear-gradient(to right, rgba(128, 128, 128, 0.08) 1px, transparent 1px), 
-                linear-gradient(to bottom, rgba(128, 128, 128, 0.08) 1px, transparent 1px);
-            background-size: 24px 24px;
-            min-height: 100vh;
-        }
-        
-        .clean-panel { 
-            background: #ffffff; 
-            border-radius: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            border: 1px solid #f3f4f6;
-        }
-        
-        .input-clean {
-            background-color: #f9fafb;
-            border: 1px solid #e5e7eb;
-            color: #111827;
-            transition: all 0.2s ease;
-            width: 100%;
-            padding: 0.875rem 1rem;
-            border-radius: 12px;
-        }
-        .input-clean:focus {
-            border-color: #F2CE5A;
-            background-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(242, 206, 90, 0.15);
-            outline: none;
-        }
-        .input-clean::placeholder {
-            color: #9ca3af;
-        }
-        
-        .btn-brand {
-            background-color: #F2CE5A;
-            color: #000000;
-            font-weight: 800;
-            border-radius: 12px;
-            padding: 0.75rem 1.5rem;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(242, 206, 90, 0.2);
-        }
-        .btn-brand:hover {
-            background-color: #e6c045;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 12px rgba(242, 206, 90, 0.3);
-        }
-        .btn-brand:active {
-            transform: scale(0.98);
-        }
-        .btn-brand:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        .icon-box {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-        
-        /* Print Styles */
-        @media print {
-            body * { visibility: hidden; }
-            #printCardsContainer, #printCardsContainer * { visibility: visible; }
-            #printCardsContainer {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                display: grid !important;
-                grid-template-columns: repeat(4, 1fr) !important;
-                gap: 15px !important;
-                padding: 10px !important;
-            }
-            .generic-card {
-                break-inside: avoid;
-                page-break-inside: avoid;
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                padding: 10px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                background-color: white;
-            }
-        }
-        
-        #printCardsContainer { display: none; }
-    </style>
-</head>
-<body class="flex flex-col items-center justify-center p-4 relative">
-    
-    <!-- Login Screen -->
-    <div id="loginScreen" class="w-full max-w-sm relative z-10 clean-panel p-8 print:hidden text-center transition-all my-auto">
-        <div class="relative w-20 h-20 mx-auto mb-5">
-            <img src="assets/images/learnaria_logo.png" alt="Logo" class="w-full h-full rounded-2xl shadow-sm border border-brand">
-            <div class="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full border-4 border-white"></div>
-        </div>
-        <h1 class="text-3xl font-black mb-1 text-gray-900 tracking-tight font-cairo">الناظر<span class="text-brand">.</span></h1>
-        <p class="text-gray-500 text-sm font-semibold mb-8">Admin Dashboard</p>
-        
-        <div id="loginError" class="hidden mb-5 p-3 bg-red-50 text-red-600 text-sm font-bold border border-red-100 rounded-xl"></div>
-        
-        <div class="space-y-4">
-            <div class="relative">
-                <i class="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="email" id="adminEmail" placeholder="Email Address" class="input-clean pl-11" dir="ltr" value="admin@elnazer-edu.com" readonly>
-            </div>
-            
-            <div class="relative">
-                <i class="ri-lock-password-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="password" id="adminPassword" placeholder="Password" class="input-clean pl-11" dir="ltr">
-            </div>
-            
-            <button id="loginBtn" class="btn-brand w-full flex justify-center items-center gap-2 mt-2">
-                <i class="ri-login-circle-line text-lg"></i> Login
-            </button>
-        </div>
-    </div>
-
-    <!-- Admin Panel -->
-    <div id="adminPanel" class="hidden w-full max-w-6xl relative z-10 print:hidden transition-all pb-12 mt-6">
-        
-        <!-- Header Navbar (Matching Dashboard Style) -->
-        <nav class="clean-panel px-6 py-4 mb-8 flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <a href="#" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                    <div class="relative">
-                        <img src="assets/images/learnaria_logo.png" alt="Logo" class="h-10 w-10 rounded-xl shadow-sm border border-brand">
-                        <div class="absolute -bottom-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white"></div>
-                    </div>
-                    <h1 class="text-2xl font-black text-gray-900 font-cairo tracking-tight">الناظر<span class="text-brand">.</span></h1>
-                </a>
-                <span class="text-gray-300">|</span>
-                <p class="text-gray-500 text-sm font-bold">Admin Dashboard</p>
-            </div>
-            <button id="logoutBtn" class="h-10 px-4 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white font-bold rounded-full text-sm transition-colors flex items-center gap-2">
-                <i class="ri-logout-circle-r-line"></i> Logout
-            </button>
-        </nav>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <!-- SECTION 1: Teacher Management -->
-            <div class="clean-panel p-6 flex flex-col h-full">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="icon-box bg-blue-50 text-blue-600">
-                        <i class="ri-user-star-fill"></i>
-                    </div>
-                    <h2 class="text-lg font-bold text-gray-900">Create Teacher Account</h2>
-                </div>
-
-                <div class="space-y-4 flex-grow">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="teacherNameInput" placeholder="e.g. Mr. Ahmed" class="input-clean">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label>
-                            <input type="text" id="teacherSubjectInput" placeholder="e.g. Physics" class="input-clean">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
-                            <input type="text" id="teacherPhoneInput" placeholder="+2010..." class="input-clean" dir="ltr">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
-                        <input type="text" id="teacherPasswordInput" placeholder="Enter password" class="input-clean" dir="ltr">
-                    </div>
-                </div>
-
-                <button onclick="createNewTeacher()" class="btn-brand w-full mt-6 flex items-center justify-center gap-2">
-                    <i class="ri-user-add-line"></i> Create Teacher Account
-                </button>
-                <div id="teacherCreateStatus" class="mt-3 text-center text-sm font-semibold h-5"></div>
-            </div>
-
-            <!-- SECTION 2: Center Management -->
-            <div class="clean-panel p-6 flex flex-col h-full">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="icon-box bg-purple-50 text-purple-600">
-                        <i class="ri-building-4-fill"></i>
-                    </div>
-                    <h2 class="text-lg font-bold text-gray-900">Create Center</h2>
-                </div>
-
-                <div class="space-y-4 flex-grow">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Center Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="centerNameInput" placeholder="e.g. Al Awael Center" class="input-clean">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
-                        <input type="text" id="centerPhoneInput" placeholder="+2010..." class="input-clean" dir="ltr">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
-                        <input type="text" id="centerPasswordInput" placeholder="Enter password" class="input-clean" dir="ltr">
-                    </div>
-                </div>
-
-                <button onclick="createNewCenter()" class="btn-brand w-full mt-6 flex items-center justify-center gap-2">
-                    <i class="ri-building-add-line"></i> Create Center Account
-                </button>
-                <div id="centerCreateStatus" class="mt-3 text-center text-sm font-semibold h-5"></div>
-            </div>
-            
-        </div>
-
-        <!-- SECTION 3: Smart Cards Generator -->
-        <div class="clean-panel p-6 mt-6">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="icon-box bg-brand/10 text-brand">
-                    <i class="ri-qr-code-line"></i>
-                </div>
-                <h2 class="text-lg font-bold text-gray-900">Generate QR Codes</h2>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
-                <div class="md:col-span-1">
-                    <label class="block text-xs font-bold text-gray-700 mb-1">Owner Phone Number <span class="text-red-500">*</span></label>
-                    <input type="text" id="cardOwnerInput" placeholder="+2010..." class="input-clean" dir="ltr">
-                </div>
-                
-                <div class="md:col-span-1">
-                    <label class="block text-xs font-bold text-gray-700 mb-1">Quantity <span class="text-red-500">*</span></label>
-                    <input type="number" id="cardsCountInput" min="10" max="1000" value="100" class="input-clean" dir="ltr">
-                </div>
-
-                <div class="md:col-span-1">
-                    <button onclick="generateAndAssignCards()" id="generateBtn" class="btn-brand w-full flex justify-center items-center gap-2">
-                        <i class="ri-printer-line"></i> Generate & Print
-                    </button>
-                </div>
-            </div>
-            
-            <div id="cardGenStatus" class="mt-4 text-center text-sm font-semibold h-5"></div>
-        </div>
-
-    </div>
-
-    <!-- Hidden Print Container -->
-    <div id="printCardsContainer"></div>
-
     <script>
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             alert('Global Error: ' + msg);
@@ -336,7 +47,7 @@
         // 2. AUTHENTICATION LOGIC
         // ==========================================
         const loginScreen = document.getElementById('loginScreen');
-        const adminPanel = document.getElementById('adminPanel');
+        const adminApp = document.getElementById('adminApp');
         const loginError = document.getElementById('loginError');
 
         function showError(msg) {
@@ -348,14 +59,15 @@
             if (user) {
                 if (user.email === ADMIN_EMAIL) {
                     loginScreen.classList.add('hidden');
-                    adminPanel.classList.remove('hidden');
+                    adminApp.classList.remove('hidden');
+                    if(typeof loadOverviewData === 'function') loadOverviewData();
                 } else {
                     auth.signOut();
                     showError('Unauthorized access.');
                 }
             } else {
                 loginScreen.classList.remove('hidden');
-                adminPanel.classList.add('hidden');
+                adminApp.classList.add('hidden');
             }
         });
 
@@ -381,6 +93,7 @@
         });
 
         document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
+        document.getElementById('logoutBtnMobile').addEventListener('click', () => auth.signOut());
 
         function restrictPhoneInput(e) {
             let val = e.target.value;
@@ -617,6 +330,2070 @@
                 btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
             }
         }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#F2CE5A',
+                        brandHover: '#e6c045',
+                        darkBg: '#0f111a',
+                        darkSurface: '#1a1d2d',
+                    },
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                        mono: ['Courier New', 'Courier', 'monospace']
+                    }
+                }
+            }
+        }
     </script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- RemixIcons -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- QRCode JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Firebase v8 Compat -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <style>
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: #f3f4f6;
+            color: #1f2937;
+            background-image: 
+                linear-gradient(to right, rgba(128, 128, 128, 0.08) 1px, transparent 1px), 
+                linear-gradient(to bottom, rgba(128, 128, 128, 0.08) 1px, transparent 1px);
+            background-size: 24px 24px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        html.dark body {
+            background-color: #0f111a;
+            color: #e5e7eb;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px), 
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        html.dark .glass-card {
+            background: rgba(26, 29, 45, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .input-clean {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            color: #111827;
+            transition: all 0.2s ease;
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border-radius: 1rem;
+        }
+
+        html.dark .input-clean {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #f3f4f6;
+        }
+
+        .input-clean:focus {
+            border-color: #F2CE5A;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(242, 206, 90, 0.15);
+            outline: none;
+        }
+
+        html.dark .input-clean:focus {
+            background-color: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 3px rgba(242, 206, 90, 0.1);
+        }
+
+        .btn-brand {
+            background-color: #F2CE5A;
+            color: #000000;
+            font-weight: 800;
+            border-radius: 1rem;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(242, 206, 90, 0.2);
+        }
+        .btn-brand:hover {
+            background-color: #e6c045;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(242, 206, 90, 0.3);
+        }
+        .btn-brand:active {
+            transform: scale(0.98);
+        }
+        .btn-brand:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .tab-button {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: #6b7280;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            width: 100%;
+            text-align: right;
+            position: relative;
+            overflow: hidden;
+        }
+
+        html.dark .tab-button {
+            color: #9ca3af;
+        }
+
+        .tab-button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: #1f2937;
+        }
+
+        html.dark .tab-button:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #f3f4f6;
+        }
+
+        .tab-button.active {
+            color: #1f2937;
+            background-color: rgba(242, 206, 90, 0.15);
+        }
+
+        html.dark .tab-button.active {
+            color: #F2CE5A;
+            background-color: rgba(242, 206, 90, 0.1);
+        }
+
+        .tab-button.active::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #F2CE5A;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Print Styles for QR Cards */
+        @media print {
+            body * { visibility: hidden; }
+            #printCardsContainer, #printCardsContainer * { visibility: visible; }
+            #printCardsContainer {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 15px !important;
+                padding: 10px !important;
+            }
+            .generic-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background-color: white;
+            }
+        }
+        #printCardsContainer { display: none; }
+        
+        .pulse-dot {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 print:hidden">
+        <div class="glass-card p-8 w-full max-w-md text-center relative overflow-hidden">
+            <div class="absolute -top-20 -left-20 w-60 h-60 bg-brand/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div class="relative z-10 w-24 h-24 mx-auto mb-6">
+                <img src="assets/images/learnaria_logo.png" alt="Logo" class="w-full h-full rounded-2xl shadow-xl border border-brand/50">
+                <div class="absolute -bottom-1 -right-1 bg-brand text-black w-7 h-7 rounded-full flex items-center justify-center border-2 border-white dark:border-zinc-900 shadow-sm" title="Super Admin">
+                    <i class="ri-shield-star-fill text-xs"></i>
+                </div>
+            </div>
+            
+            <h1 class="text-4xl font-black mb-2 text-gray-900 dark:text-white font-cairo">الناظر<span class="text-brand">.</span></h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm font-bold mb-8 uppercase tracking-widest">Super Admin Dashboard</p>
+            
+            <div id="loginError" class="hidden mb-6 p-4 bg-red-50/80 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-bold border border-red-200 dark:border-red-500/20 rounded-xl backdrop-blur-sm"></div>
+            
+            <div class="space-y-5 text-right relative z-10">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 ms-1">البريد الإلكتروني للإدارة</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand">
+                            <i class="ri-mail-line text-lg"></i>
+                        </div>
+                        <input type="email" id="adminEmail" placeholder="admin@..." class="input-clean ps-11 font-mono text-left" dir="ltr" value="admin@elnazer-edu.com" readonly>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 ms-1">كلمة المرور</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand">
+                            <i class="ri-lock-password-line text-lg"></i>
+                        </div>
+                        <input type="password" id="adminPassword" placeholder="••••••••" class="input-clean ps-11 font-mono text-left" dir="ltr">
+                    </div>
+                </div>
+                
+                <button id="loginBtn" class="btn-brand w-full flex justify-center items-center gap-2 mt-4 py-3.5 text-lg">
+                    <i class="ri-login-circle-line"></i> تسجيل الدخول
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin App Wrapper -->
+    <div id="adminApp" class="hidden min-h-screen flex flex-col md:flex-row print:hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-64 flex-shrink-0 p-4 border-b md:border-b-0 md:border-l border-gray-200 dark:border-white/5 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md z-40 fixed md:sticky top-0 bottom-auto md:bottom-0 md:h-screen flex flex-col transition-all overflow-y-auto">
+            
+            <!-- Logo area -->
+            <div class="flex items-center gap-3 mb-8 pb-6 border-b border-gray-200 dark:border-white/10 mt-2 px-2">
+                <img src="assets/images/learnaria_logo.png" alt="Logo" class="w-10 h-10 rounded-xl shadow-sm border border-brand/50">
+                <div>
+                    <h1 class="text-xl font-black text-gray-900 dark:text-white font-cairo leading-none">الناظر<span class="text-brand">.</span></h1>
+                    <div class="flex items-center gap-1 mt-1">
+                        <div class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></div>
+                        <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Super Admin</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <nav class="flex-grow space-y-2 flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 hide-scrollbar">
+                <button class="tab-button active shrink-0" data-tab="overview">
+                    <i class="ri-dashboard-3-line text-lg"></i>
+                    <span>نظرة عامة</span>
+                </button>
+                <button class="tab-button shrink-0" data-tab="auth_users">
+                    <i class="ri-group-line text-lg"></i>
+                    <span>مستخدمين Auth</span>
+                </button>
+                <button class="tab-button shrink-0" data-tab="notifications">
+                    <i class="ri-notification-3-line text-lg"></i>
+                    <span>سجل الإشعارات</span>
+                </button>
+                <button class="tab-button shrink-0" data-tab="tokens">
+                    <i class="ri-smartphone-line text-lg"></i>
+                    <span>حالة التوكنز</span>
+                </button>
+                <button class="tab-button shrink-0" data-tab="explorer">
+                    <i class="ri-folder-open-line text-lg"></i>
+                    <span>المدرسين والطلاب</span>
+                </button>
+                <div class="h-px w-full bg-gray-200 dark:bg-white/10 my-2 hidden md:block"></div>
+                <button class="tab-button shrink-0" data-tab="tools">
+                    <i class="ri-tools-line text-lg"></i>
+                    <span>أدوات النظام</span>
+                </button>
+                <button class="tab-button shrink-0 text-brand" data-tab="bonus">
+                    <i class="ri-magic-line text-lg"></i>
+                    <span>ميزات إضافية</span>
+                </button>
+            </nav>
+
+            <!-- Bottom Actions -->
+            <div class="mt-auto pt-6 border-t border-gray-200 dark:border-white/10 hidden md:block">
+                <button onclick="toggleDarkMode()" class="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300 font-bold text-sm transition-colors mb-2">
+                    <span class="flex items-center gap-2"><i class="ri-moon-line"></i> الوضع الليلي</span>
+                    <div class="w-8 h-4 bg-gray-200 dark:bg-brand rounded-full relative transition-colors">
+                        <div class="absolute w-3 h-3 bg-white rounded-full top-0.5 right-0.5 dark:left-0.5 dark:right-auto transition-all shadow-sm"></div>
+                    </div>
+                </button>
+                <button id="logoutBtn" class="w-full flex items-center gap-2 p-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 font-bold text-sm transition-colors">
+                    <i class="ri-logout-circle-r-line text-lg"></i> تسجيل خروج
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow p-4 md:p-8 md:pt-8 pt-32 h-screen overflow-y-auto">
+            
+            <!-- Mobile Header Actions (Visible only on small screens) -->
+            <div class="flex md:hidden justify-between items-center mb-6 bg-white/50 dark:bg-zinc-900/50 p-4 rounded-2xl glass-card">
+                <span class="font-black text-gray-800 dark:text-white">Admin Tools</span>
+                <div class="flex gap-2">
+                    <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-600 dark:text-white">
+                        <i class="ri-moon-line"></i>
+                    </button>
+                    <button id="logoutBtnMobile" class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/20 flex items-center justify-center text-red-500">
+                        <i class="ri-logout-circle-r-line"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content: Overview -->
+            <div id="tab-overview" class="tab-content block animate-fade-in">
+                <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-gray-900 dark:text-white font-cairo flex items-center gap-3">
+                            <i class="ri-dashboard-3-fill text-brand"></i> نظرة عامة
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">إحصائيات المنصة بالكامل في لمحة.</p>
+                    </div>
+                    <button onclick="loadOverviewData()" class="btn-brand flex items-center gap-2 py-2 px-4 rounded-xl text-sm">
+                        <i class="ri-refresh-line"></i> تحديث البيانات
+                    </button>
+                </div>
+                
+                <!-- KPI Grid -->
+                <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+                    <!-- KPI Card 1 -->
+                    <div class="glass-card p-4 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">المدرسين</span>
+                            <div class="w-8 h-8 rounded-lg bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center">
+                                <i class="ri-user-star-fill"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpiTeachers" class="text-2xl font-black text-gray-900 dark:text-white">-</h3>
+                    </div>
+                    <!-- KPI Card 2 -->
+                    <div class="glass-card p-4 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">الطلاب</span>
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                                <i class="ri-graduation-cap-fill"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpiStudents" class="text-2xl font-black text-gray-900 dark:text-white">-</h3>
+                    </div>
+                    <!-- KPI Card 3 -->
+                    <div class="glass-card p-4 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">أولياء الأمور</span>
+                            <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 flex items-center justify-center">
+                                <i class="ri-parent-fill"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpiParents" class="text-2xl font-black text-gray-900 dark:text-white">-</h3>
+                    </div>
+                    <!-- KPI Card 4 -->
+                    <div class="glass-card p-4 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">السناتر</span>
+                            <div class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                                <i class="ri-building-4-fill"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpiCenters" class="text-2xl font-black text-gray-900 dark:text-white">-</h3>
+                    </div>
+                    <!-- KPI Card 5 -->
+                    <div class="glass-card p-4 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">الكروت</span>
+                            <div class="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                                <i class="ri-qr-code-fill"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpiCards" class="text-2xl font-black text-gray-900 dark:text-white">-</h3>
+                    </div>
+                    <!-- KPI Card 6 -->
+                    <div class="glass-card p-4 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">إشعارات اليوم</span>
+                            <div class="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center">
+                                <i class="ri-notification-3-fill"></i>
+                            </div>
+                        </div>
+                        <h3 id="kpiNotifs" class="text-2xl font-black text-gray-900 dark:text-white">-</h3>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Line Chart -->
+                    <div class="glass-card p-6 lg:col-span-2">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">نمو الطلاب الجدد</h3>
+                        <div class="w-full h-64">
+                            <canvas id="studentsGrowthChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Doughnut Chart -->
+                    <div class="glass-card p-6">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">توزيع المستخدمين</h3>
+                        <div class="w-full h-64 relative flex items-center justify-center">
+                            <canvas id="usersDistributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            
+            <!-- Tab Content: Data Explorer -->
+            <div id="tab-explorer" class="tab-content hidden animate-fade-in">
+                <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-gray-900 dark:text-white font-cairo flex items-center gap-3">
+                            <i class="ri-folder-open-fill text-brand"></i> بيانات المدرسين والطلاب
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">استعراض هرمي للمدرسين، المجموعات، والطلاب.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="globalSearchInput" placeholder="بحث شامل (هاتف، اسم، كود)..." class="input-clean !py-2 !w-64">
+                        <button onclick="performGlobalSearch()" class="btn-brand flex items-center gap-2 py-2 px-4 rounded-xl text-sm">
+                            <i class="ri-search-line"></i> بحث
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Global Search Results -->
+                <div id="searchResultsContainer" class="hidden mb-6">
+                    <div class="glass-card overflow-hidden border border-brand/30">
+                        <div class="bg-brand/10 p-3 flex justify-between items-center border-b border-brand/20">
+                            <h3 class="font-bold text-brand flex items-center gap-2"><i class="ri-search-eye-line"></i> نتائج البحث الشامل</h3>
+                            <button onclick="closeSearchResults()" class="text-gray-500 hover:text-gray-700"><i class="ri-close-line text-xl"></i></button>
+                        </div>
+                        <div id="searchResultsContent" class="p-4 max-h-96 overflow-y-auto space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Accordion Tree View -->
+                <div class="glass-card p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ri-organization-chart"></i> شجرة البيانات</h3>
+                        <button onclick="loadExplorerData()" class="text-sm font-bold text-brand hover:text-brand-dark bg-brand/10 px-3 py-1.5 rounded-lg transition-colors">
+                            <i class="ri-refresh-line"></i> تحديث الكل
+                        </button>
+                    </div>
+                    <div id="explorerTree" class="space-y-2">
+                        <div class="text-center text-gray-500 p-8"><i class="ri-loader-4-line animate-spin text-3xl"></i></div>
+                    </div>
+                </div>
+            </div>
+
+<!-- Tab Content: Auth Users -->
+            <div id="tab-auth_users" class="tab-content hidden animate-fade-in">
+                <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-gray-900 dark:text-white font-cairo flex items-center gap-3">
+                            <i class="ri-group-fill text-brand"></i> إدارة مستخدمي Auth
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">عرض وحذف مستخدمين Firebase Authentication.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="authSearchInput" placeholder="بحث بالبريد..." class="input-clean !py-2 !w-64">
+                        <button onclick="loadAuthUsers()" class="btn-brand flex items-center gap-2 py-2 px-4 rounded-xl text-sm">
+                            <i class="ri-refresh-line"></i> تحميل
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right" id="authUsersTable">
+                            <thead class="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-200 dark:border-white/10">
+                                <tr>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">البريد الإلكتروني</th>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">UID</th>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">تاريخ الإنشاء</th>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">النوع</th>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300 text-left">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-white/5" id="authUsersTbody">
+                                <tr>
+                                    <td colspan="5" class="p-8 text-center text-gray-500">
+                                        <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                                        اضغط على تحميل لعرض المستخدمين
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-4 border-t border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-zinc-800/30">
+                        <span class="text-xs text-gray-500 dark:text-gray-400" id="authUsersStatus"></span>
+                        <div class="flex gap-2">
+                            <button id="authPrevPageBtn" class="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-sm font-bold disabled:opacity-50" disabled>السابق</button>
+                            <button id="authNextPageBtn" class="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-sm font-bold disabled:opacity-50" disabled>التالي</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <!-- Tab Content: Notifications History -->
+            <div id="tab-notifications" class="tab-content hidden animate-fade-in">
+                <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-gray-900 dark:text-white font-cairo flex items-center gap-3">
+                            <i class="ri-notification-3-fill text-brand"></i> سجل الإشعارات
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">مراقبة جميع الإشعارات الصادرة (غياب، واجبات، يدوية) وحالتها.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="notifFilterSelect" class="input-clean !py-2 !w-40 font-bold text-sm">
+                            <option value="all">كل الإشعارات</option>
+                            <option value="success">الناجحة فقط</option>
+                            <option value="error">الفاشلة فقط</option>
+                        </select>
+                        <button onclick="loadNotificationsHistory()" class="btn-brand flex items-center gap-2 py-2 px-4 rounded-xl text-sm">
+                            <i class="ri-refresh-line"></i> تحديث
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right" id="notifsTable">
+                            <thead class="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-200 dark:border-white/10">
+                                <tr>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">التاريخ والوقت</th>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">العنوان</th>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">النوع</th>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">الحالة</th>
+                                    <th class="p-4 text-sm font-bold text-gray-600 dark:text-gray-300">التفاصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-white/5" id="notifsTbody">
+                                <tr>
+                                    <td colspan="5" class="p-8 text-center text-gray-500">
+                                        <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                                        اضغط على تحديث لعرض الإشعارات
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-4 border-t border-gray-200 dark:border-white/10 text-center">
+                        <button onclick="loadMoreNotifications()" id="loadMoreNotifsBtn" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 font-bold text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors hidden">
+                            عرض المزيد...
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Tokens Status -->
+            <div id="tab-tokens" class="tab-content hidden animate-fade-in">
+                <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-gray-900 dark:text-white font-cairo flex items-center gap-3">
+                            <i class="ri-smartphone-fill text-brand"></i> حالة التوكنز
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">البحث عن حالة التوكن الخاص بأي ولي أمر لا يصله إشعارات.</p>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 mb-6">
+                    <div class="flex gap-4">
+                        <div class="flex-grow">
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم هاتف ولي الأمر أو الطالب</label>
+                            <input type="text" id="tokenSearchInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="checkTokenStatus()" id="checkTokenBtn" class="btn-brand py-3.5 px-6 rounded-xl text-sm flex items-center gap-2">
+                                <i class="ri-search-line"></i> فحص
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tokenResultContainer" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="glass-card p-6">
+                            <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <i class="ri-database-2-line text-blue-500"></i> بيانات الـ Parents Collection
+                            </h3>
+                            <div id="parentTokenData" class="space-y-3 font-mono text-sm" dir="ltr" style="text-align: left;"></div>
+                        </div>
+                        <div class="glass-card p-6">
+                            <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <i class="ri-user-smile-line text-green-500"></i> بيانات الـ Student Document
+                            </h3>
+                            <div id="studentTokenData" class="space-y-3 font-mono text-sm" dir="ltr" style="text-align: left;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+<!-- Tab Content: System Tools -->
+            <div id="tab-tools" class="tab-content hidden animate-fade-in">
+                <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-gray-900 dark:text-white font-cairo flex items-center gap-3">
+                            <i class="ri-tools-fill text-brand"></i> أدوات النظام
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">إدارة الكيانات والكروت والإعدادات التقنية.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- SECTION 1: Teacher Management -->
+                    <div class="glass-card p-6 flex flex-col h-full">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl">
+                                <i class="ri-user-star-fill"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">إنشاء حساب مدرس</h2>
+                        </div>
+
+                        <div class="space-y-4 flex-grow">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">الاسم الكامل <span class="text-red-500">*</span></label>
+                                <input type="text" id="teacherNameInput" placeholder="مثال: أ. أحمد محمد" class="input-clean">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">المادة <span class="text-red-500">*</span></label>
+                                    <input type="text" id="teacherSubjectInput" placeholder="مثال: فيزياء" class="input-clean">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف <span class="text-red-500">*</span></label>
+                                    <input type="text" id="teacherPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">كلمة المرور <span class="text-red-500">*</span></label>
+                                <input type="text" id="teacherPasswordInput" placeholder="أدخل كلمة المرور" class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                        </div>
+
+                        <button onclick="createNewTeacher()" class="btn-brand w-full mt-6 flex items-center justify-center gap-2">
+                            <i class="ri-user-add-line"></i> إنشاء الحساب
+                        </button>
+                        <div id="teacherCreateStatus" class="mt-3 text-center text-sm font-semibold h-5"></div>
+                    </div>
+
+                    <!-- SECTION 2: Center Management -->
+                    <div class="glass-card p-6 flex flex-col h-full">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl">
+                                <i class="ri-building-4-fill"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">إنشاء حساب سنتر</h2>
+                        </div>
+
+                        <div class="space-y-4 flex-grow">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">اسم السنتر <span class="text-red-500">*</span></label>
+                                <input type="text" id="centerNameInput" placeholder="مثال: سنتر الأوائل" class="input-clean">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف <span class="text-red-500">*</span></label>
+                                <input type="text" id="centerPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">كلمة المرور <span class="text-red-500">*</span></label>
+                                <input type="text" id="centerPasswordInput" placeholder="أدخل كلمة المرور" class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                        </div>
+
+                        <button onclick="createNewCenter()" class="btn-brand w-full mt-6 flex items-center justify-center gap-2">
+                            <i class="ri-building-add-line"></i> إنشاء حساب السنتر
+                        </button>
+                        <div id="centerCreateStatus" class="mt-3 text-center text-sm font-semibold h-5"></div>
+                    </div>
+                    
+                </div>
+
+                <!-- SECTION 3: Smart Cards Generator -->
+                <div class="glass-card p-6 mt-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-brand/20 text-brand flex items-center justify-center text-xl">
+                            <i class="ri-qr-code-line text-black dark:text-brand"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-gray-900 dark:text-white">توليد وطباعة الكروت الذكية (QR)</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم هاتف المالك (المدرس/السنتر) <span class="text-red-500">*</span></label>
+                            <input type="text" id="cardOwnerInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                        </div>
+                        
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">العدد المطلوب <span class="text-red-500">*</span></label>
+                            <input type="number" id="cardsCountInput" min="10" max="1000" value="100" class="input-clean font-mono text-left" dir="ltr">
+                        </div>
+
+                        <div class="md:col-span-1">
+                            <button onclick="generateAndAssignCards()" id="generateBtn" class="btn-brand w-full flex justify-center items-center gap-2">
+                                <i class="ri-printer-line"></i> توليد وطباعة
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="cardGenStatus" class="mt-4 text-center text-sm font-semibold h-5"></div>
+                </div>
+
+                <!-- NEW SECTION: Reset & Activate -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    
+                    <!-- Reset Password -->
+                    <div class="glass-card p-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center text-xl">
+                                <i class="ri-key-line"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">إعادة تعيين كلمة مرور (أي مستخدم)</h2>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف <span class="text-red-500">*</span></label>
+                                <input type="text" id="resetPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">كلمة المرور الجديدة <span class="text-red-500">*</span></label>
+                                <input type="text" id="resetPasswordInput" placeholder="أدخل كلمة المرور الجديدة" class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <button onclick="resetUserPassword()" id="resetPassBtn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                <i class="ri-refresh-line"></i> تغيير كلمة المرور
+                            </button>
+                            <div id="resetPassStatus" class="mt-2 text-center text-sm font-semibold h-5"></div>
+                        </div>
+                    </div>
+
+                    <!-- Activate Parent -->
+                    <div class="glass-card p-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center text-xl">
+                                <i class="ri-parent-line"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">تفعيل حساب ولي أمر يدوياً</h2>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم هاتف ولي الأمر <span class="text-red-500">*</span></label>
+                                <input type="text" id="activateParentPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">ستقوم هذه الأداة بإنشاء حساب لولي الأمر بكلمة المرور الافتراضية <code>elnazer@123456</code> أو إعادة تعيينها إذا كان موجوداً.</p>
+                            <button onclick="activateParentManual()" id="activateParentBtn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                <i class="ri-check-double-line"></i> تفعيل الحساب
+                            </button>
+                            <div id="activateParentStatus" class="mt-2 text-center text-sm font-semibold h-5"></div>
+                        </div>
+                    </div>
+                <!-- NEW SECTION: Manage Center & Migrate Cards -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    
+                    <!-- Manage Center Teachers -->
+                    <div class="glass-card p-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl">
+                                <i class="ri-team-line"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">إدارة مدرسي السناتر</h2>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم السنتر <span class="text-red-500">*</span></label>
+                                <input type="text" id="manageCenterPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم المدرس <span class="text-red-500">*</span></label>
+                                <input type="text" id="manageTeacherPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="manageCenterTeacher('add')" id="addTeacherBtn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                    <i class="ri-user-add-line"></i> إضافة للسنتر
+                                </button>
+                                <button onclick="manageCenterTeacher('remove')" id="removeTeacherBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                    <i class="ri-user-unfollow-line"></i> إزالة من السنتر
+                                </button>
+                            </div>
+                            <div id="manageCenterStatus" class="mt-2 text-center text-sm font-semibold h-5"></div>
+                        </div>
+                    </div>
+
+                    <!-- Migrate Cards -->
+                    <div class="glass-card p-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center text-xl">
+                                <i class="ri-database-2-line"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">هجرة الكروت القديمة (Migration)</h2>
+                        </div>
+                        <div class="space-y-4">
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                هذه الأداة ستقوم بالبحث في جميع الطلاب الحاليين، وسحب الكروت القديمة وإضافتها إلى مجموعة الكروت العالمية <code>cards</code> لتجنب فقدانها.
+                            </p>
+                            <div class="p-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-xl text-orange-700 dark:text-orange-400 text-xs font-bold flex items-start gap-2">
+                                <i class="ri-alert-line text-lg mt-0.5"></i>
+                                <span>تأكد من عدم تشغيل هذه الأداة إلا عند الحاجة فقط تجنباً لاستهلاك العمليات.</span>
+                            </div>
+                            <button onclick="migrateCards()" id="migrateCardsBtn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 transition-colors">
+                                <i class="ri-database-forward-line"></i> بدء الهجرة
+                            </button>
+                            <div id="migrateCardsStatus" class="mt-2 text-center text-sm font-semibold h-5"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        
+            <!-- Tab Content: Bonus -->
+            <div id="tab-bonus" class="tab-content hidden animate-fade-in">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-black text-gray-900 dark:text-white font-cairo flex items-center gap-3">
+                        <i class="ri-magic-line text-brand"></i> ميزات إضافية (Bonus)
+                    </h2>
+                    <p class="text-gray-500 dark:text-gray-400 mt-1 font-semibold text-sm">شريط الأحداث المباشر وأدوات متقدمة.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Real-time Activity Feed -->
+                    <div class="glass-card p-6">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+                            <h3 class="font-bold text-gray-900 dark:text-white">النشاط المباشر (Real-Time Feed)</h3>
+                        </div>
+                        <div id="activityFeed" class="space-y-3 h-96 overflow-y-auto pr-2">
+                            <div class="text-center text-gray-500 text-sm py-10">جاري الاتصال...</div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Analytics Placeholder -->
+                    <div class="glass-card p-6 flex flex-col items-center justify-center text-center">
+                        <div class="w-20 h-20 rounded-full bg-brand/10 text-brand flex items-center justify-center text-4xl mb-4">
+                            <i class="ri-bar-chart-2-fill"></i>
+                        </div>
+                        <h3 class="font-bold text-gray-900 dark:text-white mb-2">تحليلات متقدمة قريباً</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-xs">سيتم إضافة المزيد من الرسوم البيانية المتقدمة هنا قريباً...</p>
+                    </div>
+                </div>
+            </div>
+
+
+        </main>
+    </div>
+
+    <!-- Hidden Print Container -->
+    <div id="printCardsContainer"></div>
+
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            alert('Global Error: ' + msg);
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            alert('Unhandled Promise Rejection: ' + (event.reason && event.reason.message ? event.reason.message : event.reason));
+        });
+
+        // ==========================================
+        // 1. FIREBASE CONFIG
+        // ==========================================
+        const prodConfig = {
+            apiKey: "AIzaSyAbN4awHvNUZWC-uCgU_hR7iYiHk-3dpv8",
+            authDomain: "learnaria-483e7.firebaseapp.com",
+            projectId: "learnaria-483e7",
+            storageBucket: "learnaria-483e7.firebasestorage.app",
+            messagingSenderId: "573038013067",
+            appId: "1:573038013067:web:db6a78e8370d33b07a828e",
+            measurementId: "G-T68CEZS4YC"
+        };
+        
+        // Initialize Firebase
+        const app = firebase.initializeApp(prodConfig);
+        const auth = firebase.auth();
+        const functions = firebase.functions();
+        const db = firebase.firestore();
+
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            auth.useEmulator(`http://${window.location.hostname}:9090`);
+            functions.useEmulator(window.location.hostname, 5011);
+            db.useEmulator(window.location.hostname, 8088);
+            console.log("🔌 Connected to Firebase Local Emulators");
+        }
+        
+        const ADMIN_EMAIL = 'admin@elnazer-edu.com';
+
+        // ==========================================
+        // 2. AUTHENTICATION LOGIC
+        // ==========================================
+        const loginScreen = document.getElementById('loginScreen');
+        const adminApp = document.getElementById('adminApp');
+        const loginError = document.getElementById('loginError');
+
+        function showError(msg) {
+            loginError.innerText = msg;
+            loginError.classList.remove('hidden');
+        }
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                if (user.email === ADMIN_EMAIL) {
+                    loginScreen.classList.add('hidden');
+                    adminApp.classList.remove('hidden');
+                    if(typeof loadOverviewData === 'function') loadOverviewData();
+                } else {
+                    auth.signOut();
+                    showError('Unauthorized access.');
+                }
+            } else {
+                loginScreen.classList.remove('hidden');
+                adminApp.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value;
+            loginError.classList.add('hidden');
+            
+            if (!password) return showError('Please enter the password');
+            
+            const btn = document.getElementById('loginBtn');
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (err) {
+                showError('Invalid password or access denied.');
+            } finally {
+                btn.innerHTML = '<i class="ri-login-circle-line"></i> Login';
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
+        document.getElementById('logoutBtnMobile').addEventListener('click', () => auth.signOut());
+
+        function restrictPhoneInput(e) {
+            let val = e.target.value;
+            // Only allow digits and '+'
+            val = val.replace(/[^\d+]/g, '');
+            // Limit based on startsWith '+'
+            if (val.startsWith('+')) {
+                if (val.length > 13) val = val.substring(0, 13);
+            } else {
+                if (val.length > 11) val = val.substring(0, 11);
+            }
+            e.target.value = val;
+        }
+
+        document.getElementById('teacherPhoneInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('centerPhoneInput').addEventListener('input', restrictPhoneInput);
+        document.getElementById('cardOwnerInput').addEventListener('input', restrictPhoneInput);
+
+        // ==========================================
+        // 3. ENTITY MANAGEMENT (Teachers & Centers)
+        // ==========================================
+        async function createNewTeacher() {
+            const statusDiv = document.getElementById('teacherCreateStatus');
+            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
+            statusDiv.innerText = 'Validating data...';
+            
+            const name = document.getElementById('teacherNameInput').value.trim();
+            const subject = document.getElementById('teacherSubjectInput').value.trim();
+            const phone = document.getElementById('teacherPhoneInput').value.trim();
+            const password = document.getElementById('teacherPasswordInput').value.trim();
+
+            if (!name || !subject || !phone || !password) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Please fill all fields.';
+                return;
+            }
+
+            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
+            if (!phoneRegex.test(phone)) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Invalid Egyptian phone number format.';
+                return;
+            }
+
+            try {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
+                statusDiv.innerText = 'Sending to server...';
+                
+                const createTeacherFn = functions.httpsCallable('createTeacher');
+                await createTeacherFn({ teacherName: name, teacherSubject: subject, teacherPhone: phone, password: password });
+                
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = 'Teacher account created successfully!';
+                document.getElementById('teacherNameInput').value = '';
+                document.getElementById('teacherSubjectInput').value = '';
+                document.getElementById('teacherPhoneInput').value = '';
+                document.getElementById('teacherPasswordInput').value = '';
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Error: ' + err.message;
+            }
+        }
+
+        async function createNewCenter() {
+            const statusDiv = document.getElementById('centerCreateStatus');
+            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-gray-500 h-5';
+            statusDiv.innerText = 'Validating data...';
+            
+            const name = document.getElementById('centerNameInput').value.trim();
+            const phone = document.getElementById('centerPhoneInput').value.trim();
+            const password = document.getElementById('centerPasswordInput').value.trim();
+
+            if (!name || !phone || !password) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Please fill all fields.';
+                return;
+            }
+
+            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
+            if (!phoneRegex.test(phone)) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Invalid Egyptian phone number format.';
+                return;
+            }
+
+            try {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
+                statusDiv.innerText = 'Sending to server...';
+                
+                const createCenterFn = functions.httpsCallable('createCenter');
+                await createCenterFn({ centerName: name, centerPhone: phone, password: password });
+                
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = 'Center account created successfully!';
+                document.getElementById('centerNameInput').value = '';
+                document.getElementById('centerPhoneInput').value = '';
+                document.getElementById('centerPasswordInput').value = '';
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Error: ' + err.message;
+            }
+        }
+
+        // ==========================================
+        // 4. SMART CARDS GENERATION
+        // ==========================================
+        const motivationQuotes = [
+            "أنت بطل قصتك", "لا تستسلم أبداً", "استمر في التقدم", 
+            "النجاح يليق بك", "حلمك يستحق التعب", "إياك أن تيأس", 
+            "العلم نور دروبك", "المستقبل بانتظارك", "تعب اليوم راحة الغد"
+        ];
+
+        function generateCardId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let id = 'NAZ-';
+            for (let i = 0; i < 8; i++) {
+                id += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return id;
+        }
+
+        async function generateAndAssignCards() {
+            const ownerPhone = document.getElementById('cardOwnerInput').value.trim();
+            const countInput = document.getElementById('cardsCountInput');
+            let count = parseInt(countInput.value) || 100;
+            const statusDiv = document.getElementById('cardGenStatus');
+            const btn = document.getElementById('generateBtn');
+
+            if (!ownerPhone) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Owner phone number is required.';
+                return;
+            }
+
+            const phoneRegex = /^(01[0125]\d{8}|\+201[0125]\d{8})$/;
+            if (!phoneRegex.test(ownerPhone)) {
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'Invalid Egyptian phone number format.';
+                return;
+            }
+
+            if (count > 2000) count = 2000;
+            if (count < 1) count = 1;
+            countInput.value = count;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Generating...';
+            statusDiv.className = 'mt-3 text-center text-sm font-semibold text-blue-600 h-5';
+            statusDiv.innerText = 'Verifying owner identity...';
+
+            try {
+                // Verify owner exists (check both teachers and centers)
+                let isTeacher = false;
+                let isCenter = false;
+                
+                const tDoc = await db.collection('teachers').doc(ownerPhone).get();
+                if (tDoc.exists) isTeacher = true;
+                
+                if (!isTeacher) {
+                    const cDoc = await db.collection('centers').doc(ownerPhone).get();
+                    if (cDoc.exists) isCenter = true;
+                }
+
+                if (!isTeacher && !isCenter) {
+                    throw new Error('No teacher or center found with this number.');
+                }
+
+                statusDiv.innerText = `Verified. Generating ${count} cards...`;
+
+                // Generate Card IDs and Prepare Batch
+                const generatedCards = [];
+                const batch = db.batch();
+                
+                const cardsRef = db.collection('smart_cards');
+                
+                for (let i = 0; i < count; i++) {
+                    const cardId = generateCardId();
+                    generatedCards.push(cardId);
+                    
+                    batch.set(cardsRef.doc(cardId), {
+                        ownerId: ownerPhone,
+                        ownerType: isTeacher ? 'teacher' : 'center',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        assignedToStudent: false
+                    });
+                }
+
+                await batch.commit();
+
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = 'Saved. Preparing print view...';
+
+                // Render HTML for Print
+                const container = document.getElementById('printCardsContainer');
+                container.innerHTML = '';
+                container.style.display = 'grid';
+
+                for (const cardId of generatedCards) {
+                    let randomQuote = motivationQuotes[Math.floor(Math.random() * motivationQuotes.length)];
+                    const card = document.createElement('div');
+                    card.className = 'generic-card';
+                    card.innerHTML = `
+                        <div id="generic-qr-${cardId}"></div>
+                        <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 900; margin-top: 6px; color: #000000; letter-spacing: 1px; text-align: center;">${cardId}</div>
+                        <div style="font-size: 9px; font-weight: bold; margin-top: 3px; color: #666; text-align: center;">${randomQuote}</div>
+                    `;
+                    container.appendChild(card);
+
+                    new QRCode(card.querySelector(`#generic-qr-${cardId}`), {
+                        text: cardId,
+                        width: 100,
+                        height: 100,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+
+                // Trigger Print
+                setTimeout(() => {
+                    window.print();
+                    container.style.display = 'none';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
+                }, 1000);
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-3 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = err.message;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-printer-line"></i> Generate & Print';
+            }
+        }
+
+        // Check initial dark mode preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        // Tab Switching Logic
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active from all
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                
+                // Add active to clicked
+                btn.classList.add('active');
+                const tabId = btn.getAttribute('data-tab');
+                const contentEl = document.getElementById(`tab-${tabId}`);
+                if (contentEl) {
+                    contentEl.classList.remove('hidden');
+                }
+            });
+        // ==========================================
+        // 5. NEW TOOLS (Reset & Activate)
+        // ==========================================
+        async function resetUserPassword() {
+            const phoneInput = document.getElementById('resetPhoneInput').value.trim();
+            const passwordInput = document.getElementById('resetPasswordInput').value.trim();
+            const statusDiv = document.getElementById('resetPassStatus');
+            const btn = document.getElementById('resetPassBtn');
+
+            if (!phoneInput || !passwordInput) {
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'يرجى إدخال رقم الهاتف وكلمة المرور الجديدة.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري التغيير...';
+            statusDiv.className = 'mt-2 text-center text-sm font-semibold text-blue-600 h-5';
+            statusDiv.innerText = 'جاري إرسال الطلب...';
+
+            try {
+                const resetFn = functions.httpsCallable('resetPassword');
+                await resetFn({ phoneNumber: phoneInput, newPassword: passwordInput });
+                
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = 'تم تغيير كلمة المرور بنجاح!';
+                document.getElementById('resetPhoneInput').value = '';
+                document.getElementById('resetPasswordInput').value = '';
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-refresh-line"></i> تغيير كلمة المرور';
+            }
+        }
+
+        async function activateParentManual() {
+            const phoneInput = document.getElementById('activateParentPhoneInput').value.trim();
+            const statusDiv = document.getElementById('activateParentStatus');
+            const btn = document.getElementById('activateParentBtn');
+
+            if (!phoneInput) {
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'يرجى إدخال رقم الهاتف.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري التفعيل...';
+            statusDiv.className = 'mt-2 text-center text-sm font-semibold text-blue-600 h-5';
+            statusDiv.innerText = 'جاري إرسال الطلب...';
+
+            try {
+                const activateFn = functions.httpsCallable('activateParentAccount');
+                const result = await activateFn({ phone: phoneInput });
+                
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = result.data.message || 'تم التفعيل بنجاح!';
+                document.getElementById('activateParentPhoneInput').value = '';
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-check-double-line"></i> تفعيل الحساب';
+            }
+        }
+
+        async function migrateCards() {
+            if (!confirm('هل أنت متأكد من رغبتك في تشغيل هجرة الكروت؟ هذه العملية قد تستغرق بعض الوقت.')) return;
+
+            const statusDiv = document.getElementById('migrateCardsStatus');
+            const btn = document.getElementById('migrateCardsBtn');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري الهجرة...';
+            statusDiv.className = 'mt-2 text-center text-sm font-semibold text-blue-600 h-5';
+            statusDiv.innerText = 'جاري التشغيل...';
+
+            try {
+                const migrateFn = functions.httpsCallable('migrateExistingCards');
+                const result = await migrateFn();
+                
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = `تمت الهجرة بنجاح! تم نقل ${result.data.migratedCount} كارت.`;
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-database-forward-line"></i> بدء الهجرة';
+            }
+        }
+
+        async function manageCenterTeacher(action) {
+            const centerPhone = document.getElementById('manageCenterPhoneInput').value.trim();
+            const teacherPhone = document.getElementById('manageTeacherPhoneInput').value.trim();
+            const statusDiv = document.getElementById('manageCenterStatus');
+            
+            const btnAdd = document.getElementById('addTeacherBtn');
+            const btnRemove = document.getElementById('removeTeacherBtn');
+
+            if (!centerPhone || !teacherPhone) {
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = 'يرجى إدخال رقم السنتر ورقم المدرس.';
+                return;
+            }
+
+            btnAdd.disabled = true;
+            btnRemove.disabled = true;
+            statusDiv.className = 'mt-2 text-center text-sm font-semibold text-blue-600 h-5';
+            statusDiv.innerText = 'جاري التنفيذ...';
+
+            try {
+                const fnName = action === 'add' ? 'addTeacherToCenter' : 'removeTeacherFromCenter';
+                const manageFn = functions.httpsCallable(fnName);
+                await manageFn({ centerId: centerPhone, teacherId: teacherPhone });
+                
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-green-600 h-5';
+                statusDiv.innerText = action === 'add' ? 'تمت إضافة المدرس للسنتر بنجاح!' : 'تمت إزالة المدرس من السنتر بنجاح!';
+                document.getElementById('manageCenterPhoneInput').value = '';
+                document.getElementById('manageTeacherPhoneInput').value = '';
+            } catch (err) {
+                console.error(err);
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold text-red-500 h-5';
+                statusDiv.innerText = err.message;
+            } finally {
+                btnAdd.disabled = false;
+                btnRemove.disabled = false;
+            }
+        // ==========================================
+        // 6. OVERVIEW TAB LOGIC
+        // ==========================================
+        let studentsChart = null;
+        let usersChart = null;
+
+        async function loadOverviewData() {
+            try {
+                // Update KPIs
+                const teachersSnap = await db.collection('teachers').get();
+                const centersSnap = await db.collection('centers').get();
+                const parentsSnap = await db.collection('parents').get();
+                
+                // For students, we might use collectionGroup if we don't have a global count
+                const studentsSnap = await db.collectionGroup('students').get();
+                const cardsSnap = await db.collection('smart_cards').get();
+                
+                // For today's notifications
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const notifsSnap = await db.collection('notificationHistory')
+                    .where('sentAt', '>=', today)
+                    .get();
+
+                const tCount = teachersSnap.size;
+                const cCount = centersSnap.size;
+                const pCount = parentsSnap.size;
+                const sCount = studentsSnap.size;
+                const cardsCount = cardsSnap.size;
+                const nCount = notifsSnap.size;
+
+                document.getElementById('kpiTeachers').innerText = tCount;
+                document.getElementById('kpiCenters').innerText = cCount;
+                document.getElementById('kpiParents').innerText = pCount;
+                document.getElementById('kpiStudents').innerText = sCount;
+                document.getElementById('kpiCards').innerText = cardsCount;
+                document.getElementById('kpiNotifs').innerText = nCount;
+
+                // Update Users Distribution Chart
+                const ctxUsers = document.getElementById('usersDistributionChart').getContext('2d');
+                if (usersChart) usersChart.destroy();
+                
+                const isDark = document.documentElement.classList.contains('dark');
+                const textColor = isDark ? '#e5e7eb' : '#1f2937';
+
+                usersChart = new Chart(ctxUsers, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['طلاب', 'أولياء أمور', 'مدرسين', 'سناتر'],
+                        datasets: [{
+                            data: [sCount, pCount, tCount, cCount],
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.8)', // blue
+                                'rgba(16, 185, 129, 0.8)', // green
+                                'rgba(245, 158, 11, 0.8)', // yellow
+                                'rgba(139, 92, 246, 0.8)'  // purple
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: textColor, font: { family: 'Cairo' } }
+                            }
+                        }
+                    }
+                });
+
+                // Update Students Growth Chart (Mock data for now, ideally group students by createdAt)
+                const ctxGrowth = document.getElementById('studentsGrowthChart').getContext('2d');
+                if (studentsChart) studentsChart.destroy();
+
+                studentsChart = new Chart(ctxGrowth, {
+                    type: 'line',
+                    data: {
+                        labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو'],
+                        datasets: [{
+                            label: 'عدد الطلاب',
+                            data: [Math.round(sCount*0.2), Math.round(sCount*0.4), Math.round(sCount*0.5), Math.round(sCount*0.7), Math.round(sCount*0.8), Math.round(sCount*0.9), sCount],
+                            borderColor: '#F2CE5A',
+                            backgroundColor: 'rgba(242, 206, 90, 0.2)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: { ticks: { color: textColor, font: { family: 'Cairo' } }, grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } },
+                            y: { ticks: { color: textColor, font: { family: 'Cairo' } }, grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("Error loading overview data:", err);
+            }
+        }
+
+        
+    
+        // ==========================================
+        // 7. AUTH USERS LOGIC
+        // ==========================================
+        let authPageTokens = [];
+        let currentAuthPage = 0;
+        let allAuthUsersCache = [];
+
+        async function loadAuthUsers(pageToken = null, isNext = true) {
+            const tbody = document.getElementById('authUsersTbody');
+            const status = document.getElementById('authUsersStatus');
+            const btnNext = document.getElementById('authNextPageBtn');
+            const btnPrev = document.getElementById('authPrevPageBtn');
+            
+            tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500"><i class="ri-loader-4-line animate-spin text-4xl mb-2 block"></i>جاري التحميل...</td></tr>';
+            status.innerText = 'جاري جلب البيانات...';
+            btnNext.disabled = true;
+            btnPrev.disabled = true;
+
+            try {
+                const listFn = functions.httpsCallable('adminListUsers');
+                const result = await listFn({ pageToken: pageToken });
+                const users = result.data.users || [];
+                const nextToken = result.data.nextPageToken;
+
+                allAuthUsersCache = users; // Store for search
+                renderAuthUsers(users);
+
+                status.innerText = `تم تحميل ${users.length} مستخدم.`;
+
+                // Handle pagination state
+                if (isNext && nextToken) {
+                    if (authPageTokens.length === currentAuthPage) {
+                        authPageTokens.push(nextToken);
+                    }
+                }
+                
+                btnNext.disabled = !nextToken;
+                btnPrev.disabled = currentAuthPage === 0;
+
+                // Attach events
+                btnNext.onclick = () => {
+                    currentAuthPage++;
+                    loadAuthUsers(authPageTokens[currentAuthPage - 1], true);
+                };
+                btnPrev.onclick = () => {
+                    currentAuthPage--;
+                    const prevToken = currentAuthPage === 0 ? null : authPageTokens[currentAuthPage - 1];
+                    loadAuthUsers(prevToken, false);
+                };
+
+            } catch (error) {
+                console.error(error);
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500"><i class="ri-error-warning-line text-4xl mb-2 block"></i>حدث خطأ: ${error.message}</td></tr>`;
+                status.innerText = 'فشل التحميل.';
+            }
+        }
+
+        function renderAuthUsers(users) {
+            const tbody = document.getElementById('authUsersTbody');
+            tbody.innerHTML = '';
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">لا يوجد مستخدمين.</td></tr>';
+                return;
+            }
+
+            users.forEach(user => {
+                let typeBadge = '';
+                let typeClass = '';
+                const email = user.email || '';
+                
+                if (email.endsWith('@spot.com')) {
+                    typeBadge = 'مدرس / سنتر';
+                    typeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+                } else if (email.endsWith('@learnaria.app')) {
+                    typeBadge = 'ولي أمر';
+                    typeClass = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+                } else if (email === 'admin@elnazer-edu.com') {
+                    typeBadge = 'Super Admin';
+                    typeClass = 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+                } else {
+                    typeBadge = 'غير معروف';
+                    typeClass = 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+                }
+
+                const dateStr = user.creationTime ? new Date(user.creationTime).toLocaleDateString('ar-EG') : '-';
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group';
+                tr.innerHTML = `
+                    <td class="p-4">
+                        <div class="font-bold text-gray-900 dark:text-white" dir="ltr" style="text-align: right;">${email}</div>
+                    </td>
+                    <td class="p-4 text-xs font-mono text-gray-500 dark:text-gray-400" dir="ltr" style="text-align: right;">${user.uid}</td>
+                    <td class="p-4 text-sm text-gray-600 dark:text-gray-300">${dateStr}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 text-xs font-bold rounded-md ${typeClass}">${typeBadge}</span>
+                    </td>
+                    <td class="p-4 text-left">
+                        <button onclick="deleteAuthUser('${user.uid}', '${email}')" class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100" title="حذف المستخدم">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function deleteAuthUser(uid, email) {
+            if (!confirm(`هل أنت متأكد من حذف المستخدم النهائي: ${email}؟ هذا الإجراء لا يمكن التراجع عنه.`)) return;
+
+            try {
+                const deleteFn = functions.httpsCallable('adminDeleteUser');
+                await deleteFn({ uid: uid });
+                alert('تم حذف المستخدم بنجاح.');
+                // Refresh current page
+                const token = currentAuthPage === 0 ? null : authPageTokens[currentAuthPage - 1];
+                loadAuthUsers(token, false);
+            } catch (err) {
+                console.error(err);
+                alert('خطأ أثناء الحذف: ' + err.message);
+            }
+        }
+
+        document.getElementById('authSearchInput').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if (!query) {
+                renderAuthUsers(allAuthUsersCache);
+                return;
+            }
+            const filtered = allAuthUsersCache.filter(u => u.email && u.email.toLowerCase().includes(query));
+            renderAuthUsers(filtered);
+        });
+
+
+
+        // ==========================================
+        // 8. NOTIFICATION HISTORY & TOKENS LOGIC
+        // ==========================================
+        let lastNotifDoc = null;
+        let isFetchingNotifs = false;
+
+        async function loadNotificationsHistory(loadMore = false) {
+            if (isFetchingNotifs) return;
+            
+            const tbody = document.getElementById('notifsTbody');
+            const btnMore = document.getElementById('loadMoreNotifsBtn');
+            const filter = document.getElementById('notifFilterSelect').value;
+
+            if (!loadMore) {
+                lastNotifDoc = null;
+                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500"><i class="ri-loader-4-line animate-spin text-4xl mb-2 block"></i>جاري التحميل...</td></tr>';
+                btnMore.classList.add('hidden');
+            } else {
+                btnMore.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري التحميل...';
+                btnMore.disabled = true;
+            }
+
+            isFetchingNotifs = true;
+
+            try {
+                let query = db.collection('notificationHistory').orderBy('sentAt', 'desc').limit(20);
+                
+                if (filter !== 'all') {
+                    // Assuming status field exists and is "success" or "error"
+                    query = query.where('status', '==', filter);
+                }
+
+                if (loadMore && lastNotifDoc) {
+                    query = query.startAfter(lastNotifDoc);
+                }
+
+                const snap = await query.get();
+                
+                if (!loadMore) tbody.innerHTML = '';
+
+                if (snap.empty) {
+                    if (!loadMore) tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">لا توجد إشعارات.</td></tr>';
+                    btnMore.classList.add('hidden');
+                } else {
+                    snap.docs.forEach(doc => {
+                        const data = doc.data();
+                        
+                        const dateStr = data.sentAt ? data.sentAt.toDate().toLocaleString('ar-EG') : '-';
+                        const title = data.title || 'بدون عنوان';
+                        const type = (data.context && data.context.type) || 'عام';
+                        const isSuccess = data.status === 'success';
+                        
+                        const statusBadge = isSuccess 
+                            ? '<span class="px-2 py-1 text-xs font-bold rounded-md bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">ناجح</span>'
+                            : '<span class="px-2 py-1 text-xs font-bold rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">فشل</span>';
+                        
+                        let details = '';
+                        if (data.tokensSummary) {
+                            details = `ناجح: ${data.tokensSummary.successCount || 0} | فشل: ${data.tokensSummary.failureCount || 0}`;
+                        }
+                        if (data.error) details += `<br><span class="text-red-500 text-xs">${data.error}</span>`;
+
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-gray-50 dark:hover:bg-white/5 transition-colors';
+                        tr.innerHTML = `
+                            <td class="p-4 text-xs font-mono text-gray-500 dark:text-gray-400" dir="ltr" style="text-align: right;">${dateStr}</td>
+                            <td class="p-4 text-sm font-bold text-gray-900 dark:text-white">${title}</td>
+                            <td class="p-4 text-xs text-gray-600 dark:text-gray-300">${type}</td>
+                            <td class="p-4">${statusBadge}</td>
+                            <td class="p-4 text-xs text-gray-500 dark:text-gray-400" dir="ltr" style="text-align: right;">${details}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    lastNotifDoc = snap.docs[snap.docs.length - 1];
+                    if (snap.size === 20) {
+                        btnMore.classList.remove('hidden');
+                    } else {
+                        btnMore.classList.add('hidden');
+                    }
+                }
+
+            } catch (err) {
+                console.error(err);
+                if (!loadMore) tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">حدث خطأ: ${err.message}</td></tr>`;
+            } finally {
+                isFetchingNotifs = false;
+                if (loadMore) {
+                    btnMore.innerHTML = 'عرض المزيد...';
+                    btnMore.disabled = false;
+                }
+            }
+        }
+
+        async function checkTokenStatus() {
+            const phone = document.getElementById('tokenSearchInput').value.trim();
+            const container = document.getElementById('tokenResultContainer');
+            const parentDiv = document.getElementById('parentTokenData');
+            const studentDiv = document.getElementById('studentTokenData');
+            const btn = document.getElementById('checkTokenBtn');
+
+            if (!phone) {
+                alert("يرجى إدخال رقم الهاتف.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري...';
+            
+            parentDiv.innerHTML = '<div class="animate-pulse h-10 bg-gray-200 dark:bg-white/5 rounded-lg w-full"></div>';
+            studentDiv.innerHTML = '<div class="animate-pulse h-10 bg-gray-200 dark:bg-white/5 rounded-lg w-full"></div>';
+            container.classList.remove('hidden');
+
+            try {
+                // 1. Check Parents Collection
+                let pDataHTML = '';
+                const pDoc = await db.collection('parents').doc(phone).get();
+                if (pDoc.exists) {
+                    const data = pDoc.data();
+                    pDataHTML += `<div class="p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-200 dark:border-white/10">`;
+                    pDataHTML += `<strong class="text-gray-900 dark:text-white block mb-1">Found Parent Doc:</strong>`;
+                    pDataHTML += `<div><span class="text-gray-500">fcmToken:</span> <span class="text-blue-600 dark:text-blue-400 break-all">${data.fcmToken || 'NULL'}</span></div>`;
+                    
+                    if (data.fcmTokens && Array.isArray(data.fcmTokens)) {
+                        pDataHTML += `<div><span class="text-gray-500">fcmTokens[]:</span> ${data.fcmTokens.length} tokens</div>`;
+                        data.fcmTokens.forEach((tk, i) => {
+                            pDataHTML += `<div class="text-xs text-gray-400 pl-4 break-all">- ${tk}</div>`;
+                        });
+                    }
+                    if (data.lastTokenError) {
+                        pDataHTML += `<div><span class="text-red-500">lastTokenError:</span> ${data.lastTokenError}</div>`;
+                    }
+                    pDataHTML += `</div>`;
+                } else {
+                    pDataHTML = `<div class="p-3 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl border border-red-200 dark:border-red-500/20">لا يوجد حساب ولي أمر بهذا الرقم.</div>`;
+                }
+                parentDiv.innerHTML = pDataHTML;
+
+                // 2. Check Students (collectionGroup)
+                let sDataHTML = '';
+                const sSnap = await db.collectionGroup('students').where('parentPhone', '==', phone).get();
+                
+                if (sSnap.empty) {
+                    sDataHTML = `<div class="p-3 bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-xl border border-yellow-200 dark:border-yellow-500/20">لم يتم العثور على أي طالب مسجل برقم ولي الأمر هذا.</div>`;
+                } else {
+                    sSnap.docs.forEach(doc => {
+                        const data = doc.data();
+                        const path = doc.ref.path;
+                        sDataHTML += `<div class="p-3 mb-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-200 dark:border-white/10">`;
+                        sDataHTML += `<strong class="text-gray-900 dark:text-white block mb-1">${data.name || 'بدون اسم'}</strong>`;
+                        sDataHTML += `<div class="text-xs text-gray-500 mb-2 truncate" title="${path}">${path}</div>`;
+                        
+                        sDataHTML += `<div><span class="text-gray-500">parentFcmToken:</span> <span class="text-blue-600 dark:text-blue-400 break-all">${data.parentFcmToken || 'NULL'}</span></div>`;
+                        
+                        if (data.parentFcmTokens && Array.isArray(data.parentFcmTokens)) {
+                            sDataHTML += `<div><span class="text-gray-500">parentFcmTokens[]:</span> ${data.parentFcmTokens.length} tokens</div>`;
+                            data.parentFcmTokens.forEach((tk) => {
+                                sDataHTML += `<div class="text-xs text-gray-400 pl-4 break-all">- ${tk}</div>`;
+                            });
+                        }
+                        sDataHTML += `</div>`;
+                    });
+                }
+                studentDiv.innerHTML = sDataHTML;
+
+            } catch (err) {
+                console.error(err);
+                parentDiv.innerHTML = `<div class="text-red-500">خطأ: ${err.message}</div>`;
+                studentDiv.innerHTML = `<div class="text-red-500">خطأ: ${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-search-line"></i> فحص';
+            }
+        }
+
+
+        // ==========================================
+        // 9. DATA EXPLORER & GLOBAL SEARCH LOGIC
+        // ==========================================
+        
+        async function loadExplorerData() {
+            const tree = document.getElementById('explorerTree');
+            tree.innerHTML = '<div class="text-center text-gray-500 p-8"><i class="ri-loader-4-line animate-spin text-3xl"></i> جاري التحميل...</div>';
+            
+            try {
+                const teachersSnap = await db.collection('teachers').get();
+                if (teachersSnap.empty) {
+                    tree.innerHTML = '<div class="text-center text-gray-500 p-8">لا يوجد مدرسين مسجلين.</div>';
+                    return;
+                }
+                
+                tree.innerHTML = '';
+                
+                teachersSnap.docs.forEach(doc => {
+                    const data = doc.data();
+                    const teacherId = doc.id;
+                    const name = data.name || data.teacherName || 'مدرس بدون اسم';
+                    
+                    const item = document.createElement('div');
+                    item.className = 'border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden bg-gray-50 dark:bg-zinc-800/30 transition-all';
+                    item.innerHTML = `
+                        <button onclick="toggleExplorerNode('node-${teacherId}', '${teacherId}')" class="w-full p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 flex items-center justify-center">
+                                    <i class="ri-user-star-fill"></i>
+                                </div>
+                                <div class="text-right">
+                                    <h4 class="font-bold text-gray-900 dark:text-white">${name}</h4>
+                                    <p class="text-xs text-gray-500 font-mono">${teacherId}</p>
+                                </div>
+                            </div>
+                            <i class="ri-arrow-down-s-line text-gray-400 transition-transform" id="icon-${teacherId}"></i>
+                        </button>
+                        <div id="node-${teacherId}" class="hidden p-4 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-900">
+                            <div class="text-center text-gray-400 text-sm py-2"><i class="ri-loader-4-line animate-spin"></i> جاري تحميل المجموعات...</div>
+                        </div>
+                    `;
+                    tree.appendChild(item);
+                });
+            } catch (err) {
+                console.error(err);
+                tree.innerHTML = `<div class="text-center text-red-500 p-8">خطأ: ${err.message}</div>`;
+            }
+        }
+
+        async function toggleExplorerNode(nodeId, teacherId) {
+            const node = document.getElementById(nodeId);
+            const icon = document.getElementById(`icon-${teacherId}`);
+            
+            if (node.classList.contains('hidden')) {
+                // Open
+                node.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+                
+                // Load groups if not loaded
+                if (node.getAttribute('data-loaded') !== 'true') {
+                    try {
+                        const groupsSnap = await db.collection('teachers').doc(teacherId).collection('groups').get();
+                        if (groupsSnap.empty) {
+                            node.innerHTML = '<div class="text-sm text-gray-500 text-center py-2">لا يوجد مجموعات.</div>';
+                        } else {
+                            node.innerHTML = '<div class="space-y-2"></div>';
+                            const container = node.querySelector('div');
+                            
+                            groupsSnap.docs.forEach(gDoc => {
+                                const gData = gDoc.data();
+                                const gId = gDoc.id;
+                                const gName = gData.name || 'مجموعة بدون اسم';
+                                
+                                const gItem = document.createElement('div');
+                                gItem.className = 'border border-gray-100 dark:border-white/5 rounded-lg overflow-hidden bg-gray-50 dark:bg-zinc-800/50';
+                                gItem.innerHTML = `
+                                    <button onclick="toggleExplorerGroup('${teacherId}', '${gId}')" class="w-full p-3 flex items-center justify-between hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+                                        <div class="flex items-center gap-2">
+                                            <i class="ri-group-fill text-blue-500"></i>
+                                            <span class="font-bold text-sm text-gray-800 dark:text-gray-200">${gName}</span>
+                                        </div>
+                                        <i class="ri-arrow-down-s-line text-gray-400 transition-transform" id="icon-${teacherId}-${gId}"></i>
+                                    </button>
+                                    <div id="node-${teacherId}-${gId}" class="hidden p-3 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-zinc-900/80 max-h-64 overflow-y-auto">
+                                        <div class="text-center text-gray-400 text-xs py-2"><i class="ri-loader-4-line animate-spin"></i> جاري تحميل الطلاب...</div>
+                                    </div>
+                                `;
+                                container.appendChild(gItem);
+                            });
+                        }
+                        node.setAttribute('data-loaded', 'true');
+                    } catch (err) {
+                        node.innerHTML = `<div class="text-xs text-red-500 py-2">خطأ: ${err.message}</div>`;
+                    }
+                }
+            } else {
+                // Close
+                node.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        async function toggleExplorerGroup(teacherId, groupId) {
+            const nodeId = `node-${teacherId}-${groupId}`;
+            const iconId = `icon-${teacherId}-${groupId}`;
+            const node = document.getElementById(nodeId);
+            const icon = document.getElementById(iconId);
+            
+            if (node.classList.contains('hidden')) {
+                node.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+                
+                if (node.getAttribute('data-loaded') !== 'true') {
+                    try {
+                        const studentsSnap = await db.collection('teachers').doc(teacherId).collection('groups').doc(groupId).collection('students').get();
+                        if (studentsSnap.empty) {
+                            node.innerHTML = '<div class="text-xs text-gray-500 text-center py-2">لا يوجد طلاب.</div>';
+                        } else {
+                            let html = '<ul class="space-y-1">';
+                            studentsSnap.docs.forEach(sDoc => {
+                                const sData = sDoc.data();
+                                html += `
+                                    <li class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 border border-transparent hover:border-gray-100 dark:hover:border-white/5 transition-colors">
+                                        <div>
+                                            <div class="text-sm font-bold text-gray-800 dark:text-gray-200">${sData.name || 'بدون اسم'}</div>
+                                            <div class="text-xs text-gray-500 font-mono">${sData.parentPhone || 'لا يوجد هاتف'}</div>
+                                        </div>
+                                        <span class="text-xs bg-gray-200 dark:bg-white/10 px-2 py-0.5 rounded font-mono">${sData.cardId || sData.oldCardId || 'لا يوجد كارت'}</span>
+                                    </li>
+                                `;
+                            });
+                            html += '</ul>';
+                            node.innerHTML = html;
+                        }
+                        node.setAttribute('data-loaded', 'true');
+                    } catch (err) {
+                        node.innerHTML = `<div class="text-xs text-red-500 py-2">خطأ: ${err.message}</div>`;
+                    }
+                }
+            } else {
+                node.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        async function performGlobalSearch() {
+            const query = document.getElementById('globalSearchInput').value.trim();
+            if (!query) return;
+
+            const container = document.getElementById('searchResultsContainer');
+            const content = document.getElementById('searchResultsContent');
+            
+            container.classList.remove('hidden');
+            content.innerHTML = '<div class="text-center text-brand py-4"><i class="ri-loader-4-line animate-spin text-2xl"></i> جاري البحث...</div>';
+
+            let resultsHTML = '';
+            let count = 0;
+
+            try {
+                // Determine search type
+                let searchField = 'name';
+                let isPhone = false;
+                if (/^(\+20|01)\d+$/.test(query)) {
+                    searchField = 'parentPhone';
+                    isPhone = true;
+                } else if (/^[a-zA-Z0-9-]{10,}$/.test(query)) {
+                    searchField = 'cardId';
+                }
+
+                const studentsSnap = await db.collectionGroup('students')
+                    .where(searchField, '>=', query)
+                    .where(searchField, '<=', query + '')
+                    .limit(10)
+                    .get();
+
+                studentsSnap.docs.forEach(doc => {
+                    const s = doc.data();
+                    const path = doc.ref.path;
+                    count++;
+                    resultsHTML += `
+                        <div class="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-gray-100 dark:border-white/5 flex flex-col gap-1">
+                            <div class="flex justify-between items-start">
+                                <strong class="text-sm text-gray-900 dark:text-white">${s.name || 'بدون اسم'}</strong>
+                                <span class="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded">طالب</span>
+                            </div>
+                            <div class="text-xs text-gray-500 font-mono">${path}</div>
+                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1 flex gap-3">
+                                <span><i class="ri-phone-line"></i> ${s.parentPhone || '-'}</span>
+                                <span><i class="ri-qr-code-line"></i> ${s.cardId || s.oldCardId || '-'}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                if (count === 0) {
+                    content.innerHTML = '<div class="text-center text-gray-500 py-4">لم يتم العثور على نتائج.</div>';
+                } else {
+                    content.innerHTML = resultsHTML;
+                }
+            } catch (err) {
+                console.error(err);
+                content.innerHTML = `<div class="text-center text-red-500 py-4">خطأ في البحث: ${err.message}</div>`;
+            }
+        }
+
+        function closeSearchResults() {
+            document.getElementById('searchResultsContainer').classList.add('hidden');
+        }
+
+        // Attach Explorer load on tab switch if empty
+        document.querySelector('[data-tab="explorer"]').addEventListener('click', () => {
+            const tree = document.getElementById('explorerTree');
+            if (tree.children.length === 1 && tree.innerText.includes('جاري التحميل')) {
+                loadExplorerData();
+            }
+        });
+
+
+
+        // ==========================================
+        // 10. BONUS LOGIC (Real-Time Feed)
+        // ==========================================
+        
+        let activityUnsubscribe = null;
+
+        function startRealTimeFeed() {
+            const feed = document.getElementById('activityFeed');
+            
+            if (activityUnsubscribe) return; // Already listening
+            
+            activityUnsubscribe = db.collection('notificationHistory')
+                .orderBy('sentAt', 'desc')
+                .limit(20)
+                .onSnapshot(snap => {
+                    feed.innerHTML = '';
+                    if (snap.empty) {
+                        feed.innerHTML = '<div class="text-center text-gray-500 text-sm py-10">لا يوجد نشاط हाल.</div>';
+                        return;
+                    }
+                    
+                    snap.docs.forEach(doc => {
+                        const data = doc.data();
+                        const title = data.title || 'إشعار جديد';
+                        const type = (data.context && data.context.type) || 'عام';
+                        const isSuccess = data.status === 'success';
+                        const time = data.sentAt ? data.sentAt.toDate().toLocaleTimeString('ar-EG') : '';
+                        
+                        const icon = isSuccess ? '<i class="ri-check-line text-green-500 bg-green-100 dark:bg-green-500/20 p-2 rounded-lg"></i>' 
+                                               : '<i class="ri-close-line text-red-500 bg-red-100 dark:bg-red-500/20 p-2 rounded-lg"></i>';
+
+                        feed.innerHTML += `
+                            <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-white/5 animate-fade-in">
+                                ${icon}
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-900 dark:text-white">${title}</h4>
+                                    <p class="text-xs text-gray-500 mt-1">${type} • ${time}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }, err => {
+                    console.error("Feed error:", err);
+                    feed.innerHTML = `<div class="text-center text-red-500 text-sm py-10">خطأ في الاتصال.</div>`;
+                });
+        }
+
+        document.querySelector('[data-tab="bonus"]').addEventListener('click', startRealTimeFeed);
+
+
+</script>
 </body>
 </html>

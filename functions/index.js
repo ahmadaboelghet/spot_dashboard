@@ -2232,3 +2232,123 @@ exports.removeParentTokenOnLogout = onCall({ cors: true }, async (request) => {
     throw new HttpsError("internal", error.message);
   }
 });
+
+// ===================================================================
+// (نظام الـ Super Admin)
+// ===================================================================
+
+exports.adminListUsers = onCall({ cors: true }, async (request) => {
+  // Only allow admin
+  if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
+    throw new HttpsError('permission-denied', 'Only admin can list users.');
+  }
+
+  const { pageToken } = request.data || {};
+  try {
+    const listUsersResult = await admin.auth().listUsers(100, pageToken);
+    
+    // Add roles logic based on custom claims or collections (basic check for now)
+    const users = listUsersResult.users.map((userRecord) => ({
+      uid: userRecord.uid,
+      email: userRecord.email,
+      displayName: userRecord.displayName,
+      creationTime: userRecord.metadata.creationTime,
+      lastSignInTime: userRecord.metadata.lastSignInTime,
+      disabled: userRecord.disabled
+    }));
+
+    return {
+      users: users,
+      nextPageToken: listUsersResult.pageToken
+    };
+  } catch (error) {
+    console.error('Error listing users:', error);
+    throw new HttpsError('internal', error.message);
+  }
+});
+
+exports.adminDeleteUser = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
+    throw new HttpsError('permission-denied', 'Only admin can delete users.');
+  }
+
+  const { uid } = request.data;
+  if (!uid) {
+    throw new HttpsError('invalid-argument', 'Missing user UID.');
+  }
+
+  try {
+    await admin.auth().deleteUser(uid);
+    // Optional: delete from firestore collections if needed
+    // admin.firestore().collection('parents').doc(uid).delete();
+    return { success: true, message: 'User deleted successfully.' };
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw new HttpsError('internal', error.message);
+  }
+});
+
+exports.adminSendNotification = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
+    throw new HttpsError('permission-denied', 'Only admin can send manual notifications.');
+  }
+
+  const { targetType, targetId, title, body } = request.data;
+  if (!targetType || !title || !body) {
+    throw new HttpsError('invalid-argument', 'Missing target, title, or body.');
+  }
+
+  try {
+    const db = admin.firestore();
+    const payload = {
+      notification: { title, body },
+      data: { type: "admin_alert" }
+    };
+    
+    let studentDocs = [];
+    
+    if (targetType === "teacher") {
+      if (!targetId) throw new HttpsError('invalid-argument', 'Missing teacherId');
+      const snap = await db.collectionGroup("students")
+                           .orderBy(admin.firestore.FieldPath.documentId())
+                           .get(); // Need to filter by teacher in path
+      snap.docs.forEach(doc => {
+        if (doc.ref.path.startsWith(`teachers/${targetId}/`)) {
+          studentDocs.push(doc);
+        }
+      });
+    } else if (targetType === "group") {
+      const { teacherId, groupId } = request.data;
+      if (!teacherId || !groupId) throw new HttpsError('invalid-argument', 'Missing teacherId or groupId');
+      const snap = await db.collection("teachers").doc(teacherId).collection("groups").doc(groupId).collection("students").get();
+      studentDocs = snap.docs;
+    } else if (targetType === "student") {
+      const { teacherId, groupId, studentId } = request.data;
+      if (!teacherId || !groupId || !studentId) throw new HttpsError('invalid-argument', 'Missing teacher, group, or student ID');
+      const doc = await db.collection("teachers").doc(teacherId).collection("groups").doc(groupId).collection("students").doc(studentId).get();
+      if (doc.exists) studentDocs.push(doc);
+    }
+    
+    let sentCount = 0;
+    const promises = studentDocs.map(async (doc) => {
+      const studentData = doc.data();
+      const studentId = doc.id;
+      const pathSegments = doc.ref.path.split("/");
+      const tId = pathSegments[1];
+      const gId = pathSegments[3];
+      
+      try {
+        await sendNotificationToParent(studentData, payload, "AdminManual", studentId, tId, gId);
+        sentCount++;
+      } catch(e) {
+        console.error("Failed for student", studentId, e);
+      }
+    });
+    
+    await Promise.all(promises);
+    return { success: true, sentCount };
+  } catch (error) {
+    console.error('Error sending admin notification:', error);
+    throw new HttpsError('internal', error.message);
+  }
+});
