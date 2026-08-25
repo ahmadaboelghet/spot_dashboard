@@ -2243,7 +2243,7 @@ exports.removeParentTokenOnLogout = onCall({ cors: true }, async (request) => {
 // (نظام الـ Super Admin)
 // ===================================================================
 
-exports.adminListUsers = onCall({ cors: true }, async (request) => {
+exports.adminListUsers = onCall({ cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
   // Only allow admin
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can list users.');
@@ -2273,7 +2273,7 @@ exports.adminListUsers = onCall({ cors: true }, async (request) => {
   }
 });
 
-exports.adminDeleteUser = onCall({ cors: true }, async (request) => {
+exports.adminDeleteUser = onCall({ cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can delete users.');
   }
@@ -2294,7 +2294,7 @@ exports.adminDeleteUser = onCall({ cors: true }, async (request) => {
   }
 });
 
-exports.adminSendNotification = onCall({ cors: true }, async (request) => {
+exports.adminSendNotification = onCall({ cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
   if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
     throw new HttpsError('permission-denied', 'Only admin can send manual notifications.');
   }
