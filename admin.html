@@ -1435,7 +1435,7 @@
                 // For today's notifications
                 const today = new Date();
                 today.setHours(0,0,0,0);
-                const notifsSnap = await db.collection('notificationHistory')
+                const notifsSnap = await db.collectionGroup('notificationHistory')
                     .where('sentAt', '>=', today)
                     .get();
 
@@ -1903,7 +1903,7 @@
             isFetchingNotifs = true;
 
             try {
-                let query = db.collection('notificationHistory').orderBy('sentAt', 'desc').limit(20);
+                let query = db.collectionGroup('notificationHistory').orderBy('sentAt', 'desc').limit(20);
                 
                 if (filter !== 'all') {
                     // Assuming status field exists and is "success" or "error"
@@ -2065,7 +2065,7 @@
             
             if (activityUnsubscribe) return; // Already listening
             
-            activityUnsubscribe = db.collection('notificationHistory')
+            activityUnsubscribe = db.collectionGroup('notificationHistory')
                 .orderBy('sentAt', 'desc')
                 .limit(20)
                 .onSnapshot(snap => {
