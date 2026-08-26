@@ -2358,3 +2358,71 @@ exports.adminSendNotification = onCall({ invoker: 'public', cors: ['https://elna
     throw new HttpsError('internal', error.message);
   }
 });
+
+
+exports.adminMoveStudent = onCall({ invoker: 'public', cors: ['https://elnazer-edu.com', 'https://www.elnazer-edu.com', /localhost/, /127\.0\.0\.1/] }, async (request) => {
+  if (!request.auth || request.auth.token.email !== 'admin@elnazer-edu.com') {
+    throw new HttpsError('permission-denied', 'Only admin can move students.');
+  }
+
+  const { fromTeacherId, fromGroupId, studentId, toTeacherId, toGroupId } = request.data;
+  if (!fromTeacherId || !fromGroupId || !studentId || !toTeacherId || !toGroupId) {
+    throw new HttpsError('invalid-argument', 'Missing parameters.');
+  }
+
+  const db = admin.firestore();
+  
+  const oldStudentRef = db.doc(`teachers/${fromTeacherId}/groups/${fromGroupId}/students/${studentId}`);
+  const newStudentRef = db.doc(`teachers/${toTeacherId}/groups/${toGroupId}/students/${studentId}`);
+  
+  const oldSnap = await oldStudentRef.get();
+  if (!oldSnap.exists) {
+    throw new HttpsError('not-found', 'Student not found in the original group.');
+  }
+  
+  const toGroupSnap = await db.doc(`teachers/${toTeacherId}/groups/${toGroupId}`).get();
+  if (!toGroupSnap.exists) {
+    throw new HttpsError('not-found', 'Target group does not exist.');
+  }
+
+  const studentData = oldSnap.data();
+  // Update the groupId field just in case it's stored inside
+  studentData.groupId = toGroupId;
+  
+  const batch = db.batch();
+  batch.set(newStudentRef, studentData);
+  batch.delete(oldStudentRef);
+  
+  await batch.commit();
+  
+  // Now copy notification history
+  const oldNotifsRef = oldStudentRef.collection('notificationHistory');
+  const newNotifsRef = newStudentRef.collection('notificationHistory');
+  
+  const notifsSnap = await oldNotifsRef.get();
+  if (!notifsSnap.empty) {
+    // Process in chunks of 450 to avoid batch limit (500)
+    const chunks = [];
+    let currentChunk = db.batch();
+    let count = 0;
+    
+    for (const doc of notifsSnap.docs) {
+      currentChunk.set(newNotifsRef.doc(doc.id), doc.data());
+      currentChunk.delete(doc.ref);
+      count += 2;
+      
+      if (count >= 450) {
+        chunks.push(currentChunk);
+        currentChunk = db.batch();
+        count = 0;
+      }
+    }
+    if (count > 0) chunks.push(currentChunk);
+    
+    for (const chunk of chunks) {
+      await chunk.commit();
+    }
+  }
+
+  return { success: true, message: 'Student moved successfully' };
+});
