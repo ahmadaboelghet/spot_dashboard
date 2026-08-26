@@ -101,7 +101,7 @@ async function sendNotificationToParent(studentData, payload, context, studentId
     const timeStr = new Intl.DateTimeFormat('ar-EG', timeOptions).format(now);
     const dateStr = new Intl.DateTimeFormat('ar-EG', dateOptions).format(now);
     
-    payload.notification.body += `\n\n⏰ مُسجلة في تمام الساعة ${timeStr}، يوم ${dateStr}.`;
+    payload.notification.body += `\n\n⏰ وذلك في تمام الساعة ${timeStr}، يوم ${dateStr}.`;
   }
   
   const tokensToSend = [];

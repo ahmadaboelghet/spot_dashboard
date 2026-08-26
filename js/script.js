@@ -19,6 +19,25 @@ function sentryBreadcrumb(message, category = 'action', data = {}) {
     }
 }
 
+// ==========================================
+// FIREBASE ANALYTICS HELPER
+// ==========================================
+function logEvent(eventName, params = {}) {
+    try {
+        // Add global context to every event
+        const enriched = {
+            teacher_id: TEACHER_ID || 'unknown',
+            group_id: SELECTED_GROUP_ID || 'none',
+            ...params
+        };
+        if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+            const analytics = firebase.analytics();
+            if (analytics) analytics.logEvent(eventName, enriched);
+        }
+    } catch (e) { /* Analytics not critical, fail silently */ }
+}
+
+
  * SPOT TEACHER - FINAL INTEGRATED VERSION
  * Features: Smart Login + Parent Link + Unified Payments + Mirror Fix + Messages + Sync Fix + Fail-Safe Loading + Auto-Switch + UI Protection
  * FIXES: 
@@ -84,6 +103,12 @@ try {
         firestoreDB = firebase.firestore();
         storage = firebase.storage();
         functions = firebase.functions(); // مهم عشان الشات بوت يشتغل
+
+        // تفعيل Analytics (Production only)
+        let analyticsInstance = null;
+        if (!(location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')) {
+            try { analyticsInstance = firebase.analytics(); } catch(e) { /* not available */ }
+        }
 
         // تفعيل الكاش (Offline Persistence) مع دعم التبويبات المتعددة لمنع الأخطاء
         firestoreDB.enablePersistence({ synchronizeTabs: true }).catch(err => {
@@ -2087,6 +2112,7 @@ async function loginTeacher() {
         if (typeof Sentry !== 'undefined') {
             Sentry.setUser({ id: TEACHER_ID, username: data?.name || TEACHER_ID });
             Sentry.addBreadcrumb({ category: 'auth', message: 'Teacher logged in', level: 'info' });
+        logEvent('login', { method: 'email', teacher_name: data?.name || 'unknown' });
         }
 
         document.getElementById('landingSection').classList.add('hidden');
@@ -2137,6 +2163,7 @@ async function logout() {
         }
     } catch(e) {
         sentryBreadcrumb("Teacher logged out", "auth");
+    logEvent('logout');
         console.error("Firebase signout error:", e);
     }
 
@@ -2253,6 +2280,7 @@ async function createGroup() {
     switchTab('overview');
     await loadGroupData(); // تفعيل أزرار الإضافة (عشان لو عايز يضيف طلاب علطول)
     document.getElementById('defaultAmountInput').value = '';
+    logEvent("group_created", { group_name: newGroupName });
     showToast(translations[currentLang].groupCreatedSuccess);
 }
 
@@ -2289,6 +2317,7 @@ async function deleteCurrentGroup() {
         checkGroupSelectionPortal();
 
     } catch (e) {
+        logEvent("group_deleted", { group_id: SELECTED_GROUP_ID });
         console.error("Error deleting group:", e);
         sentryCaptureError(e, { action: "deleteGroup", groupId: SELECTED_GROUP_ID });
         showToast("Error during delete", 'error');
@@ -3296,6 +3325,7 @@ async function saveDailyData(isSilent = false) {
                 };
 
                 console.log(sentryBreadcrumb("Attendance save queued", "attendance", { groupId: SELECTED_GROUP_ID });
+                logEvent("attendance_saved", { group_id: SELECTED_GROUP_ID });
                 console.log("📝 Queuing attendance save:"), {
                     path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
                     localId: attendanceId,
@@ -3586,6 +3616,7 @@ async function handleScan(scannedText) {
             }
 
         } catch (err) {
+            logEvent("scan_error", { scan_type: "cross_group", error: err.message });
             console.error("Cross-Group Error:", err);
             sentryCaptureError(err, { action: "crossGroupScan", groupId: SELECTED_GROUP_ID });
         }
@@ -3725,6 +3756,7 @@ function processDailyScan(student) {
         sel.dispatchEvent(new Event('change'));
         row.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    logEvent('scan_attendance', { student_id: student.id, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
     if (hasHomeworkToday) {
         currentPendingStudentId = student.id;
         document.getElementById('hwStudentName').innerText = student.name;
@@ -3739,6 +3771,7 @@ async function resolveHomework(isSubmitted) {
     if (currentCrossGroupStudent) {
         // حفظ الحضور + الواجب (حسب الاختيار)
         await saveCrossGroupAttendance(currentCrossGroupStudent, isSubmitted);
+        logEvent('homework_resolved', { submitted: isSubmitted, scan_type: 'cross_group', student_id: currentCrossGroupStudent.id });
 
         // جلب اسم المجموعة للعرض
         let groupName = "مجموعة أخرى";
@@ -3779,6 +3812,7 @@ async function resolveHomework(isSubmitted) {
     }
 
     document.getElementById('hwConfirmModal').classList.add('hidden');
+    logEvent('homework_resolved', { submitted: isSubmitted, scan_type: 'regular', student_id: currentPendingStudentId });
     currentPendingStudentId = null;
     isScannerPaused = false;
     requestAnimationFrame(tickScanner);
@@ -3815,6 +3849,7 @@ function processPaymentScan(student) {
             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
             row.classList.add('ring-4', 'ring-green-300');
             setTimeout(() => row.classList.remove('ring-4', 'ring-green-300'), 1000);
+            logEvent('scan_payment', { student_id: student.id, student_name: student.name, amount: val, group_id: SELECTED_GROUP_ID });
         } else {
             showToast(`تم دفع المصاريف مسبقاً للطالب: ${student.name}`);
         }
@@ -4261,6 +4296,7 @@ async function linkCardToStudent(student, cardId) {
     }
     
     closeCardLinkModal();
+    logEvent("student_added", { group_id: SELECTED_GROUP_ID });
     showToast(translations[currentLang].studentAdded || 'تم ربط الكارت بالطالب بنجاح!', 'success');
 }
 
