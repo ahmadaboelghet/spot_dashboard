@@ -3324,9 +3324,9 @@ async function saveDailyData(isSilent = false) {
                     records: attendanceRecords
                 };
 
-                console.log(sentryBreadcrumb("Attendance save queued", "attendance", { groupId: SELECTED_GROUP_ID });
+                sentryBreadcrumb("Attendance save queued", "attendance", { groupId: SELECTED_GROUP_ID });
                 logEvent("attendance_saved", { group_id: SELECTED_GROUP_ID });
-                console.log("📝 Queuing attendance save:"), {
+                console.log("📝 Queuing attendance save:", {
                     path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
                     localId: attendanceId,
                     recordsCount: attendanceRecords.length
