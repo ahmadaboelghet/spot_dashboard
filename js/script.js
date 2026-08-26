@@ -2126,6 +2126,8 @@ async function logout() {
 }
 
 async function loadGroups() {
+    if (!TEACHER_ID) return;
+    
     let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
     renderGroupsDropdown(groups);
 
