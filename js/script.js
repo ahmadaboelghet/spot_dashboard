@@ -5973,7 +5973,8 @@ async function calculateOverallIncome(liveGroupTotal = null) {
     if (!month) return;
 
     try {
-        let groups = await getAllFromDB('groups');
+        // ✅ جيب مجموعات المدرس الحالي فقط
+        let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
 
         if (!groups || groups.length === 0) {
             display.innerText = "0 ج.م";
@@ -5982,14 +5983,12 @@ async function calculateOverallIncome(liveGroupTotal = null) {
 
         // مصفوفة وعود لحساب كل مجموعة بالتوازي
         const promises = groups.map(async (group) => {
-            // ✅ اللوجيك الجديد:
-            // لو دي المجموعة اللي أنا فاتحها دلوقتي + باعتلها رقم مباشر (Live)
-            // استخدم الرقم المباشر ومتروحش للداتابيز القديمة
+            // ✅ لو دي المجموعة المفتوحة حالياً واحنا عندنا رقمها Live → استخدمه
             if (group.id === SELECTED_GROUP_ID && liveGroupTotal !== null) {
                 return parseInt(liveGroupTotal) || 0;
             }
 
-            // باقي المجموعات: هاتها من الداتابيز عادي
+            // باقي المجموعات: هاتها من الداتابيز
             const payId = `${group.id}_PAY_${month}`;
             const doc = await getFromDB('payments', payId);
 
