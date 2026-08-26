@@ -793,15 +793,18 @@
                                 <h3 class="font-bold text-sm text-gray-700 dark:text-gray-300">من (المكان الحالي)</h3>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم المدرس الحالي <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveFromTeacherInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                                    <div class="flex gap-2">
+    <input type="text" id="moveFromTeacherInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+    <button type="button" onclick="loadMoveFromGroups()" class="bg-gray-200 dark:bg-zinc-700 px-3 rounded-xl hover:bg-gray-300 dark:hover:bg-zinc-600 transition-colors"><i class="ri-search-line"></i></button>
+</div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">ID المجموعة الحالية <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveFromGroupInput" placeholder="أدخل ID المجموعة" class="input-clean font-mono text-left" dir="ltr">
+                                    <select id="moveFromGroupInput" class="input-clean" onchange="onMoveFromGroupChange()"><option value="">اختر المجموعة...</option></select>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">ID الطالب <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveStudentIdInput" placeholder="أدخل ID الطالب" class="input-clean font-mono text-left" dir="ltr">
+                                    <select id="moveStudentIdInput" class="input-clean"><option value="">اختر الطالب...</option></select>
                                 </div>
                             </div>
                             
@@ -810,11 +813,14 @@
                                 <h3 class="font-bold text-sm text-purple-700 dark:text-purple-400">إلى (المكان الجديد)</h3>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم المدرس الجديد <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveToTeacherInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                                    <div class="flex gap-2">
+    <input type="text" id="moveToTeacherInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+    <button type="button" onclick="loadMoveToGroups()" class="bg-purple-200 dark:bg-purple-900/40 px-3 rounded-xl hover:bg-purple-300 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 transition-colors"><i class="ri-search-line"></i></button>
+</div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">ID المجموعة الجديدة <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveToGroupInput" placeholder="أدخل ID المجموعة الجديدة" class="input-clean font-mono text-left" dir="ltr">
+                                    <select id="moveToGroupInput" class="input-clean"><option value="">اختر المجموعة...</option></select>
                                 </div>
                             </div>
                         </div>
@@ -1060,15 +1066,18 @@
                                 <h3 class="font-bold text-sm text-gray-700 dark:text-gray-300">من (المكان الحالي)</h3>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم المدرس الحالي <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveFromTeacherInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                                    <div class="flex gap-2">
+    <input type="text" id="moveFromTeacherInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+    <button type="button" onclick="loadMoveFromGroups()" class="bg-gray-200 dark:bg-zinc-700 px-3 rounded-xl hover:bg-gray-300 dark:hover:bg-zinc-600 transition-colors"><i class="ri-search-line"></i></button>
+</div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">ID المجموعة الحالية <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveFromGroupInput" placeholder="أدخل ID المجموعة" class="input-clean font-mono text-left" dir="ltr">
+                                    <select id="moveFromGroupInput" class="input-clean" onchange="onMoveFromGroupChange()"><option value="">اختر المجموعة...</option></select>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">ID الطالب <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveStudentIdInput" placeholder="أدخل ID الطالب" class="input-clean font-mono text-left" dir="ltr">
+                                    <select id="moveStudentIdInput" class="input-clean"><option value="">اختر الطالب...</option></select>
                                 </div>
                             </div>
                             
@@ -1077,11 +1086,14 @@
                                 <h3 class="font-bold text-sm text-purple-700 dark:text-purple-400">إلى (المكان الجديد)</h3>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم المدرس الجديد <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveToTeacherInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+                                    <div class="flex gap-2">
+    <input type="text" id="moveToTeacherInput" placeholder="+2010..." class="input-clean font-mono text-left" dir="ltr">
+    <button type="button" onclick="loadMoveToGroups()" class="bg-purple-200 dark:bg-purple-900/40 px-3 rounded-xl hover:bg-purple-300 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 transition-colors"><i class="ri-search-line"></i></button>
+</div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">ID المجموعة الجديدة <span class="text-red-500">*</span></label>
-                                    <input type="text" id="moveToGroupInput" placeholder="أدخل ID المجموعة الجديدة" class="input-clean font-mono text-left" dir="ltr">
+                                    <select id="moveToGroupInput" class="input-clean"><option value="">اختر المجموعة...</option></select>
                                 </div>
                             </div>
                         </div>
@@ -1344,6 +1356,84 @@
         }
 
         
+        
+        async function loadMoveFromGroups() {
+            const teacherId = document.getElementById('moveFromTeacherInput').value.trim();
+            const groupSelect = document.getElementById('moveFromGroupInput');
+            if (!teacherId) return;
+            
+            groupSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+            try {
+                const snap = await db.collection(`teachers/${teacherId}/groups`).get();
+                if (snap.empty) {
+                    groupSelect.innerHTML = '<option value="">لا توجد مجموعات</option>';
+                    return;
+                }
+                groupSelect.innerHTML = '<option value="">اختر المجموعة...</option>';
+                snap.docs.forEach(doc => {
+                    const data = doc.data();
+                    const name = data.name || doc.id;
+                    groupSelect.innerHTML += `<option value="${doc.id}">${name}</option>`;
+                });
+            } catch (err) {
+                console.error(err);
+                groupSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+            }
+        }
+
+        async function onMoveFromGroupChange() {
+            const teacherId = document.getElementById('moveFromTeacherInput').value.trim();
+            const groupId = document.getElementById('moveFromGroupInput').value;
+            const studentSelect = document.getElementById('moveStudentIdInput');
+            
+            if (!teacherId || !groupId) {
+                studentSelect.innerHTML = '<option value="">اختر الطالب...</option>';
+                return;
+            }
+            
+            studentSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+            try {
+                const snap = await db.collection(`teachers/${teacherId}/groups/${groupId}/students`).get();
+                if (snap.empty) {
+                    studentSelect.innerHTML = '<option value="">لا يوجد طلاب</option>';
+                    return;
+                }
+                studentSelect.innerHTML = '<option value="">اختر الطالب...</option>';
+                snap.docs.forEach(doc => {
+                    const data = doc.data();
+                    const name = data.name || 'بدون اسم';
+                    studentSelect.innerHTML += `<option value="${doc.id}">${name}</option>`;
+                });
+            } catch (err) {
+                console.error(err);
+                studentSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+            }
+        }
+
+        async function loadMoveToGroups() {
+            const teacherId = document.getElementById('moveToTeacherInput').value.trim();
+            const groupSelect = document.getElementById('moveToGroupInput');
+            if (!teacherId) return;
+            
+            groupSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+            try {
+                const snap = await db.collection(`teachers/${teacherId}/groups`).get();
+                if (snap.empty) {
+                    groupSelect.innerHTML = '<option value="">لا توجد مجموعات</option>';
+                    return;
+                }
+                groupSelect.innerHTML = '<option value="">اختر المجموعة...</option>';
+                snap.docs.forEach(doc => {
+                    const data = doc.data();
+                    const name = data.name || doc.id;
+                    groupSelect.innerHTML += `<option value="${doc.id}">${name}</option>`;
+                });
+            } catch (err) {
+                console.error(err);
+                groupSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+            }
+        }
+
         async function moveStudentBtnClick() {
             const fromTeacherId = document.getElementById('moveFromTeacherInput').value.trim();
             const fromGroupId = document.getElementById('moveFromGroupInput').value.trim();
