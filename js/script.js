@@ -1,4 +1,24 @@
 /**
+
+// ==========================================
+// SENTRY ERROR TRACKING HELPER
+// ==========================================
+function sentryCaptureError(error, context = {}) {
+    if (typeof Sentry !== 'undefined') {
+        Sentry.withScope(scope => {
+            Object.entries(context).forEach(([k, v]) => scope.setExtra(k, v));
+            if (TEACHER_ID) scope.setUser({ id: TEACHER_ID });
+            if (SELECTED_GROUP_ID) scope.setTag('groupId', SELECTED_GROUP_ID);
+            Sentry.captureException(error instanceof Error ? error : new Error(String(error)));
+        });
+    }
+}
+function sentryBreadcrumb(message, category = 'action', data = {}) {
+    if (typeof Sentry !== 'undefined') {
+        Sentry.addBreadcrumb({ message, category, data, level: 'info' });
+    }
+}
+
  * SPOT TEACHER - FINAL INTEGRATED VERSION
  * Features: Smart Login + Parent Link + Unified Payments + Mirror Fix + Messages + Sync Fix + Fail-Safe Loading + Auto-Switch + UI Protection
  * FIXES: 
@@ -76,6 +96,7 @@ try {
     }
 } catch (e) {
     console.error("Firebase Initialization Error:", e);
+    sentryCaptureError(e, { action: "firebaseInit" });
 }
 
 // ==========================================
@@ -1413,6 +1434,7 @@ async function processSyncQueue(isRecovering = false) {
 
     } catch (e) {
         console.error("🔥 Fatal error in processSyncQueue:", e);
+        sentryCaptureError(e, { action: "processSyncQueue" });
     } finally {
         isSyncing = false;
         await updateSyncUI();
@@ -1465,6 +1487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setInterval(updateOnlineStatus, 15000);
     } catch (err) {
         console.error("🔥 Fatal initialization error:", err);
+        sentryCaptureError(err, { action: "appInit" });
         // Recovery fallback: remove anti-flash class and show landing section so page is not blank
         document.documentElement.classList.remove('is-logged-in');
         const landing = document.getElementById('landingSection');
@@ -2059,6 +2082,12 @@ async function loginTeacher() {
         localStorage.setItem('learnaria-tid', TEACHER_ID);
         if (TEACHER_CENTER_ID) localStorage.setItem('learnaria-cid', TEACHER_CENTER_ID);
         updateHomeLinks();
+        
+        // Sentry: تسجيل هوية المستخدم لربط الأخطاء بحسابه
+        if (typeof Sentry !== 'undefined') {
+            Sentry.setUser({ id: TEACHER_ID, username: data?.name || TEACHER_ID });
+            Sentry.addBreadcrumb({ category: 'auth', message: 'Teacher logged in', level: 'info' });
+        }
 
         document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
@@ -2083,6 +2112,7 @@ async function loginTeacher() {
     } catch (error) {
         if (error.message !== "Offline first login") {
             console.error("Login Error:", error);
+            sentryCaptureError(error, { action: "login", teacherId: fmt });
             if (error.message.includes("Missing or insufficient permissions") || error.code === 'permission-denied') {
                 showToast(currentLang === 'ar' ? 'كلمة المرور غير صحيحة، أو الحساب غير مسجل لدينا.' : 'Wrong password, or account is not registered.', "error");
             } else {
@@ -2106,6 +2136,7 @@ async function logout() {
             await firebase.auth().signOut();
         }
     } catch(e) {
+        sentryBreadcrumb("Teacher logged out", "auth");
         console.error("Firebase signout error:", e);
     }
 
@@ -2259,6 +2290,7 @@ async function deleteCurrentGroup() {
 
     } catch (e) {
         console.error("Error deleting group:", e);
+        sentryCaptureError(e, { action: "deleteGroup", groupId: SELECTED_GROUP_ID });
         showToast("Error during delete", 'error');
     }
 }
@@ -3086,6 +3118,7 @@ async function renderDailyList(filter = "") {
         updateAttendanceCount(); // تشغيل العداد أول مرة
     } catch (error) {
         console.error("Error rendering daily class list:", error);
+        sentryCaptureError(error, { action: "renderDailyList", groupId: SELECTED_GROUP_ID });
     }
 }
 
@@ -3158,7 +3191,8 @@ async function updateGroupAnalyticsChart() {
         if (window.groupHomeworkChartInstance) window.groupHomeworkChartInstance.destroy();
         window.groupHomeworkChartInstance = renderBarChart(hwCtx, hwLabels, hwData, 'الواجب %', 'rgba(59, 130, 246, 0.7)', '#3B82F6');
 
-    } catch (e) { console.error("Analytics Critical Error:", e); }
+    } catch (e) { console.error("Analytics Critical Error:", e);
+    sentryCaptureError(e, { action: "groupAnalytics", groupId: SELECTED_GROUP_ID }); }
 }
 
 // دالة مساعدة لرسم التشارت الموحد
@@ -3261,7 +3295,8 @@ async function saveDailyData(isSilent = false) {
                     records: attendanceRecords
                 };
 
-                console.log("📝 Queuing attendance save:", {
+                console.log(sentryBreadcrumb("Attendance save queued", "attendance", { groupId: SELECTED_GROUP_ID });
+                console.log("📝 Queuing attendance save:"), {
                     path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
                     localId: attendanceId,
                     recordsCount: attendanceRecords.length
@@ -3345,6 +3380,7 @@ async function saveDailyData(isSilent = false) {
 
     } catch (error) {
         console.error("❌ Save Error (saveDailyData):", error);
+        sentryCaptureError(error, { action: "saveDailyData", groupId: SELECTED_GROUP_ID, teacherId: TEACHER_ID });
         if (!isSilent) showToast("حدث خطأ أثناء الحفظ", "error");
     } finally {
         if (!isSilent && saveBtn) {
@@ -3551,6 +3587,7 @@ async function handleScan(scannedText) {
 
         } catch (err) {
             console.error("Cross-Group Error:", err);
+            sentryCaptureError(err, { action: "crossGroupScan", groupId: SELECTED_GROUP_ID });
         }
 
         // إعادة تشغيل الكاميرا بعد مهلة قصيرة

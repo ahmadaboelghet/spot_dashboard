@@ -105,6 +105,21 @@
       }
     }
     </script>
+    <!-- Sentry Error Monitoring -->
+    <script src="https://js-de.sentry-cdn.com/fc4b095702a6d0b28f3fbaa9435315f4.min.js" crossorigin="anonymous"></script>
+    <script>
+      if (typeof Sentry !== 'undefined') {
+        Sentry.onLoad(function() {
+          Sentry.init({
+            dsn: "https://fc4b095702a6d0b28f3fbaa9435315f4@o4511976593883136.ingest.de.sentry.io/4511976601550928",
+            tracesSampleRate: 1.0,
+            replaysSessionSampleRate: 0.1,
+            replaysOnErrorSampleRate: 1.0,
+            environment: window.location.hostname.includes('localhost') ? 'development' : 'production',
+          });
+        });
+      }
+    </script>
 </head>
 
 <body class="font-cairo bg-gray-100 text-gray-800 transition-colors duration-300 dark:bg-darkBg dark:text-gray-100 profile-grid-bg">
