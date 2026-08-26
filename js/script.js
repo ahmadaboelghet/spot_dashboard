@@ -4,17 +4,23 @@
 // ==========================================
 function sentryCaptureError(error, context = {}) {
     if (typeof Sentry !== 'undefined') {
-        Sentry.withScope(scope => {
-            Object.entries(context).forEach(([k, v]) => scope.setExtra(k, v));
-            if (TEACHER_ID) scope.setUser({ id: TEACHER_ID });
-            if (SELECTED_GROUP_ID) scope.setTag('groupId', SELECTED_GROUP_ID);
+        if (typeof Sentry.withScope === 'function') {
+            Sentry.withScope(scope => {
+                Object.entries(context).forEach(([k, v]) => scope.setExtra(k, v));
+                if (TEACHER_ID) scope.setUser({ id: TEACHER_ID });
+                if (SELECTED_GROUP_ID) scope.setTag('groupId', SELECTED_GROUP_ID);
+                Sentry.captureException(error instanceof Error ? error : new Error(String(error)));
+            });
+        } else if (typeof Sentry.captureException === 'function') {
             Sentry.captureException(error instanceof Error ? error : new Error(String(error)));
-        });
+        }
     }
 }
 function sentryBreadcrumb(message, category = 'action', data = {}) {
     if (typeof Sentry !== 'undefined') {
-        Sentry.addBreadcrumb({ message, category, data, level: 'info' });
+        if (typeof Sentry.addBreadcrumb === 'function') {
+            Sentry.addBreadcrumb({ message, category, data, level: 'info' });
+        }
     }
 }
 
@@ -2110,8 +2116,8 @@ async function loginTeacher() {
         
         // Sentry: تسجيل هوية المستخدم لربط الأخطاء بحسابه
         if (typeof Sentry !== 'undefined') {
-            Sentry.setUser({ id: TEACHER_ID, username: data?.name || TEACHER_ID });
-            Sentry.addBreadcrumb({ category: 'auth', message: 'Teacher logged in', level: 'info' });
+            if (typeof Sentry.setUser === "function") { Sentry.setUser({ id: TEACHER_ID, username: data?.name || TEACHER_ID }); } else if (Sentry.onLoad) { Sentry.onLoad(function() { Sentry.setUser({ id: TEACHER_ID, username: data?.name || TEACHER_ID }); }); }
+            if (typeof Sentry.addBreadcrumb === 'function') { Sentry.addBreadcrumb({ category: 'auth', message: 'Teacher logged in', level: 'info' }); }
         logEvent('login', { method: 'email', teacher_name: data?.name || 'unknown' });
         }
 
