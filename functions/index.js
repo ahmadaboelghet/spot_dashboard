@@ -91,6 +91,19 @@ function formatTime12Hour(timeString) {
  * @return {Promise<void>} - وعد يكتمل عند انتهاء المحاولة
  */
 async function sendNotificationToParent(studentData, payload, context, studentId, teacherId = null, groupId = null) {
+  
+  // Add exact timestamp to notification body
+  if (payload.notification && payload.notification.body) {
+    const now = new Date();
+    const timeOptions = { timeZone: 'Africa/Cairo', hour: 'numeric', minute: '2-digit', hour12: true };
+    const dateOptions = { timeZone: 'Africa/Cairo', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    
+    const timeStr = new Intl.DateTimeFormat('ar-EG', timeOptions).format(now);
+    const dateStr = new Intl.DateTimeFormat('ar-EG', dateOptions).format(now);
+    
+    payload.notification.body += `\n\n⏰ مُسجلة في تمام الساعة ${timeStr}، يوم ${dateStr}.`;
+  }
+  
   const tokensToSend = [];
 
   // Helper to safely collect tokens (supporting both single strings and arrays of strings)
