@@ -1,4 +1,3 @@
-/**
 
 // ==========================================
 // SENTRY ERROR TRACKING HELPER
@@ -38,6 +37,7 @@ function logEvent(eventName, params = {}) {
 }
 
 
+/**
  * SPOT TEACHER - FINAL INTEGRATED VERSION
  * Features: Smart Login + Parent Link + Unified Payments + Mirror Fix + Messages + Sync Fix + Fail-Safe Loading + Auto-Switch + UI Protection
  * FIXES: 
