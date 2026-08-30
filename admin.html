@@ -32,6 +32,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- QRCode JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- JSZip for ZIP export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <!-- Firebase v8 Compat -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -224,6 +226,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- QRCode JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- JSZip for ZIP export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <!-- Firebase v8 Compat -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -1759,9 +1763,6 @@
                 const batchSize = 500;
                 let generatedCount = 0;
                 let newCards = [];
-
-                const printContainer = document.getElementById('printCardsContainer');
-                printContainer.innerHTML = '';
                 
                 while (generatedCount < count) {
                     const batch = db.batch();
@@ -1784,79 +1785,63 @@
                     statusDiv.innerText = `Saved ${generatedCount}/${count} cards to DB...`;
                 }
 
-                statusDiv.innerText = 'Rendering QR codes for printing...';
-                
-                let printHtml = `
-                <html>
-                <head>
-                    <title>Print Smart Cards - ${ownerId}</title>
-                    <style>
-                        @page { size: A4; margin: 10mm; }
-                        body { font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: flex-start; }
-                        .card-container {
-                            width: calc(25% - 4mm); 
-                            height: 60mm;
-                            margin: 2mm;
-                            border: 1px dashed #ccc;
-                            box-sizing: border-box;
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            padding: 5mm;
-                            text-align: center;
-                            page-break-inside: avoid;
-                        }
-                        .qr-box { width: 35mm; height: 35mm; margin-bottom: 3mm; }
-                        .qr-box img { width: 100%; height: 100%; object-fit: contain; }
-                        .card-id { font-family: monospace; font-size: 11px; font-weight: bold; letter-spacing: 1px; color: #333; }
-                        .owner-id { font-size: 9px; color: #777; margin-top: 1mm;}
-                        @media print {
-                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                        }
-                    </style>
-                </head>
-                <body>
-                `;
+                statusDiv.innerText = 'Generating QR images and packing ZIP...';
 
-                for (const cardId of newCards) {
+                // ✅ توليد كل QR Code وتحزيمه في ZIP
+                const zip = new JSZip();
+                const qrSize = 400; // حجم كبير وواضح للطباعة
+
+                for (let i = 0; i < newCards.length; i++) {
+                    const cardId = newCards[i];
+                    
+                    // رسم الـ QR على canvas
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = qrSize;
+                    tempCanvas.height = qrSize;
+                    
                     const tempDiv = document.createElement('div');
+                    document.body.appendChild(tempDiv);
                     new QRCode(tempDiv, {
                         text: cardId,
-                        width: 128,
-                        height: 128,
+                        width: qrSize,
+                        height: qrSize,
                         colorDark: "#000000",
                         colorLight: "#ffffff",
                         correctLevel: QRCode.CorrectLevel.H
                     });
-
-                    await new Promise(r => setTimeout(r, 5));
+                    
+                    await new Promise(r => setTimeout(r, 10));
                     
                     const canvas = tempDiv.querySelector('canvas');
-                    const imgUrl = canvas.toDataURL("image/png");
-
-                    printHtml += `
-                        <div class="card-container">
-                            <div class="qr-box"><img src="${imgUrl}" /></div>
-                            <div class="card-id">${cardId}</div>
-                            <div class="owner-id">Prop: ${ownerId}</div>
-                        </div>
-                    `;
+                    if (canvas) {
+                        // تحويل الـ canvas لـ base64 PNG نقي (QR بس بدون أي كلام)
+                        const base64 = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+                        zip.file(`${cardId}.jpg`, base64, { base64: true });
+                    }
+                    document.body.removeChild(tempDiv);
+                    
+                    if ((i + 1) % 10 === 0) {
+                        statusDiv.innerText = `Rendering... ${i + 1}/${newCards.length}`;
+                        await new Promise(r => setTimeout(r, 0)); // إراحة للمتصفح
+                    }
                 }
 
-                printHtml += '</body></html>';
-
-                const printWindow = window.open('', '_blank');
-                printWindow.document.write(printHtml);
-                printWindow.document.close();
+                statusDiv.innerText = 'Packing ZIP file...';
                 
-                printWindow.onload = function() {
-                    printWindow.focus();
-                    setTimeout(() => printWindow.print(), 1000);
-                };
+                const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+                
+                // تنزيل الـ ZIP تلقائياً
+                const url = URL.createObjectURL(zipBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `QR_Cards_${ownerId}_${count}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
 
                 statusDiv.className = 'mt-4 text-center text-sm font-semibold text-green-600 h-5';
-                statusDiv.innerText = `Successfully generated ${count} cards.`;
+                statusDiv.innerText = `✅ Done! ${count} QR images downloaded as ZIP.`;
                 document.getElementById('cardsCountInput').value = '100';
 
             } catch (err) {

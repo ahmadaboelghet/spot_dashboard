@@ -3524,6 +3524,14 @@ let scanCtx = null;
 
 function tickScanner() {
     if (isScannerPaused || document.getElementById('scannerModal').classList.contains('hidden')) return;
+    
+    // التحقق من وجود مكتبة jsQR لتجنب الأخطاء لو الإنترنت ضعيف ومحملهاش
+    if (typeof jsQR === 'undefined') {
+        showToast("خطأ: تعذر تحميل مكتبة قراءة الكاميرا (تأكد من الإنترنت وأغلق الـ AdBlocker)", "error");
+        stopScanner();
+        return;
+    }
+
     if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
         if (!scanCanvas) {
             scanCanvas = document.createElement('canvas');
@@ -3534,8 +3542,13 @@ function tickScanner() {
         
         scanCtx.drawImage(videoElement, 0, 0, scanCanvas.width, scanCanvas.height);
         const imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-        if (code) handleScan(code.data);
+        
+        try {
+            const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+            if (code) handleScan(code.data);
+        } catch (e) {
+            console.error("jsQR Error:", e);
+        }
     }
     animationFrameId = requestAnimationFrame(tickScanner);
 }
