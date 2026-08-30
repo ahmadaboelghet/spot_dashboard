@@ -5965,15 +5965,19 @@ window.printStudyNote = function (content) {
     printWindow.document.close();
 };
 
+// متغيرات لتخزين مجاميع المجموعات الأخرى في الذاكرة لتجنب بطء الـ Network مع كل ضغطة
+let _cachedOtherGroupsTotal = 0;
+let _lastMonthCalculated = null;
+let _lastGroupCalculated = null;
+
 // دالة حساب الدخل الكلي (بذكاء 🧠)
 async function calculateOverallIncome(liveGroupTotal = null) {
     const month = document.getElementById('paymentMonthInput').value;
     const display = document.getElementById('overallTotalDisplay');
 
-    if (!month) return;
+    if (!month || !TEACHER_ID) return;
 
     try {
-        // ✅ جيب مجموعات المدرس الحالي فقط
         let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
 
         if (!groups || groups.length === 0) {
@@ -5981,31 +5985,43 @@ async function calculateOverallIncome(liveGroupTotal = null) {
             return;
         }
 
-        // مصفوفة وعود لحساب كل مجموعة بالتوازي
-        const promises = groups.map(async (group) => {
-            // ✅ لو دي المجموعة المفتوحة حالياً واحنا عندنا رقمها Live → استخدمه
-            if (group.id === SELECTED_GROUP_ID && liveGroupTotal !== null) {
-                return parseInt(liveGroupTotal) || 0;
-            }
+        // لو الشهر اتغير أو المجموعة اتغيرت، لازم نحسب المجموعات التانية من الداتابيز تاني
+        if (_lastMonthCalculated !== month || _lastGroupCalculated !== SELECTED_GROUP_ID) {
+            // جيب كل المجموعات ما عدا الحالية
+            const otherGroups = groups.filter(g => g.id !== SELECTED_GROUP_ID);
+            
+            const promises = otherGroups.map(async (group) => {
+                try {
+                    // القراءة من الداتابيز مباشرة (Firestore) مش الكاش
+                    const snap = await firestoreDB.doc(`teachers/${TEACHER_ID}/groups/${group.id}/payments/${month}`).get();
+                    if (snap.exists && snap.data().records) {
+                        return snap.data().records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
+                    }
+                } catch (err) {
+                    // لو النت فاصل، اقرأ من الكاش
+                    const payId = `${group.id}_PAY_${month}`;
+                    const doc = await getFromDB('payments', payId);
+                    if (doc && doc.records) {
+                        return doc.records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
+                    }
+                }
+                return 0;
+            });
 
-            // باقي المجموعات: هاتها من الداتابيز
-            const payId = `${group.id}_PAY_${month}`;
-            const doc = await getFromDB('payments', payId);
+            const results = await Promise.all(promises);
+            _cachedOtherGroupsTotal = results.reduce((acc, curr) => acc + curr, 0);
+            _lastMonthCalculated = month;
+            _lastGroupCalculated = SELECTED_GROUP_ID;
+        }
 
-            if (doc && doc.records) {
-                return doc.records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
-            }
-            return 0;
-        });
-
-        // تجميع النتائج
-        const results = await Promise.all(promises);
-        const totalIncome = results.reduce((acc, curr) => acc + curr, 0);
+        // المجموع الكلي = الرقم الحي للمجموعة الحالية (أو صفر) + مجموع المجموعات التانية المتكيش في الميموري
+        let currentGroupVal = (liveGroupTotal !== null) ? (parseInt(liveGroupTotal) || 0) : 0;
+        const totalIncome = currentGroupVal + _cachedOtherGroupsTotal;
 
         display.innerText = `${totalIncome.toLocaleString()} ج.م`;
 
     } catch (error) {
-        console.error(error);
+        console.error('Error calculating overall income:', error);
     }
 }
 // ==========================================
