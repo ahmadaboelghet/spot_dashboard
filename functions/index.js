@@ -92,17 +92,7 @@ function formatTime12Hour(timeString) {
  */
 async function sendNotificationToParent(studentData, payload, context, studentId, teacherId = null, groupId = null) {
   
-  // Add exact timestamp to notification body
-  if (payload.notification && payload.notification.body) {
-    const now = new Date();
-    const timeOptions = { timeZone: 'Africa/Cairo', hour: 'numeric', minute: '2-digit', hour12: true };
-    const dateOptions = { timeZone: 'Africa/Cairo', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    
-    const timeStr = new Intl.DateTimeFormat('ar-EG', timeOptions).format(now);
-    const dateStr = new Intl.DateTimeFormat('ar-EG', dateOptions).format(now);
-    
-    payload.notification.body += `\n\n⏰ وذلك في تمام الساعة ${timeStr}، يوم ${dateStr}.`;
-  }
+
   
   const tokensToSend = [];
 
@@ -488,13 +478,7 @@ exports.notifyOnNewGrades = onDocumentWritten(
 
             if (isScoreChanged || isSubmittedChanged) {
               
-              // ✅✅ التعديل السحري لمنع التكرار ✅✅
-              // لو الواجب يومي، وتم تأكيد تسليمه لأول مرة (أو تعديله)، وفي نفس اللحظة المدرس كان بيغير الغياب لحضور
-              // فهنتجاهل الإشعار ده، لأن دالة notifyOnPresence هتبعت إشعار (حضور + تسليم واجب) يغني عنه.
-              // أما لو المدرس غير الواجب بس (بمعزل عن الحضور)، هنبعت الإشعار عادي.
-              if (isSubmittedChanged && afterData.type === 'daily' && scoreData._attChanged) {
-                  return; // تخطي إرسال هذا الإشعار لمنع التكرار
-              }
+              // ✅ تعديل: فصلنا نوتيفيكاشن الواجب عن الحضور، فهنرسل ده دايما
 
               const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
 
@@ -1611,33 +1595,8 @@ exports.notifyOnPresence = onDocumentWritten(
     const groupId = event.params.groupId;
     const date = event.params.date;
 
-    // 3. جلب بيانات مساعدة (اسم المادة + ملف الواجب لهذا اليوم)
+    // 3. جلب بيانات مساعدة (اسم المادة)
     const subjectName = await getTeacherSubject(teacherId);
-
-    // بنحاول نجيب ملف الواجب بنفس الـ ID اللي بنعمله في الـ Frontend
-    // ID Format: {groupId}_HW_{date}
-    const hwId = `${groupId}_HW_${date}`;
-    const hwDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/assignments/${hwId}`).get();
-
-    let hwScores = {};
-    let hasHomeworkToday = false;
-    let homeworkName = "الواجب";
-
-    if (hwDoc.exists) {
-      hasHomeworkToday = true;
-      const hwData = hwDoc.data();
-      hwScores = hwData.scores || {};
-      homeworkName = hwData.name || "الواجب";
-    }
-
-    // استخراج الطلاب الذين تم تحويلهم من حاضر إلى غائب (لتصحيح الخطأ)
-    const newlyAbsentStudents = afterRecords.filter((rAfter) => {
-      const isAbsentNow = rAfter.status === "absent";
-      const wasPresent = beforeRecords.some((rBefore) =>
-        rBefore.studentId === rAfter.studentId && rBefore.status === "present",
-      );
-      return isAbsentNow && wasPresent;
-    });
 
     const allNotifications = [];
 
@@ -1650,20 +1609,17 @@ exports.notifyOnPresence = onDocumentWritten(
         const sData = sDoc.data();
 
         let title = "تم تسجيل الحضور ✅";
-        let body = `تم تسجيل حضور الطالب ${sData.name} اليوم في حصة ${subjectName}.`;
-
-        if (hasHomeworkToday) {
-          const studentHw = hwScores[studentId];
-          const isSubmitted = studentHw && studentHw.submitted === true;
-
-          if (isSubmitted) {
-            title = "حضور + تسليم واجب 🌟";
-            body = `ممتاز! حضر الطالب ${sData.name} حصة ${subjectName} وقام بتسليم "${homeworkName}" بنجاح.`;
-          } else {
-            title = "تنبيه واجب ⚠️";
-            body = `تم تسجيل حضور ${sData.name} في حصة ${subjectName}، ولكن لم يتم تسليم "${homeworkName}".`;
-          }
+        
+        let timeStr = "";
+        if (record.time) {
+            try {
+                const dateObj = new Date(record.time);
+                const tOpts = { timeZone: 'Africa/Cairo', hour: 'numeric', minute: '2-digit', hour12: true };
+                timeStr = "\n\n⏰ حضر في تمام الساعة: " + new Intl.DateTimeFormat('ar-EG', tOpts).format(dateObj);
+            } catch (e) { }
         }
+        
+        let body = `تم تسجيل حضور الطالب ${sData.name} اليوم في حصة ${subjectName}.${timeStr}`;
 
         const payload = {
           notification: { title, body },

@@ -344,6 +344,7 @@ async function deleteFromDB(store, key) {
 let TEACHER_ID = null, TEACHER_CENTER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = localStorage.getItem('lang') || 'ar';
 let isSyncing = false;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
+let sessionScannedStudents = new Set();
 let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
 
 // Session & Remember Me Helpers
@@ -1657,8 +1658,6 @@ function setupListeners() {
     });
     document.getElementById('dailyDateInput')?.addEventListener('change', renderDailyList);
     document.getElementById('saveDailyBtn')?.addEventListener('click', saveDailyData);
-    document.getElementById('hwYesBtn')?.addEventListener('click', () => resolveHomework(true));
-    document.getElementById('hwNoBtn')?.addEventListener('click', () => resolveHomework(false));
 
 
     document.getElementById('addNewStudentButton')?.addEventListener('click', addNewStudent);
@@ -3010,7 +3009,7 @@ async function renderDailyList(filter = "") {
         }
 
         const attMap = {};
-        if (attDoc?.records) attDoc.records.forEach(r => { if (r) attMap[r.studentId] = r.status; });
+        if (attDoc?.records) attDoc.records.forEach(r => { if (r) attMap[r.studentId] = r; });
 
         const hwMap = {};
         let hasAnySubmitted = false;
@@ -3043,7 +3042,9 @@ async function renderDailyList(filter = "") {
 
         let finalStudents = studentsToRender.filter(s => {
             if (currentDailyFilter === 'all') return true;
-            const status = attMap[s.id] || 'absent';
+            const attRec = attMap[s.id] || {};
+        const status = typeof attRec === 'string' ? attRec : (attRec.status || 'absent');
+        const scanTime = attRec.time || '';
             const hwSubmitted = hwMap[s.id];
             
             if (currentDailyFilter === 'present') return status === 'present';
@@ -3054,7 +3055,9 @@ async function renderDailyList(filter = "") {
         });
 
         finalStudents.forEach(s => {
-            const status = attMap[s.id] || 'absent'; // الافتراضي غائب لو مفيش تسجيل
+            const attRec = attMap[s.id] || {};
+        const status = typeof attRec === 'string' ? attRec : (attRec.status || 'absent');
+        const scanTime = attRec.time || ''; // الافتراضي غائب لو مفيش تسجيل
             if (status === 'present') presentCount++;
 
             const hwSubmitted = hwMap[s.id];
@@ -3313,9 +3316,16 @@ async function saveDailyData(isSilent = false) {
             studentRows.forEach(div => {
                 const attSelect = div.querySelector('.att-select');
                 if (attSelect) {
+                    let t = div.dataset.scanTime;
+                    if (attSelect.value === 'present' && !t) {
+                        t = new Date().toISOString();
+                        div.dataset.scanTime = t; // Update DOM for next saves
+                    }
+                    if (attSelect.value === 'absent') t = '';
                     attendanceRecords.push({
                         studentId: div.dataset.sid,
-                        status: attSelect.value
+                        status: attSelect.value,
+                        time: t || null
                     });
                 }
             });
@@ -3577,29 +3587,36 @@ async function handleScan(scannedText) {
 
             if (globalMatch) {
                 playBeep();
-
-                // ✅ التحقق: هل المدرس مفعل خيار الواجب؟
-                if (hasHomeworkToday) {
-                    currentCrossGroupStudent = globalMatch; // حفظ الطالب مؤقتاً
-
-                    // تجهيز وعرض المودال
-                    document.getElementById('hwStudentName').innerText = globalMatch.name;
-                    document.getElementById('hwConfirmModal').classList.remove('hidden');
-                    return; // نخرج من الدالة وننتظر قرار المدرس (نعم/لا)
+                const studentId = globalMatch.id;
+                
+                if (!sessionScannedStudents.has(studentId)) {
+                    // أول سكان: حضور
+                    sessionScannedStudents.add(studentId);
+                    await saveCrossGroupAttendance(globalMatch, false);
+                    
+                    let groupName = "مجموعة أخرى";
+                    const groupDoc = await getFromDB('groups', globalMatch.groupId);
+                    if (groupDoc) groupName = groupDoc.name;
+                    
+                    showToast(`⚠️ ضيف من (${groupName})`, 'warning');
+                    setTimeout(() => showScanSuccessUI(globalMatch, 'attendance'), 800);
+                } else {
+                    // تاني سكان: واجب
+                    if (hasHomeworkToday) {
+                        await saveCrossGroupAttendance(globalMatch, true);
+                        showScanSuccessUI(globalMatch, 'homework');
+                        logEvent('scan_homework', { submitted: true, scan_type: 'cross_group', student_id: studentId });
+                    } else {
+                        showToast(`⚠️ لا يوجد واجب اليوم`, 'warning');
+                    }
                 }
-
-                // لو مفيش واجب، نسجل حضور فوراً
-                await saveCrossGroupAttendance(globalMatch, false);
-
-                // إشعار للمدرس
-                let groupName = "مجموعة أخرى";
-                const groupDoc = await getFromDB('groups', globalMatch.groupId);
-                if (groupDoc) groupName = groupDoc.name;
-
-                showToast(`⚠️ تنبيه: الطالب "${globalMatch.name}" في (${groupName})`, 'warning');
+                
+                // إعادة تشغيل الكاميرا بعد مهلة قصيرة
                 setTimeout(() => {
-                    showToast(`✅ تم تسجيل الحضور (ضيف)!`, 'success');
-                }, 1200);
+                    isScannerPaused = false;
+                    requestAnimationFrame(tickScanner);
+                }, 1500);
+                return;
 
             } else {
                 // كود غير معروف تماماً
@@ -3686,8 +3703,9 @@ async function saveCrossGroupAttendance(student, homeworkSubmitted) {
     const existingRec = attDoc.records.find(r => r.studentId === student.id);
     if (existingRec) {
         existingRec.status = 'present';
+        if (!existingRec.time) existingRec.time = new Date().toISOString();
     } else {
-        attDoc.records.push({ studentId: student.id, status: 'present' });
+        attDoc.records.push({ studentId: student.id, status: 'present', time: new Date().toISOString() });
     }
 
     // حفظ الحضور (Local & Sync)
@@ -3736,92 +3754,63 @@ async function saveCrossGroupAttendance(student, homeworkSubmitted) {
 }
 
 // --- دالة مساعدة للمؤثرات البصرية (عشان الكود يبقى نظيف) ---
-function showScanSuccessUI(student) {
+function showScanSuccessUI(student, type = 'attendance') {
     const overlay = document.getElementById('scannerOverlay');
     const feedback = document.getElementById('scannedStudentName');
+    const nameText = document.getElementById('feedbackNameText');
 
-    // تحديث الاسم اللي بيظهر في نص الشاشة
-    document.getElementById('feedbackNameText').innerText = student.name;
+    if (type === 'attendance') {
+        nameText.innerText = "✅ حضور: " + student.name;
+        overlay.style.backgroundColor = "rgba(34, 197, 94, 0.4)"; // أخضر
+    } else {
+        nameText.innerText = "📚 واجب: " + student.name;
+        overlay.style.backgroundColor = "rgba(59, 130, 246, 0.4)"; // أزرق
+    }
 
-    // إظهار الرسالة الخضراء
     feedback.classList.remove('opacity-0', 'translate-y-10', 'scale-90');
     overlay.classList.add('success');
 
-    // إخفائها بعد ثانية ونص
     setTimeout(() => {
         feedback.classList.add('opacity-0', 'translate-y-10', 'scale-90');
         overlay.classList.remove('success');
+        overlay.style.backgroundColor = ""; // Reset
     }, 1500);
 }
 
 function processDailyScan(student) {
-    const row = document.querySelector(`#dailyStudentsList > div[data-sid="${student.id}"]`);
-    if (row) {
-        const sel = row.querySelector('.att-select');
-        sel.value = 'present';
-        sel.dispatchEvent(new Event('change'));
-        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    logEvent('scan_attendance', { student_id: student.id, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
-    if (hasHomeworkToday) {
-        currentPendingStudentId = student.id;
-        document.getElementById('hwStudentName').innerText = student.name;
-        document.getElementById('hwConfirmModal').classList.remove('hidden');
-    } else {
-        setTimeout(() => { isScannerPaused = false; requestAnimationFrame(tickScanner); }, 1200);
-    }
-}
+    const studentId = student.id;
+    const row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`);
 
-async function resolveHomework(isSubmitted) {
-    // ✅ الحالة 1: الطالب من مجموعة أخرى (Cross-Group)
-    if (currentCrossGroupStudent) {
-        // حفظ الحضور + الواجب (حسب الاختيار)
-        await saveCrossGroupAttendance(currentCrossGroupStudent, isSubmitted);
-        logEvent('homework_resolved', { submitted: isSubmitted, scan_type: 'cross_group', student_id: currentCrossGroupStudent.id });
-
-        // جلب اسم المجموعة للعرض
-        let groupName = "مجموعة أخرى";
-        try {
-            const gDoc = await getFromDB('groups', currentCrossGroupStudent.groupId);
-            if (gDoc) groupName = gDoc.name;
-        } catch (e) { }
-
-        // رسائل تأكيد
-        showToast(`⚠️ الطالب "${currentCrossGroupStudent.name}" مسجل في (${groupName})`, 'warning');
-        setTimeout(() => {
-            if (isSubmitted) showToast(`✅ تم تسجيل الحضور واستلام الواجب!`);
-            else showToast(`✅ تم تسجيل الحضور (بدون واجب)`);
-        }, 1000);
-
-        // تنظيف وإعادة تشغيل
-        currentCrossGroupStudent = null;
-        document.getElementById('hwConfirmModal').classList.add('hidden');
-
-        setTimeout(() => {
-            isScannerPaused = false;
-            requestAnimationFrame(tickScanner);
-        }, 1500);
-        return;
-    }
-
-    // ✅ الحالة 2: الطالب من المجموعة الحالية (Logic القديم)
-    if (currentPendingStudentId) {
-        const row = document.querySelector(`#dailyStudentsList > div[data-sid="${currentPendingStudentId}"]`);
+    if (!sessionScannedStudents.has(studentId)) {
+        // أول سكان: حضور
+        sessionScannedStudents.add(studentId);
         if (row) {
-            const chk = row.querySelector('.hw-check');
-            if (chk) {
-                chk.checked = isSubmitted;
-                // تلوين الصف لو تم التسليم (اختياري)
-                if (isSubmitted) row.classList.add('bg-green-50');
+            const sel = row.querySelector('.att-select');
+            sel.value = 'present';
+            row.dataset.scanTime = new Date().toISOString();
+            sel.dispatchEvent(new Event('change'));
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        logEvent('scan_attendance', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
+        showScanSuccessUI(student, 'attendance');
+    } else {
+        // ثاني سكان: واجب
+        if (hasHomeworkToday) {
+            if (row) {
+                const chk = row.querySelector('.hw-check');
+                if (chk) {
+                    chk.checked = true;
+                    row.classList.add('bg-green-50');
+                }
             }
+            logEvent('scan_homework', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
+            showScanSuccessUI(student, 'homework');
+        } else {
+            showToast(`⚠️ لا يوجد واجب اليوم`, 'warning');
         }
     }
 
-    document.getElementById('hwConfirmModal').classList.add('hidden');
-    logEvent('homework_resolved', { submitted: isSubmitted, scan_type: 'regular', student_id: currentPendingStudentId });
-    currentPendingStudentId = null;
-    isScannerPaused = false;
-    requestAnimationFrame(tickScanner);
+    setTimeout(() => { isScannerPaused = false; requestAnimationFrame(tickScanner); }, 1200);
 }
 
 function processPaymentScan(student) {
