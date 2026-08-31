@@ -2877,6 +2877,13 @@ function switchTab(tabId) {
 
     setSessionItem('learnaria-tab', tabId);
 
+    // ✅ تحديث وضع السكانر أوتوماتيكياً لو الكاميرا شغالة وتغيرت التابة
+    if (tabId === 'payments') {
+        currentScannerMode = 'payments';
+    } else if (tabId === 'daily') {
+        currentScannerMode = 'daily';
+    }
+
     if (!SELECTED_GROUP_ID && tabId !== 'profile') {
         return; // Don't fetch data if no group is selected
     }
@@ -3711,10 +3718,10 @@ async function handleScan(scannedText, scannerType = "camera") {
         if (absentSibling) studentToMark = absentSibling;
     }
 
-    showScanSuccessUI(studentToMark);
-
     // توجيه حسب الوضع
     if (currentScannerMode === 'daily') {
+        showScanSuccessUI(studentToMark, 'attendance');
+        
         let scanType = sessionScannedStudents.has(studentToMark.id) ? 'homework' : 'attendance';
         logScanRecord(qrCode, 'success', null, studentToMark.name, scanType, scannerType);
 
@@ -3728,6 +3735,7 @@ async function handleScan(scannedText, scannerType = "camera") {
         }, 500);
     }
     else if (currentScannerMode === 'payments') {
+        showScanSuccessUI(studentToMark, 'payments');
         logScanRecord(qrCode, 'success', null, studentToMark.name, 'payments', scannerType);
         processPaymentScan(studentToMark);
     }
@@ -3810,6 +3818,9 @@ function showScanSuccessUI(student, type = 'attendance') {
     if (type === 'attendance') {
         nameText.innerText = "✅ حضور: " + student.name;
         overlay.style.backgroundColor = "rgba(34, 197, 94, 0.4)"; // أخضر
+    } else if (type === 'payments') {
+        nameText.innerText = "💰 تحصيل: " + student.name;
+        overlay.style.backgroundColor = "rgba(234, 179, 8, 0.4)"; // أصفر/ذهبي
     } else {
         nameText.innerText = "📚 واجب: " + student.name;
         overlay.style.backgroundColor = "rgba(59, 130, 246, 0.4)"; // أزرق
@@ -4517,14 +4528,27 @@ async function renderPaymentsList(filter = "") {
     container.appendChild(fragment);
 }
 
-async function savePayments() {
+
+let savePaymentsTimeout;
+
+async function silentSavePayments() {
+    console.log("🔄 جاري حفظ التحصيل في الخلفية...");
+    await savePayments(true);
+}
+
+async function savePayments(isSilent = false) {
     const month = document.getElementById('paymentMonthInput').value;
     if (!month) return showToast(translations[currentLang].paymentMonthMissing, 'error');
     
-    const btn = document.getElementById('savePaymentsBtn');
-    const originalContent = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<i class="ri-loader-4-line animate-spin text-lg"></i> <span>جاري الحفظ وإرسال الإشعارات...</span>`;
+    let btn, originalContent;
+    if (!isSilent) {
+        btn = document.getElementById('savePaymentsBtn');
+        if (btn) {
+            originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i class="ri-loader-4-line animate-spin text-lg"></i> <span>جاري الحفظ وإرسال الإشعارات...</span>`;
+        }
+    }
 
     try {
         const records = [];
@@ -4537,13 +4561,16 @@ async function savePayments() {
         await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${month}`, month, records });
         await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, data: { month, records } });
         
-        showToast(translations[currentLang].saved || "تم حفظ التحصيل بنجاح");
+        if (!isSilent) showToast(translations[currentLang].saved || "تم حفظ التحصيل بنجاح");
+        else console.log("✅ Auto-saved payments successfully (Background)");
     } catch (err) {
         console.error("Error saving payments:", err);
-        showToast("حدث خطأ أثناء حفظ عملية التحصيل", "error");
+        if (!isSilent) showToast("حدث خطأ أثناء حفظ عملية التحصيل", "error");
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
+        if (!isSilent && btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
     }
 }
 
