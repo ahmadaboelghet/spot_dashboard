@@ -932,6 +932,56 @@
                         </div>
                     </div>
                 </div>
+
+                    <!-- Fix Attendance Records -->
+                    <div class="glass-card p-6 lg:col-span-2">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl">
+                                <i class="ri-tools-fill"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">إصلاح سجلات الحضور (صامت)</h2>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="md:col-span-1">
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">رقم المدرس <span class="text-red-500">*</span></label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="fixTeacherPhoneInput" placeholder="+2010..." class="input-clean font-mono text-left w-full" dir="ltr">
+                                        <button onclick="fixLoadGroups()" class="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-3 flex items-center justify-center transition-colors">
+                                            <i class="ri-search-line"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="md:col-span-1">
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">المجموعة</label>
+                                    <div class="flex gap-2">
+                                        <select id="fixGroupSelect" class="input-clean w-full">
+                                            <option value="">اختر المجموعة...</option>
+                                        </select>
+                                        <button onclick="fixLoadDates()" class="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-3 flex items-center justify-center transition-colors">
+                                            <i class="ri-download-cloud-2-line"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="md:col-span-1">
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">تاريخ الحصة</label>
+                                    <select id="fixDateSelect" class="input-clean w-full">
+                                        <option value="">اختر التاريخ...</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-1 flex flex-col gap-2 justify-end">
+                                    <button onclick="fixDeleteAbsents()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl py-2 flex items-center justify-center gap-1 transition-colors text-xs" title="يمسح الغياب العشوائي ويحتفظ بالحاضرين فقط">
+                                        <i class="ri-eraser-line"></i> مسح الغياب فقط
+                                    </button>
+                                    <button onclick="fixDeleteWholeDay()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl py-2 flex items-center justify-center gap-1 transition-colors text-xs" title="يحذف اليوم ده تماماً من سجل المجموعة">
+                                        <i class="ri-delete-bin-line"></i> حذف اليوم بالكامل
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="fixAttendanceStatus" class="mt-2 text-center text-sm font-semibold h-5"></div>
+                        </div>
+                    </div>
+
                 <!-- NEW SECTION: Manage Center & Migrate Cards -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                     
@@ -1503,6 +1553,196 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="ri-arrow-left-right-line"></i> تنفيذ عملية النقل';
+            }
+        }
+
+        
+        // ==========================================
+        // 🛠️ أداة إصلاح سجلات الحضور الصامتة
+        // ==========================================
+        let fixCurrentTeacherId = null;
+
+        async function fixLoadGroups() {
+            const phoneStr = document.getElementById('fixTeacherPhoneInput').value.trim();
+            const statusDiv = document.getElementById('fixAttendanceStatus');
+            const groupSelect = document.getElementById('fixGroupSelect');
+            
+            if (!phoneStr) {
+                statusDiv.innerText = 'أدخل رقم المدرس أولاً.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
+                return;
+            }
+
+            statusDiv.innerText = 'جاري البحث عن المدرس...';
+            statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-blue-500';
+            groupSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+
+            try {
+                let formattedPhone = phoneStr.startsWith('+20') ? phoneStr : '+20' + phoneStr.replace(/^0+/, '');
+                const teacherQuery = await db.collection('teachers').where('phoneNumber', '==', formattedPhone).limit(1).get();
+                
+                if (teacherQuery.empty) {
+                    statusDiv.innerText = 'لم يتم العثور على مدرس بهذا الرقم.';
+                    statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
+                    groupSelect.innerHTML = '<option value="">اختر المجموعة...</option>';
+                    return;
+                }
+
+                fixCurrentTeacherId = teacherQuery.docs[0].id;
+                
+                const groupsSnap = await db.collection('teachers').doc(fixCurrentTeacherId).collection('groups').get();
+                if (groupsSnap.empty) {
+                    statusDiv.innerText = 'المدرس ليس لديه مجموعات.';
+                    groupSelect.innerHTML = '<option value="">لا توجد مجموعات</option>';
+                    return;
+                }
+
+                groupSelect.innerHTML = '<option value="">اختر المجموعة...</option>';
+                groupsSnap.forEach(doc => {
+                    const data = doc.data();
+                    const opt = document.createElement('option');
+                    opt.value = doc.id;
+                    opt.innerText = data.name || doc.id;
+                    groupSelect.appendChild(opt);
+                });
+
+                statusDiv.innerText = 'تم تحميل المجموعات.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-green-500';
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = 'حدث خطأ أثناء تحميل المجموعات.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
+            }
+        }
+
+        async function fixLoadDates() {
+            const groupId = document.getElementById('fixGroupSelect').value;
+            const statusDiv = document.getElementById('fixAttendanceStatus');
+            const dateSelect = document.getElementById('fixDateSelect');
+
+            if (!fixCurrentTeacherId || !groupId) {
+                statusDiv.innerText = 'يرجى اختيار المدرس والمجموعة أولاً.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
+                return;
+            }
+
+            statusDiv.innerText = 'جاري تحميل التواريخ...';
+            statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-blue-500';
+            dateSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+
+            try {
+                const attSnap = await db.collection('teachers').doc(fixCurrentTeacherId)
+                    .collection('groups').doc(groupId)
+                    .collection('dailyAttendance').orderBy('date', 'desc').get();
+
+                dateSelect.innerHTML = '<option value="">اختر التاريخ...</option>';
+                
+                if (attSnap.empty) {
+                    statusDiv.innerText = 'لا توجد سجلات حضور لهذه المجموعة.';
+                    return;
+                }
+
+                attSnap.forEach(doc => {
+                    const data = doc.data();
+                    const opt = document.createElement('option');
+                    opt.value = doc.id; // doc.id is usually the date
+                    const count = (data.records || []).length;
+                    opt.innerText = `${data.date || doc.id} (سجل: ${count})`;
+                    dateSelect.appendChild(opt);
+                });
+
+                statusDiv.innerText = 'تم تحميل التواريخ بنجاح.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-green-500';
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = 'حدث خطأ أثناء تحميل التواريخ.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
+            }
+        }
+
+        async function fixDeleteAbsents() {
+            const groupId = document.getElementById('fixGroupSelect').value;
+            const dateId = document.getElementById('fixDateSelect').value;
+            const statusDiv = document.getElementById('fixAttendanceStatus');
+
+            if (!fixCurrentTeacherId || !groupId || !dateId) {
+                statusDiv.innerText = 'يرجى استكمال الاختيارات.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
+                return;
+            }
+
+            if (!confirm('هل أنت متأكد أنك تريد مسح كل الغياب في هذا اليوم وإبقاء الحاضرين فقط؟ هذا الإجراء صامت ولن يرسل إشعارات.')) return;
+
+            statusDiv.innerText = 'جاري الإصلاح (صامت)...';
+            statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-blue-500';
+
+            try {
+                const docRef = db.collection('teachers').doc(fixCurrentTeacherId)
+                    .collection('groups').doc(groupId)
+                    .collection('dailyAttendance').doc(dateId);
+                
+                const docSnap = await docRef.get();
+                if (!docSnap.exists) {
+                    statusDiv.innerText = 'السجل غير موجود.';
+                    return;
+                }
+
+                const data = docSnap.data();
+                const originalRecords = data.records || [];
+                
+                // Keep ONLY those who are 'present'
+                const fixedRecords = originalRecords.filter(r => r.status === 'present');
+
+                await docRef.update({
+                    records: fixedRecords,
+                    _noNotify: true // 🔥 Cloud function will see this and skip
+                });
+
+                statusDiv.innerText = `تم الإصلاح بنجاح! تم الإبقاء على ${fixedRecords.length} حاضر، ومسح الباقي بدون إشعار.`;
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-green-500';
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = 'حدث خطأ أثناء الإصلاح.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
+            }
+        }
+
+        async function fixDeleteWholeDay() {
+            const groupId = document.getElementById('fixGroupSelect').value;
+            const dateId = document.getElementById('fixDateSelect').value;
+            const statusDiv = document.getElementById('fixAttendanceStatus');
+
+            if (!fixCurrentTeacherId || !groupId || !dateId) {
+                statusDiv.innerText = 'يرجى استكمال الاختيارات.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
+                return;
+            }
+
+            if (!confirm('🚨 هل أنت متأكد تماماً من حذف سجل اليوم بالكامل؟ لن يتم احتسابه كحصة في الإحصائيات بعد الآن.')) return;
+
+            statusDiv.innerText = 'جاري الحذف...';
+            statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-blue-500';
+
+            try {
+                const docRef = db.collection('teachers').doc(fixCurrentTeacherId)
+                    .collection('groups').doc(groupId)
+                    .collection('dailyAttendance').doc(dateId);
+                
+                await docRef.delete();
+
+                statusDiv.innerText = `تم حذف سجل اليوم بالكامل بنجاح.`;
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-green-500';
+                
+                // Refresh dates list
+                fixLoadDates();
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = 'حدث خطأ أثناء الحذف.';
+                statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
             }
         }
 

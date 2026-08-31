@@ -1566,6 +1566,13 @@ exports.notifyOnPresence = onDocumentWritten(
     if (!snapAfter.exists) return; // تم الحذف، لا نفعل شيئاً
 
     const afterData = snapAfter.data();
+    
+    // 🔥 تجنب إرسال إشعارات لو ده تعديل صامت (عشان تصحيح الأخطاء)
+    if (afterData._noNotify === true) {
+      console.log("🤫 Silent update detected. Skipping notifications.");
+      return null;
+    }
+
     const beforeData = snapBefore.exists ? snapBefore.data() : { records: [] };
 
     const afterRecords = afterData.records || [];
@@ -1580,6 +1587,15 @@ exports.notifyOnPresence = onDocumentWritten(
         rBefore.studentId === rAfter.studentId && rBefore.status === "present",
       );
       return isPresentNow && !wasPresent;
+    });
+
+    // 2.5 استخراج الطلاب الذين تم تعديل حالتهم من "حاضر" إلى "غائب" (للتصحيح)
+    const newlyAbsentStudents = beforeRecords.filter((rBefore) => {
+      if (rBefore.status !== "present") return false;
+      
+      const rAfter = afterRecords.find((r) => r.studentId === rBefore.studentId);
+      // يُعتبر غائب لو لم يعد موجوداً في القائمة الجديدة، أو موجود ولكن حالته ليست حاضر
+      return !rAfter || rAfter.status !== "present";
     });
 
     if (newlyPresentStudents.length === 0 && afterRecords.length > 0) {
