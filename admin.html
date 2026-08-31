@@ -982,6 +982,40 @@
                         </div>
                     </div>
 
+
+                <!-- Scan Audit Log -->
+                <div class="glass-card p-6 mt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl">
+                                <i class="ri-qr-scan-2-line"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">سجل السكانات (Scan Audit)</h2>
+                        </div>
+                        <button onclick="loadScanLogs()" class="btn-clean !px-3 !py-1 text-xs">
+                            <i class="ri-refresh-line"></i> تحديث
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-right text-gray-500 dark:text-gray-400">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300">
+                                <tr>
+                                    <th class="px-4 py-2">الوقت</th>
+                                    <th class="px-4 py-2">الكود المقروء</th>
+                                    <th class="px-4 py-2">الطالب</th>
+                                    <th class="px-4 py-2">الحالة</th>
+                                    <th class="px-4 py-2">السبب (لو فشل)</th>
+                                    <th class="px-4 py-2">النوع</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scanLogsTableBody">
+                                <tr><td colspan="6" class="text-center py-4">اضغط تحديث لعرض السجلات</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- NEW SECTION: Manage Center & Migrate Cards -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                     
@@ -1561,6 +1595,53 @@
         // 🛠️ أداة إصلاح سجلات الحضور الصامتة
         // ==========================================
         let fixCurrentTeacherId = null;
+
+        
+        // ==========================================
+        // 🚀 أداة سجل السكانات
+        // ==========================================
+        async function loadScanLogs() {
+            const tbody = document.getElementById('scanLogsTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><i class="ri-loader-4-line animate-spin"></i> جاري التحميل...</td></tr>';
+            
+            try {
+                const logsSnap = await db.collection('scanLogs')
+                    .orderBy('timestamp', 'desc')
+                    .limit(50)
+                    .get();
+                
+                if (logsSnap.empty) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">لا توجد سجلات.</td></tr>';
+                    return;
+                }
+                
+                let html = '';
+                logsSnap.forEach(doc => {
+                    const data = doc.data();
+                    const date = data.timestamp ? data.timestamp.toDate().toLocaleString('ar-EG') : 'الآن';
+                    const isSuccess = data.result === 'success';
+                    const statusHtml = isSuccess 
+                        ? '<span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded border border-green-400">نجاح</span>' 
+                        : '<span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded border border-red-400">فشل</span>';
+                    
+                    html += `
+                        <tr class="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <td class="px-4 py-2 dir-ltr text-left">${date}</td>
+                            <td class="px-4 py-2 font-mono font-bold text-gray-900 dark:text-white">${data.rawValue || '-'}</td>
+                            <td class="px-4 py-2">${data.studentName || '-'}</td>
+                            <td class="px-4 py-2">${statusHtml}</td>
+                            <td class="px-4 py-2 text-xs text-red-500 font-bold">${data.failReason || '-'}</td>
+                            <td class="px-4 py-2 text-xs text-gray-400">${data.scannerType || 'camera'} - ${data.scanType || '-'}</td>
+                        </tr>
+                    `;
+                });
+                
+                tbody.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">حدث خطأ أثناء جلب السجلات.</td></tr>';
+            }
+        }
 
         async function fixLoadGroups() {
             const phoneStr = document.getElementById('fixTeacherPhoneInput').value.trim();

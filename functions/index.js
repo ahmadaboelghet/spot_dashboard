@@ -2411,3 +2411,41 @@ exports.adminMoveStudent = onCall({ invoker: 'public', cors: ['https://elnazer-e
 
   return { success: true, message: 'Student moved successfully' };
 });
+
+
+// ============================================================
+// 🧹 دالة تنظيف سجلات السكان (تحذف الأقدم من 7 أيام) - كل ليلة
+// ============================================================
+exports.cleanupScanLogs = onSchedule({
+  schedule: "0 2 * * *", // الساعة 2 صباحاً بتوقيت السيرفر
+  timeZone: "Africa/Cairo"
+}, async (event) => {
+  const db = admin.firestore();
+  
+  // حساب التاريخ من 7 أيام
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const oldLogsQuery = db.collection('scanLogs')
+    .where('timestamp', '<', admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+    .limit(500); // نأخذ 500 في كل مرة عشان مانتجاوزش الحد المسموح
+    
+  let batch = db.batch();
+  let deleteCount = 0;
+  
+  const snapshot = await oldLogsQuery.get();
+  
+  if (snapshot.empty) {
+    console.log("No old scan logs to delete.");
+    return;
+  }
+  
+  snapshot.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+    deleteCount++;
+  });
+  
+  await batch.commit();
+  console.log(`Successfully deleted ${deleteCount} old scan logs.`);
+});
+

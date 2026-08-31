@@ -3545,7 +3545,7 @@ function tickScanner() {
         
         try {
             const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-            if (code) handleScan(code.data);
+            if (code) handleScan(code.data, "camera");
         } catch (e) {
             console.error("jsQR Error:", e);
         }
@@ -3557,13 +3557,38 @@ function tickScanner() {
 // 🚀 التعديل الجوهري: هندلة الطالب الغريب وتسجيله فوراً
 // ==========================================
 
-async function handleScan(scannedText) {
+
+// ==========================================
+// 🚀 سجل السكان (Scan Audit Log)
+// ==========================================
+function logScanRecord(rawValue, result, failReason, studentName, scanType, scannerType) {
+    if (!navigator.onLine || !TEACHER_ID) return;
+    try {
+        const payload = {
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            teacherId: TEACHER_ID,
+            groupId: SELECTED_GROUP_ID || null,
+            rawValue: rawValue || '',
+            result: result, // 'success' or 'failed'
+            failReason: failReason || null,
+            studentName: studentName || null,
+            scanType: scanType || null,
+            scannerType: scannerType || 'camera'
+        };
+        firestoreDB.collection('scanLogs').add(payload);
+    } catch (e) {
+        console.error("Error logging scan:", e);
+    }
+}
+
+async function handleScan(scannedText, scannerType = "camera") {
     const qrCode = scannedText.replace(/"/g, '').trim();
 
     // 🛑 الحالة: ربط الكارت
     if (currentScannerMode === 'link-card') {
         playBeep();
         stopScanner();
+        logScanRecord(qrCode, 'success', null, studentPendingCardLink ? studentPendingCardLink.name : 'Unknown', 'link-card', scannerType);
         if (studentPendingCardLink) {
             await linkCardToStudent(studentPendingCardLink, qrCode);
         }
@@ -3604,6 +3629,7 @@ async function handleScan(scannedText) {
                 
                 if (!sessionScannedStudents.has(studentId)) {
                     // أول سكان: حضور
+                    logScanRecord(qrCode, 'success', null, globalMatch.name, 'cross-group-attendance', scannerType);
                     sessionScannedStudents.add(studentId);
                     await saveCrossGroupAttendance(globalMatch, false);
                     
@@ -3615,6 +3641,7 @@ async function handleScan(scannedText) {
                     setTimeout(() => showScanSuccessUI(globalMatch, 'attendance'), 800);
                 } else {
                     // تاني سكان: واجب
+                    logScanRecord(qrCode, 'success', null, globalMatch.name, 'cross-group-homework', scannerType);
                     if (hasHomeworkToday) {
                         await saveCrossGroupAttendance(globalMatch, true);
                         showScanSuccessUI(globalMatch, 'homework');
@@ -3638,15 +3665,19 @@ async function handleScan(scannedText) {
                     if (cardSnap.exists) {
                         const ownerId = TEACHER_CENTER_ID || TEACHER_ID;
                         if (cardSnap.data().ownerId && cardSnap.data().ownerId !== ownerId) {
+                            logScanRecord(qrCode, 'failed', 'another_organization', null, 'cross-group', scannerType);
                             showToast(currentLang === 'ar' ? "⛔ هذا الكارت مسجل في مؤسسة أخرى!" : "⛔ Card belongs to another organization!", "error");
                         } else {
+                            logScanRecord(qrCode, 'failed', 'unlinked_card', null, 'cross-group', scannerType);
                             showToast(currentLang === 'ar' ? "⚠️ هذا الكارت غير مربوط بأي طالب حتى الآن!" : "⚠️ Card is not linked to any student yet!", "warning");
                         }
                     } else {
+                        logScanRecord(qrCode, 'failed', 'invalid_fake_card', null, 'cross-group', scannerType);
                         showToast(currentLang === 'ar' ? "❌ كود غير صحيح أو كارت مزيف!" : "❌ Invalid code or fake card!", "error");
                     }
                 } else {
                     // Offline or not a card format
+                    logScanRecord(qrCode, 'failed', 'unknown_card', null, 'cross-group', scannerType);
                     showToast(currentLang === 'ar' ? "الطالب غير موجود" : "Student not found", "error");
                 }
             }
@@ -3684,6 +3715,9 @@ async function handleScan(scannedText) {
 
     // توجيه حسب الوضع
     if (currentScannerMode === 'daily') {
+        let scanType = sessionScannedStudents.has(studentToMark.id) ? 'homework' : 'attendance';
+        logScanRecord(qrCode, 'success', null, studentToMark.name, scanType, scannerType);
+
         checkGoldenTicket(studentToMark.name);
         processDailyScan(studentToMark);
 
@@ -6708,7 +6742,9 @@ document.addEventListener('keydown', async (e) => {
             }
 
             // 3. إرسال الكود لنفس الدالة اللي بتشغل كاميرا اللابتوب/الموبايل
-            await handleScan(qrCode);
+            await handleScan(qrCode, 'hardware');
+        } else if (qrCode.length > 0 && qrCode.length < 4) {
+            logScanRecord(qrCode, 'failed', 'scanner_incomplete', null, currentScannerMode || 'unknown', 'hardware');
         }
         return;
     }
