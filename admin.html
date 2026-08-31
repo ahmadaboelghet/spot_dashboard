@@ -1578,17 +1578,30 @@
             groupSelect.innerHTML = '<option value="">جاري التحميل...</option>';
 
             try {
-                let formattedPhone = phoneStr.startsWith('+20') ? phoneStr : '+20' + phoneStr.replace(/^0+/, '');
-                const teacherQuery = await db.collection('teachers').where('phoneNumber', '==', formattedPhone).limit(1).get();
+                // Try exact phone first (as document ID)
+                let teacherDoc = await db.collection('teachers').doc(phoneStr).get();
+                if (!teacherDoc.exists) {
+                    // Try with +20 just in case
+                    let formattedPhone = phoneStr.startsWith('+20') ? phoneStr : '+20' + phoneStr.replace(/^0+/, '');
+                    teacherDoc = await db.collection('teachers').doc(formattedPhone).get();
+                }
                 
-                if (teacherQuery.empty) {
+                if (!teacherDoc.exists) {
+                    // Try 010... if they entered +20
+                    if (phoneStr.startsWith('+20')) {
+                        let zeroPhone = '0' + phoneStr.substring(3);
+                        teacherDoc = await db.collection('teachers').doc(zeroPhone).get();
+                    }
+                }
+
+                if (!teacherDoc.exists) {
                     statusDiv.innerText = 'لم يتم العثور على مدرس بهذا الرقم.';
                     statusDiv.className = 'mt-2 text-center text-sm font-semibold h-5 text-red-500';
                     groupSelect.innerHTML = '<option value="">اختر المجموعة...</option>';
                     return;
                 }
 
-                fixCurrentTeacherId = teacherQuery.docs[0].id;
+                fixCurrentTeacherId = teacherDoc.id;
                 
                 const groupsSnap = await db.collection('teachers').doc(fixCurrentTeacherId).collection('groups').get();
                 if (groupsSnap.empty) {
