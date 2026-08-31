@@ -1647,7 +1647,7 @@
             try {
                 const attSnap = await db.collection('teachers').doc(fixCurrentTeacherId)
                     .collection('groups').doc(groupId)
-                    .collection('dailyAttendance').orderBy('date', 'desc').get();
+                    .collection('dailyAttendance').get();
 
                 dateSelect.innerHTML = '<option value="">اختر التاريخ...</option>';
                 
@@ -1656,10 +1656,20 @@
                     return;
                 }
 
-                attSnap.forEach(doc => {
-                    const data = doc.data();
+                // الترتيب باستخدام الجافاسكريبت لتجنب أخطاء الفايربيز للـ index
+                const docs = [];
+                attSnap.forEach(doc => docs.push({ id: doc.id, data: doc.data() }));
+                
+                docs.sort((a, b) => {
+                    const d1 = a.data.date || a.id;
+                    const d2 = b.data.date || b.id;
+                    return d2.localeCompare(d1); // ترتيب تنازلي (الأحدث أولاً)
+                });
+
+                docs.forEach(doc => {
+                    const data = doc.data;
                     const opt = document.createElement('option');
-                    opt.value = doc.id; // doc.id is usually the date
+                    opt.value = doc.id;
                     const count = (data.records || []).length;
                     opt.innerText = `${data.date || doc.id} (سجل: ${count})`;
                     dateSelect.appendChild(opt);
