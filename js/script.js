@@ -6658,8 +6658,9 @@ document.addEventListener('keydown', async (e) => {
 
     const currentTime = Date.now();
     
-    // ✅ تعديل 1: زيادة الوقت لـ 250 ملي ثانية لتجنب تفريغ الكود أثناء انشغال المتصفح برسم التابة
-    if (currentTime - hwScannerLastKeyTime > 250) {
+    // ✅ تعديل 1: زيادة الوقت لـ 500 ملي ثانية لتجنب تفريغ الكود أثناء انشغال المتصفح برسم التابة
+    // (تم رفعها من 250 → 500 لأن بعض الأجهزة بتستغرق وقت أطول بين الحروف والأرقام)
+    if (currentTime - hwScannerLastKeyTime > 500) {
         hwScannerBuffer = "";
     }
     
