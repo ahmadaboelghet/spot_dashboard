@@ -3728,6 +3728,7 @@ async function handleScan(scannedText, scannerType = "camera") {
         }, 500);
     }
     else if (currentScannerMode === 'payments') {
+        logScanRecord(qrCode, 'success', null, studentToMark.name, 'payments', scannerType);
         processPaymentScan(studentToMark);
     }
 }
@@ -3861,7 +3862,9 @@ function processDailyScan(student) {
 }
 
 function processPaymentScan(student) {
+    console.log("processPaymentScan called for:", student.name);
     const row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
+    console.log("Row found:", !!row);
     const defaultAmountInput = document.getElementById('defaultAmountInput');
 
     if (row) {
@@ -6692,9 +6695,9 @@ document.addEventListener('keydown', async (e) => {
 
     const currentTime = Date.now();
     
-    // ✅ تعديل 1: زيادة الوقت لـ 500 ملي ثانية لتجنب تفريغ الكود أثناء انشغال المتصفح برسم التابة
-    // (تم رفعها من 250 → 500 لأن بعض الأجهزة بتستغرق وقت أطول بين الحروف والأرقام)
-    if (currentTime - hwScannerLastKeyTime > 500) {
+    // ✅ تعديل 1: زيادة الوقت لـ 1000 ملي ثانية (ثانية كاملة) 
+    // لأن بعض السكانرات البطيئة بتقف كتير بين الحروف والأرقام
+    if (currentTime - hwScannerLastKeyTime > 1000) {
         hwScannerBuffer = "";
     }
     
