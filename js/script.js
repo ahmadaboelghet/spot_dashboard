@@ -861,8 +861,9 @@ const translations = {
 // ==========================================
 // 4. UTILS
 // ==========================================
-function generateUniqueId() { return `off_${Date.now()}
+function generateUniqueId() { return `off_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; }
 
+// FIX #1: Local timezone date helpers (replaces new Date().toISOString().slice(...) which uses UTC)
 function getLocalDateString(date = new Date()) {
     const tzOffset = date.getTimezoneOffset() * 60000;
     return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
@@ -872,7 +873,8 @@ function getLocalMonthString(date = new Date()) {
     const tzOffset = date.getTimezoneOffset() * 60000;
     return new Date(date.getTime() - tzOffset).toISOString().slice(0, 7);
 }
-_${Math.random().toString(36).substr(2, 5)}`; }
+
+
 function generateCardId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = 'NAZ-';
@@ -2497,11 +2499,11 @@ async function loadGroupData() {
             );
 
             // جلب كل البيانات بالتوازي لتسريع العملية بشكل كبير جداً بدلاً من جلبها بالتتابع
-            // FIX #12: Add orderBy('date', 'desc') before limit(60) to get newest records
+            // FIX #12: Use limit(60) without orderBy (avoids index requirement); sort client-side below
             const [sSnap, aSnap, asSnap, pSnap] = await Promise.all([
                 firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/students`).get(),
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/dailyAttendance`).orderBy('date', 'desc').limit(60).get(),
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/assignments`).orderBy('date', 'desc').limit(60).get(),
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/dailyAttendance`).limit(60).get(),
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/assignments`).limit(60).get(),
                 firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/payments`).limit(24).get()
             ]);
 
@@ -2550,7 +2552,8 @@ async function loadGroupData() {
                     date: data.date || d.id,
                     ...data
                 };
-            });
+            // FIX #12: Sort client-side by date desc (avoids needing Firestore index)
+            }).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
             // FIX #11: Offline Overwrite Mirage — don't overwrite if pending sync writes exist
             const attToSave = attendanceDocs.filter(doc => {
@@ -2568,7 +2571,8 @@ async function loadGroupData() {
                     date: data.date || d.id.split('_').pop(),
                     ...data
                 };
-            });
+            // FIX #12: Sort client-side by date desc (avoids needing Firestore index)
+            }).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
             // FIX #11: Offline Overwrite Mirage for assignments
             const assignToSave = assignmentsDocs.filter(doc => {
