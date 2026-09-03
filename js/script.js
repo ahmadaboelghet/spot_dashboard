@@ -3888,10 +3888,20 @@ async function processDailyScan(student) {
     setTimeout(() => { isScannerPaused = false; requestAnimationFrame(tickScanner); }, 1200);
 }
 
-function processPaymentScan(student) {
+// خلينا الدالة async
+async function processPaymentScan(student) {
     console.log("processPaymentScan called for:", student.name);
-    const row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
-    console.log("Row found:", !!row);
+    let row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
+    
+    // ✅ الحل السحري: لو السطر مش موجود، نجبر الشاشة تترسم
+    if (!row) {
+        console.warn("⏳ سطر الدفع غير موجود، جاري رسم القائمة...");
+        const searchInput = document.getElementById('paymentStudentSearchInput');
+        if (searchInput) searchInput.value = ''; // تفريغ البحث
+        await renderPaymentsList(); // إجبار رسم الشاشة
+        row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
+    }
+
     const defaultAmountInput = document.getElementById('defaultAmountInput');
 
     if (row) {
@@ -3901,23 +3911,21 @@ function processPaymentScan(student) {
         if (!checkbox.checked) {
             const val = defaultAmountInput.value;
 
-            // ✅✅ التعديل الجديد: منع الـ Scan لو المبلغ مش محدد ✅✅
+            // منع الـ Scan لو المبلغ مش محدد
             if (!val) {
                 showToast(`⚠️ لا يمكن تحصيل المصاريف لـ "${student.name}"`, "error");
                 setTimeout(() => showToast("يرجى تحديد المبلغ أولاً في الخانة العلوية", "error"), 1000);
-
-                // تشغيل صوت خطأ لو متاح، أو هزة للصف
                 row.classList.add('shake-anim');
-                defaultAmountInput.focus(); // توجيه المؤشر للخانة الفاضية
+                defaultAmountInput.focus();
                 setTimeout(() => row.classList.remove('shake-anim'), 500);
-                return; // وقف التنفيذ
+                return;
             }
 
             // لو المبلغ موجود، كمل عادي
             checkbox.checked = true;
             input.value = val;
-
-            checkbox.dispatchEvent(new Event('change'));
+            checkbox.dispatchEvent(new Event('change')); // ده هيشغل الحسابات والحفظ التلقائي
+            
             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
             row.classList.add('ring-4', 'ring-green-300');
             setTimeout(() => row.classList.remove('ring-4', 'ring-green-300'), 1000);
@@ -4526,6 +4534,11 @@ async function renderPaymentsList(filter = "") {
             }
             groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
             calculateOverallIncome(currentGroupTotal);
+
+            clearTimeout(savePaymentsTimeout);
+            savePaymentsTimeout = setTimeout(() => {
+                silentSavePayments();
+            }, 1000);
         });
 
         fragment.appendChild(div);
