@@ -4260,41 +4260,86 @@ function closeCardLinkModal() {
     document.getElementById('cardLinkModal').classList.add('hidden');
 }
 
-let isLinkingCard = false; // قفل لمنع التنفيذ المزدوج
+let isLinkingCard = false; // 1. قفل لمنع التكرار (يجب أن يكون خارج الدالة)
 
 async function linkCardToStudent(student, cardId) {
+    // لو الفنكشن شغالة حالياً ومخلصتش، ارفض أي سكان جديد (يمنع التكرار)
     if (isLinkingCard) return; 
-    isLinkingCard = true; // تفعيل القفل
-    
-    try {
-        // ... (كود التحقق من تكرار الكارت سيبه زي ما هو لحد الجزء بتاع التحديث) ...
-        // (أنا هكتبلك الجزء الأخير من الدالة اللي بيتحدث فيه الداتا)
+    isLinkingCard = true;
 
-        student.cardId = cardId;
+    // توحيد حالة الحروف للكارت (عشان لو الاسكانر قراه سمول يظبط)
+    const safeCardId = cardId.toUpperCase().trim();
+
+    // 2. إظهار حالة التحميل للمستخدم عشان ميسحبش سكان تاني
+    const modalTitle = document.getElementById('cardLinkStudentName');
+    const originalTitle = modalTitle ? modalTitle.innerText : '';
+    if (modalTitle) {
+        modalTitle.innerHTML = `<i class="ri-loader-4-line animate-spin text-brand"></i> جاري ربط الكارت...`;
+    }
+
+    try {
+        const allGroups = await getAllFromDB('groups');
+        const allStudentsFromDB = await getAllFromDB('students');
         
-        // تحديث الداتابيز المحلية
+        // التحقق من تكرار الكارت محلياً
+        const conflictStudent = allStudentsFromDB.find(s => 
+            s.cardId && s.cardId.toUpperCase() === safeCardId && s.id !== student.id
+        );
+        
+        if (conflictStudent) {
+            const conflictGroup = allGroups.find(g => g.id === conflictStudent.groupId);
+            const groupName = conflictGroup ? conflictGroup.name : '';
+            showToast(`⛔ الكارت مربوط بالطالب "${conflictStudent.name}" في مجموعة "${groupName}"!`, 'error');
+            closeCardLinkModal();
+            return;
+        }
+
+        // التحقق من السيرفر
+        const ownerId = TEACHER_CENTER_ID || TEACHER_ID;
+        if (navigator.onLine) {
+            const cardRef = firestoreDB.collection('cards').doc(safeCardId);
+            const cardSnap = await cardRef.get();
+            
+            if (cardSnap.exists) {
+                const cardData = cardSnap.data();
+                if (cardData.ownerId && cardData.ownerId !== ownerId) {
+                    showToast(`⛔ هذا الكارت مسجل مسبقاً في مؤسسة أخرى!`, 'error');
+                    closeCardLinkModal();
+                    return;
+                }
+            } else {
+                await cardRef.set({
+                    id: safeCardId,
+                    ownerId: ownerId,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        }
+
+        // حفظ البيانات
+        student.cardId = safeCardId;
         await putToDB('students', student);
-        
-        // الرفع للسيرفر
         await addToSyncQueue({ 
             type: 'update', 
             path: `teachers/${TEACHER_ID}/groups/${student.groupId}/students/${student.id}`, 
-            data: { cardId } 
+            data: { cardId: safeCardId } 
         });
 
-        // تحديث القائمة الرئيسية
+        // تحديث الميموري والقائمة الخلفية
         const idx = allStudents.findIndex(s => s.id === student.id);
         if (idx !== -1) {
-            allStudents[idx].cardId = cardId;
-            renderStudents();
+            allStudents[idx].cardId = safeCardId;
+            if (document.getElementById('tab-students') && !document.getElementById('tab-students').classList.contains('hidden')) {
+                renderStudents();
+            }
         }
         
-        // ✅ التعديل السحري: تحديث واجهة بروفايل الطالب فوراً لو كان مفتوح
+        // 3. ✨ التحديث الفوري لبروفايل الطالب المفتوح (يمنع الحاجة للريفريش) ✨
         if (currentProfileId === student.id) {
             const cardBadgeText = document.getElementById('profileCardText');
             const cardBadgeIcon = document.getElementById('profileCardIcon');
             if (cardBadgeText && cardBadgeIcon) {
-                cardBadgeText.innerText = cardId;
+                cardBadgeText.innerText = safeCardId;
                 cardBadgeText.classList.remove('text-gray-500');
                 cardBadgeText.classList.add('text-brand');
                 cardBadgeIcon.className = 'ri-qr-code-line text-brand';
@@ -4303,17 +4348,19 @@ async function linkCardToStudent(student, cardId) {
 
         closeCardLinkModal();
         logEvent("student_added", { group_id: SELECTED_GROUP_ID });
-        
-        // إرجاع وضع الاسكانر لطبيعته بعد ربط الكارت
-        currentScannerMode = document.querySelector('.tab-button.active')?.dataset.tab === 'payments' ? 'payments' : 'daily';
-
-        showToast(translations[currentLang].studentAdded || 'تم ربط الكارت بالطالب بنجاح!', 'success');
+        showToast(translations[currentLang].studentAdded || 'تم ربط الكارت بنجاح!', 'success');
         
     } catch (err) {
-        console.error('Card check error:', err);
-        showToast('حدث خطأ أثناء فحص الكارت', 'error');
+        console.error('Card link error:', err);
+        showToast('حدث خطأ أثناء ربط الكارت', 'error');
     } finally {
-        isLinkingCard = false; // تحرير القفل للعملية القادمة
+        // إرجاع العنوان وفك القفل للعملية القادمة
+        if (modalTitle) modalTitle.innerText = originalTitle;
+        isLinkingCard = false;
+        
+        // إرجاع وضع الاسكانر لطبيعته
+        const activeTab = document.querySelector('.tab-button.active')?.dataset.tab;
+        currentScannerMode = activeTab === 'payments' ? 'payments' : 'daily';
     }
 }
 
