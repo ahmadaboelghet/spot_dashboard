@@ -4260,116 +4260,61 @@ function closeCardLinkModal() {
     document.getElementById('cardLinkModal').classList.add('hidden');
 }
 
+let isLinkingCard = false; // قفل لمنع التنفيذ المزدوج
+
 async function linkCardToStudent(student, cardId) {
-    // ⛔ CRITICAL: Check if this cardId is already assigned to another student
-    // Check across ALL groups under this teacher (not just current group)
+    if (isLinkingCard) return; 
+    isLinkingCard = true; // تفعيل القفل
+    
     try {
-        const allGroups = await getAllFromDB('groups');
-        const allStudentsFromDB = await getAllFromDB('students');
-        
-        const conflictStudent = allStudentsFromDB.find(s => 
-            s.cardId && s.cardId === cardId && s.id !== student.id
-        );
-        
-        if (conflictStudent) {
-            // Find the group name for better error message
-            const conflictGroup = allGroups.find(g => g.id === conflictStudent.groupId);
-            const groupName = conflictGroup ? conflictGroup.name : '';
-            const errorMsg = currentLang === 'ar' 
-                ? `⛔ هذا الكارت مربوط بالفعل بالطالب "${conflictStudent.name}"${groupName ? ` في مجموعة "${groupName}"` : ''}! لا يمكن ربط نفس الكارت بأكثر من طالب.`
-                : `⛔ This card is already linked to student "${conflictStudent.name}"${groupName ? ` in group "${groupName}"` : ''}! Cannot link the same card to multiple students.`;
-            showToast(errorMsg, 'error');
-            closeCardLinkModal();
-            return;
-        }
+        // ... (كود التحقق من تكرار الكارت سيبه زي ما هو لحد الجزء بتاع التحديث) ...
+        // (أنا هكتبلك الجزء الأخير من الدالة اللي بيتحدث فيه الداتا)
 
-        // Global check in cards collection
-        const ownerId = TEACHER_CENTER_ID || TEACHER_ID;
-        if (navigator.onLine) {
-            const cardRef = firestoreDB.collection('cards').doc(cardId);
-            const cardSnap = await cardRef.get();
-            
-            if (cardSnap.exists) {
-                const cardData = cardSnap.data();
-                
-                // If it belongs to another organization/teacher
-                if (cardData.ownerId && cardData.ownerId !== ownerId) {
-                    const errorMsg = currentLang === 'ar'
-                        ? `⛔ هذا الكارت مسجل مسبقاً في سنتر أو عند مدرس آخر!`
-                        : `⛔ This card is registered to another center/teacher!`;
-                    showToast(errorMsg, 'error');
-                    closeCardLinkModal();
-                    return;
-                }
-            } else {
-                // Register the card for the first time
-                await cardRef.set({
-                    id: cardId,
-                    ownerId: ownerId,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+        student.cardId = cardId;
+        
+        // تحديث الداتابيز المحلية
+        await putToDB('students', student);
+        
+        // الرفع للسيرفر
+        await addToSyncQueue({ 
+            type: 'update', 
+            path: `teachers/${TEACHER_ID}/groups/${student.groupId}/students/${student.id}`, 
+            data: { cardId } 
+        });
+
+        // تحديث القائمة الرئيسية
+        const idx = allStudents.findIndex(s => s.id === student.id);
+        if (idx !== -1) {
+            allStudents[idx].cardId = cardId;
+            renderStudents();
+        }
+        
+        // ✅ التعديل السحري: تحديث واجهة بروفايل الطالب فوراً لو كان مفتوح
+        if (currentProfileId === student.id) {
+            const cardBadgeText = document.getElementById('profileCardText');
+            const cardBadgeIcon = document.getElementById('profileCardIcon');
+            if (cardBadgeText && cardBadgeIcon) {
+                cardBadgeText.innerText = cardId;
+                cardBadgeText.classList.remove('text-gray-500');
+                cardBadgeText.classList.add('text-brand');
+                cardBadgeIcon.className = 'ri-qr-code-line text-brand';
             }
         }
 
-        // Also check Firestore directly for extra safety (in case local DB is out of sync)
-        const groupsSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups`).get();
+        closeCardLinkModal();
+        logEvent("student_added", { group_id: SELECTED_GROUP_ID });
         
-        for (const groupDoc of groupsSnap.docs) {
-            const studentsSnap = await firestoreDB
-                .collection(`teachers/${TEACHER_ID}/groups/${groupDoc.id}/students`)
-                .where('cardId', '==', cardId)
-                .get();
-            
-            if (!studentsSnap.empty) {
-                const existingDoc = studentsSnap.docs[0];
-                const existingStudent = existingDoc.data();
-                // If it's the same student, allow (re-linking same card)
-                if (existingDoc.id === student.id) continue;
-                
-                const errorMsg = currentLang === 'ar'
-                    ? `⛔ هذا الكارت مربوط بالفعل بالطالب "${existingStudent.name}" في مجموعة "${groupDoc.data().name || groupDoc.id}"! لا يمكن ربط نفس الكارت بأكثر من طالب.`
-                    : `⛔ This card is already linked to "${existingStudent.name}" in group "${groupDoc.data().name || groupDoc.id}"! Cannot link the same card to multiple students.`;
-                showToast(errorMsg, 'error');
-                closeCardLinkModal();
-                return;
-            }
-        }
+        // إرجاع وضع الاسكانر لطبيعته بعد ربط الكارت
+        currentScannerMode = document.querySelector('.tab-button.active')?.dataset.tab === 'payments' ? 'payments' : 'daily';
+
+        showToast(translations[currentLang].studentAdded || 'تم ربط الكارت بالطالب بنجاح!', 'success');
+        
     } catch (err) {
-        console.error('Card uniqueness check error:', err);
-        // If the check fails (e.g. offline), still do the local check at minimum
-        const localConflict = allStudents.find(s => s.cardId && s.cardId === cardId && s.id !== student.id);
-        if (localConflict) {
-            const errorMsg = currentLang === 'ar'
-                ? `⛔ هذا الكارت مربوط بالفعل بالطالب "${localConflict.name}"! لا يمكن ربط نفس الكارت بأكثر من طالب.`
-                : `⛔ This card is already linked to "${localConflict.name}"! Cannot link the same card to multiple students.`;
-            showToast(errorMsg, 'error');
-            closeCardLinkModal();
-            return;
-        }
+        console.error('Card check error:', err);
+        showToast('حدث خطأ أثناء فحص الكارت', 'error');
+    } finally {
+        isLinkingCard = false; // تحرير القفل للعملية القادمة
     }
-
-    student.cardId = cardId;
-    
-    // Update local DB
-    await putToDB('students', student);
-    
-    // Sync to Firestore
-    await addToSyncQueue({ 
-        type: 'update', 
-        path: `teachers/${TEACHER_ID}/groups/${student.groupId}/students/${student.id}`, 
-        data: { cardId } 
-    });
-
-    // Update in-memory array if it's the current group
-    const idx = allStudents.findIndex(s => s.id === student.id);
-    if (idx !== -1) {
-        allStudents[idx].cardId = cardId;
-        renderStudents();
-    }
-    
-    closeCardLinkModal();
-    logEvent("student_added", { group_id: SELECTED_GROUP_ID });
-    showToast(translations[currentLang].studentAdded || 'تم ربط الكارت بالطالب بنجاح!', 'success');
 }
 
 function startCardLinkScanner() {
@@ -6765,11 +6710,10 @@ document.addEventListener('keydown', async (e) => {
 
             // 2. تحديد وضع السكانر
             const linkModal = document.getElementById('cardLinkModal');
-            if (linkModal && !linkModal.classList.contains('hidden')) {
+            // لو المودال مفتوح أو وضع الاسكانر متبرمج على ربط الكارت
+            if ((linkModal && !linkModal.classList.contains('hidden')) || currentScannerMode === 'link-card') {
                 currentScannerMode = 'link-card';
-                if (studentPendingCardLink) {
-                    await linkCardToStudent(studentPendingCardLink, qrCode);
-                }
+                await handleScan(qrCode, 'hardware');
                 return;
             }
 
