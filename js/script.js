@@ -217,11 +217,11 @@ async function getFromDB(store, key) {
     }
 }
 
-async function putToDB(store, data) {
+async function putToDB(store, data, key = undefined) {
     try {
         await openDB();
         const tx = localDB.transaction(store, 'readwrite');
-        tx.objectStore(store).put(data);
+        if (key !== undefined) { tx.objectStore(store).put(data, key); } else { tx.objectStore(store).put(data); }
         return new Promise((resolve, reject) => {
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
@@ -231,7 +231,7 @@ async function putToDB(store, data) {
             localDB = null;
             await openDB();
             const tx = localDB.transaction(store, 'readwrite');
-            tx.objectStore(store).put(data);
+            if (key !== undefined) { tx.objectStore(store).put(data, key); } else { tx.objectStore(store).put(data); }
             return new Promise((resolve, reject) => {
                 tx.oncomplete = () => resolve();
                 tx.onerror = () => reject(tx.error);
@@ -343,6 +343,7 @@ async function deleteFromDB(store, key) {
 // ==========================================
 let TEACHER_ID = null, TEACHER_CENTER_ID = null, SELECTED_GROUP_ID = null, allStudents = [], currentLang = localStorage.getItem('lang') || 'ar';
 let isSyncing = false;
+let syncRetryCount = 0;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
 let sessionScannedStudents = new Set();
 let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
@@ -860,7 +861,18 @@ const translations = {
 // ==========================================
 // 4. UTILS
 // ==========================================
-function generateUniqueId() { return `off_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`; }
+function generateUniqueId() { return `off_${Date.now()}
+
+function getLocalDateString(date = new Date()) {
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
+function getLocalMonthString(date = new Date()) {
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 7);
+}
+_${Math.random().toString(36).substr(2, 5)}`; }
 function generateCardId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = 'NAZ-';
@@ -1451,7 +1463,7 @@ async function processSyncQueue(isRecovering = false) {
                 };
 
                 try {
-                    await putToDB('syncQueue', updated);
+                    await putToDB('syncQueue', updated, op.id);
                 } catch (metaErr) {
                     console.error("⚠️ Failed to update retry metadata for sync item:", metaErr);
                 }
@@ -1478,8 +1490,16 @@ async function processSyncQueue(isRecovering = false) {
                 // نتحقق أن العناصر ليست فاشلة نهائياً لتجنب اللوب اللانهائي
                 const hasPending = items.some(item => !item.failed && item.attempts < MAX_SYNC_RETRIES);
                 if (hasPending) {
-                    setTimeout(processSyncQueue, 1000);
+                    // FIX #4: Exponential backoff — prevents infinite CPU lockup when firewalled
+                    const backoffMs = Math.min(Math.pow(2, syncRetryCount) * 1000, 64000);
+                    console.log(`⏳ Retry sync in ${backoffMs}ms (attempt ${syncRetryCount})`);
+                    syncRetryCount++;
+                    setTimeout(processSyncQueue, backoffMs);
+                } else {
+                    syncRetryCount = 0; // Reset on empty/all-failed queue
                 }
+            } else {
+                syncRetryCount = 0; // Reset on success or offline
             }
         } catch (_) {}
     }
@@ -1517,6 +1537,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Check actual internet connectivity periodically (every 15s) to recover from ISP disconnects
         setInterval(updateOnlineStatus, 15000);
+
+        // FIX #29: Missing Unload Flush — save pending data before page unloads
+        window.addEventListener('beforeunload', () => {
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+                saveTimeout = null;
+                saveDailyData(true); // Best-effort, fire-and-forget
+            }
+            if (savePaymentsTimeout) {
+                clearTimeout(savePaymentsTimeout);
+                savePaymentsTimeout = null;
+                savePayments(true); // Best-effort, fire-and-forget
+            }
+        });
     } catch (err) {
         console.error("🔥 Fatal initialization error:", err);
         sentryCaptureError(err, { action: "appInit" });
@@ -1595,6 +1629,18 @@ function setupListeners() {
     document.getElementById('createNewGroupBtn')?.addEventListener('click', createGroup);
 
     const handleGroupSelectionChange = async (groupId) => {
+        // FIX #8: Context Switch Data Loss — flush any pending saves before switching groups
+        if (saveTimeout) {
+            clearTimeout(saveTimeout);
+            saveTimeout = null;
+            await saveDailyData(true);
+        }
+        if (savePaymentsTimeout) {
+            clearTimeout(savePaymentsTimeout);
+            savePaymentsTimeout = null;
+            await savePayments(true);
+        }
+
         SELECTED_GROUP_ID = groupId;
         
         if (SELECTED_GROUP_ID) {
@@ -2169,6 +2215,7 @@ async function logout() {
     } catch(e) {
         sentryBreadcrumb("Teacher logged out", "auth");
     logEvent('logout');
+    if (typeof Sentry !== 'undefined' && Sentry.setUser) Sentry.setUser(null);
         console.error("Firebase signout error:", e);
     }
 
@@ -2393,7 +2440,10 @@ function deduplicateStudents(students) {
 // ✅✅ NEW LOAD GROUP DATA WITH SAFE SYNC & FAIL-SAFE LOGIC ✅✅
 // ------------------------------------------------------------------
 async function loadGroupData() {
-    allStudents = []; // 🔄 إعادة تعيين القائمة فوراً لمنع التداخل
+    // FIX #6: Reset all global state to prevent cross-group data pollution
+    allStudents = [];
+    hasHomeworkToday = false;
+    currentPendingStudentId = null;
 
     // Clear all student search inputs when switching groups
     ['studentSearchInput', 'dailyStudentSearchInput', 'examStudentSearchInput', 'paymentStudentSearchInput'].forEach(id => {
@@ -2434,48 +2484,102 @@ async function loadGroupData() {
 
     // 2. جلب البيانات من السيرفر (Sync)
     if (navigator.onLine && typeof firebase.auth === 'function' && firebase.auth().currentUser) {
+        // FIX #7: Capture group ID before async ops to detect race conditions
+        const capturedGroupId = SELECTED_GROUP_ID;
         try {
+            // FIX #9: Get pending syncQueue items to avoid overwriting local changes
+            const { items: sqItems } = await getAllSyncQueueItemsWithKeys().catch(() => ({ items: [] }));
+            const pendingDeletePaths = new Set(
+                sqItems.filter(item => item.type === 'delete').map(item => item.path)
+            );
+            const pendingWritePaths = new Set(
+                sqItems.filter(item => item.type === 'set' || item.type === 'update' || item.type === 'add').map(item => item.path)
+            );
+
             // جلب كل البيانات بالتوازي لتسريع العملية بشكل كبير جداً بدلاً من جلبها بالتتابع
+            // FIX #12: Add orderBy('date', 'desc') before limit(60) to get newest records
             const [sSnap, aSnap, asSnap, pSnap] = await Promise.all([
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`).get(),
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance`).limit(60).get(),
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments`).limit(60).get(),
-                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments`).limit(24).get()
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/students`).get(),
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/dailyAttendance`).orderBy('date', 'desc').limit(60).get(),
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/assignments`).orderBy('date', 'desc').limit(60).get(),
+                firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${capturedGroupId}/payments`).limit(24).get()
             ]);
 
+            // FIX #7: Race condition guard — bail if group changed during fetch
+            if (SELECTED_GROUP_ID !== capturedGroupId) {
+                console.warn('⚠️ Group changed during Firestore fetch, discarding stale data.');
+                return;
+            }
+
             // أ. الطلاب
-            const remoteStudents = sSnap.docs.map(d => ({ id: d.id, groupId: SELECTED_GROUP_ID, ...d.data() }));
-            allStudents = deduplicateStudents(remoteStudents);
-            await saveStudentsToLocalDB(remoteStudents);
+            const remoteStudents = sSnap.docs.map(d => ({ id: d.id, groupId: capturedGroupId, ...d.data() }));
+
+            // FIX #9: Filter out students with pending delete actions (Phantom Resurrection)
+            const filteredRemoteStudents = remoteStudents.filter(s => {
+                const studentPath = `teachers/${TEACHER_ID}/groups/${capturedGroupId}/students/${s.id}`;
+                return !pendingDeletePaths.has(studentPath);
+            });
+
+            allStudents = deduplicateStudents(filteredRemoteStudents);
+            await saveStudentsToLocalDB(filteredRemoteStudents);
+
+            // FIX #10: Immortal Local Data — delete local students not on server
+            try {
+                const localStudents = await getAllFromDB('students', 'groupId', capturedGroupId);
+                const remoteIdSet = new Set(remoteStudents.map(s => s.id));
+                for (const ls of localStudents) {
+                    if (!remoteIdSet.has(ls.id)) {
+                        await deleteFromDB('students', ls.id);
+                    }
+                }
+            } catch (cleanupErr) {
+                console.warn('Local student cleanup error:', cleanupErr);
+            }
+
             refreshCurrentTab();
+
+            // FIX #7: Race condition guard again after async local ops
+            if (SELECTED_GROUP_ID !== capturedGroupId) return;
 
             // ب. الحضور الأخير
             const attendanceDocs = aSnap.docs.map(d => {
                 const data = d.data();
                 return {
-                    id: `${SELECTED_GROUP_ID}_${d.id}`,
-                    groupId: SELECTED_GROUP_ID,
+                    id: `${capturedGroupId}_${d.id}`,
+                    groupId: capturedGroupId,
                     date: data.date || d.id,
                     ...data
                 };
             });
-            await putAllToDB('attendance', attendanceDocs);
+
+            // FIX #11: Offline Overwrite Mirage — don't overwrite if pending sync writes exist
+            const attToSave = attendanceDocs.filter(doc => {
+                const path = `teachers/${TEACHER_ID}/groups/${capturedGroupId}/dailyAttendance/${doc.date}`;
+                return !pendingWritePaths.has(path);
+            });
+            if (attToSave.length > 0) await putAllToDB('attendance', attToSave);
 
             // ج. التكاليف/الواجبات
             const assignmentsDocs = asSnap.docs.map(d => {
                 const data = d.data();
                 return {
                     id: d.id,
-                    groupId: SELECTED_GROUP_ID,
+                    groupId: capturedGroupId,
                     date: data.date || d.id.split('_').pop(),
                     ...data
                 };
             });
-            await putAllToDB('assignments', assignmentsDocs);
+
+            // FIX #11: Offline Overwrite Mirage for assignments
+            const assignToSave = assignmentsDocs.filter(doc => {
+                const path = `teachers/${TEACHER_ID}/groups/${capturedGroupId}/assignments/${doc.id}`;
+                return !pendingWritePaths.has(path);
+            });
+            if (assignToSave.length > 0) await putAllToDB('assignments', assignToSave);
 
             // د. المدفوعات
             const paymentsDocs = pSnap.docs.map(d => ({
-                id: `${SELECTED_GROUP_ID}_PAY_${d.id}`,
+                id: `${capturedGroupId}_PAY_${d.id}`,
                 month: d.id,
                 ...d.data()
             }));
@@ -2487,6 +2591,7 @@ async function loadGroupData() {
             refreshCurrentTab();
         }
     }
+
 
     renderOverview();
     
@@ -2629,7 +2734,7 @@ async function renderOverview() {
         }
 
         // 4. Monthly Collection Summary
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        const currentMonth = getLocalMonthString(); // YYYY-MM
         const monthPayments = await getFromDB('payments', `${SELECTED_GROUP_ID}_PAY_${currentMonth}`);
         const records = monthPayments?.records || [];
         // ✅ إصلاح: تحويل سجل الدفع لخريطة (Map) لتسريع البحث بدلاً من O(N^2)
@@ -2901,7 +3006,7 @@ function switchTab(tabId) {
     if (tabId === 'students') renderStudents();
     if (tabId === 'payments') {
         const pm = document.getElementById('paymentMonthInput');
-        if (!pm.value) pm.value = new Date().toISOString().slice(0, 7);
+        if (!pm.value) pm.value = getLocalMonthString();
         renderPaymentsList();
     }
     if (tabId === 'exams') loadExams();
@@ -2934,7 +3039,7 @@ async function renderDailyList(filter = "") {
         if (dateInput && !dateInput.value) {
             dateInput.valueAsDate = new Date();
         }
-        const date = dateInput ? dateInput.value : new Date().toISOString().slice(0, 10);
+        const date = dateInput ? dateInput.value : getLocalDateString();
         const list = document.getElementById('dailyStudentsList');
         list.innerHTML = '';
 
@@ -3123,10 +3228,10 @@ async function renderDailyList(filter = "") {
                     row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                     row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent');
 
-                    // ✅ لو غاب: نقفل خانة الواجب ونشيل علامة الصح (reset)
+                    // FIX #15: Disable but do NOT uncheck — preserve previously submitted homework
                     if (hwCheck) {
-                        hwCheck.checked = false;
                         hwCheck.disabled = true;
+                        // Do NOT set hwCheck.checked = false — this would erase submitted homework
                     }
                 }
 
@@ -3388,15 +3493,23 @@ async function saveDailyData(isSilent = false) {
                     }
                 });
 
-                const hwData = {
-                    id: hwId,
-                    teacherId: TEACHER_ID,
-                    groupId: SELECTED_GROUP_ID,
-                    name: `واجب ${date}`,
-                    date,
-                    scores,
-                    type: 'daily'
-                };
+                let hwData = await getFromDB('assignments', hwId);
+                if (hwData) {
+                    for (const sid in scores) {
+                        if (!hwData.scores) hwData.scores = {};
+                        hwData.scores[sid] = { ...hwData.scores[sid], ...scores[sid] };
+                    }
+                } else {
+                    hwData = {
+                        id: hwId,
+                        teacherId: TEACHER_ID,
+                        groupId: SELECTED_GROUP_ID,
+                        name: `واجب ${date}`,
+                        date,
+                        scores,
+                        type: 'daily'
+                    };
+                }
 
                 console.log("📝 Queuing homework save:", {
                     path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`,
@@ -3520,6 +3633,7 @@ function stopScanner() {
         videoElement.srcObject.getTracks().forEach(t => {
             t.stop(); // هذا يغلق الكاميرا والفلاش تلقائياً
         });
+        videoElement.srcObject = null;
     }
     document.getElementById('scannerModal').classList.add('hidden');
     if (videoElement) videoElement.style.transform = "";
@@ -3557,7 +3671,7 @@ function tickScanner() {
             console.error("jsQR Error:", e);
         }
     }
-    animationFrameId = requestAnimationFrame(tickScanner);
+    setTimeout(() => { animationFrameId = requestAnimationFrame(tickScanner); }, 250);
 }
 
 // ==========================================
@@ -3589,7 +3703,10 @@ function logScanRecord(rawValue, result, failReason, studentName, scanType, scan
 }
 
 async function handleScan(scannedText, scannerType = "camera") {
-    const qrCode = scannedText.replace(/"/g, '').trim();
+    let qrCode = scannedText.replace(/"/g, '').trim();
+    qrCode = qrCode.replace(/^https?:\/\//i, '').replace(/^URL:/i, '');
+    const urlMatch = qrCode.match(/s=([^&]+)/);
+    if (urlMatch) qrCode = urlMatch[1];
 
     // 🛑 الحالة: ربط الكارت
     if (currentScannerMode === 'link-card') {
@@ -4176,7 +4293,7 @@ async function addNewStudent() {
         } else if (result.action === 'link') {
             childId = result.student.childId;
             nameToUse = result.student.name;
-            cardIdToUse = result.student.cardId || null;
+            cardIdToUse = null; // Do not copy sibling's cardId
         }
     }
 
@@ -4419,6 +4536,22 @@ async function renderPaymentsList(filter = "") {
     const groupTotalDisplay = document.getElementById('groupTotalDisplay');
 
     container.innerHTML = '';
+    
+function recalculateGroupTotal() {
+    let total = 0;
+    document.querySelectorAll('#paymentsList > div').forEach(div => {
+        const checkbox = div.querySelector('.payment-check');
+        const input = div.querySelector('.payment-input');
+        if (checkbox && checkbox.checked) {
+            total += parseInt(input.value || 0);
+        }
+    });
+    currentGroupTotal = total;
+    const groupTotalDisplay = document.getElementById('groupTotalDisplay');
+    if (groupTotalDisplay) groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
+    calculateOverallIncome(currentGroupTotal);
+}
+
     let currentGroupTotal = 0; // ده العداد الحي للمجموعة
 
     if (!month || !allStudents.length) return;
@@ -4439,8 +4572,7 @@ async function renderPaymentsList(filter = "") {
     });
 
     // عرض الأرقام الأولية
-    groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
-    calculateOverallIncome(currentGroupTotal); // ✅ بنبعت الرقم المبدئي
+     // ✅ بنبعت الرقم المبدئي
 
     const normalizedFilter = filter.trim().toLowerCase();
     const searchPhoneFilter = normalizedFilter.startsWith('+20') ? normalizedFilter.replace('+20', '0') : normalizedFilter;
@@ -4505,9 +4637,8 @@ async function renderPaymentsList(filter = "") {
         input.addEventListener('change', (e) => {
             const newVal = parseInt(e.target.value) || 0;
             if (checkbox.checked) {
-                currentGroupTotal = (currentGroupTotal - oldVal) + newVal;
-                groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
-                calculateOverallIncome(currentGroupTotal);
+                recalculateGroupTotal();
+                
             }
             oldVal = newVal;
         });
@@ -4525,15 +4656,14 @@ async function renderPaymentsList(filter = "") {
                 if (!input.value || input.value == 0) input.value = defaultVal;
                 div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.add('text-green-600', 'font-bold');
-                currentGroupTotal += parseInt(input.value || 0);
+                recalculateGroupTotal();
             } else {
-                currentGroupTotal -= parseInt(input.value || 0);
+                recalculateGroupTotal();
                 input.value = '';
                 div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.remove('text-green-600', 'font-bold');
             }
-            groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
-            calculateOverallIncome(currentGroupTotal);
+            
 
             clearTimeout(savePaymentsTimeout);
             savePaymentsTimeout = setTimeout(() => {
@@ -4621,7 +4751,7 @@ async function addNewExam() {
         totalMark: parseInt(totalMark),
         type: 'exam',
         scores: {},
-        date: new Date().toISOString().slice(0, 10)
+        date: getLocalDateString()
     };
 
     await putToDB('assignments', data);
@@ -4723,8 +4853,11 @@ async function renderExamGrades(filter = "") {
         inp.addEventListener('input', (e) => {
             const currentTotal = parseInt(totalMarkInput.value) || 0;
             if (parseInt(e.target.value) > currentTotal) {
-                e.target.value = currentTotal;
+                e.target.classList.add('border-red-500');
                 showToast(`الدرجة لا يمكن أن تزيد عن ${currentTotal}`, 'error');
+                return;
+            } else {
+                e.target.classList.remove('border-red-500');
             }
             if (parseInt(e.target.value) === currentTotal && currentTotal > 0) {
                 showCelebration();
@@ -5236,6 +5369,7 @@ function checkGoldenTicket(studentName) {
         if (prizeNameEl && modalEl) {
             prizeNameEl.innerText = randomPrize;
             modalEl.style.display = 'flex';
+            isScannerPaused = true;
         }
 
         console.log(`🎰 Winner! Student: ${studentName}, Prize: ${randomPrize}`);
@@ -5266,6 +5400,7 @@ function launchConfetti() {
 function closeGoldenTicket() {
     const modal = document.getElementById('goldenTicketModal');
     if (modal) modal.style.display = 'none';
+    isScannerPaused = false;
 }
 
 // 8. تفعيل المستمعين (Listeners)
@@ -5333,7 +5468,7 @@ async function handleBotFileUpload(e) {
 
     // المسار السحري اللي بيشغل الـ Cloud Function
     // teachers/{teacherId}/{filename}
-    const storageRef = firebase.storage().ref().child(`teachers/${TEACHER_ID}/${file.name}`);
+    const storageRef = firebase.storage().ref().child(`teachers/${TEACHER_ID}/${Date.now()}_${file.name}`);
     const uploadTask = storageRef.put(file);
 
     uploadTask.on('state_changed',
@@ -5517,7 +5652,8 @@ window.confirmGenerateExam = function () {
     const lang = document.querySelector('input[name="examLang"]:checked').value;
     const langText = lang === 'ar' ? 'باللغة العربية (الأرقام والرموز س، ص...)' : 'in English (xyz, 123...)';
 
-    let prompt = `من فضلك اعمل لي امتحان احترافي جداً لملف (${currentExamFile}) بالمواصفات دي:
+    let prompt = `[FILE_REF: teachers/${TEACHER_ID}/${currentExamFile}]
+من فضلك اعمل لي امتحان احترافي جداً لملف (${currentExamFile}) بالمواصفات دي:
 - المستوى: ${currentExamDifficulty}
 - عدد الأسئلة: ${count}
 - اللغة والتنسيق: ${langText}
@@ -5537,7 +5673,8 @@ window.generateFromMaterial = function (fileName, type) {
     } else {
         if (!isChatOpen) toggleSpotChat();
         const input = document.getElementById('chatInput');
-        input.value = `من فضلك اعمل لي ${type} احترافي جداً من ملف (${fileName})`;
+        input.value = `[FILE_REF: teachers/${TEACHER_ID}/${fileName}]
+من فضلك اعمل لي ${type} احترافي جداً من ملف (${fileName})`;
         sendSpotMessage();
     }
 };
@@ -6367,6 +6504,7 @@ async function saveStudentChanges() {
         if (sIndex !== -1) {
             allStudents[sIndex].name = newName;
             allStudents[sIndex].parentPhoneNumber = formattedPhone;
+            await putToDB('students', allStudents[sIndex]);
         }
 
         showToast("تم تحديث البيانات بنجاح ✅");
@@ -6738,10 +6876,19 @@ let hwScannerBuffer = "";
 let hwScannerLastKeyTime = Date.now();
 
 document.addEventListener('keydown', async (e) => {
-    // إحنا مهتمين بالحروف وزرار الـ Enter بس
     if (!e.key || (e.key !== 'Enter' && e.key.length !== 1)) return;
+    const arabicMap = {'ض':'q','ص':'w','ث':'e','ق':'r','ف':'t','غ':'y','ع':'u','ه':'i','خ':'o','ح':'p','ج':'[','د':']','ش':'a','س':'s','ي':'d','ب':'f','ل':'g','ا':'h','ت':'j','ن':'k','م':'l','ك':';','ط':'\'','ئ':'z','ء':'x','ؤ':'c','ر':'v','لا':'b','ى':'n','ة':'m','و':',','ز':'.','ظ':'/'};
+    let mappedKey = arabicMap[e.key] || e.key;
 
+    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+    const isInput = activeTag === 'input' || activeTag === 'textarea';
+    
+    if (e.key === 'Enter' && isInput) return; // Fix 18
+    
     const currentTime = Date.now();
+    if (currentTime - hwScannerLastKeyTime < 30 && isInput) e.preventDefault(); // Fix 17
+
+
     
     // ✅ تعديل 1: زيادة الوقت لـ 1000 ملي ثانية (ثانية كاملة) 
     // لأن بعض السكانرات البطيئة بتقف كتير بين الحروف والأرقام
@@ -6800,7 +6947,7 @@ document.addEventListener('keydown', async (e) => {
     }
 
     if (e.key.length === 1) {
-        hwScannerBuffer += e.key.toUpperCase();
+        hwScannerBuffer += mappedKey.toUpperCase();
     }
 });
 
