@@ -1631,6 +1631,7 @@ function setupListeners() {
     document.getElementById('createNewGroupBtn')?.addEventListener('click', createGroup);
 
     const handleGroupSelectionChange = async (groupId) => {
+        sessionScannedStudents.clear();
         // FIX #8: Context Switch Data Loss — flush any pending saves before switching groups
         if (saveTimeout) {
             clearTimeout(saveTimeout);
@@ -1704,7 +1705,10 @@ function setupListeners() {
         hasHomeworkToday = e.target.checked;
         renderDailyList();
     });
-    document.getElementById('dailyDateInput')?.addEventListener('change', renderDailyList);
+    document.getElementById('dailyDateInput')?.addEventListener('change', (e) => {
+    sessionScannedStudents.clear(); // <--- أضف هذا السطر
+    renderDailyList();
+});
     document.getElementById('saveDailyBtn')?.addEventListener('click', saveDailyData);
 
 
@@ -3962,47 +3966,48 @@ async function processDailyScan(student) {
     const studentId = student.id;
     let row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`);
 
-    // 🌟 الحل السحري: لو السطر مش موجود (بسبب بحث أو تحميل الشاشة)، نجبره يترسم
+    // لو السطر مش موجود، نجبر النظام على رسم القائمة
     if (!row) {
         console.warn("⏳ سطر الطالب غير موجود، جاري إجبار النظام على رسم القائمة...");
-        
-        // تفريغ خانة البحث لو المساعد كان واقف فيها بالغلط
         const searchInput = document.getElementById('dailyStudentSearchInput');
         if (searchInput) searchInput.value = '';
-        
-        await renderDailyList(); // استنى لحد ما الشاشة تترسم بالكامل
-        row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`); // دور عليه تاني
+        await renderDailyList(); 
+        row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`); 
     }
 
-    if (!sessionScannedStudents.has(studentId)) {
-        // --- أول سكان: حضور ---
-        sessionScannedStudents.add(studentId);
-        if (row) {
-            const sel = row.querySelector('.att-select');
-            if (sel) {
-                sel.value = 'present';
-                row.dataset.scanTime = new Date().toISOString();
-                sel.dispatchEvent(new Event('change')); // 🚀 ده اللي بيشغل دالة الحفظ التلقائي
-                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+    if (!row) return; // حماية إضافية
+
+    // 🌟 التعديل الجوهري: الاعتماد على حالة الواجهة الحالية بدلاً من sessionScannedStudents
+    const attSelect = row.querySelector('.att-select');
+    const hwCheck = row.querySelector('.hw-check');
+    
+    const isPresent = attSelect && attSelect.value === 'present';
+    const isHwSubmitted = hwCheck && hwCheck.checked;
+
+    if (!isPresent) {
+        // --- أول سكان: تسجيل الحضور ---
+        if (attSelect) {
+            attSelect.value = 'present';
+            row.dataset.scanTime = new Date().toISOString();
+            attSelect.dispatchEvent(new Event('change')); // يشغل دالة الحفظ التلقائي
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         logEvent('scan_attendance', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
         showScanSuccessUI(student, 'attendance');
     } else {
-        // --- ثاني سكان: واجب ---
+        // --- ثاني سكان: تسجيل الواجب ---
         if (hasHomeworkToday) {
-            if (row) {
-                const chk = row.querySelector('.hw-check');
-                if (chk) {
-                    chk.checked = true;
-                    chk.dispatchEvent(new Event('change')); // 🚀 عشان السيستم يحس بتسليم الواجب ويحفظه
-                    row.classList.add('bg-green-50');
-                }
+            if (hwCheck && !isHwSubmitted) {
+                hwCheck.checked = true;
+                hwCheck.dispatchEvent(new Event('change')); // يشغل الحفظ للواجب
+                row.classList.add('bg-green-50');
+                logEvent('scan_homework', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
+                showScanSuccessUI(student, 'homework');
+            } else {
+                showToast(`الطالب ${student.name} حضر وسلم الواجب مسبقاً`, 'info');
             }
-            logEvent('scan_homework', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
-            showScanSuccessUI(student, 'homework');
         } else {
-            showToast(`⚠️ لا يوجد واجب اليوم`, 'warning');
+            showToast(`تم تسجيل حضور ${student.name} مسبقاً`, 'info');
         }
     }
 
