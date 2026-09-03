@@ -3726,7 +3726,7 @@ async function handleScan(scannedText, scannerType = "camera") {
         logScanRecord(qrCode, 'success', null, studentToMark.name, scanType, scannerType);
 
         checkGoldenTicket(studentToMark.name);
-        processDailyScan(studentToMark);
+        await processDailyScan(studentToMark);
 
         // حفظ الحضور في الداتابيز
         clearTimeout(saveTimeout);
@@ -3836,29 +3836,45 @@ function showScanSuccessUI(student, type = 'attendance') {
     }, 1500);
 }
 
-function processDailyScan(student) {
+// خلينا الدالة async عشان تقدر تستنى رسم الشاشة
+async function processDailyScan(student) {
     const studentId = student.id;
-    const row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`);
+    let row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`);
+
+    // 🌟 الحل السحري: لو السطر مش موجود (بسبب بحث أو تحميل الشاشة)، نجبره يترسم
+    if (!row) {
+        console.warn("⏳ سطر الطالب غير موجود، جاري إجبار النظام على رسم القائمة...");
+        
+        // تفريغ خانة البحث لو المساعد كان واقف فيها بالغلط
+        const searchInput = document.getElementById('dailyStudentSearchInput');
+        if (searchInput) searchInput.value = '';
+        
+        await renderDailyList(); // استنى لحد ما الشاشة تترسم بالكامل
+        row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`); // دور عليه تاني
+    }
 
     if (!sessionScannedStudents.has(studentId)) {
-        // أول سكان: حضور
+        // --- أول سكان: حضور ---
         sessionScannedStudents.add(studentId);
         if (row) {
             const sel = row.querySelector('.att-select');
-            sel.value = 'present';
-            row.dataset.scanTime = new Date().toISOString();
-            sel.dispatchEvent(new Event('change'));
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (sel) {
+                sel.value = 'present';
+                row.dataset.scanTime = new Date().toISOString();
+                sel.dispatchEvent(new Event('change')); // 🚀 ده اللي بيشغل دالة الحفظ التلقائي
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
         logEvent('scan_attendance', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
         showScanSuccessUI(student, 'attendance');
     } else {
-        // ثاني سكان: واجب
+        // --- ثاني سكان: واجب ---
         if (hasHomeworkToday) {
             if (row) {
                 const chk = row.querySelector('.hw-check');
                 if (chk) {
                     chk.checked = true;
+                    chk.dispatchEvent(new Event('change')); // 🚀 عشان السيستم يحس بتسليم الواجب ويحفظه
                     row.classList.add('bg-green-50');
                 }
             }
