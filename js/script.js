@@ -4580,6 +4580,10 @@ function recalculateGroupTotal() {
         if (amount && amount > 0) currentGroupTotal += parseInt(amount);
     });
 
+    if (groupTotalDisplay) {
+        groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
+    }
+    calculateOverallIncome(currentGroupTotal);
     // عرض الأرقام الأولية
      // ✅ بنبعت الرقم المبدئي
 
