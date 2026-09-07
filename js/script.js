@@ -1834,7 +1834,14 @@ function setupListeners() {
     document.getElementById('dailyStudentSearchInput')?.addEventListener('input', (e) => {
         clearTimeout(dailySearchTimeout);
         dailySearchTimeout = setTimeout(() => {
-            renderDailyList(e.target.value);
+            // ✅ PHASE 2: Prevent data wipe by using DOM filter instead of full render
+            const filter = e.target.value;
+            const container = document.getElementById('dailyStudentsList');
+            if (container && container.querySelectorAll('[data-search-key]').length > 0) {
+                _filterListBySearch(container, filter);
+            } else {
+                renderDailyList(filter);
+            }
         }, 300);
     });
 
@@ -3264,24 +3271,28 @@ async function renderDailyList(filter = "") {
             // Update UI components
         }
 
-        // ✅ PHASE 2: Hydrate liveSessionData
-        liveSessionData.groupId = SELECTED_GROUP_ID;
-        liveSessionData.date = date;
-        liveSessionData.attendance = {};
-        liveSessionData.homework = {};
+        // ✅ PHASE 2 & 3: Hydrate liveSessionData ONLY if group or date changed.
+        // If we just re-rendered (e.g. filter change), we MUST preserve memory state
+        // otherwise we wipe out rapid scans that haven't saved yet.
+        if (liveSessionData.groupId !== SELECTED_GROUP_ID || liveSessionData.date !== date) {
+            liveSessionData.groupId = SELECTED_GROUP_ID;
+            liveSessionData.date = date;
+            liveSessionData.attendance = {};
+            liveSessionData.homework = {};
 
-        // Seed with defaults for all students in group, override with DB data
-        allStudents.forEach(s => {
-            const attRec = attMap[s.id] || {};
-            liveSessionData.attendance[s.id] = {
-                status: typeof attRec === 'string' ? attRec : (attRec.status || 'absent'),
-                time: attRec.time || null
-            };
-            liveSessionData.homework[s.id] = {
-                submitted: hwMap[s.id] || false,
-                score: hwDoc?.scores?.[s.id]?.score || null
-            };
-        });
+            // Seed with defaults for all students in group, override with DB data
+            allStudents.forEach(s => {
+                const attRec = attMap[s.id] || {};
+                liveSessionData.attendance[s.id] = {
+                    status: typeof attRec === 'string' ? attRec : (attRec.status || 'absent'),
+                    time: attRec.time || null
+                };
+                liveSessionData.homework[s.id] = {
+                    submitted: hwMap[s.id] || false,
+                    score: hwDoc?.scores?.[s.id]?.score || null
+                };
+            });
+        }
 
         if (hwDoc?.scores) {
             const hwToggle = document.getElementById('homeworkToggle');
@@ -3333,6 +3344,10 @@ async function renderDailyList(filter = "") {
 
             const row = document.createElement('div');
             row.dataset.sid = s.id;
+            
+            // ✅ PHASE 2: Add search key for DOM filtering
+            const pPhone = s.parentPhoneNumber ? s.parentPhoneNumber.replace(/^\+20/, '0') : '';
+            row.dataset.searchKey = `${(s.name || '').toLowerCase()} ${pPhone} ${(s.childId || s.id || '').toLowerCase()}`;
 
             // تنسيق الصف حسب الحالة
             row.className = `daily-student-row grid grid-cols-12 items-center p-3 rounded-lg border transition-colors mb-1 ${status === 'present'
@@ -3544,19 +3559,17 @@ async function saveDailyData(isSilent = false) {
     let oldText = "";
 
     try {
-        if (!TEACHER_ID || !SELECTED_GROUP_ID) {
-            if (!isSilent) console.warn("⚠️ لا يوجد معرف مدرس أو مجموعة. تم إلغاء الحفظ.");
+        if (!TEACHER_ID) {
+            if (!isSilent) console.warn("⚠️ لا يوجد معرف مدرس. تم إلغاء الحفظ.");
             return;
         }
 
-        const dateInput = document.getElementById('dailyDateInput');
-        if (!dateInput) {
-            console.warn("⚠️ Save aborted: Date input not found in DOM.");
-            return;
-        }
-        const date = dateInput.value;
-        if (!date) {
-            if (!isSilent) showToast("يرجى اختيار التاريخ", "error");
+        // ✅ PHASE 3: Extract strictly from memory to prevent cross-group injection
+        const targetGroupId = liveSessionData.groupId;
+        const targetDate = liveSessionData.date;
+
+        if (!targetGroupId || !targetDate) {
+            if (!isSilent) console.warn("⚠️ Save aborted: No live session data active.");
             return;
         }
 
@@ -3567,87 +3580,86 @@ async function saveDailyData(isSilent = false) {
         }
 
         const promises = [];
-        const studentRows = document.querySelectorAll('#dailyStudentsList > div');
 
-            // ✅ PHASE 2: Read from liveSessionData instead of DOM
-            if (Object.keys(liveSessionData.attendance).length === 0) {
-                if (!isSilent) {
-                    console.warn("ℹ️ No session data found for daily save; skipping.");
-                }
-            } else {
-                // --- Attendance ---
-                const attendanceRecords = [];
-                for (const [studentId, attRec] of Object.entries(liveSessionData.attendance)) {
-                    attendanceRecords.push({
-                        studentId: studentId,
-                        status: attRec.status,
-                        time: attRec.status === 'present' ? (attRec.time || new Date().toISOString()) : null
-                    });
-                }
+        // ✅ PHASE 2: Read from liveSessionData instead of DOM
+        if (Object.keys(liveSessionData.attendance).length === 0) {
+            if (!isSilent) {
+                console.warn("ℹ️ No session data found for daily save; skipping.");
+            }
+        } else {
+            // --- Attendance ---
+            const attendanceRecords = [];
+            for (const [studentId, attRec] of Object.entries(liveSessionData.attendance)) {
+                attendanceRecords.push({
+                    studentId: studentId,
+                    status: attRec.status,
+                    time: attRec.status === 'present' ? (attRec.time || new Date().toISOString()) : null
+                });
+            }
 
-                if (attendanceRecords.length > 0) {
-                    const attendanceId = `${SELECTED_GROUP_ID}_${date}`;
-                    const attendanceData = {
-                        id: attendanceId,
-                        teacherId: TEACHER_ID,
-                        groupId: SELECTED_GROUP_ID,
-                        date,
-                        records: attendanceRecords
+            if (attendanceRecords.length > 0) {
+                const attendanceId = `${targetGroupId}_${targetDate}`;
+                const attendanceData = {
+                    id: attendanceId,
+                    teacherId: TEACHER_ID,
+                    groupId: targetGroupId,
+                    date: targetDate,
+                    records: attendanceRecords
+                };
+
+                sentryBreadcrumb("Attendance save queued", "attendance", { groupId: targetGroupId });
+                logEvent("attendance_saved", { group_id: targetGroupId });
+                console.log("📝 Queuing attendance save from memory:", {
+                    path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/dailyAttendance/${targetDate}`,
+                    localId: attendanceId,
+                    recordsCount: attendanceRecords.length
+                });
+
+                promises.push(putToDB('attendance', attendanceData));
+                promises.push(
+                    addToSyncQueue({
+                        type: 'set',
+                        path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/dailyAttendance/${targetDate}`,
+                        data: {
+                            date: targetDate,
+                            records: attendanceRecords
+                        }
+                    })
+                );
+            }
+
+            // --- Homework (daily) ---
+            if (typeof hasHomeworkToday !== 'undefined' && hasHomeworkToday) {
+                const hwId = `${targetGroupId}_HW_${targetDate}`;
+                const scores = {};
+
+                for (const [studentId, hwRec] of Object.entries(liveSessionData.homework)) {
+                    scores[studentId] = {
+                        submitted: hwRec.submitted,
+                        score: hwRec.score
                     };
-
-                    sentryBreadcrumb("Attendance save queued", "attendance", { groupId: SELECTED_GROUP_ID });
-                    logEvent("attendance_saved", { group_id: SELECTED_GROUP_ID });
-                    console.log("📝 Queuing attendance save from memory:", {
-                        path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
-                        localId: attendanceId,
-                        recordsCount: attendanceRecords.length
-                    });
-
-                    promises.push(putToDB('attendance', attendanceData));
-                    promises.push(
-                        addToSyncQueue({
-                            type: 'set',
-                            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
-                            data: {
-                                date,
-                                records: attendanceRecords
-                            }
-                        })
-                    );
                 }
 
-                // --- Homework (daily) ---
-                if (typeof hasHomeworkToday !== 'undefined' && hasHomeworkToday) {
-                    const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
-                    const scores = {};
-
-                    for (const [studentId, hwRec] of Object.entries(liveSessionData.homework)) {
-                        scores[studentId] = {
-                            submitted: hwRec.submitted,
-                            score: hwRec.score
-                        };
-                    }
-
-                    let hwData = await getFromDB('assignments', hwId);
-                    if (hwData) {
-                        for (const sid in scores) {
-                            if (!hwData.scores) hwData.scores = {};
+                let hwData = await getFromDB('assignments', hwId);
+                if (hwData) {
+                    for (const sid in scores) {
+                        if (!hwData.scores) hwData.scores = {};
                         hwData.scores[sid] = { ...hwData.scores[sid], ...scores[sid] };
                     }
                 } else {
                     hwData = {
                         id: hwId,
                         teacherId: TEACHER_ID,
-                        groupId: SELECTED_GROUP_ID,
-                        name: `واجب ${date}`,
-                        date,
+                        groupId: targetGroupId,
+                        name: `واجب ${targetDate}`,
+                        date: targetDate,
                         scores,
                         type: 'daily'
                     };
                 }
 
                 console.log("📝 Queuing homework save:", {
-                    path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`,
+                    path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/assignments/${hwId}`,
                     localId: hwId,
                     studentsCount: Object.keys(scores).length
                 });
@@ -3656,7 +3668,7 @@ async function saveDailyData(isSilent = false) {
                 promises.push(
                     addToSyncQueue({
                         type: 'set',
-                        path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${hwId}`,
+                        path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/assignments/${hwId}`,
                         data: hwData
                     })
                 );
@@ -3782,18 +3794,21 @@ let scanCtx = null;
 // ✅ FIX 7: Web Worker for jsQR — keeps the main thread unblocked
 let _scanWorker = null;
 let _scanWorkerBusy = false;  // منع إرسال فريم جديد قبل ما الـ Worker يخلص
+let _scanWorkerTimeout = null;
 
 function _initScanWorker() {
     if (_scanWorker) return; // already initialized
     try {
         _scanWorker = new Worker('js/scanner-worker.js');
         _scanWorker.onmessage = (e) => {
+            clearTimeout(_scanWorkerTimeout);
             _scanWorkerBusy = false;
             if (e.data && e.data.result) {
                 handleScan(e.data.result, 'camera');
             }
         };
         _scanWorker.onerror = (err) => {
+            clearTimeout(_scanWorkerTimeout);
             console.warn('⚠️ ScanWorker error, falling back to main-thread jsQR:', err.message);
             _scanWorker = null; // falls back silently
             _scanWorkerBusy = false;
@@ -3820,6 +3835,7 @@ function tickScanner() {
         if (_scanWorker && !_scanWorkerBusy) {
             // ✅ Worker path: offload to background thread via Transferable
             _scanWorkerBusy = true;
+            _scanWorkerTimeout = setTimeout(() => { _scanWorkerBusy = false; }, 500); // Safety timeout
             const buf = imageData.data.buffer.slice(0); // copy عشان نقدر ننقله
             _scanWorker.postMessage(
                 { data: new Uint8ClampedArray(buf), width: imageData.width, height: imageData.height, id: Date.now() },
@@ -3998,10 +4014,7 @@ async function handleScan(scannedText, scannerType = "camera") {
     // منطق التوأم (اختيار من لم يحضر بعد)
     let studentToMark = matchedStudents[0];
     if (matchedStudents.length > 1) {
-        const absentSibling = matchedStudents.find(s => {
-            const row = document.querySelector(`#dailyStudentsList > div[data-sid="${s.id}"]`);
-            return row && row.querySelector('.att-select').value !== 'present';
-        });
+        const absentSibling = matchedStudents.find(s => liveSessionData.attendance[s.id]?.status !== 'present');
         if (absentSibling) studentToMark = absentSibling;
     }
 
