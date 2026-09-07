@@ -5979,7 +5979,8 @@ window.sendSpotMessage = async function () {
     scrollToBottom();
 
     try {
-        const chatFn = firebase.functions().httpsCallable('chatWithSpot');
+        // Fix deadline-exceeded error: Increase client timeout to 5 minutes (300,000 ms)
+        const chatFn = firebase.functions().httpsCallable('chatWithSpot', { timeout: 300000 });
         const result = await chatFn({
             message: msg,
             teacherId: currentTeacherId,
