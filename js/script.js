@@ -1256,6 +1256,20 @@ function scheduleThrottledSave() {
     }
 }
 
+// ✅ PHASE 3: Flush pending saves
+async function flushPendingSaves() {
+    if (_saveThrottleTimer || _saveThrottleForced) {
+        clearTimeout(_saveThrottleTimer);
+        clearTimeout(_saveThrottleForced);
+        _saveThrottleTimer = null;
+        _saveThrottleForced = null;
+        if (!_saveThrottleRunning) {
+            _saveThrottleRunning = true;
+            try { await silentSave(); } finally { _saveThrottleRunning = false; }
+        }
+    }
+}
+
 async function updateSyncUI() {
     if (!localDB) await openDB();
     const count = await new Promise(r => {
@@ -1621,13 +1635,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Check actual internet connectivity periodically (every 15s) to recover from ISP disconnects
         setInterval(updateOnlineStatus, 15000);
 
-        // FIX #29: Missing Unload Flush — save pending data before page unloads
+        // ✅ PHASE 3: Missing Unload Flush — save pending data before page unloads
         window.addEventListener('beforeunload', () => {
-            if (saveTimeout) {
-                clearTimeout(saveTimeout);
-                saveTimeout = null;
-                saveDailyData(true); // Best-effort, fire-and-forget
-            }
+            flushPendingSaves(); // Best-effort, fire-and-forget
             if (savePaymentsTimeout) {
                 clearTimeout(savePaymentsTimeout);
                 savePaymentsTimeout = null;
@@ -1713,12 +1723,8 @@ function setupListeners() {
 
     const handleGroupSelectionChange = async (groupId) => {
         sessionScannedStudents.clear();
-        // FIX #8: Context Switch Data Loss — flush any pending saves before switching groups
-        if (saveTimeout) {
-            clearTimeout(saveTimeout);
-            saveTimeout = null;
-            await saveDailyData(true);
-        }
+        // ✅ PHASE 3: Context Switch Data Loss — flush any pending saves before switching groups
+        await flushPendingSaves();
         if (savePaymentsTimeout) {
             clearTimeout(savePaymentsTimeout);
             savePaymentsTimeout = null;
@@ -3318,10 +3324,11 @@ async function renderDailyList(filter = "") {
 
         let finalStudents = studentsToRender.filter(s => {
             if (currentDailyFilter === 'all') return true;
-            const attRec = attMap[s.id] || {};
-        const status = typeof attRec === 'string' ? attRec : (attRec.status || 'absent');
-        const scanTime = attRec.time || '';
-            const hwSubmitted = hwMap[s.id];
+            // ✅ PHASE 4: Read strictly from Memory State
+            const memAtt = liveSessionData.attendance[s.id] || {};
+            const status = memAtt.status || 'absent';
+            const memHw = liveSessionData.homework[s.id] || {};
+            const hwSubmitted = memHw.submitted || false;
             
             if (currentDailyFilter === 'present') return status === 'present';
             if (currentDailyFilter === 'absent') return status === 'absent';
@@ -3331,12 +3338,13 @@ async function renderDailyList(filter = "") {
         });
 
         finalStudents.forEach(s => {
-            const attRec = attMap[s.id] || {};
-        const status = typeof attRec === 'string' ? attRec : (attRec.status || 'absent');
-        const scanTime = attRec.time || ''; // الافتراضي غائب لو مفيش تسجيل
+            // ✅ PHASE 4: Read strictly from Memory State
+            const memAtt = liveSessionData.attendance[s.id] || {};
+            const status = memAtt.status || 'absent';
             if (status === 'present') presentCount++;
 
-            const hwSubmitted = hwMap[s.id];
+            const memHw = liveSessionData.homework[s.id] || {};
+            const hwSubmitted = memHw.submitted || false;
             const isAbsent = status === 'absent';
 
             const studentColSpan = hasHomeworkToday ? 'col-span-6' : 'col-span-8';
@@ -3390,11 +3398,20 @@ async function renderDailyList(filter = "") {
         const delegatedHandler = (e) => {
             const row = e.target.closest('[data-sid]');
             if (!row) return;
+            const studentId = row.dataset.sid;
 
             // Handle att-select change
             if (e.target.classList.contains('att-select')) {
                 const val = e.target.value;
-                row.dataset.attendanceJustChanged = 'true';
+                
+                // ✅ PHASE 1: Sync manual DOM change to Memory State
+                if (!liveSessionData.attendance[studentId]) {
+                    liveSessionData.attendance[studentId] = { status: 'absent', time: null };
+                }
+                liveSessionData.attendance[studentId].status = val;
+                if (val === 'present' && !liveSessionData.attendance[studentId].time) {
+                    liveSessionData.attendance[studentId].time = new Date().toISOString();
+                }
 
                 const hwCheck = row.querySelector('.hw-check');
 
@@ -3410,15 +3427,18 @@ async function renderDailyList(filter = "") {
                 }
 
                 updateAttendanceCount();
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(() => silentSave(), 3000);
+                scheduleThrottledSave();
             }
 
             // Handle hw-check change
             if (e.target.classList.contains('hw-check')) {
-                row.dataset.homeworkJustChanged = 'true';
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(() => silentSave(), 3000);
+                // ✅ PHASE 1: Sync manual DOM change to Memory State
+                if (!liveSessionData.homework[studentId]) {
+                    liveSessionData.homework[studentId] = { submitted: false, score: null };
+                }
+                liveSessionData.homework[studentId].submitted = e.target.checked;
+                
+                scheduleThrottledSave();
             }
         };
 
@@ -4026,13 +4046,7 @@ async function handleScan(scannedText, scannerType = "camera") {
         logScanRecord(qrCode, 'success', null, studentToMark.name, scanType, scannerType);
 
         checkGoldenTicket(studentToMark.name);
-        await processDailyScan(studentToMark);
-
-        // حفظ الحضور في الداتابيز
-        clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(() => {
-            silentSave();
-        }, 500);
+        await processDailyScan(studentToMark, scannerType);
     }
     else if (currentScannerMode === 'payments') {
         showScanSuccessUI(studentToMark, 'payments');
@@ -4150,7 +4164,7 @@ function showScanSuccessUI(student, type = 'attendance') {
     }, 1500);
 }
 
-async function processDailyScan(student) {
+async function processDailyScan(student, scannerType = 'camera') {
     const studentId = student.id;
 
     // ✅ PHASE 2 & 3: Memory-first update. We do NOT force renderDailyList!
@@ -4187,7 +4201,7 @@ async function processDailyScan(student) {
             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         
-        logEvent('scan_attendance', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
+        logEvent('scan_attendance', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: scannerType });
         showScanSuccessUI(student, 'attendance');
     } else {
         // --- 2nd Scan: Homework ---
@@ -4200,7 +4214,7 @@ async function processDailyScan(student) {
                     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
                 
-                logEvent('scan_homework', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
+                logEvent('scan_homework', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: scannerType });
                 showScanSuccessUI(student, 'homework');
             } else {
                 showToast(`الطالب ${student.name} حضر وسلم الواجب مسبقاً`, 'info');
@@ -4213,10 +4227,12 @@ async function processDailyScan(student) {
     // ✅ PHASE 2: Trigger the throttled background save
     scheduleThrottledSave();
 
-    // Release the scanner quickly for the next barcode
+    // ✅ PHASE 2: Fix CPU Meltdown. Do not spin up camera loops for hardware scanners.
     setTimeout(() => { 
         isScannerPaused = false; 
-        requestAnimationFrame(tickScanner); 
+        if (scannerType !== 'hardware') {
+            requestAnimationFrame(tickScanner); 
+        }
     }, 1200);
 }
 
