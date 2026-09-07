@@ -1115,14 +1115,33 @@ exports.cleanupDeletedFile = onObjectDeleted({ region: "europe-west1" }, async (
     
     if (doc.exists) {
       const knowledgeBase = doc.data().knowledgeBase || [];
-      const updatedKB = knowledgeBase.filter(item => {
-        if (typeof item === 'string') return !item.includes(fileName);
-        return item.fileName !== fileName;
+      const updatedKB = [];
+      const urisToDelete = [];
+
+      knowledgeBase.forEach(item => {
+        const isMatch = (typeof item === 'string') 
+            ? item.includes(fileName) 
+            : (item.fileName === fileName || (item.uri && item.uri.includes(fileName)));
+
+        if (isMatch) {
+            const uri = (typeof item === 'string') ? item : item.uri;
+            if (uri && uri.includes('files/')) {
+                const match = uri.match(/files\/[a-zA-Z0-9_-]+/);
+                if (match) urisToDelete.push(match[0]);
+            }
+        } else {
+            updatedKB.push(item);
+        }
       });
 
       if (updatedKB.length !== knowledgeBase.length) {
         await teacherRef.update({ knowledgeBase: updatedKB });
         console.log(`🧹 تم مسح الملف ${fileName} من knowledgeBase الخاصة بالمعلم ${teacherId}`);
+        
+        // Phase 1: Real AI Storage Leak Guard
+        for (const fileToDelete of urisToDelete) {
+            await fileManager.deleteFile(fileToDelete).catch(e => console.error("File API Del Error:", e));
+        }
       }
     }
   } catch (error) {
@@ -1190,7 +1209,9 @@ exports.whatsappWebhook = onRequest(async (req, res) => {
       const knowledgeItems = teacherDoc.data().knowledgeBase;
       console.log(`📚 المدرس (${teacherId}) عنده ${knowledgeItems.length} ملفات.`);
 
-      promptParts = knowledgeItems.map((item) => {
+      // Phase 2: WhatsApp Token Bomb Guard
+      const recentItems = knowledgeItems.slice(-3);
+      promptParts = recentItems.map((item) => {
         if (typeof item === "object" && item.uri) {
           return {
             fileData: {

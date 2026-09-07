@@ -6046,7 +6046,7 @@ function addMessageToUI(text, sender, type, saveToHistory = true) {
         let history = [];
         try { history = JSON.parse(localStorage.getItem(key)) || []; } catch (e) {}
         history.push({ text, sender, type });
-        history = history.slice(-50);
+        history = history.slice(-10);
         localStorage.setItem(key, JSON.stringify(history));
     }
 
