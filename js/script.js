@@ -2298,6 +2298,7 @@ async function loginTeacher() {
         localStorage.setItem('learnaria-tid', TEACHER_ID);
         if (TEACHER_CENTER_ID) localStorage.setItem('learnaria-cid', TEACHER_CENTER_ID);
         updateHomeLinks();
+        loadChatHistory(); // ✅ PHASE 1: Load Chat History on manual login
         
         // Sentry: تسجيل هوية المستخدم لربط الأخطاء بحسابه
         if (typeof Sentry !== 'undefined') {
@@ -5292,6 +5293,7 @@ async function loadPreferences() {
         // لو لقينا ID، نرجعه للمتغير ونخفي شاشة الدخول فوراً
         TEACHER_ID = storedID;
         updateHomeLinks();
+        loadChatHistory(); // ✅ PHASE 1: Load Chat History on auto-login
         document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
         document.getElementById('navHomeButton')?.classList.add('hidden');
@@ -6036,7 +6038,17 @@ function cleanJSON(text) {
 }
 
 // دالة عرض الرسائل (مع Exam Card و Note Card و Chat Bubble)
-function addMessageToUI(text, sender, type) {
+function addMessageToUI(text, sender, type, saveToHistory = true) {
+    // ✅ PHASE 1: Chat History Persistence
+    if (saveToHistory && typeof TEACHER_ID !== 'undefined' && TEACHER_ID) {
+        const key = `spot_chat_${TEACHER_ID}`;
+        let history = [];
+        try { history = JSON.parse(localStorage.getItem(key)) || []; } catch (e) {}
+        history.push({ text, sender, type });
+        history = history.slice(-50);
+        localStorage.setItem(key, JSON.stringify(history));
+    }
+
     const container = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = "mb-6 animate-fade-in-up w-full";
@@ -6150,6 +6162,20 @@ function addMessageToUI(text, sender, type) {
     scrollToBottom();
 }
 
+// ✅ PHASE 1: Load Chat History from Local Storage
+async function loadChatHistory() {
+    if (!TEACHER_ID) return;
+    const key = `spot_chat_${TEACHER_ID}`;
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(key)) || []; } catch (e) {}
+    
+    const container = document.getElementById('chatMessages');
+    if (container) container.innerHTML = '';
+    
+    history.forEach(msg => {
+        addMessageToUI(msg.text, msg.sender, msg.type, false);
+    });
+}
 
 // 🖨️ دالة طباعة الامتحانات (MathJax + Cairo + SVG)
 window.printExam = function (examData) {
@@ -6214,31 +6240,32 @@ window.printExam = function (examData) {
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
     <style>
         @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        @page { size: A4; margin: 1cm; }
         * { box-sizing: border-box; }
         body {
             font-family: 'Cairo', 'Amiri', sans-serif;
             direction: rtl; text-align: right;
-            padding: 30px 40px; max-width: 900px; margin: 0 auto;
+            padding: 0; margin: 0; font-size: 14px;
             background: #fff; color: #111;
         }
         mjx-container { direction: ltr !important; display: inline-block !important; }
-        .exam-header { text-align: center; border-bottom: 3px double #1a1a2e; padding-bottom: 20px; margin-bottom: 35px; }
-        .exam-title { font-family: 'Amiri', serif; font-size: 30px; font-weight: 900; color: #1a1a2e; margin-bottom: 8px; }
-        .exam-meta { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #555; flex-wrap: wrap; gap: 5px; }
-        .student-info { display: flex; justify-content: space-between; font-size: 17px; font-weight: 700; margin-top: 15px; }
+        .exam-header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 15px; }
+        .exam-title { font-family: 'Amiri', serif; font-size: 22px; font-weight: 900; color: #1a1a2e; margin-bottom: 4px; }
+        .exam-meta { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: #555; flex-wrap: wrap; gap: 5px; }
+        .student-info { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; margin-top: 10px; }
         .field-line { border-bottom: 1px solid #333; display: inline-block; min-width: 180px; }
-        .q-wrap { display: flex; gap: 14px; margin-bottom: 28px; page-break-inside: avoid; align-items: flex-start; }
-        .q-num { background: #1a1a2e; color: #fff; min-width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; flex-shrink: 0; margin-top: 4px; }
+        .q-wrap { display: flex; gap: 8px; margin-bottom: 10px; page-break-inside: avoid; align-items: flex-start; }
+        .q-num { background: #1a1a2e; color: #fff; min-width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; flex-shrink: 0; margin-top: 2px; }
         .q-body { flex: 1; }
-        .q-text { font-size: 19px; font-weight: 700; line-height: 1.7; margin-bottom: 12px; }
-        .diagram-box { display: flex; justify-content: center; margin: 12px 0; }
-        .diagram-box svg { max-width: 260px; height: auto; border: 1px dashed #aaa; padding: 8px; border-radius: 8px; }
+        .q-text { font-size: 16px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
+        .diagram-box { display: flex; justify-content: center; margin: 8px 0; }
+        .diagram-box svg { max-width: 200px; height: auto; border: 1px dashed #aaa; padding: 6px; border-radius: 6px; }
         .diagram-box text { font-family: 'Cairo', sans-serif; font-weight: bold; }
-        .mcq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 25px; margin-top: 8px; }
-        .opt-row { display: flex; align-items: center; gap: 10px; font-size: 17px; }
-        .opt-char { font-weight: 900; color: #1a1a2e; min-width: 24px; }
-        .essay-line { border-bottom: 1px dashed #ccc; height: 38px; margin-top: 8px; }
-        .footer { text-align: center; margin-top: 50px; font-size: 12px; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; }
+        .mcq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 15px; margin-top: 4px; }
+        .opt-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .opt-char { font-weight: 900; color: #1a1a2e; min-width: 20px; }
+        .essay-line { border-bottom: 1px dashed #ccc; height: 22px; margin-top: 4px; }
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; }
     </style>
 </head>
 <body>

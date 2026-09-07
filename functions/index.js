@@ -1039,6 +1039,9 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 exports.processUploadedFile = onObjectFinalized({ region: "europe-west1", cpu: 1, memory: "1GiB", timeoutSeconds: 540 }, async (event) => {
   const fileBucket = event.data.bucket;
   const filePath = event.data.name;
+
+  if (filePath.includes('/generated/')) return console.log('Ignored generated file');
+
   const contentType = event.data.contentType; // نوع الملف الأصلي (المضمون 100%)
 
   // أنواع الملفات المسموحة
@@ -1094,6 +1097,36 @@ exports.processUploadedFile = onObjectFinalized({ region: "europe-west1", cpu: 1
     if (fs.existsSync(tempFilePath)) {
       fs.unlinkSync(tempFilePath);
     }
+  }
+});
+
+exports.cleanupDeletedFile = onObjectDeleted({ region: "europe-west1" }, async (event) => {
+  const filePath = event.data.name;
+  if (filePath.includes('/generated/')) return;
+
+  const pathParts = filePath.split("/");
+  if (pathParts.length < 3 || pathParts[0] !== "teachers") return;
+  const teacherId = pathParts[1];
+  const fileName = path.basename(filePath);
+
+  try {
+    const teacherRef = db.collection("teachers").doc(teacherId);
+    const doc = await teacherRef.get();
+    
+    if (doc.exists) {
+      const knowledgeBase = doc.data().knowledgeBase || [];
+      const updatedKB = knowledgeBase.filter(item => {
+        if (typeof item === 'string') return !item.includes(fileName);
+        return item.fileName !== fileName;
+      });
+
+      if (updatedKB.length !== knowledgeBase.length) {
+        await teacherRef.update({ knowledgeBase: updatedKB });
+        console.log(`🧹 تم مسح الملف ${fileName} من knowledgeBase الخاصة بالمعلم ${teacherId}`);
+      }
+    }
+  } catch (error) {
+    console.error("❌ خطأ أثناء مسح الملف:", error);
   }
 });
 
@@ -1257,7 +1290,22 @@ exports.chatWithSpot = onCall({
     if (teacherId) {
       const teacherDoc = await db.collection("teachers").doc(teacherId).get();
       if (teacherDoc.exists && teacherDoc.data().knowledgeBase) {
-        promptParts = teacherDoc.data().knowledgeBase.map((item) => ({
+        let kb = teacherDoc.data().knowledgeBase;
+        
+        // Phase 2: Token Stuffing Fix
+        const fileRefMatch = message ? message.match(/\[FILE_REF:\s*teachers\/[^/]+\/([^\]]+)\]/) : null;
+        if (fileRefMatch) {
+          const requestedFileName = fileRefMatch[1].trim();
+          kb = kb.filter(item => {
+            if (typeof item === 'string') return item.includes(requestedFileName);
+            return item.fileName === requestedFileName || (item.uri && item.uri.includes(requestedFileName));
+          });
+        } else {
+          // Limit to 3 most recent files
+          kb = kb.slice(-3);
+        }
+
+        promptParts = kb.map((item) => ({
           fileData: { mimeType: item.mimeType || "application/pdf", fileUri: item.uri || item },
         }));
       }
@@ -1358,12 +1406,19 @@ You are "Spot", a smart AI assistant for teachers. Communicate in a friendly yet
 
     // ── 5. Call Gemini (systemInstruction passed as dedicated field) ─────────
     try {
+      const genConfig = {
+        temperature: 0.1,  // low temp = no hallucinations
+      };
+      
+      // Phase 2: JSON Enforcement
+      if (isExamRequest) {
+        genConfig.responseMimeType = "application/json";
+      }
+
       modelInstance = genAI.getGenerativeModel({
         model: "gemini-2.5-pro",
         systemInstruction: systemInstruction,   // ✅ dedicated system instruction — not a chat message
-        generationConfig: {
-          temperature: 0.1,  // low temp = no hallucinations
-        },
+        generationConfig: genConfig,
       });
 
       result = await modelInstance.generateContent({
