@@ -27,18 +27,27 @@ function sentryBreadcrumb(message, category = 'action', data = {}) {
 // ==========================================
 // FIREBASE ANALYTICS HELPER
 // ==========================================
+// ✅ FIX 8: Cache analytics instance once — avoid re-instantiating on every call
+let _analyticsInstance = null;
+function _getAnalytics() {
+    if (_analyticsInstance) return _analyticsInstance;
+    try {
+        if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+            _analyticsInstance = firebase.analytics();
+        }
+    } catch (e) { /* analytics not available */ }
+    return _analyticsInstance;
+}
+
 function logEvent(eventName, params = {}) {
     try {
-        // Add global context to every event
         const enriched = {
             teacher_id: TEACHER_ID || 'unknown',
             group_id: SELECTED_GROUP_ID || 'none',
             ...params
         };
-        if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
-            const analytics = firebase.analytics();
-            if (analytics) analytics.logEvent(eventName, enriched);
-        }
+        const analytics = _getAnalytics();
+        if (analytics) analytics.logEvent(eventName, enriched);
     } catch (e) { /* Analytics not critical, fail silently */ }
 }
 
@@ -347,6 +356,18 @@ let syncRetryCount = 0;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
 let sessionScannedStudents = new Set();
 let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
+
+// ✅ PHASE 2: Memory-as-State — single source of truth for the current session
+// Structure: liveSessionData.attendance = { studentId: { status, time } }
+//            liveSessionData.homework   = { studentId: { submitted, score } }
+//            liveSessionData.date       = 'YYYY-MM-DD'
+//            liveSessionData.groupId    = 'xxx'
+const liveSessionData = { attendance: {}, homework: {}, date: null, groupId: null };
+
+// ✅ PHASE 2: Throttled-save state — guarantees a save fires at most every 4s under rapid scans
+let _saveThrottleTimer = null;      // debounce arm (resets on each scan)
+let _saveThrottleForced = null;     // max-interval arm (fires regardless after 4s)
+let _saveThrottleRunning = false;   // prevent re-entrant save
 
 // Session & Remember Me Helpers
 function getSessionItem(key) {
@@ -1204,6 +1225,37 @@ async function silentSave() {
     await saveDailyData(true); // true دي عشان نعرف الدالة إن ده حفظ صامت
 }
 
+// ✅ PHASE 2 — THROTTLED SAVE:
+// Combines a short debounce (500ms) with a hard max-interval cap (4000ms).
+// Under 50 rapid scans: save fires at t=0 (first scan arms the forced timer),
+// then again at t=4s (forced), then once more 500ms after the LAST scan.
+// This prevents the old "3-second infinite delay" bug.
+function scheduleThrottledSave() {
+    // Arm the debounce: save 500ms after the last activity
+    clearTimeout(_saveThrottleTimer);
+    _saveThrottleTimer = setTimeout(async () => {
+        clearTimeout(_saveThrottleForced); // debounce won — cancel the forced timer
+        _saveThrottleForced = null;
+        _saveThrottleTimer = null;
+        if (!_saveThrottleRunning) {
+            _saveThrottleRunning = true;
+            try { await silentSave(); } finally { _saveThrottleRunning = false; }
+        }
+    }, 500);
+
+    // Arm the max-interval: if debounce never fires within 4s, save anyway
+    if (!_saveThrottleForced) {
+        _saveThrottleForced = setTimeout(async () => {
+            _saveThrottleForced = null;
+            // debounce will still fire later for the tail — that's OK
+            if (!_saveThrottleRunning) {
+                _saveThrottleRunning = true;
+                try { await silentSave(); } finally { _saveThrottleRunning = false; }
+            }
+        }, 4000);
+    }
+}
+
 async function updateSyncUI() {
     if (!localDB) await openDB();
     const count = await new Promise(r => {
@@ -1255,9 +1307,13 @@ async function getAllSyncQueueItemsWithKeys() {
 }
 
 const withTimeout = (promise, ms) => {
+    let _timerId;
+    const timeoutPromise = new Promise((_, reject) => {
+        _timerId = setTimeout(() => reject(new Error("Timeout (Firebase offline)")), ms);
+    });
     return Promise.race([
-        promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout (Firebase offline)")), ms))
+        promise.then(result => { clearTimeout(_timerId); return result; }),
+        timeoutPromise
     ]);
 };
 
@@ -1306,30 +1362,55 @@ async function processSyncQueue(isRecovering = false) {
         const supersededKeys = new Set();
         const filteredEntries = [];
 
-        // 2️⃣ حل التعارضات (مثلاً set + delete لنفس dailyAttendance)
+        // 2️⃣ حل التعارضات مع Deep Merge للـ data
         groupedByPath.forEach((list, pathKey) => {
             const hasSetOrUpdate = list.some(e => e.action.type === 'set' || e.action.type === 'update');
             const isDailyAttendanceDoc = pathKey.includes('/dailyAttendance/');
 
             if (hasSetOrUpdate) {
-                // احتفظ بآخر set/update فقط
-                let lastSetEntry = null;
-                for (const e of list) {
-                    if (e.action.type === 'set' || e.action.type === 'update') {
-                        if (!lastSetEntry || e.index > lastSetEntry.index) {
-                            lastSetEntry = e;
+                // 🔀 Deep Merge: نجمع كل بيانات set/update بالترتيب الزمني (الأحدث يطغى على الأقدم)
+                const setUpdateEntries = list
+                    .filter(e => e.action.type === 'set' || e.action.type === 'update')
+                    .sort((a, b) => a.index - b.index); // ترتيب تصاعدي عشان الأحدث يطغى
+
+                // نأخذ آخر entry كأساس عشان نحتفظ بـ options, type, path
+                const baseEntry = setUpdateEntries[setUpdateEntries.length - 1];
+
+                // نعمل Deep Merge لكل الـ data payloads
+                const deepMerge = (target, source) => {
+                    if (!source || typeof source !== 'object') return target;
+                    const result = { ...target };
+                    for (const key of Object.keys(source)) {
+                        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])
+                            && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+                            result[key] = deepMerge(target[key], source[key]);
+                        } else {
+                            result[key] = source[key]; // Arrays و القيم البدائية: الأحدث يطغى
                         }
+                    }
+                    return result;
+                };
+
+                let mergedData = {};
+                for (const e of setUpdateEntries) {
+                    if (e.action.data && typeof e.action.data === 'object') {
+                        mergedData = deepMerge(mergedData, e.action.data);
                     }
                 }
 
-                if (lastSetEntry) {
-                    filteredEntries.push(lastSetEntry);
-                }
+                // نبني entry واحدة مدمجة بالـ data المدموجة
+                const mergedEntry = {
+                    ...baseEntry,
+                    action: { ...baseEntry.action, data: mergedData }
+                };
+
+                filteredEntries.push(mergedEntry);
+                console.log(`🔀 Deep-merged ${setUpdateEntries.length} set/update ops for path:`, pathKey);
 
                 for (const e of list) {
-                    if (lastSetEntry && e.key === lastSetEntry.key) continue;
+                    if (e.key === baseEntry.key) continue;
 
-                    // لو فيه delete لنفس dailyAttendance مع وجود set -> نرميه من الـ Queue من غير ما ننفذه
+                    // لو فيه delete لنفس dailyAttendance مع وجود set -> نرميه من الـ Queue
                     if (e.action.type === 'delete' && isDailyAttendanceDoc) {
                         console.warn("🚫 Dropping conflicting DELETE for dailyAttendance (SET exists):", {
                             path: pathKey,
@@ -1713,12 +1794,40 @@ function setupListeners() {
 
 
     document.getElementById('addNewStudentButton')?.addEventListener('click', addNewStudent);
+
+    // ✅ PERF FIX 4: Helper shared by all list search inputs — toggles DOM nodes, no re-render
+    function _filterListBySearch(containerSelector, filter) {
+        const norm = filter.trim().toLowerCase();
+        const container = typeof containerSelector === 'string'
+            ? document.querySelector(containerSelector)
+            : containerSelector;
+        if (!container) return;
+        let hasVisible = false;
+        container.querySelectorAll('[data-search-key]').forEach(el => {
+            const key = el.dataset.searchKey || '';
+            const match = !norm || key.includes(norm);
+            el.classList.toggle('hidden', !match);
+            if (match) hasVisible = true;
+        });
+        // أظهر/اخفى رسالة "لا نتائج"
+        let noResultEl = container.querySelector('[data-no-results]');
+        if (noResultEl) noResultEl.classList.toggle('hidden', hasVisible);
+    }
+
     let studentSearchTimeout;
     document.getElementById('studentSearchInput')?.addEventListener('input', (e) => {
         clearTimeout(studentSearchTimeout);
         studentSearchTimeout = setTimeout(() => {
-            renderStudents(e.target.value);
-        }, 300);
+            const filter = e.target.value;
+            const norm = filter.trim().toLowerCase();
+            // لو الـ container جاهز نعمل DOM filter، غير كده نعمل full render
+            const container = document.getElementById('studentsListDisplay');
+            if (container && container.querySelectorAll('[data-search-key]').length > 0) {
+                _filterListBySearch(container, filter);
+            } else {
+                renderStudents(filter);
+            }
+        }, 150);
     });
 
     let dailySearchTimeout;
@@ -1733,16 +1842,28 @@ function setupListeners() {
     document.getElementById('examStudentSearchInput')?.addEventListener('input', (e) => {
         clearTimeout(examSearchTimeout);
         examSearchTimeout = setTimeout(() => {
-            renderExamGrades(e.target.value);
-        }, 300);
+            const filter = e.target.value;
+            const container = document.getElementById('examGradesList');
+            if (container && container.querySelectorAll('[data-search-key]').length > 0) {
+                _filterListBySearch(container, filter);
+            } else {
+                renderExamGrades(filter);
+            }
+        }, 150);
     });
 
     let paymentSearchTimeout;
     document.getElementById('paymentStudentSearchInput')?.addEventListener('input', (e) => {
         clearTimeout(paymentSearchTimeout);
         paymentSearchTimeout = setTimeout(() => {
-            renderPaymentsList(e.target.value);
-        }, 300);
+            const filter = e.target.value;
+            const container = document.getElementById('paymentsList');
+            if (container && container.querySelectorAll('[data-search-key]').length > 0) {
+                _filterListBySearch(container, filter);
+            } else {
+                renderPaymentsList(filter);
+            }
+        }, 150);
     });
 
     document.getElementById('addRecurringScheduleButton')?.addEventListener('click', saveRecurringSchedule);
@@ -2614,7 +2735,8 @@ async function syncGroupNotificationStatus() {
     const pendingStudents = allStudents.filter(s => !s.parentFcmToken && s.parentPhoneNumber);
     if (pendingStudents.length === 0) return;
     
-    let updatedAny = false;
+    // ✅ FIX 6: collect all modified students, batch-write once at the end
+    const studentsToUpdateInDB = [];
     
     // تشغيل الفحوصات بالتوازي بدلاً من تشغيلها واحداً تلو الآخر لتجنب قفل الواجهة البرمجية والبطء
     await Promise.all(pendingStudents.map(async (student) => {
@@ -2649,17 +2771,18 @@ async function syncGroupNotificationStatus() {
                     data: { parentFcmToken: token }
                 });
                 
-                // تحديث البيانات محلياً وفي قاعدة البيانات المحلية
+                // تحديث البيانات محلياً (سيتم الكتابة للـ DB بـ batch بعد انتهاء الـ Promise.all)
                 student.parentFcmToken = token;
-                await putToDB('students', student);
-                updatedAny = true;
+                studentsToUpdateInDB.push(student);
             }
         } catch (e) {
             console.error("Error syncing notification status for student: " + student.id, e);
         }
     }));
-    
-    if (updatedAny) {
+
+    // ✅ FIX 6: Batch write — transaction واحدة بدلاً من N transactions
+    if (studentsToUpdateInDB.length > 0) {
+        await putAllToDB('students', studentsToUpdateInDB);
         // إعادة رندرة الطلاب لتحديث لون الجرس إلى الأخضر فوراً
         renderStudents();
         if (typeof renderOverview === 'function') renderOverview();
@@ -3138,7 +3261,29 @@ async function renderDailyList(filter = "") {
                 hwMap[sid] = (val && typeof val === 'object') ? val.submitted : false;
                 if (hwMap[sid]) hasAnySubmitted = true;
             });
-            
+            // Update UI components
+        }
+
+        // ✅ PHASE 2: Hydrate liveSessionData
+        liveSessionData.groupId = SELECTED_GROUP_ID;
+        liveSessionData.date = date;
+        liveSessionData.attendance = {};
+        liveSessionData.homework = {};
+
+        // Seed with defaults for all students in group, override with DB data
+        allStudents.forEach(s => {
+            const attRec = attMap[s.id] || {};
+            liveSessionData.attendance[s.id] = {
+                status: typeof attRec === 'string' ? attRec : (attRec.status || 'absent'),
+                time: attRec.time || null
+            };
+            liveSessionData.homework[s.id] = {
+                submitted: hwMap[s.id] || false,
+                score: hwDoc?.scores?.[s.id]?.score || null
+            };
+        });
+
+        if (hwDoc?.scores) {
             const hwToggle = document.getElementById('homeworkToggle');
             if (hwToggle) {
                 hwToggle.disabled = hasAnySubmitted; // ✅ تجميد الزرار فقط لو فيه أي حد مسلم الواجب فعلياً
@@ -3215,57 +3360,55 @@ async function renderDailyList(filter = "") {
             }
 
             row.innerHTML = html;
-
-            // --- Logic: تغيير الحالة يقفل/يفتح الواجب ---
-            const attSelect = row.querySelector('.att-select');
-            const hwCheck = row.querySelector('.hw-check');
-
-            attSelect.addEventListener('change', (e) => {
-                const val = e.target.value;
-                row.dataset.attendanceJustChanged = 'true'; // ✅ تتبع التغيير
-
-                // 1. تغيير ألوان الصف
-                if (val === 'present') {
-                    row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-                    row.classList.remove('bg-white', 'dark:bg-darkSurface', 'border-transparent');
-
-                    // ✅ لو حضر: نفتح خانة الواجب
-                    if (hwCheck) hwCheck.disabled = false;
-
-                } else { // absent
-                    row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
-                    row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent');
-
-                    // FIX #15: Disable but do NOT uncheck — preserve previously submitted homework
-                    if (hwCheck) {
-                        hwCheck.disabled = true;
-                        // Do NOT set hwCheck.checked = false — this would erase submitted homework
-                    }
-                }
-
-                // تحديث عداد الحضور المباشر
-                updateAttendanceCount();
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(() => {
-                    silentSave(); // هيحفظ التغيير ده لوحده بعد 3 ثواني
-                }, 3000);
-            });
-            if (hwCheck) {
-                hwCheck.addEventListener('change', () => {
-                    row.dataset.homeworkJustChanged = 'true'; // ✅ تتبع التغيير
-                    // ✅✅ الإضافة السحرية: حفظ تلقائي للواجب اليدوي ✅✅
-                    clearTimeout(saveTimeout);
-                    saveTimeout = setTimeout(() => {
-                        silentSave();
-                    }, 3000);
-                });
-            }
             fragment.appendChild(row);
         });
         // ✅ فحص نهائي قبل الإضافة: لو نداء أحدث بدأ، نتجاهل هذا النداء القديم
         if (thisRenderVersion !== _dailyRenderVersion) return;
         list.innerHTML = ''; // مسح القائمة مباشرة قبل الإضافة لمنع التكرار
         list.appendChild(fragment);
+
+        // ✅ FIX 5: EVENT DELEGATION — listener واحد على الـ container بدلاً من listener لكل صف
+        // نحذف أي listener قديم أولاً عشان ما يتكررش عند إعادة الرندر
+        const oldHandler = list._delegatedHandler;
+        if (oldHandler) list.removeEventListener('change', oldHandler);
+
+        const delegatedHandler = (e) => {
+            const row = e.target.closest('[data-sid]');
+            if (!row) return;
+
+            // Handle att-select change
+            if (e.target.classList.contains('att-select')) {
+                const val = e.target.value;
+                row.dataset.attendanceJustChanged = 'true';
+
+                const hwCheck = row.querySelector('.hw-check');
+
+                if (val === 'present') {
+                    row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                    row.classList.remove('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+                    if (hwCheck) hwCheck.disabled = false;
+                } else {
+                    row.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+                    row.classList.add('bg-white', 'dark:bg-darkSurface', 'border-transparent');
+                    // FIX #15: Disable but do NOT uncheck — preserve previously submitted homework
+                    if (hwCheck) hwCheck.disabled = true;
+                }
+
+                updateAttendanceCount();
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => silentSave(), 3000);
+            }
+
+            // Handle hw-check change
+            if (e.target.classList.contains('hw-check')) {
+                row.dataset.homeworkJustChanged = 'true';
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => silentSave(), 3000);
+            }
+        };
+
+        list.addEventListener('change', delegatedHandler);
+        list._delegatedHandler = delegatedHandler; // نحفظ مرجع للـ listener عشان نقدر نشيله المرة الجاية
 
         // دالة صغيرة لتحديث العداد
         function updateAttendanceCount() {
@@ -3426,85 +3569,69 @@ async function saveDailyData(isSilent = false) {
         const promises = [];
         const studentRows = document.querySelectorAll('#dailyStudentsList > div');
 
-        if (studentRows.length === 0) {
-            if (!isSilent) {
-                console.warn("ℹ️ No student rows found for daily save; skipping.");
-            }
-        } else {
-            // --- Attendance ---
-            const attendanceRecords = [];
-            studentRows.forEach(div => {
-                const attSelect = div.querySelector('.att-select');
-                if (attSelect) {
-                    let t = div.dataset.scanTime;
-                    if (attSelect.value === 'present' && !t) {
-                        t = new Date().toISOString();
-                        div.dataset.scanTime = t; // Update DOM for next saves
-                    }
-                    if (attSelect.value === 'absent') t = '';
+            // ✅ PHASE 2: Read from liveSessionData instead of DOM
+            if (Object.keys(liveSessionData.attendance).length === 0) {
+                if (!isSilent) {
+                    console.warn("ℹ️ No session data found for daily save; skipping.");
+                }
+            } else {
+                // --- Attendance ---
+                const attendanceRecords = [];
+                for (const [studentId, attRec] of Object.entries(liveSessionData.attendance)) {
                     attendanceRecords.push({
-                        studentId: div.dataset.sid,
-                        status: attSelect.value,
-                        time: t || null
+                        studentId: studentId,
+                        status: attRec.status,
+                        time: attRec.status === 'present' ? (attRec.time || new Date().toISOString()) : null
                     });
                 }
-            });
 
-            if (attendanceRecords.length > 0) {
-                const attendanceId = `${SELECTED_GROUP_ID}_${date}`;
-                const attendanceData = {
-                    id: attendanceId,
-                    teacherId: TEACHER_ID,
-                    groupId: SELECTED_GROUP_ID,
-                    date,
-                    records: attendanceRecords
-                };
+                if (attendanceRecords.length > 0) {
+                    const attendanceId = `${SELECTED_GROUP_ID}_${date}`;
+                    const attendanceData = {
+                        id: attendanceId,
+                        teacherId: TEACHER_ID,
+                        groupId: SELECTED_GROUP_ID,
+                        date,
+                        records: attendanceRecords
+                    };
 
-                sentryBreadcrumb("Attendance save queued", "attendance", { groupId: SELECTED_GROUP_ID });
-                logEvent("attendance_saved", { group_id: SELECTED_GROUP_ID });
-                console.log("📝 Queuing attendance save:", {
-                    path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
-                    localId: attendanceId,
-                    recordsCount: attendanceRecords.length
-                });
-
-                promises.push(putToDB('attendance', attendanceData));
-                promises.push(
-                    addToSyncQueue({
-                        type: 'set',
+                    sentryBreadcrumb("Attendance save queued", "attendance", { groupId: SELECTED_GROUP_ID });
+                    logEvent("attendance_saved", { group_id: SELECTED_GROUP_ID });
+                    console.log("📝 Queuing attendance save from memory:", {
                         path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
-                        data: {
-                            date,
-                            records: attendanceRecords
-                        }
-                    })
-                );
-            }
+                        localId: attendanceId,
+                        recordsCount: attendanceRecords.length
+                    });
 
-            // --- Homework (daily) ---
-            if (typeof hasHomeworkToday !== 'undefined' && hasHomeworkToday) {
-                const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
-                const scores = {};
+                    promises.push(putToDB('attendance', attendanceData));
+                    promises.push(
+                        addToSyncQueue({
+                            type: 'set',
+                            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/dailyAttendance/${date}`,
+                            data: {
+                                date,
+                                records: attendanceRecords
+                            }
+                        })
+                    );
+                }
 
-                studentRows.forEach(div => {
-                    const chk = div.querySelector('.hw-check');
-                    if (chk) {
-                        scores[div.dataset.sid] = {
-                            submitted: chk.checked,
-                            score: null,
-                            _attChanged: div.dataset.attendanceJustChanged === 'true',
-                            _hwChanged: div.dataset.homeworkJustChanged === 'true'
+                // --- Homework (daily) ---
+                if (typeof hasHomeworkToday !== 'undefined' && hasHomeworkToday) {
+                    const hwId = `${SELECTED_GROUP_ID}_HW_${date}`;
+                    const scores = {};
+
+                    for (const [studentId, hwRec] of Object.entries(liveSessionData.homework)) {
+                        scores[studentId] = {
+                            submitted: hwRec.submitted,
+                            score: hwRec.score
                         };
-                        // مسح التتبع بعد الحفظ عشان لو عدل حاجة تانية بعدين
-                        delete div.dataset.attendanceJustChanged;
-                        delete div.dataset.homeworkJustChanged;
                     }
-                });
 
-                let hwData = await getFromDB('assignments', hwId);
-                if (hwData) {
-                    for (const sid in scores) {
-                        if (!hwData.scores) hwData.scores = {};
+                    let hwData = await getFromDB('assignments', hwId);
+                    if (hwData) {
+                        for (const sid in scores) {
+                            if (!hwData.scores) hwData.scores = {};
                         hwData.scores[sid] = { ...hwData.scores[sid], ...scores[sid] };
                     }
                 } else {
@@ -3573,6 +3700,7 @@ let isTorchOn = false; // متغير لحالة الفلاش
 async function startScanner(mode) {
     currentScannerMode = mode;
     isScannerPaused = false;
+    _initScanWorker(); // ✅ FIX 7: init Worker once (no-op if already created)
     document.getElementById('scannerModal').classList.remove('hidden');
 
     // زر الفلاش
@@ -3651,16 +3779,34 @@ function stopScanner() {
 let scanCanvas = null;
 let scanCtx = null;
 
+// ✅ FIX 7: Web Worker for jsQR — keeps the main thread unblocked
+let _scanWorker = null;
+let _scanWorkerBusy = false;  // منع إرسال فريم جديد قبل ما الـ Worker يخلص
+
+function _initScanWorker() {
+    if (_scanWorker) return; // already initialized
+    try {
+        _scanWorker = new Worker('js/scanner-worker.js');
+        _scanWorker.onmessage = (e) => {
+            _scanWorkerBusy = false;
+            if (e.data && e.data.result) {
+                handleScan(e.data.result, 'camera');
+            }
+        };
+        _scanWorker.onerror = (err) => {
+            console.warn('⚠️ ScanWorker error, falling back to main-thread jsQR:', err.message);
+            _scanWorker = null; // falls back silently
+            _scanWorkerBusy = false;
+        };
+    } catch (e) {
+        console.warn('⚠️ Worker not supported, falling back to main-thread jsQR:', e);
+        _scanWorker = null;
+    }
+}
+
 function tickScanner() {
     if (isScannerPaused || document.getElementById('scannerModal').classList.contains('hidden')) return;
     
-    // التحقق من وجود مكتبة jsQR لتجنب الأخطاء لو الإنترنت ضعيف ومحملهاش
-    if (typeof jsQR === 'undefined') {
-        showToast("خطأ: تعذر تحميل مكتبة قراءة الكاميرا (تأكد من الإنترنت وأغلق الـ AdBlocker)", "error");
-        stopScanner();
-        return;
-    }
-
     if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
         if (!scanCanvas) {
             scanCanvas = document.createElement('canvas');
@@ -3668,16 +3814,32 @@ function tickScanner() {
         }
         scanCanvas.width = videoElement.videoWidth;
         scanCanvas.height = videoElement.videoHeight;
-        
         scanCtx.drawImage(videoElement, 0, 0, scanCanvas.width, scanCanvas.height);
         const imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
-        
-        try {
-            const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-            if (code) handleScan(code.data, "camera");
-        } catch (e) {
-            console.error("jsQR Error:", e);
+
+        if (_scanWorker && !_scanWorkerBusy) {
+            // ✅ Worker path: offload to background thread via Transferable
+            _scanWorkerBusy = true;
+            const buf = imageData.data.buffer.slice(0); // copy عشان نقدر ننقله
+            _scanWorker.postMessage(
+                { data: new Uint8ClampedArray(buf), width: imageData.width, height: imageData.height, id: Date.now() },
+                [buf]
+            );
+        } else if (!_scanWorker) {
+            // ✅ Fallback path: lو الـ Worker مش متاح نشتغل على الـ main thread
+            if (typeof jsQR === 'undefined') {
+                showToast("خطأ: تعذر تحميل مكتبة قراءة الكاميرا (تأكد من الإنترنت وأغلق الـ AdBlocker)", "error");
+                stopScanner();
+                return;
+            }
+            try {
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                if (code) handleScan(code.data, "camera");
+            } catch (e) {
+                console.error("jsQR Error:", e);
+            }
         }
+        // لو _scanWorkerBusy == true: نتخطى الفريم ده ونستنى الـ Worker
     }
     setTimeout(() => { animationFrameId = requestAnimationFrame(tickScanner); }, 250);
 }
@@ -3866,72 +4028,86 @@ async function handleScan(scannedText, scannerType = "camera") {
     }
 }
 
+// ✅ PHASE 4: Mutex lock for cross-group attendance
+// Prevents race conditions when scanning multiple cross-group students rapidly
+let _crossGroupSaveQueue = Promise.resolve();
+
 // ✅ دالة مساعدة لتسجيل الحضور في مجموعة أخرى (بدون فتحها)
 async function saveCrossGroupAttendance(student, homeworkSubmitted) {
     const date = document.getElementById('dailyDateInput').value;
     const groupId = student.groupId;
 
-    // 1️⃣ تسجيل الحضور (Attendance)
-    const attId = `${groupId}_${date}`;
+    // Chain the operation onto the queue
+    _crossGroupSaveQueue = _crossGroupSaveQueue.then(async () => {
+        try {
+            // 1️⃣ تسجيل الحضور (Attendance)
+            const attId = `${groupId}_${date}`;
 
-    // جلب أو إنشاء سجل الحضور
-    let attDoc = await getFromDB('attendance', attId);
-    if (!attDoc) {
-        attDoc = { id: attId, date: date, records: [] };
-    }
+            // جلب أو إنشاء سجل الحضور
+            let attDoc = await getFromDB('attendance', attId);
+            if (!attDoc) {
+                attDoc = { id: attId, date: date, teacherId: TEACHER_ID, groupId: groupId, records: [] };
+            }
 
-    // تحديث حالة الطالب
-    const existingRec = attDoc.records.find(r => r.studentId === student.id);
-    if (existingRec) {
-        existingRec.status = 'present';
-        if (!existingRec.time) existingRec.time = new Date().toISOString();
-    } else {
-        attDoc.records.push({ studentId: student.id, status: 'present', time: new Date().toISOString() });
-    }
+            // تحديث حالة الطالب
+            const existingRec = attDoc.records.find(r => r.studentId === student.id);
+            if (existingRec) {
+                existingRec.status = 'present';
+                if (!existingRec.time) existingRec.time = new Date().toISOString();
+            } else {
+                attDoc.records.push({ studentId: student.id, status: 'present', time: new Date().toISOString() });
+            }
 
-    // حفظ الحضور (Local & Sync)
-    await putToDB('attendance', attDoc);
-    await addToSyncQueue({
-        type: 'set',
-        path: `teachers/${TEACHER_ID}/groups/${groupId}/dailyAttendance/${date}`,
-        data: { date: date, records: attDoc.records }
+            // حفظ الحضور (Local & Sync)
+            await putToDB('attendance', attDoc);
+            await addToSyncQueue({
+                type: 'set',
+                path: `teachers/${TEACHER_ID}/groups/${groupId}/dailyAttendance/${date}`,
+                data: { date: date, records: attDoc.records }
+            });
+
+            // 2️⃣ تسجيل الواجب (Homework) - إذا تم التسليم
+            if (homeworkSubmitted) {
+                const hwId = `${groupId}_HW_${date}`;
+
+                // جلب أو إنشاء سجل الواجب
+                let hwDoc = await getFromDB('assignments', hwId);
+                if (!hwDoc) {
+                    hwDoc = {
+                        id: hwId,
+                        teacherId: TEACHER_ID,
+                        groupId: groupId,
+                        name: `واجب ${date}`,
+                        date: date,
+                        scores: {},
+                        type: 'daily'
+                    };
+                }
+
+                // التأكد من وجود كائن الدرجات
+                if (!hwDoc.scores) hwDoc.scores = {};
+
+                // تسجيل التسليم (submitted: true)
+                hwDoc.scores[student.id] = { submitted: true, score: null };
+
+                // حفظ الواجب (Local & Sync)
+                await putToDB('assignments', hwDoc);
+                await addToSyncQueue({
+                    type: 'set',
+                    path: `teachers/${TEACHER_ID}/groups/${groupId}/assignments/${hwId}`,
+                    data: hwDoc
+                });
+
+                console.log(`✅ Cross-Homework Saved for ${student.name}`);
+            }
+
+            console.log(`✅ Cross-Attendance Saved for ${student.name}`);
+        } catch (error) {
+            console.error(`❌ Error in saveCrossGroupAttendance for ${student.name}:`, error);
+        }
     });
 
-    // 2️⃣ تسجيل الواجب (Homework) - إذا تم التسليم
-    if (homeworkSubmitted) {
-        const hwId = `${groupId}_HW_${date}`;
-
-        // جلب أو إنشاء سجل الواجب
-        let hwDoc = await getFromDB('assignments', hwId);
-        if (!hwDoc) {
-            hwDoc = {
-                id: hwId,
-                groupId: groupId,
-                name: `واجب ${date}`,
-                date: date,
-                scores: {},
-                type: 'daily'
-            };
-        }
-
-        // التأكد من وجود كائن الدرجات
-        if (!hwDoc.scores) hwDoc.scores = {};
-
-        // تسجيل التسليم (submitted: true)
-        hwDoc.scores[student.id] = { submitted: true, score: null };
-
-        // حفظ الواجب (Local & Sync)
-        await putToDB('assignments', hwDoc);
-        await addToSyncQueue({
-            type: 'set',
-            path: `teachers/${TEACHER_ID}/groups/${groupId}/assignments/${hwId}`,
-            data: hwDoc
-        });
-
-        console.log(`✅ Cross-Homework Saved for ${student.name}`);
-    }
-
-    console.log(`✅ Cross-Attendance Saved for ${student.name}`);
+    await _crossGroupSaveQueue;
 }
 
 // --- دالة مساعدة للمؤثرات البصرية (عشان الكود يبقى نظيف) ---
@@ -3961,46 +4137,56 @@ function showScanSuccessUI(student, type = 'attendance') {
     }, 1500);
 }
 
-// خلينا الدالة async عشان تقدر تستنى رسم الشاشة
 async function processDailyScan(student) {
     const studentId = student.id;
-    let row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`);
 
-    // لو السطر مش موجود، نجبر النظام على رسم القائمة
-    if (!row) {
-        console.warn("⏳ سطر الطالب غير موجود، جاري إجبار النظام على رسم القائمة...");
-        const searchInput = document.getElementById('dailyStudentSearchInput');
-        if (searchInput) searchInput.value = '';
-        await renderDailyList(); 
-        row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`); 
+    // ✅ PHASE 2 & 3: Memory-first update. We do NOT force renderDailyList!
+    if (!liveSessionData.attendance[studentId]) {
+        liveSessionData.attendance[studentId] = { status: 'absent', time: null };
+    }
+    if (!liveSessionData.homework[studentId]) {
+        liveSessionData.homework[studentId] = { submitted: false, score: null };
     }
 
-    if (!row) return; // حماية إضافية
+    const attState = liveSessionData.attendance[studentId];
+    const hwState = liveSessionData.homework[studentId];
 
-    // 🌟 التعديل الجوهري: الاعتماد على حالة الواجهة الحالية بدلاً من sessionScannedStudents
-    const attSelect = row.querySelector('.att-select');
-    const hwCheck = row.querySelector('.hw-check');
-    
-    const isPresent = attSelect && attSelect.value === 'present';
-    const isHwSubmitted = hwCheck && hwCheck.checked;
+    const isPresent = attState.status === 'present';
+    const isHwSubmitted = hwState.submitted;
+
+    // Find the row in DOM (if it exists)
+    const row = document.querySelector(`#dailyStudentsList > div[data-sid="${studentId}"]`);
+    const attSelect = row ? row.querySelector('.att-select') : null;
+    const hwCheck = row ? row.querySelector('.hw-check') : null;
 
     if (!isPresent) {
-        // --- أول سكان: تسجيل الحضور ---
-        if (attSelect) {
-            attSelect.value = 'present';
-            row.dataset.scanTime = new Date().toISOString();
-            attSelect.dispatchEvent(new Event('change')); // يشغل دالة الحفظ التلقائي
+        // --- 1st Scan: Attendance ---
+        attState.status = 'present';
+        attState.time = new Date().toISOString();
+
+        if (row) {
+            if (attSelect) attSelect.value = 'present';
+            row.classList.replace('bg-white', 'bg-green-50');
+            row.classList.replace('dark:bg-darkSurface', 'dark:bg-green-900/20');
+            row.classList.add('border-green-500');
+            row.classList.remove('border-transparent');
+            if (hwCheck) hwCheck.disabled = false;
             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+        
         logEvent('scan_attendance', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
         showScanSuccessUI(student, 'attendance');
     } else {
-        // --- ثاني سكان: تسجيل الواجب ---
+        // --- 2nd Scan: Homework ---
         if (hasHomeworkToday) {
-            if (hwCheck && !isHwSubmitted) {
-                hwCheck.checked = true;
-                hwCheck.dispatchEvent(new Event('change')); // يشغل الحفظ للواجب
-                row.classList.add('bg-green-50');
+            if (!isHwSubmitted) {
+                hwState.submitted = true;
+                
+                if (row) {
+                    if (hwCheck) hwCheck.checked = true;
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
                 logEvent('scan_homework', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: 'camera' });
                 showScanSuccessUI(student, 'homework');
             } else {
@@ -4011,7 +4197,14 @@ async function processDailyScan(student) {
         }
     }
 
-    setTimeout(() => { isScannerPaused = false; requestAnimationFrame(tickScanner); }, 1200);
+    // ✅ PHASE 2: Trigger the throttled background save
+    scheduleThrottledSave();
+
+    // Release the scanner quickly for the next barcode
+    setTimeout(() => { 
+        isScannerPaused = false; 
+        requestAnimationFrame(tickScanner); 
+    }, 1200);
 }
 
 // خلينا الدالة async
@@ -4096,6 +4289,9 @@ function renderStudents(filter = "") {
 
         const div = document.createElement('div');
         div.className = "record-item cursor-pointer";
+        // ✅ PERF FIX 4: index for DOM-walk search
+        const pPhone = s.parentPhoneNumber ? s.parentPhoneNumber.replace(/^\+20/, '0') : '';
+        div.dataset.searchKey = `${(s.name || '').toLowerCase()} ${pPhone} ${(s.childId || s.id || '').toLowerCase()}`;
         div.onclick = (e) => {
             if (!e.target.closest('button')) openStudentProfile(s.id);
         };
@@ -4626,6 +4822,9 @@ function recalculateGroupTotal() {
         const div = document.createElement('div');
         div.className = `record-item flex justify-between items-center p-3 border rounded-xl transition-colors ${isPaid ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-white dark:bg-darkSurface border-gray-100 dark:border-gray-700'}`;
         div.dataset.sid = s.id;
+        // ✅ PERF FIX 4: index for DOM-walk search
+        const _pPay = s.parentPhoneNumber ? s.parentPhoneNumber.replace(/^\+20/, '0') : '';
+        div.dataset.searchKey = `${(s.name || '').toLowerCase()} ${_pPay} ${(s.childId || s.id || '').toLowerCase()}`;
 
         div.innerHTML = `
 <span onclick="openStudentProfile('${s.id}')" 
@@ -4852,6 +5051,9 @@ async function renderExamGrades(filter = "") {
         const val = scores[s.id]?.score || '';
         const div = document.createElement('div');
         div.className = "flex items-center gap-2 p-2 bg-white dark:bg-darkSurface border dark:border-gray-700 rounded-lg cursor-pointer hover:border-brand transition-colors";
+        // ✅ PERF FIX 4: index for DOM-walk search
+        const _pPhone = s.parentPhoneNumber ? s.parentPhoneNumber.replace(/^\+20/, '0') : '';
+        div.dataset.searchKey = `${(s.name || '').toLowerCase()} ${_pPhone} ${(s.childId || s.id || '').toLowerCase()}`;
         div.onclick = (e) => {
             if (!e.target.closest('input')) openStudentProfile(s.id);
         };
@@ -6886,51 +7088,44 @@ async function submitManualCardLink() {
 // 🚀 Hardware Scanner Global Listener (Auto-Capture) - MAC COMPATIBLE
 // ==========================================
 let hwScannerBuffer = "";
-let hwScannerLastKeyTime = Date.now();
+let hwScannerResetTimer = null;
+let hwScannerLastKeyPerf = 0;
 
 document.addEventListener('keydown', async (e) => {
     if (!e.key || (e.key !== 'Enter' && e.key.length !== 1)) return;
-    const arabicMap = {'ض':'q','ص':'w','ث':'e','ق':'r','ف':'t','غ':'y','ع':'u','ه':'i','خ':'o','ح':'p','ج':'[','د':']','ش':'a','س':'s','ي':'d','ب':'f','ل':'g','ا':'h','ت':'j','ن':'k','م':'l','ك':';','ط':'\'','ئ':'z','ء':'x','ؤ':'c','ر':'v','لا':'b','ى':'n','ة':'m','و':',','ز':'.','ظ':'/'};
-    let mappedKey = arabicMap[e.key] || e.key;
 
-    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+    // ✅ PHASE 1 — STRICT isInput GUARD (must come FIRST, before any buffer logic):
+    // If the user is focused on an input or textarea, we HARD STOP here.
+    // The buffer is NEVER touched. This eliminates buffer poisoning from stray keystrokes.
+    const activeEl = document.activeElement;
+    const activeTag = activeEl ? activeEl.tagName.toLowerCase() : '';
     const isInput = activeTag === 'input' || activeTag === 'textarea';
-    
-    if (e.key === 'Enter' && isInput) return; // Fix 18
-    
-    const currentTime = Date.now();
-    if (currentTime - hwScannerLastKeyTime < 30 && isInput) e.preventDefault(); // Fix 17
 
-
-    
-    // ✅ تعديل 1: زيادة الوقت لـ 1000 ملي ثانية (ثانية كاملة) 
-    // لأن بعض السكانرات البطيئة بتقف كتير بين الحروف والأرقام
-    if (currentTime - hwScannerLastKeyTime > 1000) {
-        hwScannerBuffer = "";
+    if (isInput) {
+        // Fix 17: suppress ghost rapid-fire characters in the same input element
+        if (e.key !== 'Enter') {
+            const now = performance.now();
+            if (now - hwScannerLastKeyPerf < 30) e.preventDefault();
+            hwScannerLastKeyPerf = performance.now();
+        }
+        // Fix 18: Enter inside input is handled by the browser naturally
+        return; // ⛔ Hard stop — the scanner buffer remains untouched
     }
-    
-    hwScannerLastKeyTime = currentTime;
+
+    const arabicMap = {'ض':'q','ص':'w','ث':'e','ق':'r','ف':'t','غ':'y','ع':'u','ه':'i','خ':'o','ح':'p','ج':'[','د':']','ش':'a','س':'s','ي':'d','ب':'f','ل':'g','ا':'h','ت':'j','ن':'k','م':'l','ك':';','ط':'\'','ئ':'z','ء':'x','ؤ':'c','ر':'v','لا':'b','ى':'n','ة':'m','و':',','ز':'.','ظ':'/'};
+    const mappedKey = arabicMap[e.key] || e.key;
 
     if (e.key === "Enter") {
-        const qrCode = hwScannerBuffer.trim();
-        hwScannerBuffer = ""; // تصفير للعملية القادمة
-        
-        if (qrCode.length >= 4) {
-            
-            // 1. منع الـ Form من الإرسال لو المدرس كان واقف بالماوس جوا خانة بحث
-            const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
-            const isInput = activeTag === 'input' || activeTag === 'textarea';
-            if (isInput) {
-                e.preventDefault();
-                const currentVal = document.activeElement.value;
-                if (currentVal.toUpperCase().endsWith(qrCode)) {
-                    document.activeElement.value = currentVal.slice(0, -qrCode.length);
-                }
-            }
+        // Consume the buffer — cancel any pending expiry timer first
+        clearTimeout(hwScannerResetTimer);
+        hwScannerResetTimer = null;
 
-            // 2. تحديد وضع السكانر
+        const qrCode = hwScannerBuffer.trim();
+        hwScannerBuffer = ""; // ✅ Reset BEFORE any async work to prevent double-processing
+
+        if (qrCode.length >= 4) {
+            // Determine scanner mode from active tab
             const linkModal = document.getElementById('cardLinkModal');
-            // لو المودال مفتوح أو وضع الاسكانر متبرمج على ربط الكارت
             if ((linkModal && !linkModal.classList.contains('hidden')) || currentScannerMode === 'link-card') {
                 currentScannerMode = 'link-card';
                 await handleScan(qrCode, 'hardware');
@@ -6942,22 +7137,30 @@ document.addEventListener('keydown', async (e) => {
                 currentScannerMode = 'payments';
             } else {
                 currentScannerMode = 'daily';
-                
-                // لو المدرس مش واقف في شاشة الحصة، حوله عليها تلقائي
                 if (activeTab !== 'daily') {
                     switchTab('daily');
-                    // ✅ تعديل 2 (السحري): إيقاف مؤقت لمدة 300 ملي ثانية لضمان اكتمال دالة renderDailyList ورسم الطلاب في الـ DOM
                     await new Promise(resolve => setTimeout(resolve, 300));
                 }
             }
 
-            // 3. إرسال الكود لنفس الدالة اللي بتشغل كاميرا اللابتوب/الموبايل
             await handleScan(qrCode, 'hardware');
+
         } else if (qrCode.length > 0 && qrCode.length < 4) {
             logScanRecord(qrCode, 'failed', 'scanner_incomplete', null, currentScannerMode || 'unknown', 'hardware');
         }
         return;
     }
+
+    // ✅ PHASE 1 — STRICT 300ms expiry:
+    // Real hardware scanners fire all characters in <50ms total.
+    // Any gap ≥ 300ms means a stray human keystroke slipped in → discard the whole buffer.
+    clearTimeout(hwScannerResetTimer);
+    hwScannerResetTimer = setTimeout(() => {
+        if (hwScannerBuffer.length > 0) {
+            console.log("⏱️ HW Scanner buffer expired (300ms), discarding stray input:", hwScannerBuffer);
+            hwScannerBuffer = "";
+        }
+    }, 300);
 
     if (e.key.length === 1) {
         hwScannerBuffer += mappedKey.toUpperCase();
