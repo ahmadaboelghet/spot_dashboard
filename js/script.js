@@ -3663,38 +3663,45 @@ async function saveDailyData(isSilent = false) {
                     };
                 }
 
-                let hwData = await getFromDB('assignments', hwId);
-                if (hwData) {
-                    for (const sid in scores) {
-                        if (!hwData.scores) hwData.scores = {};
-                        hwData.scores[sid] = { ...hwData.scores[sid], ...scores[sid] };
-                    }
+                // ✅ Fix: Only persist if at least one student actually submitted.
+                // Prevents creating phantom homework records that pollute analytics.
+                const hasRealSubmission = Object.values(scores).some(v => v.submitted === true);
+                if (!hasRealSubmission) {
+                    console.log("ℹ️ Skipping homework save — no student submitted yet.");
                 } else {
-                    hwData = {
-                        id: hwId,
-                        teacherId: TEACHER_ID,
-                        groupId: targetGroupId,
-                        name: `واجب ${targetDate}`,
-                        date: targetDate,
-                        scores,
-                        type: 'daily'
-                    };
-                }
+                    let hwData = await getFromDB('assignments', hwId);
+                    if (hwData) {
+                        for (const sid in scores) {
+                            if (!hwData.scores) hwData.scores = {};
+                            hwData.scores[sid] = { ...hwData.scores[sid], ...scores[sid] };
+                        }
+                    } else {
+                        hwData = {
+                            id: hwId,
+                            teacherId: TEACHER_ID,
+                            groupId: targetGroupId,
+                            name: `واجب ${targetDate}`,
+                            date: targetDate,
+                            scores,
+                            type: 'daily'
+                        };
+                    }
 
-                console.log("📝 Queuing homework save:", {
-                    path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/assignments/${hwId}`,
-                    localId: hwId,
-                    studentsCount: Object.keys(scores).length
-                });
-
-                promises.push(putToDB('assignments', hwData));
-                promises.push(
-                    addToSyncQueue({
-                        type: 'set',
+                    console.log("📝 Queuing homework save:", {
                         path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/assignments/${hwId}`,
-                        data: hwData
-                    })
-                );
+                        localId: hwId,
+                        studentsCount: Object.keys(scores).length
+                    });
+
+                    promises.push(putToDB('assignments', hwData));
+                    promises.push(
+                        addToSyncQueue({
+                            type: 'set',
+                            path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/assignments/${hwId}`,
+                            data: hwData
+                        })
+                    );
+                }
             }
         }
 
