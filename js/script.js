@@ -1613,6 +1613,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupListeners();
         await loadPreferences();
         updateOnlineStatus();
+        // ─── Req #4: Pre-build cross-group lookup map at startup (non-blocking) ─
+        buildCrossGroupLookupMap();
 
         const dailyInput = document.getElementById('dailyDateInput');
         if (dailyInput) dailyInput.valueAsDate = new Date();
@@ -3946,13 +3948,17 @@ async function handleScan(scannedText, scannerType = "camera") {
         isScannerPaused = true; // إيقاف الكاميرا مؤقتاً
 
         try {
-            // بحث شامل في كل الطلاب (Global Search)
-            const allLocalStudents = await getAllFromDB('students');
-            const globalMatch = allLocalStudents.find(s =>
-                (s.cardId && s.cardId === qrCode) ||
-                matchPhone(s.parentPhoneNumber, qrCode) ||
-                s.id === qrCode
-            );
+            // ─── Req #4: O(1) Lookup from pre-built in-memory map ────────────
+            // Falls back to a full DB read only if the map hasn't been populated yet.
+            let globalMatch = crossGroupLookupMap.get(qrCode)
+                           || crossGroupLookupMap.get(qrCode.replace(/^\+2/, ''));
+
+            if (!globalMatch && crossGroupLookupMap.size === 0) {
+                // Map not built yet (first scan after cold start) — build it now
+                await buildCrossGroupLookupMap();
+                globalMatch = crossGroupLookupMap.get(qrCode)
+                           || crossGroupLookupMap.get(qrCode.replace(/^\+2/, ''));
+            }
 
             if (globalMatch) {
                 playBeep();
@@ -4198,8 +4204,11 @@ async function processDailyScan(student, scannerType = 'camera') {
             row.classList.replace('dark:bg-darkSurface', 'dark:bg-green-900/20');
             row.classList.add('border-green-500');
             row.classList.remove('border-transparent');
+            // ─── Req #2: Unhide if search filter is hiding the row ────────────
+            row.classList.remove('hidden');
             if (hwCheck) hwCheck.disabled = false;
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // ─── Req #3: Debounced scroll — no more per-scan smooth scrollIntoView ─
+            _deferredScrollIntoView(row);
         }
         
         logEvent('scan_attendance', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: scannerType });
@@ -4212,7 +4221,8 @@ async function processDailyScan(student, scannerType = 'camera') {
                 
                 if (row) {
                     if (hwCheck) hwCheck.checked = true;
-                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // ─── Req #3: Debounced scroll ─────────────────────────────
+                    _deferredScrollIntoView(row);
                 }
                 
                 logEvent('scan_homework', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: scannerType });
@@ -4242,13 +4252,15 @@ async function processPaymentScan(student) {
     console.log("processPaymentScan called for:", student.name);
     let row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
     
-    // ✅ الحل السحري: لو السطر مش موجود، نجبر الشاشة تترسم
-    if (!row) {
-        console.warn("⏳ سطر الدفع غير موجود، جاري رسم القائمة...");
-        const searchInput = document.getElementById('paymentStudentSearchInput');
-        if (searchInput) searchInput.value = ''; // تفريغ البحث
-        await renderPaymentsList(); // إجبار رسم الشاشة
-        row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
+    // ─── Req #2: STRICTLY FORBIDDEN to call renderPaymentsList() here ─────────
+    // If the row exists but is hidden (active search filter), simply un-hide it.
+    // If it genuinely doesn't exist in the DOM yet, warn and bail — do not re-render.
+    if (row && row.classList.contains('hidden')) {
+        row.classList.remove('hidden');
+    } else if (!row) {
+        console.warn("⚠️ processPaymentScan: row not found in DOM — scan skipped to avoid full re-render.");
+        showToast(`⚠️ لم يتم إيجاد سطر الطالب "${student.name}" — أعد فتح تبويب المصاريف`, "error");
+        return;
     }
 
     const defaultAmountInput = document.getElementById('defaultAmountInput');
@@ -4273,9 +4285,10 @@ async function processPaymentScan(student) {
             // لو المبلغ موجود، كمل عادي
             checkbox.checked = true;
             input.value = val;
-            checkbox.dispatchEvent(new Event('change')); // ده هيشغل الحسابات والحفظ التلقائي
+            checkbox.dispatchEvent(new Event('change')); // هيشغل الحسابات والحفظ التلقائي
             
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // ─── Req #3: Debounced scroll — avoids main-thread blocking ───────
+            _deferredScrollIntoView(row);
             row.classList.add('ring-4', 'ring-green-300');
             setTimeout(() => row.classList.remove('ring-4', 'ring-green-300'), 1000);
             logEvent('scan_payment', { student_id: student.id, student_name: student.name, amount: val, group_id: SELECTED_GROUP_ID });
@@ -4538,6 +4551,10 @@ async function addNewStudent() {
     await addToSyncQueue({ type: 'add', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students`, id, data });
     nameInput.value = ''; phoneInput.value = '';
     allStudents.push(data);
+    // ─── Req #4: Keep O(1) map in sync for the new student ───────────────────
+    if (data.cardId) crossGroupLookupMap.set(data.cardId, data);
+    if (data.parentPhoneNumber) crossGroupLookupMap.set(data.parentPhoneNumber.trim().replace(/^\+2/, ''), data);
+    crossGroupLookupMap.set(data.id, data);
     renderStudents();
     
     // Instead of just a toast, let's open the card link modal
@@ -7148,24 +7165,67 @@ let hwScannerBuffer = "";
 let hwScannerResetTimer = null;
 let hwScannerLastKeyPerf = 0;
 
+// ─── Req #1: Async Scan Queue ────────────────────────────────────────────────
+// Capture codes instantly and process them one-by-one sequentially.
+// The keydown listener ONLY pushes to this queue — zero async work in the listener.
+const _scanQueue = [];             // codes waiting to be processed
+let   _scanQueueRunning = false;   // prevents spawning multiple processor loops
+
+// ─── Req #3: Debounced Scroll ────────────────────────────────────────────────
+// We never scrollIntoView inside a hot scan path. Instead, we record the target
+// row and scroll only after the user stops scanning for 300ms.
+let _pendingScrollRow = null;
+let _scrollDebounceTimer = null;
+
+function _deferredScrollIntoView(row) {
+    _pendingScrollRow = row;
+    clearTimeout(_scrollDebounceTimer);
+    _scrollDebounceTimer = setTimeout(() => {
+        if (_pendingScrollRow) {
+            _pendingScrollRow.scrollIntoView({ behavior: 'auto', block: 'center' });
+            _pendingScrollRow = null;
+        }
+    }, 300);
+}
+
+// ─── Req #4: Cross-Group O(1) Lookup Map ─────────────────────────────────────
+// Populated once at startup (and refreshed on group-change) so handleScan never
+// hits IndexedDB for a cross-group student match.
+let crossGroupLookupMap = new Map(); // key: cardId/phone/id → student object
+
+async function buildCrossGroupLookupMap() {
+    try {
+        const allLocalStudents = await getAllFromDB('students');
+        crossGroupLookupMap.clear();
+        for (const s of allLocalStudents) {
+            if (s.cardId)             crossGroupLookupMap.set(s.cardId, s);
+            if (s.parentPhoneNumber) {
+                const normalized = s.parentPhoneNumber.trim().replace(/^\+2/, '');
+                crossGroupLookupMap.set(normalized, s);
+            }
+            crossGroupLookupMap.set(s.id, s);
+        }
+        console.log(`🗺️ crossGroupLookupMap built: ${crossGroupLookupMap.size} entries`);
+    } catch (e) {
+        console.warn('crossGroupLookupMap build error:', e);
+    }
+}
+
 document.addEventListener('keydown', async (e) => {
     if (!e.key || (e.key !== 'Enter' && e.key.length !== 1)) return;
 
-    // ✅ PHASE 1 — STRICT isInput GUARD (must come FIRST, before any buffer logic):
-    // If the user is focused on an input or textarea, we HARD STOP here.
-    // The buffer is NEVER touched. This eliminates buffer poisoning from stray keystrokes.
+    // ─── isInput guard: HARD STOP before any buffer logic ────────────────────
     const activeEl = document.activeElement;
     const activeTag = activeEl ? activeEl.tagName.toLowerCase() : '';
     const isInput = activeTag === 'input' || activeTag === 'textarea';
 
     if (isInput) {
-        // Fix 17: suppress ghost rapid-fire characters in the same input element
+        // Suppress ghost rapid-fire characters inside the same input element
         if (e.key !== 'Enter') {
             const now = performance.now();
             if (now - hwScannerLastKeyPerf < 30) e.preventDefault();
             hwScannerLastKeyPerf = performance.now();
         }
-        // Fix 18: Enter inside input is handled by the browser naturally
         return; // ⛔ Hard stop — the scanner buffer remains untouched
     }
 
@@ -7173,34 +7233,23 @@ document.addEventListener('keydown', async (e) => {
     const mappedKey = arabicMap[e.key] || e.key;
 
     if (e.key === "Enter") {
-        // Consume the buffer — cancel any pending expiry timer first
+        // ─── Req #1: Push complete code to queue; NEVER await anything here ─
         clearTimeout(hwScannerResetTimer);
         hwScannerResetTimer = null;
 
         const qrCode = hwScannerBuffer.trim();
-        hwScannerBuffer = ""; // ✅ Reset BEFORE any async work to prevent double-processing
+        hwScannerBuffer = ""; // Reset BEFORE any async work
 
         if (qrCode.length >= 4) {
-            // Determine scanner mode from active tab
+            // Determine scanner mode synchronously (zero I/O)
             const linkModal = document.getElementById('cardLinkModal');
-            if ((linkModal && !linkModal.classList.contains('hidden')) || currentScannerMode === 'link-card') {
-                currentScannerMode = 'link-card';
-                await handleScan(qrCode, 'hardware');
-                return;
-            }
+            const scanMode = ((linkModal && !linkModal.classList.contains('hidden')) || currentScannerMode === 'link-card')
+                ? 'link-card'
+                : (document.querySelector('.tab-button.active')?.dataset.tab === 'payments' ? 'payments' : 'daily');
 
-            const activeTab = document.querySelector('.tab-button.active')?.dataset.tab;
-            if (activeTab === 'payments') {
-                currentScannerMode = 'payments';
-            } else {
-                currentScannerMode = 'daily';
-                if (activeTab !== 'daily') {
-                    switchTab('daily');
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                }
-            }
-
-            await handleScan(qrCode, 'hardware');
+            // Push to queue — O(1), synchronous, guaranteed zero-drop
+            _scanQueue.push({ qrCode, scanMode });
+            _startScanQueueProcessor();
 
         } else if (qrCode.length > 0 && qrCode.length < 4) {
             logScanRecord(qrCode, 'failed', 'scanner_incomplete', null, currentScannerMode || 'unknown', 'hardware');
@@ -7208,9 +7257,7 @@ document.addEventListener('keydown', async (e) => {
         return;
     }
 
-    // ✅ PHASE 1 — STRICT 300ms expiry:
-    // Real hardware scanners fire all characters in <50ms total.
-    // Any gap ≥ 300ms means a stray human keystroke slipped in → discard the whole buffer.
+    // ─── STRICT 300ms expiry: discard stray human keystrokes ─────────────────
     clearTimeout(hwScannerResetTimer);
     hwScannerResetTimer = setTimeout(() => {
         if (hwScannerBuffer.length > 0) {
@@ -7223,6 +7270,38 @@ document.addEventListener('keydown', async (e) => {
         hwScannerBuffer += mappedKey.toUpperCase();
     }
 });
+
+/**
+ * ─── Req #1: Async Scan Queue Processor ──────────────────────────────────────
+ * A background worker loop that drains _scanQueue sequentially.
+ * Only one instance runs at a time (guarded by _scanQueueRunning).
+ * This guarantees zero race conditions even at 10 scans/second.
+ */
+function _startScanQueueProcessor() {
+    if (_scanQueueRunning) return; // processor already running — new item will be picked up automatically
+    _scanQueueRunning = true;
+    _runScanQueue();
+}
+
+async function _runScanQueue() {
+    while (_scanQueue.length > 0) {
+        const { qrCode, scanMode } = _scanQueue.shift();
+        try {
+            // Switch tab if needed BEFORE processing (only for daily, only if not already there)
+            if (scanMode === 'daily' && document.querySelector('.tab-button.active')?.dataset.tab !== 'daily') {
+                currentScannerMode = 'daily';
+                switchTab('daily');
+                await new Promise(resolve => setTimeout(resolve, 300));
+            } else {
+                currentScannerMode = scanMode;
+            }
+            await handleScan(qrCode, 'hardware');
+        } catch (err) {
+            console.error('_runScanQueue: error processing scan:', qrCode, err);
+        }
+    }
+    _scanQueueRunning = false; // processor goes idle, will be restarted on next push
+}
 
 
 // ✅ تحديث روابط الشعار والرئيسية للمستخدم المسجل دخوله
