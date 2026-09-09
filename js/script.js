@@ -355,7 +355,7 @@ let isSyncing = false;
 let syncRetryCount = 0;
 let currentScannerMode = null, isScannerPaused = false, videoElement, animationFrameId;
 let sessionScannedStudents = new Set();
-let hasHomeworkToday = false, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
+let hasHomeworkToday = true, currentPendingStudentId = null, currentCrossGroupStudent = null, currentMessageStudentId = null, saveTimeout = null, groupAnalyticsChartInstance = null, groupHomeworkChartInstance = null;
 
 // ✅ PHASE 2: Memory-as-State — single source of truth for the current session
 // Structure: liveSessionData.attendance = { studentId: { status, time } }
@@ -2584,7 +2584,7 @@ function deduplicateStudents(students) {
 async function loadGroupData() {
     // FIX #6: Reset all global state to prevent cross-group data pollution
     allStudents = [];
-    hasHomeworkToday = false;
+    hasHomeworkToday = true;
     currentPendingStudentId = null;
 
     // Clear all student search inputs when switching groups
@@ -3302,23 +3302,21 @@ async function renderDailyList(filter = "") {
             });
         }
 
-        if (hwDoc?.scores) {
-            const hwToggle = document.getElementById('homeworkToggle');
-            if (hwToggle) {
-                hwToggle.disabled = hasAnySubmitted; // ✅ تجميد الزرار فقط لو فيه أي حد مسلم الواجب فعلياً
-            }
+        const hwToggle = document.getElementById('homeworkToggle');
+        if (hwToggle) {
+            // Always keep enabled so teachers can correct mistakes
+            hwToggle.disabled = false;
+            // Sync the DOM checkbox state with the JS state
+            hwToggle.checked = hasHomeworkToday;
+        }
 
-            // تفعيل الواجب تلقائياً لو فيه داتا محفوظة حقيقية
-            if (!hasHomeworkToday && hasAnySubmitted) {
-                hasHomeworkToday = true;
-                if (hwToggle) hwToggle.checked = true;
-                if (hStudent) hStudent.className = "col-span-6 transition-all duration-300";
-                if (hAtt) hAtt.className = "col-span-3 text-center transition-all duration-300";
-                if (hHw) hHw.classList.remove('hidden');
-            }
-        } else {
-            const hwToggle = document.getElementById('homeworkToggle');
-            if (hwToggle) hwToggle.disabled = false;
+        // If DB data shows someone submitted, ensure state is ON
+        if (hwDoc?.scores && !hasHomeworkToday && hasAnySubmitted) {
+            hasHomeworkToday = true;
+            if (hwToggle) hwToggle.checked = true;
+            if (hStudent) hStudent.className = "col-span-6 transition-all duration-300";
+            if (hAtt) hAtt.className = "col-span-3 text-center transition-all duration-300";
+            if (hHw) hHw.classList.remove('hidden');
         }
 
         let presentCount = 0;
