@@ -1613,8 +1613,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupListeners();
         await loadPreferences();
         updateOnlineStatus();
-        // ─── Req #4: Pre-build cross-group lookup map at startup (non-blocking) ─
-        buildCrossGroupLookupMap();
 
         const dailyInput = document.getElementById('dailyDateInput');
         if (dailyInput) dailyInput.valueAsDate = new Date();
@@ -2301,6 +2299,7 @@ async function loginTeacher() {
         if (TEACHER_CENTER_ID) localStorage.setItem('learnaria-cid', TEACHER_CENTER_ID);
         updateHomeLinks();
         loadChatHistory(); // ✅ PHASE 1: Load Chat History on manual login
+        buildCrossGroupLookupMap(); // ─── Req #4: Build after auth — guaranteed permissions
         
         // Sentry: تسجيل هوية المستخدم لربط الأخطاء بحسابه
         if (typeof Sentry !== 'undefined') {
@@ -5311,6 +5310,7 @@ async function loadPreferences() {
         TEACHER_ID = storedID;
         updateHomeLinks();
         loadChatHistory(); // ✅ PHASE 1: Load Chat History on auto-login
+        buildCrossGroupLookupMap(); // ─── Req #4: Build after auth — guaranteed permissions
         document.getElementById('landingSection').classList.add('hidden');
         document.getElementById('logoutButton').classList.remove('hidden');
         document.getElementById('navHomeButton')?.classList.add('hidden');
