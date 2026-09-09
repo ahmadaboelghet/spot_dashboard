@@ -3291,12 +3291,15 @@ async function renderDailyList(filter = "") {
             // Seed with defaults for all students in group, override with DB data
             allStudents.forEach(s => {
                 const attRec = attMap[s.id] || {};
+                const attStatus = typeof attRec === 'string' ? attRec : (attRec.status || 'absent');
                 liveSessionData.attendance[s.id] = {
-                    status: typeof attRec === 'string' ? attRec : (attRec.status || 'absent'),
+                    status: attStatus,
                     time: attRec.time || null
                 };
+                // ✅ Fix: homework can only be submitted if the student is present
+                const hwSubmittedFromDB = (hwMap[s.id] || false) && attStatus === 'present';
                 liveSessionData.homework[s.id] = {
-                    submitted: hwMap[s.id] || false,
+                    submitted: hwSubmittedFromDB,
                     score: hwDoc?.scores?.[s.id]?.score || null
                 };
             });
