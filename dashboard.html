@@ -404,6 +404,34 @@
                     </button>
                 </div>
                 
+                <!-- 🎯 Smart Scanning Section -->
+                <div class="flex flex-col items-center gap-4 w-full">
+                    
+                    <!-- 📸 Camera Scanner Button -->
+                    <button onclick="startScanner('daily')" 
+                            class="w-full md:max-w-md bg-gradient-to-r from-brand to-yellow-500 text-black font-black py-4 px-6 rounded-2xl shadow-lg shadow-brand/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 animate-pulse-slow">
+                        <i class="ri-qr-scan-2-line text-2xl"></i>
+                        <span class="text-lg">التعرف التلقائي بالكاميرا</span>
+                    </button>
+
+                    <!-- 🔌 Hardware Scanner Indicator -->
+                    <div class="w-full md:max-w-md bg-white/60 dark:bg-black/40 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl py-3 px-5 flex items-center justify-center gap-3">
+                        <div class="relative flex h-3 w-3">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </div>
+                        <i class="ri-barcode-box-line text-xl text-gray-500 dark:text-gray-400"></i>
+                        <span class="text-sm font-bold text-gray-700 dark:text-gray-300">جهاز الـ Scanner جاهز.. امسح الكارت الآن!</span>
+                    </div>
+
+                    <!-- ➖ Visual Divider -->
+                    <div class="w-full flex items-center opacity-50 pt-2 pb-4">
+                        <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+                        <span class="mx-4 text-sm font-bold text-gray-600 dark:text-gray-300">أو اختر المجموعة يدوياً</span>
+                        <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+                    </div>
+                </div>
+                
                 <div id="promptGroupCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                     <!-- Loaded dynamically via script.js -->
                 </div>
@@ -2112,7 +2140,7 @@
     <!-- ✅ Cross-Group Targeted Attendance Modal -->
     <div id="crossGroupAttendanceModal"
         class="hidden fixed inset-0 z-[3000] flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm">
-        <div class="bg-white dark:bg-darkSurface w-full md:max-w-md rounded-t-3xl md:rounded-3xl shadow-2xl p-6 animate-fadeInUp">
+        <div class="bg-white dark:bg-darkSurface w-full md:max-w-md rounded-t-3xl md:rounded-3xl shadow-2xl p-6 animate-fadeInUp max-h-[90vh] overflow-y-auto">
 
             <!-- Header -->
             <div class="flex items-center gap-4 mb-5">
@@ -2120,44 +2148,72 @@
                     <i class="ri-user-location-line"></i>
                 </div>
                 <div>
-                    <p class="text-xs font-bold text-orange-500 uppercase tracking-wider">حضور من مجموعة أخرى</p>
+                    <p class="text-xs font-bold text-orange-500 uppercase tracking-wider">طالب من مجموعة أخرى</p>
                     <h3 class="text-xl font-black text-gray-900 dark:text-white" id="cgModal_studentName">اسم الطالب</h3>
                     <p class="text-sm text-gray-400 font-medium" id="cgModal_groupName">المجموعة الأصلية</p>
                 </div>
             </div>
 
-            <hr class="border-gray-100 dark:border-white/10 mb-5">
+            <!-- ═══ Section 1: Smart Group Switch ════════════════════════════ -->
+            <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-4 mb-4 relative overflow-hidden">
+                <!-- Scanner pulse bg effect -->
+                <div class="absolute -right-4 top-1/2 -translate-y-1/2 w-24 h-24 bg-green-500/10 rounded-full blur-2xl animate-pulse"></div>
 
-            <!-- Date Selection -->
-            <div class="mb-4">
-                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                    <i class="ri-calendar-check-line ml-1 text-orange-400"></i>
-                    اختر جلسة / تاريخ التسجيل
-                </label>
+                <p class="text-xs font-black text-green-700 dark:text-green-400 uppercase tracking-wider mb-2 flex items-center">
+                    <i class="ri-swap-2-line ml-1"></i>تحويل الحصة
+                </p>
+                
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
+                    نسيت تغيير المجموعة؟ اضغط الزر بالأسفل لتحويل الحصة الحالية لمجموعة هذا الطالب وتسجيل حضوره تلقائياً.
+                </p>
+                
+                <button id="cgModal_switchBtn" onclick="window.switchGroupAndScan()"
+                    class="relative w-full flex items-center justify-center gap-2 py-3 px-4 bg-green-500 hover:bg-green-600 active:scale-95 text-white font-black rounded-xl transition-all shadow-lg shadow-green-200 dark:shadow-none mb-3 z-10">
+                    <i class="ri-arrow-left-right-line text-lg"></i>
+                    <span id="cgModal_switchBtnLabel">تحويل الحصة للمجموعة</span>
+                </button>
+
+                <!-- 💡 Double-Scan Hint -->
+                <div class="flex items-start gap-2 text-[11px] font-bold text-green-600 dark:text-green-400 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-green-100 dark:border-green-800/50">
+                    <i class="ri-qr-scan-2-line mt-0.5 animate-pulse"></i>
+                    <p>💡 <span class="opacity-80">اختصار الكاميرا:</span> <strong>امسح نفس الكارت مرة أخرى الآن</strong> للتحويل الفوري بدون لمس الشاشة!</p>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="flex items-center gap-3 opacity-50 mb-4">
+                <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+                <span class="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">أو سجّل في جلسة محددة</span>
+                <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+            </div>
+
+            <!-- ═══ Section 2: Make-up / Advance Attendance ═══════════════════ -->
+            <div class="space-y-3 mb-5">
+                <p class="text-xs font-black text-orange-500 uppercase tracking-wider">
+                    <i class="ri-calendar-check-line ml-1"></i>حضور تعويضي / مسبق
+                </p>
+
+                <!-- Date Selection Dropdown -->
                 <select id="cgModal_dateSelect"
                     class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-orange-400 transition-colors">
                     <option value="">⏳ جاري تحميل الجلسات...</option>
                 </select>
-            </div>
 
-            <!-- Custom Date (revealed when "custom" selected) -->
-            <div id="cgModal_customDateWrapper" class="hidden mb-4">
-                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                    <i class="ri-calendar-line ml-1 text-blue-400"></i>
-                    أدخل تاريخ مخصص (حضور مسبق)
+                <!-- Custom Date (revealed when "custom" selected) -->
+                <div id="cgModal_customDateWrapper" class="hidden">
+                    <input type="date" id="cgModal_customDateInput"
+                        class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-blue-400 transition-colors">
+                </div>
+
+                <!-- Homework Checkbox -->
+                <label class="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                    <input type="checkbox" id="cgModal_hwCheckbox" class="w-5 h-5 accent-brand rounded">
+                    <span class="text-sm font-bold text-gray-700 dark:text-gray-300">
+                        <i class="ri-book-2-line ml-1 text-blue-500"></i>
+                        الطالب سلّم الواجب
+                    </span>
                 </label>
-                <input type="date" id="cgModal_customDateInput"
-                    class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-blue-400 transition-colors">
             </div>
-
-            <!-- Homework Checkbox -->
-            <label class="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl mb-5 border border-blue-100 dark:border-blue-800">
-                <input type="checkbox" id="cgModal_hwCheckbox" class="w-5 h-5 accent-brand rounded">
-                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">
-                    <i class="ri-book-2-line ml-1 text-blue-500"></i>
-                    الطالب سلّم الواجب
-                </span>
-            </label>
 
             <!-- Action Buttons -->
             <div class="grid grid-cols-2 gap-3">
@@ -2173,6 +2229,7 @@
             </div>
         </div>
     </div>
+
 
     <div id="cardLinkModal" class="fixed inset-0 hidden flex items-center justify-center p-4" style="z-index: 100;">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCardLinkModal()"></div>

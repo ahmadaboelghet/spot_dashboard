@@ -3941,6 +3941,30 @@ async function handleScan(scannedText, scannerType = "camera") {
     };
 
     // ──────────────────────────────────────────────────────────────────────────
+    // ✅ NEW: State Interception (The Double-Scan Trick for Fast Group Switch)
+    // ──────────────────────────────────────────────────────────────────────────
+    const cgModal = document.getElementById('crossGroupAttendanceModal');
+    if (cgModal && !cgModal.classList.contains('hidden') && _cgModal_student) {
+        // Modal is open, check if the scanned text belongs to the pending student
+        const isSameStudent = (_cgModal_student.id === qrCode) ||
+                              (_cgModal_student.cardId && _cgModal_student.cardId === qrCode) ||
+                              matchPhone(_cgModal_student.parentPhoneNumber, qrCode);
+        
+        if (isSameStudent) {
+            playBeep();
+            // Hot-Key confirmed! Switch group and scan.
+            console.log("⚡ Double-scan detected. Switching group via Hot-Key...");
+            if (typeof window.switchGroupAndScan === 'function') {
+                await window.switchGroupAndScan();
+            }
+        } else {
+            // Scanned someone else while modal is open
+            showToast('⚠️ يرجى تأكيد تحويل المجموعة أولاً أو إغلاق النافذة', 'warning');
+        }
+        return; // Halt further execution in all cases while modal is open
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // ✅ TASK 1: Auto-Group Selection
     // If no group is selected yet, look up the student and auto-select their group.
     // ──────────────────────────────────────────────────────────────────────────
@@ -4154,18 +4178,19 @@ let _cgModal_student = null;
 async function openCrossGroupModal(student) {
     _cgModal_student = student;
 
-    const modal = document.getElementById('crossGroupAttendanceModal');
-    const nameEl  = document.getElementById('cgModal_studentName');
-    const grpEl   = document.getElementById('cgModal_groupName');
-    const dateSelect = document.getElementById('cgModal_dateSelect');
-    const hwBox   = document.getElementById('cgModal_hwCheckbox');
+    const modal        = document.getElementById('crossGroupAttendanceModal');
+    const nameEl       = document.getElementById('cgModal_studentName');
+    const grpEl        = document.getElementById('cgModal_groupName');
+    const dateSelect   = document.getElementById('cgModal_dateSelect');
+    const hwBox        = document.getElementById('cgModal_hwCheckbox');
     const customWrapper = document.getElementById('cgModal_customDateWrapper');
-    const customInput   = document.getElementById('cgModal_customDateInput');
+    const customInput  = document.getElementById('cgModal_customDateInput');
+    const switchLabel  = document.getElementById('cgModal_switchBtnLabel');
 
     if (!modal) return;
 
     // Populate header
-    nameEl.textContent  = student.name || '—';
+    nameEl.textContent = student.name || '—';
 
     // Fetch group name from IndexedDB
     let groupName = 'مجموعة أخرى';
@@ -4174,6 +4199,9 @@ async function openCrossGroupModal(student) {
         if (groupDoc?.name) groupName = groupDoc.name;
     } catch (_) {}
     grpEl.textContent = groupName;
+
+    // Update Switch button label with real group name
+    if (switchLabel) switchLabel.textContent = `تحويل الحصة إلى: ${groupName}`;
 
     // Reset controls
     hwBox.checked = false;
@@ -4196,7 +4224,7 @@ async function openCrossGroupModal(student) {
         } else {
             groupSessions.forEach(session => {
                 const opt = document.createElement('option');
-                opt.value   = session.date;
+                opt.value       = session.date;
                 opt.textContent = `📅 ${session.date}`;
                 dateSelect.appendChild(opt);
             });
@@ -4204,7 +4232,7 @@ async function openCrossGroupModal(student) {
 
         // Always add "Custom Date" option at the end
         const customOpt = document.createElement('option');
-        customOpt.value = '__custom__';
+        customOpt.value       = '__custom__';
         customOpt.textContent = '✏️ إدخال تاريخ مخصص (حضور مسبق)';
         dateSelect.appendChild(customOpt);
 
@@ -4238,6 +4266,66 @@ window.closeCrossGroupModal = function () {
         if (typeof tickScanner === 'function') requestAnimationFrame(tickScanner);
     }, 300);
 };
+
+/**
+ * ─── Smart Group Switch ───────────────────────────────────────────────────────
+ * Teacher clicked "Switch Session to [Group]".
+ * 1. Close the modal immediately.
+ * 2. Switch the active group to the student's group (flushes pending saves etc.).
+ * 3. Wait 600ms for renderDailyList to complete.
+ * 4. Re-process the student as a normal daily scan in the new group context.
+ */
+window.switchGroupAndScan = async function () {
+    const student = _cgModal_student;
+    if (!student) return;
+
+    const switchBtn = document.getElementById('cgModal_switchBtn');
+    if (switchBtn) { switchBtn.disabled = true; switchBtn.innerHTML = '<i class="ri-loader-4-line animate-spin text-lg"></i>'; }
+
+    try {
+        // Close modal first so UI isn't blocked
+        const modal = document.getElementById('crossGroupAttendanceModal');
+        if (modal) modal.classList.add('hidden');
+        _cgModal_student = null;
+
+        // Switch group — this calls flushPendingSaves, loadGroupData, etc.
+        await window.handleGroupSelectionChange(student.groupId);
+
+        // Wait for renderDailyList and tab switch to fully settle
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // Switch to daily tab explicitly in case it wasn't active
+        if (typeof switchTab === 'function') switchTab('daily');
+        await new Promise(resolve => setTimeout(resolve, 150));
+
+        // Now resume scanner and process attendance normally
+        isScannerPaused = false;
+        currentScannerMode = 'daily';
+
+        // Find the student in the freshly loaded allStudents array
+        const studentInGroup = allStudents.find(s => s.id === student.id);
+        if (studentInGroup) {
+            playBeep();
+            showScanSuccessUI(studentInGroup, 'attendance');
+            logScanRecord(student.id, 'success', null, student.name, 'attendance', 'hardware');
+            checkGoldenTicket(student.name);
+            await processDailyScan(studentInGroup, 'hardware');
+        } else {
+            // Fallback: student not found in allStudents after group switch (shouldn't happen)
+            showToast(`⚠️ لم يتم إيجاد ${student.name} في المجموعة بعد التحويل`, 'error');
+            console.warn('switchGroupAndScan: student not found in allStudents after switch', student);
+        }
+
+        logEvent('cross_group_smart_switch', { student_id: student.id, new_group: student.groupId });
+
+    } catch (err) {
+        console.error('switchGroupAndScan error:', err);
+        showToast('❌ حدث خطأ أثناء تحويل المجموعة', 'error');
+        isScannerPaused = false;
+    }
+};
+
+
 
 /**
  * Called when the teacher clicks "Confirm".
