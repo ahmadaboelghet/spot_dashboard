@@ -2393,8 +2393,22 @@ async function loadGroups() {
                     await putToDB('groups', g);
                 }
                 renderGroupsDropdown(remoteGroups);
+
+                // TASK 3: Background Hydration - Prefetch all students for cross-group scanning cache
+                const studentPromises = remoteGroups.map(async (g) => {
+                    const stuSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${g.id}/students`).get();
+                    return stuSnap.docs.map(d => ({ id: d.id, groupId: g.id, ...d.data() }));
+                });
+                
+                const allSyncedStudentsArrays = await Promise.all(studentPromises);
+                const allSyncedStudents = allSyncedStudentsArrays.flat();
+                
+                if (allSyncedStudents.length > 0) {
+                    await putAllToDB('students', allSyncedStudents);
+                    await buildCrossGroupLookupMap();
+                }
             } catch (e) {
-                console.error("Failed to sync groups:", e);
+                console.error("Failed to sync groups and students:", e);
             }
         })();
     }
@@ -3923,6 +3937,9 @@ async function handleScan(scannedText, scannerType = "camera") {
     qrCode = qrCode.replace(/^https?:\/\//i, '').replace(/^URL:/i, '');
     const urlMatch = qrCode.match(/s=([^&]+)/);
     if (urlMatch) qrCode = urlMatch[1];
+    
+    // TASK 1: Fix Case Sensitivity (hardware scanners sometimes send lowercase)
+    qrCode = qrCode.toUpperCase();
 
     // 🛑 Mode: Card Linking
     if (currentScannerMode === 'link-card') {
@@ -3946,8 +3963,8 @@ async function handleScan(scannedText, scannerType = "camera") {
     const cgModal = document.getElementById('crossGroupAttendanceModal');
     if (cgModal && !cgModal.classList.contains('hidden') && _cgModal_student) {
         // Modal is open, check if the scanned text belongs to the pending student
-        const isSameStudent = (_cgModal_student.id === qrCode) ||
-                              (_cgModal_student.cardId && _cgModal_student.cardId === qrCode) ||
+        const isSameStudent = (_cgModal_student.id && _cgModal_student.id.toUpperCase() === qrCode) ||
+                              (_cgModal_student.cardId && _cgModal_student.cardId.toUpperCase() === qrCode) ||
                               matchPhone(_cgModal_student.parentPhoneNumber, qrCode);
         
         if (isSameStudent) {
@@ -3991,9 +4008,9 @@ async function handleScan(scannedText, scannerType = "camera") {
 
     // 1. Search in the current group (highest priority)
     const matchedStudents = allStudents.filter(s =>
-        (s.cardId && s.cardId === qrCode) ||
+        (s.cardId && s.cardId.toUpperCase() === qrCode) ||
         matchPhone(s.parentPhoneNumber, qrCode) ||
-        s.id === qrCode
+        (s.id && s.id.toUpperCase() === qrCode)
     );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -7503,12 +7520,12 @@ async function buildCrossGroupLookupMap() {
         const allLocalStudents = await getAllFromDB('students');
         crossGroupLookupMap.clear();
         for (const s of allLocalStudents) {
-            if (s.cardId)             crossGroupLookupMap.set(s.cardId, s);
+            if (s.cardId) crossGroupLookupMap.set(s.cardId.toUpperCase().trim(), s);
             if (s.parentPhoneNumber) {
                 const normalized = s.parentPhoneNumber.trim().replace(/^\+2/, '');
                 crossGroupLookupMap.set(normalized, s);
             }
-            crossGroupLookupMap.set(s.id, s);
+            if (s.id) crossGroupLookupMap.set(s.id.toUpperCase().trim(), s);
         }
         console.log(`🗺️ crossGroupLookupMap built: ${crossGroupLookupMap.size} entries`);
     } catch (e) {
