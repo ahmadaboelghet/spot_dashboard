@@ -2109,6 +2109,71 @@
     </div>
 
     <!-- 🔗 Card Link Modal -->
+    <!-- ✅ Cross-Group Targeted Attendance Modal -->
+    <div id="crossGroupAttendanceModal"
+        class="hidden fixed inset-0 z-[3000] flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div class="bg-white dark:bg-darkSurface w-full md:max-w-md rounded-t-3xl md:rounded-3xl shadow-2xl p-6 animate-fadeInUp">
+
+            <!-- Header -->
+            <div class="flex items-center gap-4 mb-5">
+                <div class="w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-900/30 text-orange-500 flex items-center justify-center text-2xl flex-shrink-0">
+                    <i class="ri-user-location-line"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-orange-500 uppercase tracking-wider">حضور من مجموعة أخرى</p>
+                    <h3 class="text-xl font-black text-gray-900 dark:text-white" id="cgModal_studentName">اسم الطالب</h3>
+                    <p class="text-sm text-gray-400 font-medium" id="cgModal_groupName">المجموعة الأصلية</p>
+                </div>
+            </div>
+
+            <hr class="border-gray-100 dark:border-white/10 mb-5">
+
+            <!-- Date Selection -->
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="ri-calendar-check-line ml-1 text-orange-400"></i>
+                    اختر جلسة / تاريخ التسجيل
+                </label>
+                <select id="cgModal_dateSelect"
+                    class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-orange-400 transition-colors">
+                    <option value="">⏳ جاري تحميل الجلسات...</option>
+                </select>
+            </div>
+
+            <!-- Custom Date (revealed when "custom" selected) -->
+            <div id="cgModal_customDateWrapper" class="hidden mb-4">
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="ri-calendar-line ml-1 text-blue-400"></i>
+                    أدخل تاريخ مخصص (حضور مسبق)
+                </label>
+                <input type="date" id="cgModal_customDateInput"
+                    class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-blue-400 transition-colors">
+            </div>
+
+            <!-- Homework Checkbox -->
+            <label class="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl mb-5 border border-blue-100 dark:border-blue-800">
+                <input type="checkbox" id="cgModal_hwCheckbox" class="w-5 h-5 accent-brand rounded">
+                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">
+                    <i class="ri-book-2-line ml-1 text-blue-500"></i>
+                    الطالب سلّم الواجب
+                </span>
+            </label>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="window.closeCrossGroupModal()"
+                    class="py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    إلغاء
+                </button>
+                <button id="cgModal_confirmBtn" onclick="window.confirmCrossGroupAttendance()"
+                    class="py-3 rounded-xl font-black text-white bg-orange-500 hover:bg-orange-600 transition-colors shadow-lg shadow-orange-200 dark:shadow-none flex items-center justify-center gap-2">
+                    <i class="ri-check-double-line"></i>
+                    تأكيد التسجيل
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="cardLinkModal" class="fixed inset-0 hidden flex items-center justify-center p-4" style="z-index: 100;">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCardLinkModal()"></div>
         <div class="relative bg-white dark:bg-darkSurface rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all border border-gray-100 dark:border-white/5 overflow-hidden">

@@ -3924,7 +3924,7 @@ async function handleScan(scannedText, scannerType = "camera") {
     const urlMatch = qrCode.match(/s=([^&]+)/);
     if (urlMatch) qrCode = urlMatch[1];
 
-    // 🛑 الحالة: ربط الكارت
+    // 🛑 Mode: Card Linking
     if (currentScannerMode === 'link-card') {
         playBeep();
         stopScanner();
@@ -3940,28 +3940,50 @@ async function handleScan(scannedText, scannerType = "camera") {
         return dbPhone.trim().replace(/^\+2/, '') === qrVal.trim().replace(/^\+2/, '');
     };
 
-    const qrUpper = qrCode.toUpperCase();
+    // ──────────────────────────────────────────────────────────────────────────
+    // ✅ TASK 1: Auto-Group Selection
+    // If no group is selected yet, look up the student and auto-select their group.
+    // ──────────────────────────────────────────────────────────────────────────
+    if (!SELECTED_GROUP_ID) {
+        // Ensure map is populated
+        if (crossGroupLookupMap.size === 0) await buildCrossGroupLookupMap();
 
-    // 1. البحث في المجموعة الحالية (الأولوية)
+        const autoMatch = crossGroupLookupMap.get(qrCode)
+                       || crossGroupLookupMap.get(qrCode.replace(/^\+2/, ''));
+
+        if (autoMatch?.groupId) {
+            showToast(`🔄 جاري تحديد المجموعة تلقائياً...`, 'info');
+            await window.handleGroupSelectionChange(autoMatch.groupId);
+            // Wait for tab switch + renderDailyList to finish
+            await new Promise(resolve => setTimeout(resolve, 600));
+            // Re-process the same scan now that the group is loaded
+            await handleScan(scannedText, scannerType);
+            return;
+        } else {
+            showToast(currentLang === 'ar' ? '⚠️ اختر مجموعة أولاً' : '⚠️ Please select a group first', 'error');
+            return;
+        }
+    }
+
+    // 1. Search in the current group (highest priority)
     const matchedStudents = allStudents.filter(s =>
         (s.cardId && s.cardId === qrCode) ||
         matchPhone(s.parentPhoneNumber, qrCode) ||
         s.id === qrCode
     );
 
-    // 🛑 الحالة: الطالب مش في المجموعة دي (Cross-Group Logic)
+    // ──────────────────────────────────────────────────────────────────────────
+    // 🛑 TASK 2: Student NOT in current group → open Cross-Group Modal
+    // ──────────────────────────────────────────────────────────────────────────
     if (matchedStudents.length === 0) {
-
-        isScannerPaused = true; // إيقاف الكاميرا مؤقتاً
+        isScannerPaused = true;
 
         try {
-            // ─── Req #4: O(1) Lookup from pre-built in-memory map ────────────
-            // Falls back to a full DB read only if the map hasn't been populated yet.
+            // O(1) lookup via in-memory map
             let globalMatch = crossGroupLookupMap.get(qrCode)
                            || crossGroupLookupMap.get(qrCode.replace(/^\+2/, ''));
 
             if (!globalMatch && crossGroupLookupMap.size === 0) {
-                // Map not built yet (first scan after cold start) — build it now
                 await buildCrossGroupLookupMap();
                 globalMatch = crossGroupLookupMap.get(qrCode)
                            || crossGroupLookupMap.get(qrCode.replace(/^\+2/, ''));
@@ -3969,61 +3991,31 @@ async function handleScan(scannedText, scannerType = "camera") {
 
             if (globalMatch) {
                 playBeep();
-                const studentId = globalMatch.id;
-                
-                if (!sessionScannedStudents.has(studentId)) {
-                    // أول سكان: حضور
-                    logScanRecord(qrCode, 'success', null, globalMatch.name, 'cross-group-attendance', scannerType);
-                    sessionScannedStudents.add(studentId);
-                    await saveCrossGroupAttendance(globalMatch, false);
-                    
-                    let groupName = "مجموعة أخرى";
-                    const groupDoc = await getFromDB('groups', globalMatch.groupId);
-                    if (groupDoc) groupName = groupDoc.name;
-                    
-                    showToast(`⚠️ ضيف من (${groupName})`, 'warning');
-                    setTimeout(() => showScanSuccessUI(globalMatch, 'attendance'), 800);
-                } else {
-                    // تاني سكان: واجب
-                    logScanRecord(qrCode, 'success', null, globalMatch.name, 'cross-group-homework', scannerType);
-                    if (hasHomeworkToday) {
-                        await saveCrossGroupAttendance(globalMatch, true);
-                        showScanSuccessUI(globalMatch, 'homework');
-                        logEvent('scan_homework', { submitted: true, scan_type: 'cross_group', student_id: studentId });
-                    } else {
-                        showToast(`⚠️ لا يوجد واجب اليوم`, 'warning');
-                    }
-                }
-                
-                // إعادة تشغيل الكاميرا بعد مهلة قصيرة
-                setTimeout(() => {
-                    isScannerPaused = false;
-                    requestAnimationFrame(tickScanner);
-                }, 1500);
+                logScanRecord(qrCode, 'success', null, globalMatch.name, 'cross-group-modal', scannerType);
+                // Open the targeted modal — no phantom records created yet
+                await openCrossGroupModal(globalMatch);
                 return;
+            }
 
-            } else {
-                // كود غير معروف تماماً
-                if (navigator.onLine && qrCode.startsWith('NAZ-')) {
-                    const cardSnap = await firestoreDB.collection('cards').doc(qrCode).get();
-                    if (cardSnap.exists) {
-                        const ownerId = TEACHER_CENTER_ID || TEACHER_ID;
-                        if (cardSnap.data().ownerId && cardSnap.data().ownerId !== ownerId) {
-                            logScanRecord(qrCode, 'failed', 'another_organization', null, 'cross-group', scannerType);
-                            showToast(currentLang === 'ar' ? "⛔ هذا الكارت مسجل في مؤسسة أخرى!" : "⛔ Card belongs to another organization!", "error");
-                        } else {
-                            logScanRecord(qrCode, 'failed', 'unlinked_card', null, 'cross-group', scannerType);
-                            showToast(currentLang === 'ar' ? "⚠️ هذا الكارت غير مربوط بأي طالب حتى الآن!" : "⚠️ Card is not linked to any student yet!", "warning");
-                        }
+            // Completely unknown code
+            if (navigator.onLine && qrCode.startsWith('NAZ-')) {
+                const cardSnap = await firestoreDB.collection('cards').doc(qrCode).get();
+                if (cardSnap.exists) {
+                    const ownerId = TEACHER_CENTER_ID || TEACHER_ID;
+                    if (cardSnap.data().ownerId && cardSnap.data().ownerId !== ownerId) {
+                        logScanRecord(qrCode, 'failed', 'another_organization', null, 'cross-group', scannerType);
+                        showToast(currentLang === 'ar' ? "⛔ هذا الكارت مسجل في مؤسسة أخرى!" : "⛔ Card belongs to another organization!", "error");
                     } else {
-                        logScanRecord(qrCode, 'failed', 'invalid_fake_card', null, 'cross-group', scannerType);
-                        showToast(currentLang === 'ar' ? "❌ كود غير صحيح أو كارت مزيف!" : "❌ Invalid code or fake card!", "error");
+                        logScanRecord(qrCode, 'failed', 'unlinked_card', null, 'cross-group', scannerType);
+                        showToast(currentLang === 'ar' ? "⚠️ هذا الكارت غير مربوط بأي طالب حتى الآن!" : "⚠️ Card is not linked to any student yet!", "warning");
                     }
                 } else {
-                    // Offline or not a card format
-                    logScanRecord(qrCode, 'failed', 'unknown_card', null, 'cross-group', scannerType);
-                    showToast(currentLang === 'ar' ? "الطالب غير موجود" : "Student not found", "error");
+                    logScanRecord(qrCode, 'failed', 'invalid_fake_card', null, 'cross-group', scannerType);
+                    showToast(currentLang === 'ar' ? "❌ كود غير صحيح أو كارت مزيف!" : "❌ Invalid code or fake card!", "error");
                 }
+            } else {
+                logScanRecord(qrCode, 'failed', 'unknown_card', null, 'cross-group', scannerType);
+                showToast(currentLang === 'ar' ? "الطالب غير موجود" : "Student not found", "error");
             }
 
         } catch (err) {
@@ -4032,42 +4024,38 @@ async function handleScan(scannedText, scannerType = "camera") {
             sentryCaptureError(err, { action: "crossGroupScan", groupId: SELECTED_GROUP_ID });
         }
 
-        // إعادة تشغيل الكاميرا بعد مهلة قصيرة
+        // Resume scanner after unknown code
         setTimeout(() => {
             isScannerPaused = false;
             requestAnimationFrame(tickScanner);
         }, 2500);
-
         return;
     }
 
-    // ✅ الحالة الطبيعية: الطالب موجود في المجموعة الحالية
+    // ✅ Normal flow: student is in the current group
     playBeep();
     isScannerPaused = true;
 
-    // منطق التوأم (اختيار من لم يحضر بعد)
+    // Twin paradox: prefer the sibling who hasn't been marked yet
     let studentToMark = matchedStudents[0];
     if (matchedStudents.length > 1) {
         const absentSibling = matchedStudents.find(s => liveSessionData.attendance[s.id]?.status !== 'present');
         if (absentSibling) studentToMark = absentSibling;
     }
 
-    // توجيه حسب الوضع
     if (currentScannerMode === 'daily') {
         showScanSuccessUI(studentToMark, 'attendance');
-        
         let scanType = sessionScannedStudents.has(studentToMark.id) ? 'homework' : 'attendance';
         logScanRecord(qrCode, 'success', null, studentToMark.name, scanType, scannerType);
-
         checkGoldenTicket(studentToMark.name);
         await processDailyScan(studentToMark, scannerType);
-    }
-    else if (currentScannerMode === 'payments') {
+    } else if (currentScannerMode === 'payments') {
         showScanSuccessUI(studentToMark, 'payments');
         logScanRecord(qrCode, 'success', null, studentToMark.name, 'payments', scannerType);
         processPaymentScan(studentToMark);
     }
 }
+
 
 // ✅ PHASE 4: Mutex lock for cross-group attendance
 // Prevents race conditions when scanning multiple cross-group students rapidly
@@ -4151,7 +4139,228 @@ async function saveCrossGroupAttendance(student, homeworkSubmitted) {
     await _crossGroupSaveQueue;
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// ✅ TASK 2: Targeted Cross-Group Attendance Modal Logic
+// ════════════════════════════════════════════════════════════════════════════
+
+// Module-level state for the open modal
+let _cgModal_student = null;
+
+/**
+ * Opens the Cross-Group Attendance Modal for a given student.
+ * Fetches the last 3 session dates from IndexedDB for that student's group.
+ * @param {Object} student - The student object from crossGroupLookupMap
+ */
+async function openCrossGroupModal(student) {
+    _cgModal_student = student;
+
+    const modal = document.getElementById('crossGroupAttendanceModal');
+    const nameEl  = document.getElementById('cgModal_studentName');
+    const grpEl   = document.getElementById('cgModal_groupName');
+    const dateSelect = document.getElementById('cgModal_dateSelect');
+    const hwBox   = document.getElementById('cgModal_hwCheckbox');
+    const customWrapper = document.getElementById('cgModal_customDateWrapper');
+    const customInput   = document.getElementById('cgModal_customDateInput');
+
+    if (!modal) return;
+
+    // Populate header
+    nameEl.textContent  = student.name || '—';
+
+    // Fetch group name from IndexedDB
+    let groupName = 'مجموعة أخرى';
+    try {
+        const groupDoc = await getFromDB('groups', student.groupId);
+        if (groupDoc?.name) groupName = groupDoc.name;
+    } catch (_) {}
+    grpEl.textContent = groupName;
+
+    // Reset controls
+    hwBox.checked = false;
+    customWrapper.classList.add('hidden');
+    customInput.value = '';
+
+    // ─── Fetch last 3 recorded session dates for the student's original group ─
+    dateSelect.innerHTML = '<option value="">⏳ جاري التحميل...</option>';
+    try {
+        const allAtt = await getAllFromDB('attendance');
+        const groupSessions = allAtt
+            .filter(doc => doc.groupId === student.groupId && doc.date)
+            .sort((a, b) => b.date.localeCompare(a.date)) // newest first
+            .slice(0, 3);
+
+        dateSelect.innerHTML = '';
+
+        if (groupSessions.length === 0) {
+            dateSelect.innerHTML = '<option value="">لا توجد جلسات مسجلة</option>';
+        } else {
+            groupSessions.forEach(session => {
+                const opt = document.createElement('option');
+                opt.value   = session.date;
+                opt.textContent = `📅 ${session.date}`;
+                dateSelect.appendChild(opt);
+            });
+        }
+
+        // Always add "Custom Date" option at the end
+        const customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = '✏️ إدخال تاريخ مخصص (حضور مسبق)';
+        dateSelect.appendChild(customOpt);
+
+    } catch (err) {
+        dateSelect.innerHTML = '<option value="">⚠️ خطأ في تحميل الجلسات</option>';
+        console.error('openCrossGroupModal: fetch error', err);
+    }
+
+    // Show/hide custom date input when "Custom" option is chosen
+    dateSelect.onchange = () => {
+        const isCustom = dateSelect.value === '__custom__';
+        customWrapper.classList.toggle('hidden', !isCustom);
+        if (isCustom) customInput.focus();
+    };
+
+    // Show modal
+    modal.classList.remove('hidden');
+    isScannerPaused = true;
+}
+
+/**
+ * Closes the modal and resumes the scanner.
+ */
+window.closeCrossGroupModal = function () {
+    const modal = document.getElementById('crossGroupAttendanceModal');
+    if (modal) modal.classList.add('hidden');
+    _cgModal_student = null;
+    // Resume scanner
+    setTimeout(() => {
+        isScannerPaused = false;
+        if (typeof tickScanner === 'function') requestAnimationFrame(tickScanner);
+    }, 300);
+};
+
+/**
+ * Called when the teacher clicks "Confirm".
+ * Writes ONLY to the specific targeted date — never creates a "today" phantom record.
+ */
+window.confirmCrossGroupAttendance = async function () {
+    const student = _cgModal_student;
+    if (!student) return;
+
+    const dateSelect  = document.getElementById('cgModal_dateSelect');
+    const customInput = document.getElementById('cgModal_customDateInput');
+    const hwSubmitted = document.getElementById('cgModal_hwCheckbox').checked;
+    const confirmBtn  = document.getElementById('cgModal_confirmBtn');
+
+    // Resolve the selected date
+    let targetDate = dateSelect.value === '__custom__' ? customInput.value : dateSelect.value;
+
+    if (!targetDate) {
+        showToast('⚠️ اختر تاريخ الجلسة أولاً', 'error');
+        return;
+    }
+
+    // Lock confirm button while writing
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i>'; }
+
+    try {
+        await processTargetedCrossGroupAttendance(student, targetDate, hwSubmitted);
+        showScanSuccessUI(student, 'attendance');
+        showToast(`✅ تم تسجيل حضور ${student.name} في جلسة ${targetDate}`, 'success');
+        window.closeCrossGroupModal();
+    } catch (err) {
+        console.error('confirmCrossGroupAttendance error:', err);
+        showToast('❌ حدث خطأ أثناء التسجيل', 'error');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = '<i class="ri-check-double-line"></i> تأكيد التسجيل'; }
+    }
+};
+
+/**
+ * Core data-write logic — strict data integrity rules:
+ * - If attendance doc for targetDate exists → update ONLY this student's record.
+ * - If doc does NOT exist (advance scenario) → create a new doc with ONLY this student (no phantoms).
+ * - Updates homework for the same date if hwSubmitted=true.
+ * - All writes go through putToDB + addToSyncQueue for offline-first safety.
+ *
+ * @param {Object} student     - The cross-group student object
+ * @param {string} targetDate  - The YYYY-MM-DD date selected by the teacher
+ * @param {boolean} hwSubmitted - Whether to also mark homework as submitted
+ */
+async function processTargetedCrossGroupAttendance(student, targetDate, hwSubmitted) {
+    const groupId = student.groupId;
+    const attId   = `${groupId}_${targetDate}`;
+
+    // ─── 1. Attendance ────────────────────────────────────────────────────────
+    let attDoc = await getFromDB('attendance', attId);
+
+    if (attDoc) {
+        // Make-up scenario: doc exists → patch ONLY this student, leave everyone else intact
+        if (!attDoc.records) attDoc.records = [];
+        const existingRec = attDoc.records.find(r => r.studentId === student.id);
+        if (existingRec) {
+            existingRec.status = 'present';
+            existingRec.time   = existingRec.time || new Date().toISOString();
+        } else {
+            attDoc.records.push({ studentId: student.id, status: 'present', time: new Date().toISOString() });
+        }
+    } else {
+        // Advance attendance: doc doesn't exist → create with ONLY this student (no phantom absents)
+        attDoc = {
+            id:        attId,
+            date:      targetDate,
+            teacherId: TEACHER_ID,
+            groupId:   groupId,
+            records:   [{ studentId: student.id, status: 'present', time: new Date().toISOString() }]
+        };
+    }
+
+    await putToDB('attendance', attDoc);
+    await addToSyncQueue({
+        type: 'set',
+        path: `teachers/${TEACHER_ID}/groups/${groupId}/dailyAttendance/${targetDate}`,
+        data: { date: targetDate, records: attDoc.records }
+    });
+
+    // ─── 2. Homework (only if submitted) ─────────────────────────────────────
+    if (hwSubmitted) {
+        const hwId  = `${groupId}_HW_${targetDate}`;
+        let   hwDoc = await getFromDB('assignments', hwId);
+
+        if (!hwDoc) {
+            hwDoc = {
+                id:        hwId,
+                teacherId: TEACHER_ID,
+                groupId:   groupId,
+                name:      `واجب ${targetDate}`,
+                date:      targetDate,
+                scores:    {},
+                type:      'daily'
+            };
+        }
+        if (!hwDoc.scores) hwDoc.scores = {};
+        hwDoc.scores[student.id] = { submitted: true, score: null };
+
+        await putToDB('assignments', hwDoc);
+        await addToSyncQueue({
+            type: 'set',
+            path: `teachers/${TEACHER_ID}/groups/${groupId}/assignments/${hwId}`,
+            data: hwDoc
+        });
+    }
+
+    logEvent('cross_group_targeted_attendance', {
+        student_id:    student.id,
+        student_name:  student.name,
+        target_group:  groupId,
+        target_date:   targetDate,
+        hw_submitted:  hwSubmitted
+    });
+
+    console.log(`✅ Targeted Cross-Group Attendance saved for ${student.name} → ${targetDate} (hw: ${hwSubmitted})`);
+}
+
 // --- دالة مساعدة للمؤثرات البصرية (عشان الكود يبقى نظيف) ---
+
 function showScanSuccessUI(student, type = 'attendance') {
     const overlay = document.getElementById('scannerOverlay');
     const feedback = document.getElementById('scannedStudentName');
