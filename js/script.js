@@ -4223,13 +4223,23 @@ async function openCrossGroupModal(student) {
     } catch (_) {}
     grpEl.textContent = groupName;
 
-    // Update Switch button label with real group name
-    if (switchLabel) switchLabel.textContent = `تحويل الحصة إلى: ${groupName}`;
-
     // Reset controls
     hwBox.checked = false;
     customWrapper.classList.add('hidden');
     customInput.value = '';
+
+    // Reset buttons state and DOM structure (Fixes loading spinner getting stuck)
+    const switchBtn = document.getElementById('cgModal_switchBtn');
+    if (switchBtn) {
+        switchBtn.disabled = false;
+        switchBtn.innerHTML = `<i class="ri-arrow-left-right-line text-lg"></i> <span id="cgModal_switchBtnLabel">تحويل الحصة إلى: ${groupName}</span>`;
+    }
+
+    const confirmBtn = document.getElementById('cgModal_confirmBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = `<i class="ri-check-double-line"></i> تأكيد التسجيل`;
+    }
 
     // ─── Fetch last 3 recorded session dates for the student's original group ─
     dateSelect.innerHTML = '<option value="">⏳ جاري التحميل...</option>';
