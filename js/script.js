@@ -3933,13 +3933,13 @@ function logScanRecord(rawValue, result, failReason, studentName, scanType, scan
 }
 
 async function handleScan(scannedText, scannerType = "camera") {
-    let qrCode = scannedText.replace(/"/g, '').trim();
+    let qrCode = String(scannedText).replace(/"/g, '').trim();
     qrCode = qrCode.replace(/^https?:\/\//i, '').replace(/^URL:/i, '');
     const urlMatch = qrCode.match(/s=([^&]+)/);
     if (urlMatch) qrCode = urlMatch[1];
     
-    // TASK 1: Fix Case Sensitivity (hardware scanners sometimes send lowercase)
-    qrCode = qrCode.toUpperCase();
+    // TASK 1: Fix Case Sensitivity (hardware scanners sometimes send lowercase, safely cast to string)
+    qrCode = String(qrCode).toUpperCase();
 
     // 🛑 Mode: Card Linking
     if (currentScannerMode === 'link-card') {
@@ -3954,7 +3954,7 @@ async function handleScan(scannedText, scannerType = "camera") {
 
     const matchPhone = (dbPhone, qrVal) => {
         if (!dbPhone) return false;
-        return dbPhone.trim().replace(/^\+2/, '') === qrVal.trim().replace(/^\+2/, '');
+        return String(dbPhone).trim().replace(/^\+2/, '') === String(qrVal).trim().replace(/^\+2/, '');
     };
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -3963,8 +3963,9 @@ async function handleScan(scannedText, scannerType = "camera") {
     const cgModal = document.getElementById('crossGroupAttendanceModal');
     if (cgModal && !cgModal.classList.contains('hidden') && _cgModal_student) {
         // Modal is open, check if the scanned text belongs to the pending student
-        const isSameStudent = (_cgModal_student.id && _cgModal_student.id.toUpperCase() === qrCode) ||
-                              (_cgModal_student.cardId && _cgModal_student.cardId.toUpperCase() === qrCode) ||
+        // TASK 1: Case Sensitivity in Double-Scan Interceptor with Safe String Cast
+        const isSameStudent = (_cgModal_student.id && String(_cgModal_student.id).toUpperCase() === qrCode) ||
+                              (_cgModal_student.cardId && String(_cgModal_student.cardId).toUpperCase() === qrCode) ||
                               matchPhone(_cgModal_student.parentPhoneNumber, qrCode);
         
         if (isSameStudent) {
@@ -3995,6 +3996,10 @@ async function handleScan(scannedText, scannerType = "camera") {
         if (autoMatch?.groupId) {
             showToast(`🔄 جاري تحديد المجموعة تلقائياً...`, 'info');
             await window.handleGroupSelectionChange(autoMatch.groupId);
+            
+            // ✅ NEW UX ENHANCEMENT: Instantly show the attendance list
+            if (typeof switchTab === 'function') switchTab('daily');
+            
             // Wait for tab switch + renderDailyList to finish
             await new Promise(resolve => setTimeout(resolve, 600));
             // Re-process the same scan now that the group is loaded
@@ -4007,10 +4012,11 @@ async function handleScan(scannedText, scannerType = "camera") {
     }
 
     // 1. Search in the current group (highest priority)
+    // TASK 1: Case Sensitivity in Fallback Search with Safe String Cast
     const matchedStudents = allStudents.filter(s =>
-        (s.cardId && s.cardId.toUpperCase() === qrCode) ||
+        (s.cardId && String(s.cardId).toUpperCase() === qrCode) ||
         matchPhone(s.parentPhoneNumber, qrCode) ||
-        (s.id && s.id.toUpperCase() === qrCode)
+        (s.id && String(s.id).toUpperCase() === qrCode)
     );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -7520,12 +7526,12 @@ async function buildCrossGroupLookupMap() {
         const allLocalStudents = await getAllFromDB('students');
         crossGroupLookupMap.clear();
         for (const s of allLocalStudents) {
-            if (s.cardId) crossGroupLookupMap.set(s.cardId.toUpperCase().trim(), s);
+            if (s.cardId) crossGroupLookupMap.set(String(s.cardId).toUpperCase().trim(), s);
             if (s.parentPhoneNumber) {
-                const normalized = s.parentPhoneNumber.trim().replace(/^\+2/, '');
+                const normalized = String(s.parentPhoneNumber).trim().replace(/^\+2/, '');
                 crossGroupLookupMap.set(normalized, s);
             }
-            if (s.id) crossGroupLookupMap.set(s.id.toUpperCase().trim(), s);
+            if (s.id) crossGroupLookupMap.set(String(s.id).toUpperCase().trim(), s);
         }
         console.log(`🗺️ crossGroupLookupMap built: ${crossGroupLookupMap.size} entries`);
     } catch (e) {
