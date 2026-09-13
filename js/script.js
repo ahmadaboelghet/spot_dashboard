@@ -2394,14 +2394,17 @@ async function loadGroups() {
                 }
                 renderGroupsDropdown(remoteGroups);
 
-                // TASK 3: Background Hydration - Prefetch all students for cross-group scanning cache
-                const studentPromises = remoteGroups.map(async (g) => {
-                    const stuSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${g.id}/students`).get();
-                    return stuSnap.docs.map(d => ({ id: d.id, groupId: g.id, ...d.data() }));
-                });
-                
-                const allSyncedStudentsArrays = await Promise.all(studentPromises);
-                const allSyncedStudents = allSyncedStudentsArrays.flat();
+                // TASK 3: Background Hydration - Prefetch all students for cross-group scanning cache (Sequential to prevent network throttling)
+                const allSyncedStudents = [];
+                for (const g of remoteGroups) {
+                    try {
+                        const stuSnap = await firestoreDB.collection(`teachers/${TEACHER_ID}/groups/${g.id}/students`).get();
+                        const students = stuSnap.docs.map(d => ({ id: d.id, groupId: g.id, ...d.data() }));
+                        allSyncedStudents.push(...students);
+                    } catch (err) {
+                        console.warn(`Failed to fetch students for group ${g.id}:`, err);
+                    }
+                }
                 
                 if (allSyncedStudents.length > 0) {
                     await putAllToDB('students', allSyncedStudents);
