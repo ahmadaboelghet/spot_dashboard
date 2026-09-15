@@ -4695,7 +4695,7 @@ function renderStudents(filter = "") {
                 <button class="btn-icon w-10 h-10 bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400 act-btn" title="تفعيل حساب الأب (باسورد: elnazer@123456)">
                     <i class="ri-user-add-line"></i>
                 </button>
-                <button class="btn-icon w-10 h-10 bg-orange-50 hover:bg-orange-100 text-orange-500 dark:bg-orange-900/20 dark:text-orange-400 move-btn" title="نقل الطالب لمجموعة أخرى">
+                <button class="btn-icon w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 move-btn" title="نقل الطالب لمجموعة أخرى">
                     <i class="ri-arrow-right-up-line"></i>
                 </button>
                 <button class="btn-icon w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/20 del-btn">

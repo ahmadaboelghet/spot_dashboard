@@ -1691,7 +1691,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                        <div class="flex flex-wrap justify-center md:justify-start gap-4 mt-4">
                             <div
                                 class="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800">
                                 <i class="ri-whatsapp-line text-green-500"></i>
@@ -1699,10 +1699,16 @@
                                     class="bg-transparent text-sm font-bold text-gray-600 dark:text-gray-300 w-32 outline-none">
                             </div>
                             <div id="profileCardBadgeContainer" onclick="openProfileCardLinkModal()"
-                                class="flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold cursor-pointer transition-all hover:scale-105">
-                                <i id="profileCardIcon" class="ri-qr-code-line"></i>
+                                class="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-800 text-sm font-bold cursor-pointer transition-all hover:scale-105 bg-gray-50 dark:bg-black/20">
+                                <i id="profileCardIcon" class="ri-qr-code-line text-brand"></i>
                                 <span id="profileCardText" data-key="profileStudentCard">كارت الطالب</span>
                             </div>
+                            <!-- Move Button -->
+                            <button onclick="triggerMoveStudentFromProfile()"
+                                class="flex items-center gap-2 px-4 py-2 rounded-xl border border-orange-200 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 text-sm font-bold transition-all hover:scale-105 cursor-pointer shadow-sm">
+                                <i class="ri-arrow-right-up-line"></i>
+                                <span>نقل الطالب لمجموعة</span>
+                            </button>
                         </div>
                     </div>
 
