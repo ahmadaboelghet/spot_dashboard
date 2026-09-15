@@ -459,7 +459,7 @@ exports.notifyOnNewGrades = onDocumentWritten(
     // 🔥 تجنب إرسال إشعارات لو ده تعديل صامت (نقل سجلات تاريخية)
     if (afterData._noNotify === true) {
       console.log("🤫 Silent update detected. Skipping notifications.");
-      await snapAfter.ref.update({ _noNotify: admin.firestore.FieldValue.delete() });
+      await snapAfter.ref.update({ _noNotify: FieldValue.delete() });
       return null;
     }
 
@@ -940,7 +940,7 @@ exports.notifyOnPayment = onDocumentWritten(
     // 🔥 تجنب إرسال إشعارات لو ده تعديل صامت (نقل سجلات تاريخية)
     if (afterData._noNotify === true) {
       console.log("🤫 Silent update detected. Skipping notifications.");
-      await snapAfter.ref.update({ _noNotify: admin.firestore.FieldValue.delete() });
+      await snapAfter.ref.update({ _noNotify: FieldValue.delete() });
       return null;
     }
 
@@ -1662,7 +1662,7 @@ exports.notifyOnPresence = onDocumentWritten(
     // 🔥 تجنب إرسال إشعارات لو ده تعديل صامت (نقل سجلات تاريخية)
     if (afterData._noNotify === true) {
       console.log("🤫 Silent update detected. Skipping notifications.");
-      await snapAfter.ref.update({ _noNotify: admin.firestore.FieldValue.delete() });
+      await snapAfter.ref.update({ _noNotify: FieldValue.delete() });
       return null;
     }
 
@@ -2287,7 +2287,7 @@ exports.removeParentTokenOnLogout = onCall({ cors: true }, async (request) => {
     // 1. Remove from global parents collection
     for (const phoneDocId of phoneFormats) {
       await admin.firestore().collection('parents').doc(phoneDocId).update({
-        fcmToken: admin.firestore.FieldValue.delete(),
+        fcmToken: FieldValue.delete(),
         fcmTokens: admin.firestore.FieldValue.arrayRemove(fcmToken)
       }).catch(() => {}); // ignore if doc doesn't exist
     }
@@ -2303,7 +2303,7 @@ exports.removeParentTokenOnLogout = onCall({ cors: true }, async (request) => {
         const batch = admin.firestore().batch();
         studentsSnapshot.forEach((doc) => {
           batch.update(doc.ref, {
-            parentFcmToken: admin.firestore.FieldValue.delete()
+            parentFcmToken: FieldValue.delete()
           });
         });
         await batch.commit();

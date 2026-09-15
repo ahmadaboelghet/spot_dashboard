@@ -5237,13 +5237,14 @@ window.confirmMoveStudent = async function () {
                     };
                 }
 
-                // Silent flag: suppress Cloud Function notifications for historical data
-                targetDoc._noNotify = true;
+                // Save locally WITHOUT the silent flag to prevent IndexedDB pollution
                 await putToDB('attendance', targetDoc);
+                
+                // Inject the silent flag ONLY for the sync queue payload
                 await addToSyncQueue({
                     type: 'set',
                     path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/dailyAttendance/${srcDoc.date}`,
-                    data: targetDoc
+                    data: { ...targetDoc, _noNotify: true }
                 });
             }
         } catch (e) { console.warn('Move: attendance copy failed', e); }
@@ -5274,13 +5275,14 @@ window.confirmMoveStudent = async function () {
                     };
                 }
 
-                // Silent flag: suppress Cloud Function notifications for historical data
-                targetDoc._noNotify = true;
+                // Save locally WITHOUT the silent flag to prevent IndexedDB pollution
                 await putToDB('assignments', targetDoc);
+                
+                // Inject the silent flag ONLY for the sync queue payload
                 await addToSyncQueue({
                     type: 'set',
                     path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/assignments/${targetAssignId}`,
-                    data: targetDoc
+                    data: { ...targetDoc, _noNotify: true }
                 });
             }
         } catch (e) { console.warn('Move: assignments/exams copy failed', e); }
@@ -5313,13 +5315,14 @@ window.confirmMoveStudent = async function () {
                     };
                 }
 
-                // Silent flag: suppress Cloud Function notifications for historical data
-                targetDoc._noNotify = true;
+                // Save locally WITHOUT the silent flag to prevent IndexedDB pollution
                 await putToDB('payments', targetDoc);
+                
+                // Inject the silent flag ONLY for the sync queue payload
                 await addToSyncQueue({
                     type: 'set',
                     path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/payments/${month}`,
-                    data: targetDoc
+                    data: { ...targetDoc, _noNotify: true }
                 });
             }
         } catch (e) { console.warn('Move: payments copy failed', e); }
