@@ -5103,6 +5103,17 @@ async function deleteStudent(id) {
 // ─── Move Student to Another Group ─────────────────────────────────────────
 let _moveStudentTarget = null; // student object being moved
 
+// ✅ FIX: Missing function to trigger Move Modal directly from the Student Profile UI
+window.triggerMoveStudentFromProfile = function() {
+    if (!currentProfileId) return;
+    const student = allStudents.find(s => s.id === currentProfileId);
+    if (student) {
+        openMoveStudentModal(student);
+    } else {
+        showToast('⚠️ لم يتم العثور على الطالب', 'error');
+    }
+};
+
 async function openMoveStudentModal(student) {
     _moveStudentTarget = student;
 
@@ -5162,6 +5173,9 @@ window.confirmMoveStudent = async function () {
         return;
     }
 
+    // Source group is the student's own groupId (works from profile view too)
+    const sourceGroupId = student.groupId || SELECTED_GROUP_ID;
+
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري النقل...';
     if (status) { status.textContent = ''; status.className = 'text-sm font-bold mt-3 h-5'; }
@@ -5171,40 +5185,104 @@ window.confirmMoveStudent = async function () {
         const targetGroup = await getFromDB('groups', targetGroupId);
         const targetGroupName = targetGroup?.name || targetGroupId;
 
-        // 1. Write student to new group in IndexedDB
+        // ── 1. Write student to new group in IndexedDB ───────────────────────
         const newStudentData = { ...student, groupId: targetGroupId };
         await putToDB('students', newStudentData);
 
-        // 2. Queue Firestore: ADD to target group
+        // ── 2. Queue Firestore: ADD student to target group ──────────────────
         await addToSyncQueue({
             type: 'set',
             path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/students/${student.id}`,
             data: newStudentData
         });
 
-        // 3. Queue Firestore: DELETE from current group
+        // ── 3. Queue Firestore: DELETE student from source group ─────────────
         await addToSyncQueue({
             type: 'delete',
-            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${student.id}`
+            path: `teachers/${TEACHER_ID}/groups/${sourceGroupId}/students/${student.id}`
         });
 
-        // 4. Remove from current group's IndexedDB record for current session
-        //    (keep in DB with new groupId so other groups can see it)
+        // ── 4. Copy historical records to the new group ──────────────────────
+        // Records in the old group are KEPT as archive — we only copy, not delete.
+        if (navigator.onLine) {
+            if (status) { status.textContent = '📂 جاري نقل السجلات التاريخية...'; }
+            const basePath = `teachers/${TEACHER_ID}/groups`;
+
+            // ─── 4a. Attendance ───────────────────────────────────────────────
+            try {
+                const attSnap = await firestoreDB
+                    .collection(`${basePath}/${sourceGroupId}/dailyAttendance`)
+                    .get();
+                for (const doc of attSnap.docs) {
+                    const data = doc.data();
+                    if (data.students && data.students[student.id] !== undefined) {
+                        await addToSyncQueue({
+                            type: 'update',
+                            path: `${basePath}/${targetGroupId}/dailyAttendance/${doc.id}`,
+                            data: {
+                                date: data.date || doc.id,
+                                [`students.${student.id}`]: data.students[student.id]
+                            }
+                        });
+                    }
+                }
+            } catch (e) { console.warn('Move: attendance copy failed', e); }
+
+            // ─── 4b. Exams ────────────────────────────────────────────────────
+            try {
+                const examsSnap = await firestoreDB
+                    .collection(`${basePath}/${sourceGroupId}/exams`)
+                    .get();
+                for (const doc of examsSnap.docs) {
+                    const data = doc.data();
+                    const gradeEntry = data.grades?.[student.id];
+                    if (gradeEntry !== undefined) {
+                        await addToSyncQueue({
+                            type: 'update',
+                            path: `${basePath}/${targetGroupId}/exams/${doc.id}`,
+                            data: {
+                                name: data.name,
+                                date: data.date,
+                                totalMark: data.totalMark,
+                                [`grades.${student.id}`]: gradeEntry
+                            }
+                        });
+                    }
+                }
+            } catch (e) { console.warn('Move: exams copy failed', e); }
+
+            // ─── 4c. Payments ─────────────────────────────────────────────────
+            try {
+                const paymentsSnap = await firestoreDB
+                    .collection(`${basePath}/${sourceGroupId}/payments`)
+                    .get();
+                for (const doc of paymentsSnap.docs) {
+                    const data = doc.data();
+                    if (data.students && data.students[student.id] !== undefined) {
+                        await addToSyncQueue({
+                            type: 'update',
+                            path: `${basePath}/${targetGroupId}/payments/${doc.id}`,
+                            data: { [`students.${student.id}`]: data.students[student.id] }
+                        });
+                    }
+                }
+            } catch (e) { console.warn('Move: payments copy failed', e); }
+        }
+
+        // ── 5. Remove from current session's allStudents array ───────────────
         allStudents = allStudents.filter(s => s.id !== student.id);
 
-        // 5. Update crossGroupLookupMap
+        // ── 6. Update crossGroupLookupMap ────────────────────────────────────
         if (crossGroupLookupMap) {
             const updatedEntry = newStudentData;
-            crossGroupLookupMap.set(student.id, updatedEntry);
-            if (student.cardId) crossGroupLookupMap.set(student.cardId, updatedEntry);
-            if (student.parentPhoneNumber) {
-                crossGroupLookupMap.set(student.parentPhoneNumber.trim().replace(/^\+2/, ''), updatedEntry);
-            }
+            if (student.id)                crossGroupLookupMap.set(String(student.id).toUpperCase().trim(), updatedEntry);
+            if (student.cardId)            crossGroupLookupMap.set(String(student.cardId).toUpperCase().trim(), updatedEntry);
+            if (student.parentPhoneNumber) crossGroupLookupMap.set(String(student.parentPhoneNumber).trim().replace(/^\+2/, ''), updatedEntry);
         }
 
         renderStudents();
         window.closeMoveStudentModal();
-        showToast(`✅ تم نقل ${student.name} إلى مجموعة "${targetGroupName}" بنجاح`, 'success');
+        showToast(`✅ تم نقل ${student.name} إلى مجموعة "${targetGroupName}" مع كل سجلاته بنجاح`, 'success');
 
     } catch (err) {
         console.error('confirmMoveStudent error', err);
