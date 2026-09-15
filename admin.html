@@ -2434,9 +2434,10 @@
                                     <li class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 border border-transparent hover:border-gray-100 dark:hover:border-white/5 transition-colors">
                                         <div>
                                             <div class="text-sm font-bold text-gray-800 dark:text-gray-200">${sData.name || 'بدون اسم'}</div>
-                                            <div class="text-xs text-gray-500 font-mono">${sData.parentPhone || 'لا يوجد هاتف'}</div>
+                                            <div class="text-xs text-gray-500 font-mono mt-1"><i class="ri-phone-line text-brand"></i> ${sData.parentPhoneNumber || sData.parentPhone || 'لا يوجد هاتف'}</div>
                                         </div>
                                         <span class="text-xs bg-gray-200 dark:bg-white/10 px-2 py-0.5 rounded font-mono">${sData.cardId || sData.oldCardId || 'لا يوجد كارت'}</span>
+
                                     </li>
                                 `;
                             });
@@ -2598,6 +2599,7 @@
                 let typeBadge = '';
                 let typeClass = '';
                 const email = user.email || '';
+                let isParent = false;
                 
                 if (email.endsWith('@spot.com')) {
                     typeBadge = 'مدرس / سنتر';
@@ -2605,6 +2607,7 @@
                 } else if (email.endsWith('@learnaria.app')) {
                     typeBadge = 'ولي أمر';
                     typeClass = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+                    isParent = true;
                 } else if (email === 'admin@elnazer-edu.com') {
                     typeBadge = 'Super Admin';
                     typeClass = 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
@@ -2618,22 +2621,69 @@
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group';
                 tr.innerHTML = `
-                    <td class="p-4">
+                    <td class="p-4 align-top">
                         <div class="font-bold text-gray-900 dark:text-white" dir="ltr" style="text-align: right;">${email}</div>
                     </td>
-                    <td class="p-4 text-xs font-mono text-gray-500 dark:text-gray-400" dir="ltr" style="text-align: right;">${user.uid}</td>
-                    <td class="p-4 text-sm text-gray-600 dark:text-gray-300">${dateStr}</td>
-                    <td class="p-4">
-                        <span class="px-2 py-1 text-xs font-bold rounded-md ${typeClass}">${typeBadge}</span>
+                    <td class="p-4 text-xs font-mono text-gray-500 dark:text-gray-400 align-top" dir="ltr" style="text-align: right;">${user.uid}</td>
+                    <td class="p-4 text-sm text-gray-600 dark:text-gray-300 align-top">${dateStr}</td>
+                    <td class="p-4 align-top">
+                        <span class="px-2 py-1 text-xs font-bold rounded-md ${typeClass} inline-block mb-1">${typeBadge}</span>
+                        ${isParent ? `<div id="parent-children-${user.uid}" class="mt-2 text-xs text-gray-500 min-h-[20px]"></div>` : ''}
                     </td>
-                    <td class="p-4 text-left">
+                    <td class="p-4 text-left align-top">
                         <button onclick="deleteAuthUser('${user.uid}', '${email}')" class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100" title="حذف المستخدم">
                             <i class="ri-delete-bin-line"></i>
                         </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
+
+                if (isParent) {
+                    fetchParentChildren(user.uid, email);
+                }
             });
+        }
+
+        async function fetchParentChildren(uid, email) {
+            const container = document.getElementById(`parent-children-${uid}`);
+            if (!container) return;
+            
+            container.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري البحث...';
+            try {
+                let phone = email.replace('@learnaria.app', '');
+                let altPhone = phone;
+                if (phone.startsWith('+20')) {
+                    altPhone = '0' + phone.substring(3);
+                } else if (phone.startsWith('0')) {
+                    altPhone = '+20' + phone.substring(1);
+                }
+
+                const sSnap1 = await db.collectionGroup('students').where('parentPhoneNumber', '==', phone).get();
+                let docs = sSnap1.docs;
+
+                if (phone !== altPhone) {
+                    const sSnap2 = await db.collectionGroup('students').where('parentPhoneNumber', '==', altPhone).get();
+                    docs = [...docs, ...sSnap2.docs];
+                }
+
+                const uniqueStudents = [];
+                const seen = new Set();
+                for (const doc of docs) {
+                    if (!seen.has(doc.id)) {
+                        seen.add(doc.id);
+                        uniqueStudents.push(doc.data().name || 'بدون اسم');
+                    }
+                }
+
+                if (uniqueStudents.length === 0) {
+                    container.innerHTML = '<span class="text-yellow-600 dark:text-yellow-400 font-bold bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded">لا يوجد أبناء مسجلين</span>';
+                } else {
+                    container.innerHTML = `<div class="mt-1 font-bold text-gray-700 dark:text-gray-300 flex flex-col gap-1">${uniqueStudents.map(n => `<div><i class="ri-user-smile-line text-brand"></i> ${n}</div>`).join('')}</div>`;
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<span class="text-red-500">فشل الجلب</span>';
+            }
         }
 
         async function deleteAuthUser(uid, email) {
