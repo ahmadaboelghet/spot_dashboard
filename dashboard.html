@@ -2231,6 +2231,52 @@
     </div>
 
 
+
+    <!-- ✅ Move Student to Another Group Modal -->
+    <div id="moveStudentModal"
+        class="hidden fixed inset-0 z-[3000] flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div class="bg-white dark:bg-darkSurface w-full md:max-w-sm rounded-t-3xl md:rounded-3xl shadow-2xl p-6 animate-fadeInUp">
+
+            <!-- Header -->
+            <div class="flex items-center gap-4 mb-5">
+                <div class="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-900/30 text-orange-500 flex items-center justify-center text-xl flex-shrink-0">
+                    <i class="ri-arrow-right-up-line"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-orange-500 uppercase tracking-wider">نقل طالب</p>
+                    <h3 class="text-lg font-black text-gray-900 dark:text-white" id="moveModal_studentName">اسم الطالب</h3>
+                </div>
+            </div>
+
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+                سيتم نقل الطالب إلى المجموعة المختارة وحذفه من المجموعة الحالية. يمكنك العثور عليه في المجموعة الجديدة فور التزامن.
+            </p>
+
+            <!-- Group Dropdown -->
+            <label class="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">
+                <i class="ri-group-line ml-1 text-orange-400"></i>اختر المجموعة المستهدفة
+            </label>
+            <select id="moveModal_groupSelect"
+                class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-orange-400 transition-colors mb-1">
+                <option value="">جاري التحميل...</option>
+            </select>
+            <div id="moveModal_status" class="text-sm font-bold mt-1 h-5"></div>
+
+            <!-- Buttons -->
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                <button onclick="window.closeMoveStudentModal()"
+                    class="py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 transition-colors">
+                    إلغاء
+                </button>
+                <button id="moveModal_confirmBtn" onclick="window.confirmMoveStudent()"
+                    class="py-3 rounded-xl font-black text-white bg-orange-500 hover:bg-orange-600 transition-colors shadow-lg shadow-orange-200 dark:shadow-none flex items-center justify-center gap-2">
+                    <i class="ri-check-double-line"></i>
+                    تأكيد النقل
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="cardLinkModal" class="fixed inset-0 hidden flex items-center justify-center p-4" style="z-index: 100;">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCardLinkModal()"></div>
         <div class="relative bg-white dark:bg-darkSurface rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all border border-gray-100 dark:border-white/5 overflow-hidden">

@@ -4695,6 +4695,9 @@ function renderStudents(filter = "") {
                 <button class="btn-icon w-10 h-10 bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400 act-btn" title="تفعيل حساب الأب (باسورد: elnazer@123456)">
                     <i class="ri-user-add-line"></i>
                 </button>
+                <button class="btn-icon w-10 h-10 bg-orange-50 hover:bg-orange-100 text-orange-500 dark:bg-orange-900/20 dark:text-orange-400 move-btn" title="نقل الطالب لمجموعة أخرى">
+                    <i class="ri-arrow-right-up-line"></i>
+                </button>
                 <button class="btn-icon w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/20 del-btn">
                     <i class="ri-delete-bin-line"></i>
                 </button>
@@ -4702,6 +4705,7 @@ function renderStudents(filter = "") {
         `;
         div.querySelector('.msg-btn').onclick = () => openMessageModal(s);
         div.querySelector('.act-btn').onclick = () => activateParentAccountUI(s.parentPhoneNumber);
+        div.querySelector('.move-btn').onclick = (e) => { e.stopPropagation(); openMoveStudentModal(s); };
         div.querySelector('.del-btn').onclick = () => deleteStudent(s.id);
 
         fragment.appendChild(div);
@@ -5095,6 +5099,124 @@ async function deleteStudent(id) {
     allStudents = allStudents.filter(s => s.id !== id);
     renderStudents();
 }
+
+// ─── Move Student to Another Group ─────────────────────────────────────────
+let _moveStudentTarget = null; // student object being moved
+
+async function openMoveStudentModal(student) {
+    _moveStudentTarget = student;
+
+    // Populate student name in modal
+    const el = document.getElementById('moveModal_studentName');
+    if (el) el.textContent = student.name;
+
+    // Load all groups of this teacher (excluding the current one)
+    const select = document.getElementById('moveModal_groupSelect');
+    if (!select) return;
+    select.innerHTML = '<option value="">جاري تحميل المجموعات...</option>';
+
+    try {
+        const allGroups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
+        const otherGroups = allGroups.filter(g => g.id !== SELECTED_GROUP_ID);
+
+        select.innerHTML = '';
+        if (otherGroups.length === 0) {
+            select.innerHTML = '<option value="">لا توجد مجموعات أخرى</option>';
+        } else {
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'اختر المجموعة...';
+            select.appendChild(placeholder);
+            otherGroups.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.name || g.id;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        select.innerHTML = '<option value="">⚠️ خطأ في التحميل</option>';
+        console.error('openMoveStudentModal error', err);
+    }
+
+    // Reset status & show modal
+    const status = document.getElementById('moveModal_status');
+    if (status) { status.textContent = ''; status.className = 'text-sm font-bold mt-3 h-5'; }
+    document.getElementById('moveStudentModal').classList.remove('hidden');
+}
+
+window.closeMoveStudentModal = function () {
+    document.getElementById('moveStudentModal').classList.add('hidden');
+    _moveStudentTarget = null;
+};
+
+window.confirmMoveStudent = async function () {
+    const student = _moveStudentTarget;
+    const select  = document.getElementById('moveModal_groupSelect');
+    const status  = document.getElementById('moveModal_status');
+    const confirmBtn = document.getElementById('moveModal_confirmBtn');
+    const targetGroupId = select?.value;
+
+    if (!student || !targetGroupId) {
+        if (status) { status.textContent = 'اختر مجموعة أولاً'; status.className = 'text-sm font-bold mt-3 h-5 text-red-500'; }
+        return;
+    }
+
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري النقل...';
+    if (status) { status.textContent = ''; status.className = 'text-sm font-bold mt-3 h-5'; }
+
+    try {
+        // Get target group name for feedback toast
+        const targetGroup = await getFromDB('groups', targetGroupId);
+        const targetGroupName = targetGroup?.name || targetGroupId;
+
+        // 1. Write student to new group in IndexedDB
+        const newStudentData = { ...student, groupId: targetGroupId };
+        await putToDB('students', newStudentData);
+
+        // 2. Queue Firestore: ADD to target group
+        await addToSyncQueue({
+            type: 'set',
+            path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/students/${student.id}`,
+            data: newStudentData
+        });
+
+        // 3. Queue Firestore: DELETE from current group
+        await addToSyncQueue({
+            type: 'delete',
+            path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/students/${student.id}`
+        });
+
+        // 4. Remove from current group's IndexedDB record for current session
+        //    (keep in DB with new groupId so other groups can see it)
+        allStudents = allStudents.filter(s => s.id !== student.id);
+
+        // 5. Update crossGroupLookupMap
+        if (crossGroupLookupMap) {
+            const updatedEntry = newStudentData;
+            crossGroupLookupMap.set(student.id, updatedEntry);
+            if (student.cardId) crossGroupLookupMap.set(student.cardId, updatedEntry);
+            if (student.parentPhoneNumber) {
+                crossGroupLookupMap.set(student.parentPhoneNumber.trim().replace(/^\+2/, ''), updatedEntry);
+            }
+        }
+
+        renderStudents();
+        window.closeMoveStudentModal();
+        showToast(`✅ تم نقل ${student.name} إلى مجموعة "${targetGroupName}" بنجاح`, 'success');
+
+    } catch (err) {
+        console.error('confirmMoveStudent error', err);
+        if (status) { status.textContent = '❌ حدث خطأ: ' + err.message; status.className = 'text-sm font-bold mt-3 h-5 text-red-500'; }
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="ri-check-double-line"></i> تأكيد النقل';
+    }
+};
+// ────────────────────────────────────────────────────────────────────────────
+
+
 
 async function activateParentAccountUI(phone) {
     if (!phone) {
