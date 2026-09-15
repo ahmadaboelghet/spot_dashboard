@@ -3663,7 +3663,8 @@ async function saveDailyData(isSilent = false) {
                         path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/dailyAttendance/${targetDate}`,
                         data: {
                             date: targetDate,
-                            records: attendanceRecords
+                            records: attendanceRecords,
+                            _noNotify: false
                         }
                     })
                 );
@@ -3716,7 +3717,7 @@ async function saveDailyData(isSilent = false) {
                         addToSyncQueue({
                             type: 'set',
                             path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/assignments/${hwId}`,
-                            data: hwData
+                            data: { ...hwData, _noNotify: false }
                         })
                     );
                 }

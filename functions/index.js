@@ -476,13 +476,14 @@ exports.notifyOnNewGrades = onDocumentWritten(
         if (scoreData) {
           const processStudent = async () => {
             const scoreBefore = scoresBefore[studentId] ? scoresBefore[studentId].score : null;
-            const submittedBefore = scoresBefore[studentId] ? scoresBefore[studentId].submitted : false;
+            const submittedBefore = scoresBefore[studentId] ? !!scoresBefore[studentId].submitted : false;
+            const submittedAfter = !!scoreData.submitted;
             
             const hasScore = scoreData.score !== "" && scoreData.score != null;
             const isScoreChanged = hasScore && (scoreData.score != scoreBefore);
             
             // تحقق إذا تم تغيير حالة تسليم الواجب بمعزل عن الدرجة
-            const isSubmittedChanged = (scoreData.submitted !== submittedBefore);
+            const isSubmittedChanged = (submittedAfter !== submittedBefore);
 
             if (isScoreChanged || isSubmittedChanged) {
               
@@ -802,6 +803,7 @@ exports.getDashboardData = onCall({ cors: true }, async (request) => {
             attendance: [],
             grades: [],
             schedule: [],
+            payments: [],
           });
         } catch (teacherError) {
           console.error(`Failed to fetch teacher ${teacherId}:`, teacherError);
@@ -888,6 +890,25 @@ exports.getDashboardData = onCall({ cors: true }, async (request) => {
         });
       } catch (e) {
         console.error("Error fetching grades:", e);
+      }
+
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const paySnap = await groupRef.collection("payments").get();
+        paySnap.forEach((doc) => {
+          const data = doc.data();
+          const studentPayment = (data.records || []).find((r) => r.studentId === studentId);
+          if (studentPayment) {
+            teacherReport.payments.push({
+              studentName: studentName,
+              month: data.month || doc.id.split("_PAY_")[1] || "N/A",
+              amount: studentPayment.amount || 0,
+              paid: studentPayment.paid || false
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Error fetching payments:", e);
       }
     }
 
