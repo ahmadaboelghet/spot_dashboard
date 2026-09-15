@@ -2706,7 +2706,11 @@
                 });
         }
 
-        document.querySelector('[data-tab="bonus"]').addEventListener('click', startRealTimeFeed);
+        // Attach to Tools tab instead of bonus
+        const toolsTabBtn = document.querySelector('[data-tab="tools"]');
+        if (toolsTabBtn) {
+            toolsTabBtn.addEventListener('click', startRealTimeFeed);
+        }
 
 
 </script>
