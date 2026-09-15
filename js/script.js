@@ -5237,6 +5237,8 @@ window.confirmMoveStudent = async function () {
                     };
                 }
 
+                // Silent flag: suppress Cloud Function notifications for historical data
+                targetDoc._noNotify = true;
                 await putToDB('attendance', targetDoc);
                 await addToSyncQueue({
                     type: 'set',
@@ -5272,6 +5274,8 @@ window.confirmMoveStudent = async function () {
                     };
                 }
 
+                // Silent flag: suppress Cloud Function notifications for historical data
+                targetDoc._noNotify = true;
                 await putToDB('assignments', targetDoc);
                 await addToSyncQueue({
                     type: 'set',
@@ -5281,15 +5285,19 @@ window.confirmMoveStudent = async function () {
             }
         } catch (e) { console.warn('Move: assignments/exams copy failed', e); }
 
-        // ─── 4c. Payments (records[] array schema, NO isTransferHistory flag) ──
+        // ─── 4c. Payments (records[] array schema) ────────────────────────────
+        // Payments have NO groupId field — filter by ID prefix instead
         try {
-            const sourcePayments = await getAllFromDB('payments', 'groupId', sourceGroupId);
+            const allPayments = await getAllFromDB('payments');
+            const sourcePayments = allPayments.filter(p => p.id && p.id.startsWith(sourceGroupId + '_PAY_'));
             for (const srcDoc of sourcePayments) {
-                if (!srcDoc.month) continue;
+                // Extract month from the ID (format: GROUP_ID_PAY_YYYY-MM)
+                const month = srcDoc.id.split('_PAY_')[1];
+                if (!month) continue;
                 const studentPayment = (srcDoc.records || []).find(r => r.studentId === student.id);
                 if (!studentPayment) continue;
 
-                const targetPayId = `${targetGroupId}_PAY_${srcDoc.month}`;
+                const targetPayId = `${targetGroupId}_PAY_${month}`;
                 let targetDoc = await getFromDB('payments', targetPayId);
 
                 if (targetDoc) {
@@ -5299,16 +5307,18 @@ window.confirmMoveStudent = async function () {
                 } else {
                     targetDoc = {
                         id: targetPayId,
-                        month: srcDoc.month,
+                        month,
                         groupId: targetGroupId,
                         records: [studentPayment]
                     };
                 }
 
+                // Silent flag: suppress Cloud Function notifications for historical data
+                targetDoc._noNotify = true;
                 await putToDB('payments', targetDoc);
                 await addToSyncQueue({
                     type: 'set',
-                    path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/payments/${srcDoc.month}`,
+                    path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/payments/${month}`,
                     data: targetDoc
                 });
             }

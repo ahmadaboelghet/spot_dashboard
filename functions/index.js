@@ -455,6 +455,14 @@ exports.notifyOnNewGrades = onDocumentWritten(
     const scoresBefore = beforeData.scores || {};
 
     const afterData = snapAfter.data();
+
+    // 🔥 تجنب إرسال إشعارات لو ده تعديل صامت (نقل سجلات تاريخية)
+    if (afterData._noNotify === true) {
+      console.log("🤫 Silent update detected. Skipping notifications.");
+      await snapAfter.ref.update({ _noNotify: admin.firestore.FieldValue.delete() });
+      return null;
+    }
+
     const assignmentName = afterData.name || "واجب/امتحان";
     const scoresAfter = afterData.scores || {};
     const subjectName = await getTeacherSubject(teacherId);
@@ -928,6 +936,14 @@ exports.notifyOnPayment = onDocumentWritten(
     if (!snapAfter || !snapAfter.exists) return;
 
     const afterData = snapAfter.data();
+
+    // 🔥 تجنب إرسال إشعارات لو ده تعديل صامت (نقل سجلات تاريخية)
+    if (afterData._noNotify === true) {
+      console.log("🤫 Silent update detected. Skipping notifications.");
+      await snapAfter.ref.update({ _noNotify: admin.firestore.FieldValue.delete() });
+      return null;
+    }
+
     const beforeData = snapBefore.exists ? snapBefore.data() : { records: [] };
 
     const afterRecords = afterData.records || [];
@@ -1643,9 +1659,10 @@ exports.notifyOnPresence = onDocumentWritten(
 
     const afterData = snapAfter.data();
     
-    // 🔥 تجنب إرسال إشعارات لو ده تعديل صامت (عشان تصحيح الأخطاء)
+    // 🔥 تجنب إرسال إشعارات لو ده تعديل صامت (نقل سجلات تاريخية)
     if (afterData._noNotify === true) {
       console.log("🤫 Silent update detected. Skipping notifications.");
+      await snapAfter.ref.update({ _noNotify: admin.firestore.FieldValue.delete() });
       return null;
     }
 
