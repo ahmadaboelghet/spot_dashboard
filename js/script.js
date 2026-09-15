@@ -2920,6 +2920,7 @@ async function renderOverview() {
         if (allAssignments && allAssignments.length > 0) {
             const chartExams = allAssignments.filter(e =>
                 (e.type === 'exam' || !e.type) &&
+                !e.isTransferHistory &&
                 !e.name.includes("واجب") &&
                 e.scores && Object.keys(e.scores).length > 0
             ).sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -3499,7 +3500,7 @@ async function updateGroupAnalyticsChart() {
         let attData = [0, 0, 0, 0, 0, 0, 0];
 
         const filteredAtt = filteredAttRaw
-            .filter(d => d.date)
+            .filter(d => d.date && !d.isTransferHistory)
             .sort((a, b) => new Date(b.date) - new Date(a.date)) // descending
             .slice(0, 7) // newest 7
             .reverse(); // reverse for chart
@@ -3525,7 +3526,7 @@ async function updateGroupAnalyticsChart() {
         let hwData = [0, 0, 0, 0, 0, 0, 0];
 
         const filteredHw = filteredHwRaw
-            .filter(d => d.type === 'daily' && d.date)
+            .filter(d => d.type === 'daily' && d.date && !d.isTransferHistory)
             .sort((a, b) => new Date(b.date) - new Date(a.date))
             .slice(0, 7)
             .reverse();
@@ -5204,70 +5205,114 @@ window.confirmMoveStudent = async function () {
 
         // ── 4. Copy historical records to the new group ──────────────────────
         // Records in the old group are KEPT as archive — we only copy, not delete.
-        if (navigator.onLine) {
-            if (status) { status.textContent = '📂 جاري نقل السجلات التاريخية...'; }
-            const basePath = `teachers/${TEACHER_ID}/groups`;
+        // New sessions created in the target group are flagged with isTransferHistory:true
+        // so analytics functions can safely ignore them.
+        if (status) { status.textContent = '📂 جاري نقل السجلات التاريخية...'; }
 
-            // ─── 4a. Attendance ───────────────────────────────────────────────
-            try {
-                const attSnap = await firestoreDB
-                    .collection(`${basePath}/${sourceGroupId}/dailyAttendance`)
-                    .get();
-                for (const doc of attSnap.docs) {
-                    const data = doc.data();
-                    if (data.students && data.students[student.id] !== undefined) {
-                        await addToSyncQueue({
-                            type: 'update',
-                            path: `${basePath}/${targetGroupId}/dailyAttendance/${doc.id}`,
-                            data: {
-                                date: data.date || doc.id,
-                                [`students.${student.id}`]: data.students[student.id]
-                            }
-                        });
-                    }
-                }
-            } catch (e) { console.warn('Move: attendance copy failed', e); }
+        // ─── 4a. Attendance (records[] array schema) ──────────────────────────
+        try {
+            const sourceAtt = await getAllFromDB('attendance', 'groupId', sourceGroupId);
+            for (const srcDoc of sourceAtt) {
+                if (!srcDoc.date) continue;
+                const studentRecord = (srcDoc.records || []).find(r => r.studentId === student.id);
+                if (!studentRecord) continue;
 
-            // ─── 4b. Exams ────────────────────────────────────────────────────
-            try {
-                const examsSnap = await firestoreDB
-                    .collection(`${basePath}/${sourceGroupId}/exams`)
-                    .get();
-                for (const doc of examsSnap.docs) {
-                    const data = doc.data();
-                    const gradeEntry = data.grades?.[student.id];
-                    if (gradeEntry !== undefined) {
-                        await addToSyncQueue({
-                            type: 'update',
-                            path: `${basePath}/${targetGroupId}/exams/${doc.id}`,
-                            data: {
-                                name: data.name,
-                                date: data.date,
-                                totalMark: data.totalMark,
-                                [`grades.${student.id}`]: gradeEntry
-                            }
-                        });
-                    }
-                }
-            } catch (e) { console.warn('Move: exams copy failed', e); }
+                const targetAttId = `${targetGroupId}_${srcDoc.date}`;
+                let targetDoc = await getFromDB('attendance', targetAttId);
 
-            // ─── 4c. Payments ─────────────────────────────────────────────────
-            try {
-                const paymentsSnap = await firestoreDB
-                    .collection(`${basePath}/${sourceGroupId}/payments`)
-                    .get();
-                for (const doc of paymentsSnap.docs) {
-                    const data = doc.data();
-                    if (data.students && data.students[student.id] !== undefined) {
-                        await addToSyncQueue({
-                            type: 'update',
-                            path: `${basePath}/${targetGroupId}/payments/${doc.id}`,
-                            data: { [`students.${student.id}`]: data.students[student.id] }
-                        });
-                    }
+                if (targetDoc) {
+                    // Session exists → just push the student record if not already there
+                    if (!targetDoc.records) targetDoc.records = [];
+                    const alreadyIn = targetDoc.records.find(r => r.studentId === student.id);
+                    if (!alreadyIn) targetDoc.records.push(studentRecord);
+                } else {
+                    // Session doesn't exist → create it, flag as transfer history
+                    targetDoc = {
+                        id: targetAttId,
+                        date: srcDoc.date,
+                        teacherId: TEACHER_ID,
+                        groupId: targetGroupId,
+                        isTransferHistory: true,
+                        records: [studentRecord]
+                    };
                 }
-            } catch (e) { console.warn('Move: payments copy failed', e); }
-        }
+
+                await putToDB('attendance', targetDoc);
+                await addToSyncQueue({
+                    type: 'set',
+                    path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/dailyAttendance/${srcDoc.date}`,
+                    data: targetDoc
+                });
+            }
+        } catch (e) { console.warn('Move: attendance copy failed', e); }
+
+        // ─── 4b. Assignments & Exams (scores{} object schema) ─────────────────
+        try {
+            const sourceAssign = await getAllFromDB('assignments', 'groupId', sourceGroupId);
+            for (const srcDoc of sourceAssign) {
+                if (!srcDoc.date && !srcDoc.name) continue;
+                const studentScore = (srcDoc.scores || {})[student.id];
+                if (studentScore === undefined) continue;
+
+                const targetAssignId = srcDoc.id.replace(sourceGroupId, targetGroupId);
+                let targetDoc = await getFromDB('assignments', targetAssignId);
+
+                if (targetDoc) {
+                    // Assignment exists → just add the student's score
+                    if (!targetDoc.scores) targetDoc.scores = {};
+                    targetDoc.scores[student.id] = studentScore;
+                } else {
+                    // Assignment doesn't exist → create it, flag as transfer history
+                    targetDoc = {
+                        ...srcDoc,
+                        id: targetAssignId,
+                        groupId: targetGroupId,
+                        isTransferHistory: true,
+                        scores: { [student.id]: studentScore }
+                    };
+                }
+
+                await putToDB('assignments', targetDoc);
+                await addToSyncQueue({
+                    type: 'set',
+                    path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/assignments/${targetAssignId}`,
+                    data: targetDoc
+                });
+            }
+        } catch (e) { console.warn('Move: assignments/exams copy failed', e); }
+
+        // ─── 4c. Payments (records[] array schema, NO isTransferHistory flag) ──
+        try {
+            const sourcePayments = await getAllFromDB('payments', 'groupId', sourceGroupId);
+            for (const srcDoc of sourcePayments) {
+                if (!srcDoc.month) continue;
+                const studentPayment = (srcDoc.records || []).find(r => r.studentId === student.id);
+                if (!studentPayment) continue;
+
+                const targetPayId = `${targetGroupId}_PAY_${srcDoc.month}`;
+                let targetDoc = await getFromDB('payments', targetPayId);
+
+                if (targetDoc) {
+                    if (!targetDoc.records) targetDoc.records = [];
+                    const alreadyIn = targetDoc.records.find(r => r.studentId === student.id);
+                    if (!alreadyIn) targetDoc.records.push(studentPayment);
+                } else {
+                    targetDoc = {
+                        id: targetPayId,
+                        month: srcDoc.month,
+                        groupId: targetGroupId,
+                        records: [studentPayment]
+                    };
+                }
+
+                await putToDB('payments', targetDoc);
+                await addToSyncQueue({
+                    type: 'set',
+                    path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/payments/${srcDoc.month}`,
+                    data: targetDoc
+                });
+            }
+        } catch (e) { console.warn('Move: payments copy failed', e); }
 
         // ── 5. Remove from current session's allStudents array ───────────────
         allStudents = allStudents.filter(s => s.id !== student.id);
