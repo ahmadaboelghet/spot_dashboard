@@ -5297,8 +5297,11 @@ window.confirmMoveStudent = async function () {
                 // Extract month from the ID (format: GROUP_ID_PAY_YYYY-MM)
                 const month = srcDoc.id.split('_PAY_')[1];
                 if (!month) continue;
-                const studentPayment = (srcDoc.records || []).find(r => r.studentId === student.id);
-                if (!studentPayment) continue;
+                
+                if (!srcDoc.records) continue;
+                const studentPaymentIndex = srcDoc.records.findIndex(r => r.studentId === student.id);
+                if (studentPaymentIndex === -1) continue;
+                const studentPayment = srcDoc.records[studentPaymentIndex];
 
                 const targetPayId = `${targetGroupId}_PAY_${month}`;
                 let targetDoc = await getFromDB('payments', targetPayId);
@@ -5316,17 +5319,30 @@ window.confirmMoveStudent = async function () {
                     };
                 }
 
-                // Save locally WITHOUT the silent flag to prevent IndexedDB pollution
+                // Save TARGET locally WITHOUT the silent flag to prevent IndexedDB pollution
                 await putToDB('payments', targetDoc);
                 
-                // Inject the silent flag ONLY for the sync queue payload
+                // Inject the silent flag ONLY for the TARGET sync queue payload
                 await addToSyncQueue({
                     type: 'set',
                     path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/payments/${month}`,
                     data: { ...targetDoc, _noNotify: true }
                 });
+
+                // ✅ FIX: Remove from source group to prevent double-counting in income
+                srcDoc.records.splice(studentPaymentIndex, 1);
+                
+                // Save SOURCE locally WITHOUT silent flag
+                await putToDB('payments', srcDoc);
+                
+                // Sync SOURCE removal to server WITH silent flag
+                await addToSyncQueue({
+                    type: 'update',
+                    path: `teachers/${TEACHER_ID}/groups/${sourceGroupId}/payments/${month}`,
+                    data: { records: srcDoc.records, _noNotify: true }
+                });
             }
-        } catch (e) { console.warn('Move: payments copy failed', e); }
+        } catch (e) { console.warn('Move: payments transfer failed', e); }
 
         // ── 5. Remove from current session's allStudents array ───────────────
         allStudents = allStudents.filter(s => s.id !== student.id);
