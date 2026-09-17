@@ -5344,10 +5344,18 @@ window.confirmMoveStudent = async function () {
             }
         } catch (e) { console.warn('Move: payments transfer failed', e); }
 
-        // ── 5. Remove from current session's allStudents array ───────────────
+        // ── 5. Clear Payment Caches to fix Income calculation bugs ───────────
+        _lastMonthCalculated = null;
+        _lastGroupCalculated = null;
+        _cachedOtherGroupsTotal = 0;
+        if (typeof calculateOverallIncome === 'function') {
+            calculateOverallIncome();
+        }
+
+        // ── 6. Remove from current session's allStudents array ───────────────
         allStudents = allStudents.filter(s => s.id !== student.id);
 
-        // ── 6. Update crossGroupLookupMap ────────────────────────────────────
+        // ── 7. Update crossGroupLookupMap ────────────────────────────────────
         if (crossGroupLookupMap) {
             const updatedEntry = newStudentData;
             if (student.id)                crossGroupLookupMap.set(String(student.id).toUpperCase().trim(), updatedEntry);
