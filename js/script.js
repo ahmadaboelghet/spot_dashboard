@@ -93,7 +93,7 @@ try {
     // الكشف عن البيئة (لو العنوان localhost أو 127.0.0.1 يبقى إحنا بنجرب)
     if (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "file:") {
         console.log("🚧 Running in DEVELOPMENT mode (Test DB)");
-        activeConfig = devConfig;
+        activeConfig = prodConfig;
 
         // علامة أمان: خط أحمر فوق عشان تعرف إنك في التست وماتقلقش وانت بتمسح
         document.body.style.borderTop = "5px solid red";
