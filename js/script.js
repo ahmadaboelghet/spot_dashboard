@@ -7119,7 +7119,8 @@ let _cachedOtherGroupsTotal = 0;
 let _lastMonthCalculated = null;
 let _lastGroupCalculated = null;
 
-// دالة حساب الدخل الكلي (بذكاء 🧠)
+
+// دالة حساب الدخل الكلي (نظام هجين: سيرفر وكاش محلي لمنع تضارب المزامنة)
 async function calculateOverallIncome(liveGroupTotal = null) {
     const month = document.getElementById('paymentMonthInput').value;
     const display = document.getElementById('overallTotalDisplay');
@@ -7136,17 +7137,60 @@ async function calculateOverallIncome(liveGroupTotal = null) {
 
         if (_lastMonthCalculated !== month || _lastGroupCalculated !== SELECTED_GROUP_ID) {
             const otherGroups = groups.filter(g => g.id !== SELECTED_GROUP_ID);
+            let totalOtherGroups = 0;
             
-            let totalFromLocal = 0;
+            // 1. فحص طابور المزامنة لمعرفة إذا كان هناك ملفات دفع جاري رفعها للسيرفر
+            let pendingSyncPaths = new Set();
+            try {
+                const syncItems = await getAllFromDB('syncQueue');
+                if (syncItems) {
+                    syncItems.forEach(item => {
+                        if (item.path) pendingSyncPaths.add(item.path);
+                    });
+                }
+            } catch(e) {}
+
             for (const group of otherGroups) {
                 const payId = `${group.id}_PAY_${month}`;
-                const doc = await getFromDB('payments', payId);
-                if (doc && doc.records) {
-                    totalFromLocal += doc.records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
+                const docPath = `teachers/${TEACHER_ID}/groups/${group.id}/payments/${month}`;
+                let groupTotal = 0;
+                let useLocal = false;
+
+                // 2. إذا كان ملف الدفع لهذا الجروب في طابور المزامنة، نثق في الكاش المحلي فقط لمنع الدبلجة
+                if (pendingSyncPaths.has(docPath)) {
+                    useLocal = true;
                 }
+
+                // 3. محاولة جلب الداتا من السيرفر (للأجهزة الجديدة/الموبايل)
+                if (!useLocal && navigator.onLine) {
+                    try {
+                        const snap = await firestoreDB.doc(docPath).get();
+                        if (snap.exists && snap.data().records) {
+                            const records = snap.data().records;
+                            groupTotal = records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
+                            
+                            // تحديث الكاش المحلي فوراً عشان يشتغل أوفلاين لاحقاً
+                            await putToDB('payments', { id: payId, month: month, records: records });
+                        }
+                    } catch (err) {
+                        useLocal = true; // لو النت فصل أو حصل خطأ، نلجأ للكاش
+                    }
+                } else {
+                    useLocal = true;
+                }
+
+                // 4. استخدام الكاش المحلي (لو السيرفر متأخر أو النت قاطع)
+                if (useLocal) {
+                    const doc = await getFromDB('payments', payId);
+                    if (doc && doc.records) {
+                        groupTotal = doc.records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
+                    }
+                }
+                
+                totalOtherGroups += groupTotal;
             }
             
-            _cachedOtherGroupsTotal = totalFromLocal;
+            _cachedOtherGroupsTotal = totalOtherGroups;
             _lastMonthCalculated = month;
             _lastGroupCalculated = SELECTED_GROUP_ID;
         }
