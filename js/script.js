@@ -5413,14 +5413,23 @@ async function renderPaymentsList(filter = "") {
     container.innerHTML = '';
     
 function recalculateGroupTotal() {
-    let total = 0;
+    let currentAmounts = { ...map }; // Start with the full database state
+    
+    // Override with current DOM state for rendered/visible elements
     document.querySelectorAll('#paymentsList > div').forEach(div => {
+        const sid = div.dataset.sid;
         const checkbox = div.querySelector('.payment-check');
         const input = div.querySelector('.payment-input');
         if (checkbox && checkbox.checked) {
-            total += parseInt(input.value || 0);
+            currentAmounts[sid] = parseInt(input.value || 0);
+        } else {
+            currentAmounts[sid] = 0;
         }
     });
+
+    let total = 0;
+    Object.values(currentAmounts).forEach(amt => { total += (parseInt(amt) || 0); });
+    
     currentGroupTotal = total;
     const groupTotalDisplay = document.getElementById('groupTotalDisplay');
     if (groupTotalDisplay) groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
@@ -5586,9 +5595,12 @@ async function savePayments(isSilent = false) {
     try {
         const records = [];
         document.querySelectorAll('#paymentsList > div').forEach(div => {
+            const sid = div.dataset.sid;
+            if (!allStudents.some(s => s.id === sid)) return; // Security check: Prevent reviving moved/deleted students
+
             const val = div.querySelector('.payment-input').value;
             const amount = val ? parseFloat(val) : 0;
-            records.push({ studentId: div.dataset.sid, amount: amount, paid: amount > 0 });
+            records.push({ studentId: sid, amount: amount, paid: amount > 0 });
         });
         
         await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${month}`, month, records });
@@ -7118,44 +7130,31 @@ async function calculateOverallIncome(liveGroupTotal = null) {
         let groups = await getAllFromDB('groups', 'teacherId', TEACHER_ID);
 
         if (!groups || groups.length === 0) {
-            display.innerText = "0 ج.م";
+            if (display) display.innerText = "0 ج.م";
             return;
         }
 
-        // لو الشهر اتغير أو المجموعة اتغيرت، لازم نحسب المجموعات التانية من الداتابيز تاني
         if (_lastMonthCalculated !== month || _lastGroupCalculated !== SELECTED_GROUP_ID) {
-            // جيب كل المجموعات ما عدا الحالية
             const otherGroups = groups.filter(g => g.id !== SELECTED_GROUP_ID);
             
-            const promises = otherGroups.map(async (group) => {
-                try {
-                    // القراءة من الداتابيز مباشرة (Firestore) مش الكاش
-                    const snap = await firestoreDB.doc(`teachers/${TEACHER_ID}/groups/${group.id}/payments/${month}`).get();
-                    if (snap.exists && snap.data().records) {
-                        return snap.data().records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
-                    }
-                } catch (err) {
-                    // لو النت فاصل، اقرأ من الكاش
-                    const payId = `${group.id}_PAY_${month}`;
-                    const doc = await getFromDB('payments', payId);
-                    if (doc && doc.records) {
-                        return doc.records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
-                    }
+            let totalFromLocal = 0;
+            for (const group of otherGroups) {
+                const payId = `${group.id}_PAY_${month}`;
+                const doc = await getFromDB('payments', payId);
+                if (doc && doc.records) {
+                    totalFromLocal += doc.records.reduce((sum, r) => sum + (parseInt(r.amount) || 0), 0);
                 }
-                return 0;
-            });
-
-            const results = await Promise.all(promises);
-            _cachedOtherGroupsTotal = results.reduce((acc, curr) => acc + curr, 0);
+            }
+            
+            _cachedOtherGroupsTotal = totalFromLocal;
             _lastMonthCalculated = month;
             _lastGroupCalculated = SELECTED_GROUP_ID;
         }
 
-        // المجموع الكلي = الرقم الحي للمجموعة الحالية (أو صفر) + مجموع المجموعات التانية المتكيش في الميموري
         let currentGroupVal = (liveGroupTotal !== null) ? (parseInt(liveGroupTotal) || 0) : 0;
         const totalIncome = currentGroupVal + _cachedOtherGroupsTotal;
 
-        display.innerText = `${totalIncome.toLocaleString()} ج.م`;
+        if (display) display.innerText = `${totalIncome.toLocaleString()} ج.م`;
 
     } catch (error) {
         console.error('Error calculating overall income:', error);
