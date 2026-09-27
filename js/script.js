@@ -6633,7 +6633,7 @@ window.sendSpotMessage = async function () {
 
     try {
         // Fix deadline-exceeded error: Increase client timeout to 5 minutes (300,000 ms)
-        const chatFn = firebase.functions('europe-west1').httpsCallable('chatWithSpot', { timeout: 300000 });
+        const chatFn = firebase.app().functions('europe-west1').httpsCallable('chatWithSpot', { timeout: 300000 });
         const result = await chatFn({
             message: msg,
             teacherId: currentTeacherId,
