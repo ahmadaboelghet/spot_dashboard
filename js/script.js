@@ -6633,7 +6633,7 @@ window.sendSpotMessage = async function () {
 
     try {
         // Fix deadline-exceeded error: Increase client timeout to 5 minutes (300,000 ms)
-        const chatFn = firebase.functions().httpsCallable('chatWithSpot', { timeout: 300000 });
+        const chatFn = firebase.functions('europe-west1').httpsCallable('chatWithSpot', { timeout: 300000 });
         const result = await chatFn({
             message: msg,
             teacherId: currentTeacherId,
@@ -6726,7 +6726,25 @@ function addMessageToUI(text, sender, type, saveToHistory = true) {
         let examData = null;
         if (jsonStr) { try { examData = JSON.parse(jsonStr); } catch (_) {} }
 
-        if (examData && examData.isExam) {
+        // ── Handle server-side error response (e.g. no files uploaded) ──────
+        if (examData && examData.isExam && examData.error) {
+            div.innerHTML = `
+                <div class="flex gap-3 justify-start items-start w-full">
+                    <div class="w-10 h-10 bg-red-50 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0 text-red-500 shadow">
+                        <i class="ri-error-warning-fill text-xl"></i>
+                    </div>
+                    <div class="bg-white dark:bg-zinc-800 border-2 border-red-300 dark:border-red-700 rounded-2xl rounded-tl-none p-4 shadow-md max-w-[85%]">
+                        <p class="text-sm font-bold text-red-600 dark:text-red-400">${examData.message || 'حدث خطأ في إنشاء الامتحان.'}</p>
+                        <p class="text-xs text-gray-500 mt-2">💡 تأكد من رفع الملازم أولاً من قسم <strong>"تغذية البوت"</strong> ثم أعد الطلب.</p>
+                    </div>
+                </div>`;
+            container.appendChild(div);
+            scrollToBottom();
+            return;
+        }
+
+        // ── Render a successful exam card ────────────────────────────────────
+        if (examData && examData.isExam && examData.questions?.length > 0) {
             div.innerHTML = `
                 <div class="flex gap-3 justify-start items-start w-full">
                     <div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-900/30 rounded-full flex items-center justify-center flex-shrink-0 text-yellow-600 shadow">
@@ -6757,6 +6775,7 @@ function addMessageToUI(text, sender, type, saveToHistory = true) {
             return;
         }
     }
+
 
     // BOT: Note Card
     if (type === 'note') {

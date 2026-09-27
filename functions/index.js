@@ -1484,8 +1484,25 @@ You are "Spot", a smart AI assistant for teachers. Communicate in a friendly yet
         safetySettings,
       });
     } catch (e) {
-      if (e.message && (e.message.includes("403") || e.message.includes("permission") || e.message.includes("not exist"))) {
-        console.warn("⚠️ File API Error (stale URIs). Retrying text-only...");
+      if (e.message && (e.message.includes("403") || e.message.includes("permission") || e.message.includes("not exist") || e.message.includes("invalid"))) {
+        console.warn("⚠️ File API Error (stale URIs):", e.message);
+        
+        // If this is an exam request, we MUST NOT retry text-only — the result will be an empty exam
+        // Instead, return a clear error asking the user to re-upload the file
+        if (isExamRequest) {
+          return {
+            response: JSON.stringify({
+              isExam: true,
+              error: true,
+              message: "رابط الملف انتهت صلاحيته. يرجى حذف الملف ورفعه مرة أخرى ثم إعادة الطلب.",
+            }),
+            type: "exam",
+            teacherName: "",
+          };
+        }
+        
+        // For chat/note requests, text-only retry is acceptable
+        console.warn("Retrying text-only for non-exam request...");
         const textOnly = promptParts.filter((p) => p.text);
         result = await modelInstance.generateContent({
           contents: [{ role: "user", parts: textOnly }],
