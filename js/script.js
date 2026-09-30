@@ -364,6 +364,10 @@ let hasHomeworkToday = true, currentPendingStudentId = null, currentCrossGroupSt
 //            liveSessionData.groupId    = 'xxx'
 const liveSessionData = { attendance: {}, homework: {}, date: null, groupId: null };
 
+// Single Source of Truth for the payments tab — avoids DOM-as-state bugs
+// Structure: livePaymentData.records = { studentId: { amount, paid } }
+const livePaymentData = { groupId: null, month: null, records: {} };
+
 // ✅ PHASE 2: Throttled-save state — guarantees a save fires at most every 4s under rapid scans
 let _saveThrottleTimer = null;      // debounce arm (resets on each scan)
 let _saveThrottleForced = null;     // max-interval arm (fires regardless after 4s)
@@ -4592,53 +4596,53 @@ async function processDailyScan(student, scannerType = 'camera') {
 // خلينا الدالة async
 async function processPaymentScan(student) {
     console.log("processPaymentScan called for:", student.name);
-    let row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
-    
-    // ─── Req #2: STRICTLY FORBIDDEN to call renderPaymentsList() here ─────────
-    // If the row exists but is hidden (active search filter), simply un-hide it.
-    // If it genuinely doesn't exist in the DOM yet, warn and bail — do not re-render.
-    if (row && row.classList.contains('hidden')) {
-        row.classList.remove('hidden');
-    } else if (!row) {
-        console.warn("⚠️ processPaymentScan: row not found in DOM — scan skipped to avoid full re-render.");
-        showToast(`⚠️ لم يتم إيجاد سطر الطالب "${student.name}" — أعد فتح تبويب المصاريف`, "error");
+
+    const defaultAmountInput = document.getElementById('defaultAmountInput');
+    const defaultVal = defaultAmountInput?.value;
+
+    // ── 1. Validate default amount first ─────────────────────────────────────
+    if (!defaultVal) {
+        showToast(`⚠️ لا يمكن تحصيل المصاريف لـ "${student.name}"`, "error");
+        setTimeout(() => showToast("يرجى تحديد المبلغ أولاً في الخانة العلوية", "error"), 1000);
+        defaultAmountInput?.focus();
         return;
     }
 
-    const defaultAmountInput = document.getElementById('defaultAmountInput');
+    const amount = parseInt(defaultVal) || 0;
 
-    if (row) {
-        const checkbox = row.querySelector('.payment-check');
-        const input = row.querySelector('.payment-input');
-
-        if (!checkbox.checked) {
-            const val = defaultAmountInput.value;
-
-            // منع الـ Scan لو المبلغ مش محدد
-            if (!val) {
-                showToast(`⚠️ لا يمكن تحصيل المصاريف لـ "${student.name}"`, "error");
-                setTimeout(() => showToast("يرجى تحديد المبلغ أولاً في الخانة العلوية", "error"), 1000);
-                row.classList.add('shake-anim');
-                defaultAmountInput.focus();
-                setTimeout(() => row.classList.remove('shake-anim'), 500);
-                return;
-            }
-
-            // لو المبلغ موجود، كمل عادي
-            checkbox.checked = true;
-            input.value = val;
-            checkbox.dispatchEvent(new Event('change')); // هيشغل الحسابات والحفظ التلقائي
-            
-            // ─── Req #3: Debounced scroll — avoids main-thread blocking ───────
-            _deferredScrollIntoView(row);
-            row.classList.add('ring-4', 'ring-green-300');
-            setTimeout(() => row.classList.remove('ring-4', 'ring-green-300'), 1000);
-            logEvent('scan_payment', { student_id: student.id, student_name: student.name, amount: val, group_id: SELECTED_GROUP_ID });
-        } else {
-            showToast(`تم دفع المصاريف مسبقاً للطالب: ${student.name}`);
-        }
+    // ── 2. Check if already paid (from memory) ────────────────────────────────
+    const existing = livePaymentData.records[student.id];
+    if (existing && existing.paid) {
+        showToast(`تم دفع المصاريف مسبقاً للطالب: ${student.name}`);
+        return;
     }
+
+    // ── 3. State first — update memory immediately ────────────────────────────
+    livePaymentData.records[student.id] = { amount, paid: true };
+    recalculateGroupTotalFromMemory();
+
+    // ── 4. DOM second — update visible row if it exists ───────────────────────
+    let row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
+    if (row) {
+        if (row.classList.contains('hidden')) row.classList.remove('hidden');
+        const checkbox = row.querySelector('.payment-check');
+        const input    = row.querySelector('.payment-input');
+        if (checkbox) checkbox.checked = true;
+        if (input)    input.value = defaultVal;
+        row.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
+        if (input) { input.classList.add('text-green-600', 'font-bold'); input.classList.remove('text-gray-400'); }
+        _deferredScrollIntoView(row);
+        row.classList.add('ring-4', 'ring-green-300');
+        setTimeout(() => row.classList.remove('ring-4', 'ring-green-300'), 1000);
+    }
+    // Row not in DOM (hidden by filter or not yet rendered) — state is already updated, save will persist it.
+
+    // ── 5. Persist ────────────────────────────────────────────────────────────
+    clearTimeout(savePaymentsTimeout);
+    savePaymentsTimeout = setTimeout(silentSavePayments, 1000);
+    logEvent('scan_payment', { student_id: student.id, student_name: student.name, amount: defaultVal, group_id: SELECTED_GROUP_ID });
 }
+
 
 // ==========================================
 // 9. STUDENTS (With Link & Messages)
@@ -4993,6 +4997,12 @@ async function linkCardToStudent(student, cardId) {
     // توحيد حالة الحروف للكارت (عشان لو الاسكانر قراه سمول يظبط)
     const safeCardId = cardId.toUpperCase().trim();
 
+    // ✅ إضافة الحماية للكاميرا والإدخال اليدوي معاً
+    if (!safeCardId.startsWith('NAZ-') || safeCardId.length < 8) {
+        showToast('❌ عذراً، هذا ليس كارت "الناظر" صالح للاستخدام!', 'error');
+        isLinkingCard = false;
+        return;
+    }
     // 2. إظهار حالة التحميل للمستخدم عشان ميسحبش سكان تاني
     const modalTitle = document.getElementById('cardLinkStudentName');
     const originalTitle = modalTitle ? modalTitle.innerText : '';
@@ -5401,42 +5411,27 @@ async function activateParentAccountUI(phone) {
 }
 
 // --- Payments ---
-let _paymentsRenderVersion = 0; // ✅ عداد لمنع تكرار الطلاب عند التحميل المتوازي (Race Condition Guard)
+ let _paymentsRenderVersion = 0; // ✅ عداد لمنع تكرار الطلاب عند التحميل المتوازي (Race Condition Guard)
+
+// ── Memory-first total calculator ─────────────────────────────────────────
+function recalculateGroupTotalFromMemory() {
+    let total = 0;
+    Object.values(livePaymentData.records).forEach(r => {
+        if (r.paid) total += (parseInt(r.amount) || 0);
+    });
+    const groupTotalDisplay = document.getElementById('groupTotalDisplay');
+    if (groupTotalDisplay) groupTotalDisplay.innerText = `${total.toLocaleString()} ج.م`;
+    calculateOverallIncome(total);
+}
+
 async function renderPaymentsList(filter = "") {
     const thisRenderVersion = ++_paymentsRenderVersion;
     if (typeof filter !== 'string') filter = "";
     const month = document.getElementById('paymentMonthInput').value;
     const defaultAmountInput = document.getElementById('defaultAmountInput');
     const container = document.getElementById('paymentsList');
-    const groupTotalDisplay = document.getElementById('groupTotalDisplay');
 
     container.innerHTML = '';
-    
-function recalculateGroupTotal() {
-    let currentAmounts = { ...map }; // Start with the full database state
-    
-    // Override with current DOM state for rendered/visible elements
-    document.querySelectorAll('#paymentsList > div').forEach(div => {
-        const sid = div.dataset.sid;
-        const checkbox = div.querySelector('.payment-check');
-        const input = div.querySelector('.payment-input');
-        if (checkbox && checkbox.checked) {
-            currentAmounts[sid] = parseInt(input.value || 0);
-        } else {
-            currentAmounts[sid] = 0;
-        }
-    });
-
-    let total = 0;
-    Object.values(currentAmounts).forEach(amt => { total += (parseInt(amt) || 0); });
-    
-    currentGroupTotal = total;
-    const groupTotalDisplay = document.getElementById('groupTotalDisplay');
-    if (groupTotalDisplay) groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
-    calculateOverallIncome(currentGroupTotal);
-}
-
-    let currentGroupTotal = 0; // ده العداد الحي للمجموعة
 
     if (!month || !allStudents.length) return;
 
@@ -5444,24 +5439,26 @@ function recalculateGroupTotal() {
     const doc = await getFromDB('payments', payId);
     // ✅ فحص: لو نداء جديد بدأ أثناء الانتظار، نوقف النداء القديم فوراً
     if (thisRenderVersion !== _paymentsRenderVersion) return;
-    const map = {};
-    if (doc?.records) {
-        doc.records.forEach(r => map[r.studentId] = r.amount);
+
+    // ── Hydrate livePaymentData (only when group or month changes) ────────────
+    if (livePaymentData.groupId !== SELECTED_GROUP_ID || livePaymentData.month !== month) {
+        livePaymentData.groupId = SELECTED_GROUP_ID;
+        livePaymentData.month   = month;
+        livePaymentData.records = {};
+        const dbMap = {};
+        if (doc?.records) {
+            doc.records.forEach(r => { dbMap[r.studentId] = r.amount; });
+        }
+        allStudents.forEach(s => {
+            const amt = dbMap[s.id];
+            livePaymentData.records[s.id] = { amount: parseInt(amt) || 0, paid: !!(amt && amt > 0) };
+        });
     }
 
-    // 1. الحساب المبدئي عند التحميل
-    allStudents.forEach(s => {
-        let amount = map[s.id];
-        if (amount && amount > 0) currentGroupTotal += parseInt(amount);
-    });
+    // ── Initial total from memory ─────────────────────────────────────────────
+    recalculateGroupTotalFromMemory();
 
-    if (groupTotalDisplay) {
-        groupTotalDisplay.innerText = `${currentGroupTotal.toLocaleString()} ج.م`;
-    }
-    calculateOverallIncome(currentGroupTotal);
-    // عرض الأرقام الأولية
-     // ✅ بنبعت الرقم المبدئي
-
+    // ── Filter & render ───────────────────────────────────────────────────────
     const normalizedFilter = filter.trim().toLowerCase();
     const searchPhoneFilter = normalizedFilter.startsWith('+20') ? normalizedFilter.replace('+20', '0') : normalizedFilter;
     const studentsToRender = allStudents.filter(s => {
@@ -5476,14 +5473,10 @@ function recalculateGroupTotal() {
         return;
     }
 
-    // 2. رسم القائمة
-    const fragment = document.createDocumentFragment();
-
     let finalStudents = studentsToRender.filter(s => {
         if (currentPaymentFilter === 'all') return true;
-        let amount = map[s.id];
-        const isPaid = amount && amount > 0;
-        
+        const rec = livePaymentData.records[s.id];
+        const isPaid = rec && rec.paid;
         if (currentPaymentFilter === 'paid') return isPaid;
         if (currentPaymentFilter === 'unpaid') return !isPaid;
         return true;
@@ -5494,14 +5487,16 @@ function recalculateGroupTotal() {
         return;
     }
 
+    const fragment = document.createDocumentFragment();
+
     finalStudents.forEach(s => {
-        let amount = map[s.id];
-        const isPaid = amount && amount > 0;
+        const rec    = livePaymentData.records[s.id] || { amount: 0, paid: false };
+        const amount = rec.amount || '';
+        const isPaid = rec.paid;
 
         const div = document.createElement('div');
         div.className = `record-item flex justify-between items-center p-3 border rounded-xl transition-colors ${isPaid ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-white dark:bg-darkSurface border-gray-100 dark:border-gray-700'}`;
         div.dataset.sid = s.id;
-        // ✅ PERF FIX 4: index for DOM-walk search
         const _pPay = s.parentPhoneNumber ? s.parentPhoneNumber.replace(/^\+20/, '0') : '';
         div.dataset.searchKey = `${(s.name || '').toLowerCase()} ${_pPay} ${(s.childId || s.id || '').toLowerCase()}`;
 
@@ -5512,26 +5507,23 @@ function recalculateGroupTotal() {
 </span>            <div class="flex items-center gap-3 justify-end w-2/3">
                 <input type="number"
                        class="payment-input input-field h-9 w-24 text-center text-sm ${isPaid ? 'text-green-600 font-bold' : 'text-gray-400'}"
-                       placeholder="0" value="${amount || ''}" min="0">
+                       placeholder="0" value="${amount}" min="0">
                 <input type="checkbox" class="payment-check w-6 h-6 accent-green-600 cursor-pointer" ${isPaid ? 'checked' : ''}>
             </div>
         `;
 
         const checkbox = div.querySelector('.payment-check');
-        const input = div.querySelector('.payment-input');
-        let oldVal = 0;
+        const input    = div.querySelector('.payment-input');
 
-        input.addEventListener('focus', (e) => {
-            oldVal = parseInt(e.target.value) || 0; // حفظ القيمة قبل التعديل
-        });
-
-        input.addEventListener('change', (e) => {
-            const newVal = parseInt(e.target.value) || 0;
+        input.addEventListener('change', () => {
+            const newVal = parseInt(input.value) || 0;
             if (checkbox.checked) {
-                recalculateGroupTotal();
-                
+                // Update memory first
+                livePaymentData.records[s.id] = { amount: newVal, paid: newVal > 0 };
+                recalculateGroupTotalFromMemory();
+                clearTimeout(savePaymentsTimeout);
+                savePaymentsTimeout = setTimeout(silentSavePayments, 1000);
             }
-            oldVal = newVal;
         });
 
         checkbox.addEventListener('change', (e) => {
@@ -5544,29 +5536,33 @@ function recalculateGroupTotal() {
             }
 
             if (e.target.checked) {
+                const amt = parseInt(input.value) || parseInt(defaultVal) || 0;
                 if (!input.value || input.value == 0) input.value = defaultVal;
+                // State first
+                livePaymentData.records[s.id] = { amount: amt, paid: true };
+                // Then DOM
                 div.classList.add('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.add('text-green-600', 'font-bold');
-                recalculateGroupTotal();
             } else {
-                recalculateGroupTotal();
+                // State first
+                livePaymentData.records[s.id] = { amount: 0, paid: false };
+                // Then DOM
                 input.value = '';
                 div.classList.remove('bg-green-50', 'border-green-500', 'dark:bg-green-900/20');
                 input.classList.remove('text-green-600', 'font-bold');
             }
-            
 
+            recalculateGroupTotalFromMemory();
             clearTimeout(savePaymentsTimeout);
-            savePaymentsTimeout = setTimeout(() => {
-                silentSavePayments();
-            }, 1000);
+            savePaymentsTimeout = setTimeout(silentSavePayments, 1000);
         });
 
         fragment.appendChild(div);
     });
-    // ✅ فحص نهائي قبل الإضافة: لو نداء أحدث بدأ، نتجاهل هذا النداء القديم
+
+    // ✅ فحص نهائي قبل الإضافة
     if (thisRenderVersion !== _paymentsRenderVersion) return;
-    container.innerHTML = ''; // مسح القائمة مباشرة قبل الإضافة لمنع التكرار
+    container.innerHTML = '';
     container.appendChild(fragment);
 }
 
@@ -5593,18 +5589,20 @@ async function savePayments(isSilent = false) {
     }
 
     try {
-        const records = [];
-        document.querySelectorAll('#paymentsList > div').forEach(div => {
-            const sid = div.dataset.sid;
-            if (!allStudents.some(s => s.id === sid)) return; // Security check: Prevent reviving moved/deleted students
+        // ── Memory-first: read from livePaymentData, not the DOM ──────────────
+        const targetGroupId = livePaymentData.groupId || SELECTED_GROUP_ID;
+        const targetMonth   = livePaymentData.month   || document.getElementById('paymentMonthInput').value;
 
-            const val = div.querySelector('.payment-input').value;
-            const amount = val ? parseFloat(val) : 0;
-            records.push({ studentId: sid, amount: amount, paid: amount > 0 });
+        const records = [];
+        Object.entries(livePaymentData.records).forEach(([sid, rec]) => {
+            // Security check: prevent reviving moved/deleted students
+            if (!allStudents.some(s => s.id === sid)) return;
+            records.push({ studentId: sid, amount: rec.amount || 0, paid: !!(rec.paid) });
         });
+
         
-        await putToDB('payments', { id: `${SELECTED_GROUP_ID}_PAY_${month}`, month, records });
-        await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/payments/${month}`, data: { month, records } });
+        await putToDB('payments', { id: `${targetGroupId}_PAY_${targetMonth}`, month: targetMonth, records });
+        await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/payments/${targetMonth}`, data: { month: targetMonth, records } });
         
         if (!isSilent) showToast(translations[currentLang].saved || "تم حفظ التحصيل بنجاح");
         else console.log("✅ Auto-saved payments successfully (Background)");
