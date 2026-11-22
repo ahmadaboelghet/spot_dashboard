@@ -1585,7 +1585,7 @@ async function processSyncQueue(isRecovering = false) {
                 };
 
                 try {
-                    await putToDB('syncQueue', updated, op.id);
+                    await putToDB('syncQueue', updated, key);
                 } catch (metaErr) {
                     console.error("⚠️ Failed to update retry metadata for sync item:", metaErr);
                 }
@@ -2516,7 +2516,7 @@ async function createGroup() {
     switchTab('overview');
     await loadGroupData(); // تفعيل أزرار الإضافة (عشان لو عايز يضيف طلاب علطول)
     document.getElementById('defaultAmountInput').value = '';
-    logEvent("group_created", { group_name: newGroupName });
+    logEvent("group_created", { group_name: name });
     showToast(translations[currentLang].groupCreatedSuccess);
 }
 
@@ -4749,6 +4749,11 @@ function openMessageModal(student) {
 }
 
 async function sendCustomMessageAction() {
+    if (!firebase.auth().currentUser) {
+        showToast("انتهت جلستك، يرجى تسجيل الدخول مجدداً ⚠️", "error");
+        return;
+    }
+
     const msg = document.getElementById('customMessageInput').value.trim();
     if (!msg) return showToast(translations[currentLang].writeMsgFirst, "error");
 
@@ -6657,6 +6662,11 @@ window.toggleSpotChat = function () {
 
 // دالة إرسال الرسالة
 window.sendSpotMessage = async function () {
+    if (!firebase.auth().currentUser) {
+        showToast("انتهت جلستك، يرجى تسجيل الدخول مجدداً ⚠️", "error");
+        return;
+    }
+
     const input = document.getElementById('chatInput');
     const msg = input.value.trim();
     if (!msg) return;
@@ -7042,7 +7052,6 @@ window.printStudyNote = function (content) {
         <title>ملخص درس - الناظر AI</title>
         <meta charset="UTF-8">
         
-        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
         <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
         
         <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -7278,6 +7287,10 @@ function setupAbsenceModalListeners() {
     // 1. فتح النافذة (نتأكد إن الزرار موجود الأول)
     if (sendBtn) {
         sendBtn.onclick = () => {
+            if (!firebase.auth().currentUser) {
+                showToast("انتهت جلستك، يرجى تسجيل الدخول مجدداً ⚠️", "error");
+                return;
+            }
             const modal = document.getElementById('absenceModal');
             const overlay = document.getElementById('absenceModalOverlay');
             const content = document.getElementById('absenceModalContent');
@@ -7312,6 +7325,11 @@ function setupAbsenceModalListeners() {
     // 3. تأكيد الإرسال
     if (confirmBtn) {
         confirmBtn.onclick = async () => {
+            if (!firebase.auth().currentUser) {
+                closeAbsenceModal();
+                showToast("انتهت جلستك، يرجى تسجيل الدخول مجدداً ⚠️", "error");
+                return;
+            }
             const originalText = confirmBtn.innerText;
 
             confirmBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> جاري الإرسال...';

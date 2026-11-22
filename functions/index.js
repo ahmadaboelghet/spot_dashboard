@@ -19,7 +19,13 @@ const PDFDocument = require("pdfkit");
 
 
 const { setGlobalOptions } = require("firebase-functions/v2");
-setGlobalOptions({ maxInstances: 1 });
+const { defineSecret } = require("firebase-functions/v2/params");
+
+const TWILIO_ACCOUNT_SID = defineSecret("TWILIO_ACCOUNT_SID");
+const TWILIO_AUTH_TOKEN = defineSecret("TWILIO_AUTH_TOKEN");
+const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+
+setGlobalOptions({ maxInstances: 20 });
 
 if (!admin.apps.length) {
 
@@ -29,6 +35,33 @@ if (!admin.apps.length) {
 // ===================================================================
 // (الجزء الأول: دوال مساعدة)
 // ===================================================================
+
+/**
+ * التحقق من صلاحيات المدرس أو المدير.
+ * @param {object} request - طلب الوظيفة السحابية
+ * @param {string} requestedTeacherId - معرف المدرس المطلوب الوصول لبياناته
+ * @return {Promise<boolean>}
+ */
+async function verifyTeacherOrAdmin(request, requestedTeacherId) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "يجب تسجيل الدخول أولاً");
+  }
+  const token = request.auth.token || {};
+  if (token.email === "admin@elnazer-edu.com" || token.admin === true) {
+    return true;
+  }
+  const callerUid = request.auth.uid;
+  if (requestedTeacherId && callerUid === requestedTeacherId) {
+    return true;
+  }
+  if (requestedTeacherId) {
+    const tDoc = await admin.firestore().collection("teachers").doc(requestedTeacherId).get();
+    if (tDoc.exists && tDoc.data() && tDoc.data().centerId === callerUid) {
+      return true;
+    }
+  }
+  throw new HttpsError("permission-denied", "ليس لديك صلاحية لتنفيذ هذا الإجراء");
+}
 
 /**
  * جلب اسم المادة للمدرس.
@@ -354,11 +387,13 @@ async function sendNotificationToParent(studentData, payload, context, studentId
 // 3. دالة الغياب اليدوية (التصحيح: المسار الصحيح للطلاب)
 exports.sendAbsenceNotifications = onCall({ cors: true }, async (request) => {
   // استقبال البيانات
-  const { groupId, date, teacherId } = request.data;
+  const { groupId, date, teacherId } = request.data || {};
 
   if (!teacherId) {
     throw new HttpsError("invalid-argument", "Teacher ID is required");
   }
+
+  await verifyTeacherOrAdmin(request, teacherId);
 
   try {
     const subjectName = await getTeacherSubject(teacherId);
@@ -1020,7 +1055,13 @@ exports.notifyOnPayment = onDocumentWritten(
   });
 
 exports.sendCustomMessage = onCall({ cors: true }, async (request) => {
-  const { teacherId, groupId, studentId, messageBody } = request.data;
+  const { teacherId, groupId, studentId, messageBody } = request.data || {};
+
+  if (!teacherId) {
+    throw new HttpsError("invalid-argument", "Teacher ID is required");
+  }
+
+  await verifyTeacherOrAdmin(request, teacherId);
 
   try {
     const studentDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
@@ -1056,25 +1097,16 @@ const SVGtoPDF = require("svg-to-pdfkit");
 
 // Removed duplicate initializeApp()
 // ==========================================
-// ⚙️ إعدادات المفاتيح
+// ⚙️ إعدادات قاعدة البيانات
 // ==========================================
-const accountSid = "ACff17306c0ec58f2075e96940ea289bea";
-const authToken = "b530f2fbe1d6267edbeabf3a9be1ffca";
-const geminiApiKey = process.env.GEMINI_API_KEY;
-const client = twilio(accountSid, authToken);
-const genAI = new GoogleGenerativeAI(geminiApiKey);
-const fileManager = new GoogleAIFileManager(geminiApiKey);
 const db = getFirestore();
-
-// نستخدم موديل مستقر (1.5 Flash ممتاز للسرعة والملفات)
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
 /**
  * 1️⃣ الجزء الأول: الأوتوميشن (المراقب) - تم التعديل لحفظ نوع الملف ✅
  */
 // const myBucket = "learnaria-483e7.firebasestorage.app";
 
-exports.processUploadedFile = onObjectFinalized({ region: "europe-west1", cpu: 1, memory: "1GiB", timeoutSeconds: 540 }, async (event) => {
+exports.processUploadedFile = onObjectFinalized({ region: "europe-west1", cpu: 1, memory: "1GiB", timeoutSeconds: 540, secrets: [GEMINI_API_KEY] }, async (event) => {
   const fileBucket = event.data.bucket;
   const filePath = event.data.name;
 
@@ -1104,6 +1136,7 @@ exports.processUploadedFile = onObjectFinalized({ region: "europe-west1", cpu: 1
   await bucket.file(filePath).download({ destination: tempFilePath });
 
   try {
+    const fileManager = new GoogleAIFileManager(GEMINI_API_KEY.value());
     console.log("⬆️ جاري الرفع لـ Gemini...");
 
     // رفع الملف
@@ -1138,7 +1171,7 @@ exports.processUploadedFile = onObjectFinalized({ region: "europe-west1", cpu: 1
   }
 });
 
-exports.cleanupDeletedFile = onObjectDeleted({ region: "europe-west1" }, async (event) => {
+exports.cleanupDeletedFile = onObjectDeleted({ region: "europe-west1", secrets: [GEMINI_API_KEY] }, async (event) => {
   const filePath = event.data.name;
   if (filePath.includes('/generated/')) return;
 
@@ -1148,6 +1181,7 @@ exports.cleanupDeletedFile = onObjectDeleted({ region: "europe-west1" }, async (
   const fileName = path.basename(filePath);
 
   try {
+    const fileManager = new GoogleAIFileManager(GEMINI_API_KEY.value());
     const teacherRef = db.collection("teachers").doc(teacherId);
     const doc = await teacherRef.get();
     
@@ -1190,9 +1224,20 @@ exports.cleanupDeletedFile = onObjectDeleted({ region: "europe-west1" }, async (
 /**
  * 2️⃣ الجزء الثاني: شات بوت الواتساب (Twilio) - تم التعديل لقراءة النوع + التقسيم ✅
  */
-exports.whatsappWebhook = onRequest(async (req, res) => {
-  const incomingMsg = req.body.Body.trim();
-  const senderNumber = req.body.From;
+exports.whatsappWebhook = onRequest({ secrets: [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, GEMINI_API_KEY] }, async (req, res) => {
+  const signature = req.headers["x-twilio-signature"] || "";
+  const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+
+  if (!twilio.validateRequest(TWILIO_AUTH_TOKEN.value(), signature, fullUrl, req.body)) {
+    return res.status(403).send("Forbidden: Invalid Twilio signature");
+  }
+
+  const client = twilio(TWILIO_ACCOUNT_SID.value(), TWILIO_AUTH_TOKEN.value());
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+
+  const incomingMsg = (req.body && req.body.Body) ? req.body.Body.trim() : "";
+  const senderNumber = req.body ? req.body.From : "";
 
   console.log(`🔥 رسالة من ${senderNumber}: ${incomingMsg}`);
 
@@ -1331,9 +1376,22 @@ exports.chatWithSpot = onCall({
   timeoutSeconds: 300,
   memory: "1GiB",
   region: "europe-west1",
+  maxInstances: 10,
+  secrets: [GEMINI_API_KEY],
 }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "يجب تسجيل الدخول أولاً");
+  }
+
+  const { message, teacherId, role, image } = request.data || {};
+
+  if (role === "teacher") {
+    await verifyTeacherOrAdmin(request, teacherId);
+  }
+
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
+
   try {
-    const { message, teacherId, role, image } = request.data;
     let modelInstance;
     let result;
     let promptParts = [];
@@ -1910,7 +1968,16 @@ exports.notifyOnPresence = onDocumentWritten(
 // (إعادة تعيين كلمة المرور للمستخدمين)
 // ===================================================================
 exports.resetPassword = onCall({ cors: true }, async (request) => {
-  const { phoneNumber, newPassword } = request.data;
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "يجب تسجيل الدخول أولاً");
+  }
+  const token = request.auth.token || {};
+  const isAdmin = token.email === "admin@elnazer-edu.com" || token.admin === true;
+  if (!isAdmin) {
+    throw new HttpsError("permission-denied", "صلاحية المدير مطلوبة لإعادة تعيين كلمة المرور");
+  }
+
+  const { phoneNumber, newPassword } = request.data || {};
 
   if (!phoneNumber || !newPassword) {
     throw new HttpsError(
@@ -1960,7 +2027,22 @@ exports.activateParentAccount = onCall({ cors: true }, async (request) => {
     throw new HttpsError("unauthenticated", "يجب تسجيل الدخول أولاً.");
   }
 
-  const phone = request.data.phone;
+  const callerUid = request.auth.uid;
+  const token = request.auth.token || {};
+  const isAdmin = token.email === "admin@elnazer-edu.com" || token.admin === true;
+
+  if (!isAdmin) {
+    const [teacherDoc, centerDoc] = await Promise.all([
+      admin.firestore().collection("teachers").doc(callerUid).get(),
+      admin.firestore().collection("centers").doc(callerUid).get(),
+    ]);
+
+    if (!teacherDoc.exists && !centerDoc.exists) {
+      throw new HttpsError("permission-denied", "ليس لديك صلاحية لتفعيل أو إعادة تعيين حسابات أولياء الأمور.");
+    }
+  }
+
+  const phone = request.data ? request.data.phone : null;
   if (!phone) {
     throw new HttpsError("invalid-argument", "يجب توفير رقم هاتف ولي الأمر.");
   }
@@ -2314,12 +2396,24 @@ exports.removeTeacherFromCenter = onCall({ cors: true }, async (request) => {
 });
 
 exports.removeParentTokenOnLogout = onCall({ cors: true }, async (request) => {
-  const data = request.data;
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "يجب تسجيل الدخول أولاً");
+  }
+
+  const callerUid = request.auth.uid;
+  const token = request.auth.token || {};
+  const isAdmin = token.email === "admin@elnazer-edu.com" || token.admin === true;
+
+  const data = request.data || {};
   const phoneFormats = data.phoneFormats;
   const fcmToken = data.fcmToken;
 
   if (!phoneFormats || !Array.isArray(phoneFormats) || !fcmToken) {
     throw new HttpsError("invalid-argument", "Missing phoneFormats array or fcmToken");
+  }
+
+  if (!isAdmin && !phoneFormats.includes(callerUid)) {
+    throw new HttpsError("permission-denied", "لا يمكنك تسجيل الخروج لحساب آخر");
   }
 
   try {
