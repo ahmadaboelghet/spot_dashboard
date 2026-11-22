@@ -1,5 +1,38 @@
 
 // ==========================================
+// CONFIGURATION & GLOBAL HELPERS
+// ==========================================
+// Base URL for Parent Web App (can be toggled if needed)
+const PARENT_APP_BASE_URL = "https://www.elnazer-edu.com/parent.html";
+
+/**
+ * Reusable HTML Escaping helper to prevent Stored & Reflected XSS
+ * @param {any} str
+ * @return {string}
+ */
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+/**
+ * Sanitize intentional SVG diagrams by stripping <script> tags and on* attributes
+ * @param {string} svg
+ * @return {string}
+ */
+function sanitizeSvg(svg) {
+    if (!svg || typeof svg !== 'string') return '';
+    return svg
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/\bon\w+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, '');
+}
+
+// ==========================================
 // SENTRY ERROR TRACKING HELPER
 // ==========================================
 function sentryCaptureError(error, context = {}) {
@@ -123,6 +156,13 @@ try {
         firestoreDB = firebase.firestore();
         storage = firebase.storage();
         functions = firebase.functions(); // مهم عشان الشات بوت يشتغل
+
+        // تفعيل استمرارية الجلسة محلياً عبر Firebase Auth
+        if (typeof firebase.auth === 'function') {
+            firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => {
+                console.warn("Failed to set Firebase Auth persistence:", err);
+            });
+        }
 
         // تفعيل Analytics (Production only)
         let analyticsInstance = null;
@@ -2100,14 +2140,14 @@ async function fetchRecurringSchedules() {
             div.innerHTML = `
                 <div>
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="font-black text-gray-800 dark:text-white text-lg">${s.subject}</span>
-                        <span class="bg-brand/20 text-yellow-800 dark:text-brand text-xs px-2 py-0.5 rounded-full font-bold">${timeText}</span>
+                        <span class="font-black text-gray-800 dark:text-white text-lg">${escapeHtml(s.subject)}</span>
+                        <span class="bg-brand/20 text-yellow-800 dark:text-brand text-xs px-2 py-0.5 rounded-full font-bold">${escapeHtml(timeText)}</span>
                     </div>
                     <div class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-                        <i class="ri-repeat-line"></i> <span>${translations[currentLang].repeatsOn} ${dayNames}</span>
+                        <i class="ri-repeat-line"></i> <span>${translations[currentLang].repeatsOn} ${escapeHtml(dayNames)}</span>
                     </div>
                 </div>
-                <button class="btn-icon w-8 h-8 bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 rounded-lg" data-id="${s.id}"><i class="ri-delete-bin-line"></i></button>
+                <button class="btn-icon w-8 h-8 bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 rounded-lg" data-id="${escapeHtml(s.id)}"><i class="ri-delete-bin-line"></i></button>
             `;
 
             // عند الحذف، نعيد تحميل الدالة فيتفك القفل تلقائياً
@@ -2228,10 +2268,10 @@ async function loginTeacher() {
                     throw createErr;
                 }
 
-                // حفظ الباسورد لو كانت دي أول مرة يفتح الحساب (للتوافق القديم)
-                if (storedPass === "" && password !== "") {
-                    await firestoreDB.collection('teachers').doc(fmt).set({ password: password }, { merge: true });
-                }
+                // فور نجاح النقل إلى Firebase Auth المشفّر، نحذف حقل الباسورد القديم نهائياً من Firestore
+                await firestoreDB.collection('teachers').doc(fmt).update({
+                    password: firebase.firestore.FieldValue.delete()
+                }).catch(err => console.warn("Could not delete legacy password field:", err));
 
             } else if (authErr.code === 'auth/wrong-password') {
                 showToast(translations[currentLang].wrongPassword, "error");
@@ -2272,6 +2312,13 @@ async function loginTeacher() {
 
         if (doc && doc.exists) {
             data = { id: doc.id, ...doc.data() };
+            // إذا كان لا يزال هناك حقل password قديم، نحذفه فوراً من Firestore ومن الذاكرة المحلية
+            if (data.password !== undefined) {
+                firestoreDB.collection('teachers').doc(fmt).update({
+                    password: firebase.firestore.FieldValue.delete()
+                }).catch(err => console.warn("Could not delete legacy password field:", err));
+                delete data.password;
+            }
             await putToDB('teachers', data);
         } else {
             // Check if it's a center
@@ -2281,6 +2328,12 @@ async function loginTeacher() {
             if (centerDoc.exists) {
                 data = { id: centerDoc.id, ...centerDoc.data() };
                 isCenter = true;
+                if (data.password !== undefined) {
+                    firestoreDB.collection('centers').doc(fmt).update({
+                        password: firebase.firestore.FieldValue.delete()
+                    }).catch(err => console.warn("Could not delete legacy center password field:", err));
+                    delete data.password;
+                }
                 console.log("Center data loaded:", data);
             } else {
                 console.error("centerDoc does NOT exist for ID:", fmt);
@@ -2302,7 +2355,6 @@ async function loginTeacher() {
             TEACHER_CENTER_ID = data.id;
             localStorage.setItem('learnaria-remember', 'true');
             localStorage.setItem('learnaria-cid', TEACHER_CENTER_ID);
-            localStorage.setItem('learnaria-cpass', password); // For silent auth restore
             // Clear any old teacher id just in case
             localStorage.removeItem('learnaria-tid');
             
@@ -2346,8 +2398,6 @@ async function loginTeacher() {
             if (nameInput) nameInput.value = data.name || '';
             const subjectInput = document.getElementById('teacherSubjectInput');
             if (subjectInput) subjectInput.value = data.subject || '';
-            const passwordInput = document.getElementById('profilePasswordInput');
-            if (passwordInput) passwordInput.value = data.password || '';
         }
 
         await loadGroups();
@@ -2473,7 +2523,7 @@ function renderGroupsDropdown(groupsList) {
             cardsContainer.innerHTML = groupsList.map((g, idx) => {
                 const enterGroupMsg = currentLang === 'ar' ? 'دخول المجموعة ←' : 'Enter Group ←';
                 return `
-                    <div onclick="window.handleGroupSelectionChange('${g.id}')" 
+                    <div onclick="window.handleGroupSelectionChange('${escapeHtml(g.id)}')" 
                          class="group aspect-square flex flex-col justify-between p-6 bg-white dark:bg-zinc-800/40 hover:bg-white dark:hover:bg-zinc-800 border border-gray-200/50 dark:border-zinc-800 rounded-3xl cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-black/30 active:scale-95 text-right">
                         
                         <!-- Top: Folder Icon in subtle container -->
@@ -2483,7 +2533,7 @@ function renderGroupsDropdown(groupsList) {
                         
                         <!-- Bottom: Group Title & CTA -->
                         <div>
-                            <h4 class="font-black text-gray-800 dark:text-white text-sm group-hover:text-brand transition-colors leading-tight line-clamp-2 break-words" title="${g.name}">${g.name}</h4>
+                            <h4 class="font-black text-gray-800 dark:text-white text-sm group-hover:text-brand transition-colors leading-tight line-clamp-2 break-words" title="${escapeHtml(g.name)}">${escapeHtml(g.name)}</h4>
                             <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 font-bold">${enterGroupMsg}</p>
                         </div>
                     </div>
@@ -2898,8 +2948,8 @@ async function renderOverview() {
                                 ${idx + 1}
                             </div>
                             <div class="flex-1 text-right truncate">
-                                <p class="text-sm font-black text-gray-800 dark:text-white truncate">${g.name}</p>
-                                <p class="text-[10px] text-gray-500 font-bold">${lastExam.name}</p>
+                                <p class="text-sm font-black text-gray-800 dark:text-white truncate">${escapeHtml(g.name)}</p>
+                                <p class="text-[10px] text-gray-500 font-bold">${escapeHtml(lastExam.name)}</p>
                             </div>
                             <div class="text-left">
                                 <span class="text-sm font-black text-brand">${g.mark}</span>
@@ -3034,7 +3084,7 @@ async function renderOverview() {
                     const absentText = currentLang === 'ar' ? `غاب ${s.count} حصص` : `Absent ${s.count} classes`;
                     return `
                         <div class="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 animate-fade-in" style="animation-delay: ${idx * 0.1}s">
-                            <p class="text-sm font-black text-gray-800 dark:text-white truncate max-w-[150px] text-right">${s.name}</p>
+                            <p class="text-sm font-black text-gray-800 dark:text-white truncate max-w-[150px] text-right">${escapeHtml(s.name)}</p>
                             <span class="text-[10px] font-black bg-red-500 text-white px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
                                 ${absentText}
                             </span>
@@ -3408,7 +3458,7 @@ async function renderDailyList(filter = "") {
                 }`;
 
             let html = `
-                <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300"> ${s.name}</div>
+                <div class="${studentColSpan} font-bold text-sm truncate px-2 text-gray-800 dark:text-gray-200 transition-all duration-300"> ${escapeHtml(s.name)}</div>
                 <div class="${attColSpan} flex justify-center transition-all duration-300">
                     <select class="att-select bg-gray-50 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded text-xs py-1 px-1 outline-none cursor-pointer">
                         <option value="present" ${status === 'present' ? 'selected' : ''}>${translations[currentLang].present}</option>
@@ -4690,12 +4740,11 @@ function renderStudents(filter = "") {
         `;
         return;
     }
-    const DOMAIN_URL = "https://ahmadaboelghet.github.io/spot_dashboard/";
     const fragment = document.createDocumentFragment();
 
     filtered.forEach(s => {
         const pNum = s.parentPhoneNumber ? s.parentPhoneNumber.trim() : "";
-        const fullDirectLink = `${DOMAIN_URL}/parent.html?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
+        const fullDirectLink = `${PARENT_APP_BASE_URL}?t=${encodeURIComponent(TEACHER_ID)}&g=${encodeURIComponent(SELECTED_GROUP_ID)}&s=${encodeURIComponent(s.id)}&n=${encodeURIComponent(s.name)}&p=${encodeURIComponent(pNum)}`;
 
         const div = document.createElement('div');
         div.className = "record-item cursor-pointer";
@@ -4707,13 +4756,14 @@ function renderStudents(filter = "") {
         };
         const fcmTitle = s.parentFcmToken ? translations[currentLang].fcmEnabledTitle : translations[currentLang].fcmDisabledTitle;
         const msgTitle = translations[currentLang].sendMessageTooltip;
+        const displayPhone = s.parentPhoneNumber ? (s.parentPhoneNumber.startsWith('+2') ? s.parentPhoneNumber.substring(2) : s.parentPhoneNumber) : '';
         div.innerHTML = `
             <div class="flex-1">
                 <div class="flex items-center gap-2">
-                    <p class="font-bold text-gray-800 dark:text-white"> ${s.name}</p>
+                    <p class="font-bold text-gray-800 dark:text-white"> ${escapeHtml(s.name)}</p>
                     <i class="ri-notification-3-fill ${s.parentFcmToken ? 'text-green-500' : 'text-red-500'}" title="${fcmTitle}"></i>
                 </div>
-                <p class="text-xs text-gray-500">${s.parentPhoneNumber ? (s.parentPhoneNumber.startsWith('+2') ? s.parentPhoneNumber.substring(2) : s.parentPhoneNumber) : ''}</p>
+                <p class="text-xs text-gray-500">${escapeHtml(displayPhone)}</p>
             </div>
             <div class="flex gap-2">
                 <button class="btn-icon w-10 h-10 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 msg-btn" title="${msgTitle}">
@@ -5527,14 +5577,14 @@ async function renderPaymentsList(filter = "") {
         div.dataset.searchKey = `${(s.name || '').toLowerCase()} ${_pPay} ${(s.childId || s.id || '').toLowerCase()}`;
 
         div.innerHTML = `
-<span onclick="openStudentProfile('${s.id}')" 
+<span onclick="openStudentProfile('${escapeHtml(s.id)}')" 
       class="font-bold text-gray-700 dark:text-gray-200 flex-1 min-w-0 break-words cursor-pointer hover:text-[#F2CE5A] transition-colors leading-snug">
-    ${s.name}
+    ${escapeHtml(s.name)}
 </span>
 <div class="flex items-center gap-2 sm:gap-3 justify-end shrink-0">
     <input type="number"
            class="payment-input input-field h-9 w-20 sm:w-24 text-center text-sm ${isPaid ? 'text-green-600 font-bold' : 'text-gray-400'}"
-           placeholder="0" value="${amount}" min="0">
+           placeholder="0" value="${escapeHtml(amount)}" min="0">
     <input type="checkbox" class="payment-check w-6 h-6 accent-green-600 cursor-pointer shrink-0" ${isPaid ? 'checked' : ''}>
 </div>
         `;
@@ -5765,11 +5815,11 @@ async function renderExamGrades(filter = "") {
         div.onclick = (e) => {
             if (!e.target.closest('input')) openStudentProfile(s.id);
         };
-        div.innerHTML = `<label class="text-sm font-bold w-1/2 truncate dark:text-white"> ${s.name}</label>
+        div.innerHTML = `<label class="text-sm font-bold w-1/2 truncate dark:text-white"> ${escapeHtml(s.name)}</label>
                          <div class="relative w-1/2">
                             <input type="number" step="any" min="0" class="exam-score-input input-field w-full h-10 text-center font-bold" 
-                                   data-sid="${s.id}" value="${val}" placeholder="0">
-                            <span class="absolute left-3 top-2 text-[10px] text-gray-400">/${totalMark}</span>
+                                   data-sid="${escapeHtml(s.id)}" value="${escapeHtml(val)}" placeholder="0">
+                            <span class="absolute left-3 top-2 text-[10px] text-gray-400">/${escapeHtml(totalMark)}</span>
                          </div>`;
 
         const inp = div.querySelector('input');
@@ -5857,10 +5907,11 @@ function saveProfile() {
 
     if (hasError) return;
     
-    // الاحتفاظ بالباسورد القديم كما هو في قاعدة البيانات المحلية لتجنب فقدانه أو مسحه عن طريق الخطأ
+    // حفظ التعديلات محلياً وفي السحابة دون حفظ أي كلمة مرور مكشوفة
     getFromDB('teachers', TEACHER_ID).then(existingTeacher => {
-        const password = existingTeacher ? existingTeacher.password : '';
-        putToDB('teachers', { id: TEACHER_ID, name, subject, password });
+        const updated = { ...(existingTeacher || {}), id: TEACHER_ID, name, subject };
+        delete updated.password;
+        putToDB('teachers', updated);
         addToSyncQueue({ type: 'update', path: `teachers/${TEACHER_ID}`, data: { name, subject } });
         document.getElementById('dashboardTitle').innerText = `${translations[currentLang].welcomeTeacherGreeting}${name}`;
         showToast(translations[currentLang].saved);
@@ -5919,13 +5970,13 @@ async function handleChangePassword() {
         // 2. Update Password in Firebase Auth
         await user.updatePassword(newPassword);
 
-        // 3. Update Password in local DB and Firestore (for backward compatibility)
+        // 3. منع تخزين كلمة المرور محلياً وحذف الحقل القديم من Firestore
         const existingTeacher = await getFromDB('teachers', TEACHER_ID);
-        const name = existingTeacher ? existingTeacher.name : '';
-        const subject = existingTeacher ? existingTeacher.subject : '';
-        
-        await putToDB('teachers', { id: TEACHER_ID, name, subject, password: newPassword });
-        await addToSyncQueue({ type: 'update', path: `teachers/${TEACHER_ID}`, data: { password: newPassword } });
+        if (existingTeacher) {
+            delete existingTeacher.password;
+            await putToDB('teachers', existingTeacher);
+        }
+        await addToSyncQueue({ type: 'update', path: `teachers/${TEACHER_ID}`, data: { password: firebase.firestore.FieldValue.delete() } });
 
         showToast("تم تغيير كلمة المرور بنجاح 🔒", "success");
         closeChangePasswordModal();
@@ -5993,38 +6044,19 @@ async function loadPreferences() {
             teacherData = await getFromDB('teachers', TEACHER_ID);
         } catch (e) { console.log("Auto-login fetch error:", e); }
 
-        // ✅ Wait for Firebase Auth session to be ready before proceeding
+        // ✅ Wait for Firebase Auth session to be ready via built-in LOCAL persistence
         const authUser = await new Promise((resolve) => {
             if (typeof firebase.auth !== 'function') {
                 resolve(null);
                 return;
             }
-            const unsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
+            const unsubscribe = firebase.auth().onAuthStateChanged((user) => {
                 unsubscribe(); // مرة واحدة فقط
                 if (user) {
-                    console.log("✅ Firebase Auth session already active:", user.email);
+                    console.log("✅ Firebase Auth session active:", user.email);
                     resolve(user);
-                } else if (navigator.onLine) {
-                    const fakeEmail = `${TEACHER_ID.substring(1)}@spot.com`;
-                    console.log("🔑 Attempting silent auth restore for:", fakeEmail);
-                    try {
-                        const pass = teacherData ? teacherData.password : null;
-                        if (pass) {
-                            const cred = await firebase.auth().signInWithEmailAndPassword(fakeEmail, pass.toString().trim());
-                            console.log("✅ Silently restored Firebase Auth session:", cred.user.email);
-                            resolve(cred.user);
-                        } else {
-                            // Without password locally, we can't silent auth. It will just fail to sync.
-                            // But if they came from center dashboard, they ALREADY signed in, so `user` would NOT be null above!
-                            console.warn("⚠️ No password found locally for silent auth");
-                            resolve(null);
-                        }
-                    } catch (e) {
-                        console.error("❌ Failed silent auth restoration:", e.code, e.message);
-                        resolve(null);
-                    }
                 } else {
-                    console.warn("⚠️ Offline, skipping auth restore");
+                    console.log("ℹ️ No active Firebase Auth session found");
                     resolve(null);
                 }
             });
@@ -6049,8 +6081,6 @@ async function loadPreferences() {
             if (nameInput) nameInput.value = teacherData.name || '';
             const subjectInput = document.getElementById('teacherSubjectInput');
             if (subjectInput) subjectInput.value = teacherData.subject || '';
-            const passInput = document.getElementById('profilePasswordInput');
-            if (passInput) passInput.value = teacherData.password || '';
 
             const portalWelcome = document.getElementById('portalWelcomeTeacher');
             if (portalWelcome) portalWelcome.innerText = `${translations[currentLang].welcomeTeacherGreeting}${teacherData.name || ''} 👋`;
@@ -6765,7 +6795,7 @@ function addMessageToUI(text, sender, type, saveToHistory = true) {
         div.innerHTML = `
             <div class="flex justify-end items-end gap-2">
                 <div class="bg-gradient-to-tr from-yellow-500 to-yellow-600 text-black px-5 py-3 rounded-2xl rounded-tr-none font-bold text-sm shadow-md max-w-[85%] break-words whitespace-pre-wrap">
-                    ${text}
+                    ${escapeHtml(text)}
                 </div>
             </div>`;
         container.appendChild(div);
@@ -6787,7 +6817,7 @@ function addMessageToUI(text, sender, type, saveToHistory = true) {
                         <i class="ri-error-warning-fill text-xl"></i>
                     </div>
                     <div class="bg-white dark:bg-zinc-800 border-2 border-red-300 dark:border-red-700 rounded-2xl rounded-tl-none p-4 shadow-md max-w-[85%]">
-                        <p class="text-sm font-bold text-red-600 dark:text-red-400">${examData.message || 'حدث خطأ في إنشاء الامتحان.'}</p>
+                        <p class="text-sm font-bold text-red-600 dark:text-red-400">${escapeHtml(examData.message || 'حدث خطأ في إنشاء الامتحان.')}</p>
                         <p class="text-xs text-gray-500 mt-2">💡 تأكد من رفع الملازم أولاً من قسم <strong>"تغذية البوت"</strong> ثم أعد الطلب.</p>
                     </div>
                 </div>`;
@@ -6805,12 +6835,12 @@ function addMessageToUI(text, sender, type, saveToHistory = true) {
                     </div>
                     <div class="bg-white dark:bg-zinc-900 border-2 border-yellow-400 rounded-2xl rounded-tl-none w-full md:max-w-[90%] shadow-xl overflow-hidden">
                         <div class="bg-gradient-to-r from-yellow-500 to-yellow-400 px-5 py-4">
-                            <h3 class="font-black text-xl text-black">${examData.title || 'امتحان'}</h3>
+                            <h3 class="font-black text-xl text-black">${escapeHtml(examData.title || 'امتحان')}</h3>
                             <div class="flex gap-4 mt-1 text-black/70 text-xs font-semibold">
-                                <span><i class="ri-question-line"></i> ${examData.questions?.length || 0} سؤال</span>
-                                ${examData.difficulty ? `<span class="bg-black/20 px-2 py-0.5 rounded uppercase tracking-wider"><i class="ri-pulse-line"></i> ${examData.difficulty}</span>` : ''}
-                                ${examData.totalMarks ? `<span><i class="ri-award-line"></i> ${examData.totalMarks} درجة</span>` : ''}
-                                ${examData.duration ? `<span><i class="ri-time-line"></i> ${examData.duration}</span>` : ''}
+                                <span><i class="ri-question-line"></i> ${escapeHtml(examData.questions?.length || 0)} سؤال</span>
+                                ${examData.difficulty ? `<span class="bg-black/20 px-2 py-0.5 rounded uppercase tracking-wider"><i class="ri-pulse-line"></i> ${escapeHtml(examData.difficulty)}</span>` : ''}
+                                ${examData.totalMarks ? `<span><i class="ri-award-line"></i> ${escapeHtml(examData.totalMarks)} درجة</span>` : ''}
+                                ${examData.duration ? `<span><i class="ri-time-line"></i> ${escapeHtml(examData.duration)}</span>` : ''}
                             </div>
                         </div>
                         <div class="p-5">
@@ -6845,7 +6875,7 @@ function addMessageToUI(text, sender, type, saveToHistory = true) {
                     </div>
                     <div class="p-5 flex flex-col gap-3">
                         <div class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto border border-gray-100 dark:border-zinc-700 rounded-xl p-3 bg-gray-50 dark:bg-zinc-800 font-mono">
-                            ${text.substring(0, 500).replace(/</g, '&lt;')}${text.length > 500 ? '...' : ''}
+                            ${escapeHtml(text.substring(0, 500))}${text.length > 500 ? '...' : ''}
                         </div>
                         <button class="btn-print-note w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md text-sm">
                             <i class="ri-printer-fill text-white text-lg"></i>
@@ -6880,7 +6910,7 @@ function addMessageToUI(text, sender, type, saveToHistory = true) {
                 <i class="ri-robot-2-fill"></i>
             </div>
             <div class="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-zinc-700 text-sm text-gray-700 dark:text-gray-200 leading-relaxed break-words whitespace-pre-wrap max-w-[85%]">
-                ${displayText}
+                ${escapeHtml(displayText)}
             </div>
         </div>`;
 
@@ -6915,14 +6945,14 @@ window.printExam = function (examData) {
         <div class="q-wrap">
             <div class="q-num">${toNum(i)}</div>
             <div class="q-body">
-                <div class="q-text">${q.q || ''}</div>
-                ${q.diagram ? `<div class="diagram-box">${q.diagram}</div>` : ''}
+                <div class="q-text">${escapeHtml(q.q || '')}</div>
+                ${q.diagram ? `<div class="diagram-box">${sanitizeSvg(q.diagram)}</div>` : ''}
                 ${q.type === 'mcq' && q.options ? `
                     <div class="mcq-grid">
                         ${q.options.map((opt, j) => `
                             <div class="opt-row">
                                 <span class="opt-char">${getOptionLabel(j)}</span>
-                                <span>${opt}</span>
+                                <span>${escapeHtml(opt)}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -6944,7 +6974,7 @@ window.printExam = function (examData) {
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>${examData.title || 'امتحان'}</title>
+    <title>${escapeHtml(examData.title || 'امتحان')}</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <script>
         window.MathJax = {
@@ -6996,12 +7026,12 @@ window.printExam = function (examData) {
 </head>
 <body>
     <div class="exam-header">
-        <div class="exam-title">${examData.title || 'امتحان'}</div>
+        <div class="exam-title">${escapeHtml(examData.title || 'امتحان')}</div>
         <div class="exam-meta">
-            ${examData.subject ? `<span>${examData.subject}</span>` : ''}
-            ${examData.grade ? `<span>${examData.grade}</span>` : ''}
-            ${examData.duration ? `<span>${examData.duration}</span>` : ''}
-            ${examData.totalMarks ? `<span>الدرجة الكاملة: ${examData.totalMarks}</span>` : ''}
+            ${examData.subject ? `<span>${escapeHtml(examData.subject)}</span>` : ''}
+            ${examData.grade ? `<span>${escapeHtml(examData.grade)}</span>` : ''}
+            ${examData.duration ? `<span>${escapeHtml(examData.duration)}</span>` : ''}
+            ${examData.totalMarks ? `<span>الدرجة الكاملة: ${escapeHtml(examData.totalMarks)}</span>` : ''}
         </div>
         <div class="student-info">
             <span>اسم الطالب: <span class="field-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></span>
@@ -7014,7 +7044,7 @@ window.printExam = function (examData) {
             مع أطيب التمنيات بالتوفيق والنجاح
         </div>
         <div style="font-size: 16px; color: #333; font-weight: 700;">
-            ${window.lastTeacherName || document.getElementById('teacherNameInput')?.value ? `مستر/ ${window.lastTeacherName || document.getElementById('teacherNameInput').value}` : 'مع تحيات منصة الناظر التعليمية'}
+            ${escapeHtml(window.lastTeacherName || document.getElementById('teacherNameInput')?.value ? `مستر/ ${window.lastTeacherName || document.getElementById('teacherNameInput').value}` : 'مع تحيات منصة الناظر التعليمية')}
         </div>
         <div style="margin-top: 20px; font-size: 10px; color: #aaa;">نظام الناظر لإدارة التعليم الذكي ✨</div>
     </div>
@@ -7030,8 +7060,9 @@ window.printExam = function (examData) {
 window.printStudyNote = function (content) {
     const printWindow = window.open('', '_blank');
 
-    // معالجة النص لتحويله لـ HTML منسق
-    const formattedContent = content
+    // معالجة النص لتحويله لـ HTML منسق بعد حماية الرموز
+    const safeContent = escapeHtml(content || '');
+    const formattedContent = safeContent
         // تحويل العناوين الرئيسية (## عنوان)
         .replace(/## (.*?)\n/g, '<h2 class="section-title"><i class="ri-focus-3-line"></i> $1</h2>')
         // تحويل النقاط المرقمة
@@ -7626,8 +7657,8 @@ async function loadStudentStats(studentId) {
 
                     historyHTML += `
                         <tr class="hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-gray-800">
-                            <td class="p-4 font-bold text-gray-700 dark:text-gray-300">${data.date}</td>
-                            <td class="p-4 ${statusColor} font-black">${statusText}</td>
+                            <td class="p-4 font-bold text-gray-700 dark:text-gray-300">${escapeHtml(data.date)}</td>
+                            <td class="p-4 ${statusColor} font-black">${escapeHtml(statusText)}</td>
                             <td class="p-4">
                                 ${hwBadge}
                             </td>
@@ -7653,8 +7684,8 @@ async function loadStudentStats(studentId) {
                 const colorClass = percent >= 50 ? 'text-green-500 font-black' : 'text-red-500 font-black';
                 scoreDisplay = `
                     <div class="text-right">
-                        <span class="text-lg ${colorClass}">${scoreData.score}</span>
-                        <span class="text-xs text-gray-400 font-bold">/${total}</span>
+                        <span class="text-lg ${colorClass}">${escapeHtml(String(scoreData.score))}</span>
+                        <span class="text-xs text-gray-400 font-bold">/${escapeHtml(String(total))}</span>
                     </div>
                 `;
             } else {
@@ -7666,8 +7697,8 @@ async function loadStudentStats(studentId) {
             examsHTML += `
                 <div class="p-3 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800 flex justify-between items-center group">
                     <div class="flex flex-col">
-                        <span class="font-bold text-gray-700 dark:text-gray-200">${asm.name}</span>
-                        <span class="text-[11px] text-gray-600 dark:text-gray-300 font-black tracking-tighter">${asm.date || ''}</span>
+                        <span class="font-bold text-gray-700 dark:text-gray-200">${escapeHtml(asm.name)}</span>
+                        <span class="text-[11px] text-gray-600 dark:text-gray-300 font-black tracking-tighter">${escapeHtml(asm.date || '')}</span>
                     </div>
                     ${scoreDisplay}
                 </div>
@@ -7694,9 +7725,9 @@ async function loadStudentStats(studentId) {
 
             paymentsHTML += `
                 <div class="p-3 rounded-xl border flex justify-between items-center ${isPaid ? 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-800' : 'bg-red-50/50 border-red-200 dark:bg-red-900/10 dark:border-red-800'}">
-                    <span class="font-black text-gray-700 dark:text-gray-300">${monthStr}</span>
+                    <span class="font-black text-gray-700 dark:text-gray-300">${escapeHtml(monthStr)}</span>
                     <span class="text-xs font-black ${isPaid ? 'text-green-600' : 'text-red-500'}">
-                        ${isPaid ? `✅ مدفوع (${record.amount})` : '❌ غير مدفوع'}
+                        ${isPaid ? `✅ مدفوع (${escapeHtml(String(record.amount))})` : '❌ غير مدفوع'}
                     </span>
                 </div>
             `;

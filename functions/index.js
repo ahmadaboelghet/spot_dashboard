@@ -27,6 +27,9 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 setGlobalOptions({ maxInstances: 20 });
 
+// Base URL for Parent Web App (can be toggled if needed)
+const PARENT_APP_BASE_URL = "https://www.elnazer-edu.com/parent.html";
+
 if (!admin.apps.length) {
 
   admin.initializeApp();
@@ -241,7 +244,7 @@ async function sendNotificationToParent(studentData, payload, context, studentId
 
   if (uniqueTokens.length > 0) {
     const cleanPhone = studentData.parentPhoneNumber ? studentData.parentPhoneNumber.replace(/\s+/g, "").trim() : "";
-    const parentAppLink = `https://ahmadaboelghet.github.io/spot_dashboard/parent.html?p=${cleanPhone}`;
+    const parentAppLink = `${PARENT_APP_BASE_URL}?p=${cleanPhone}`;
 
     // Ensure all data values are flat strings to satisfy FCM V1 requirements
     const stringData = {};
@@ -288,25 +291,41 @@ async function sendNotificationToParent(studentData, payload, context, studentId
       };
 
       // Clean up failed/unregistered tokens
-      response.responses.forEach(async (res, idx) => {
+      await Promise.all(response.responses.map(async (res, idx) => {
         if (!res.success) {
           const error = res.error;
           const badToken = uniqueTokens[idx];
           console.error(`${context}: ❌ Token at index ${idx} failed:`, error);
 
-          if (error.code === "messaging/registration-token-not-registered" ||
-              error.message?.includes("not-registered")) {
+          if (error && (error.code === "messaging/registration-token-not-registered" ||
+              error.message?.includes("not-registered"))) {
             console.log(`${context}: 🧹 Cleaning up invalid token...`);
 
-            // 1. مسحه من سجل الآباء العام
+            // 1. مسحه من سجل الآباء العام بكلا الصيغتين
             if (studentData.parentPhoneNumber) {
-              const cleanPhone = studentData.parentPhoneNumber.replace(/\s+/g, "").trim();
-              await admin.firestore().collection("parents").doc(cleanPhone).update({
-                fcmTokens: FieldValue.arrayRemove(badToken),
-                fcmToken: FieldValue.delete(), // legacy cleanup
-                lastTokenError: "not-registered",
-                updatedAt: FieldValue.serverTimestamp()
-              }).catch(() => { });
+              const pClean = studentData.parentPhoneNumber.replace(/\s+/g, "").trim();
+              let phoneWithPlus = pClean;
+              let phoneWithZero = pClean;
+              if (pClean.startsWith("+20")) {
+                phoneWithZero = "0" + pClean.substring(3);
+              } else if (pClean.startsWith("0")) {
+                phoneWithPlus = "+20" + pClean.substring(1);
+              } else if (pClean) {
+                phoneWithPlus = "+20" + pClean;
+                phoneWithZero = "0" + pClean;
+              }
+
+              const phoneDocs = [phoneWithZero];
+              if (phoneWithPlus !== phoneWithZero) phoneDocs.push(phoneWithPlus);
+
+              await Promise.all(phoneDocs.map((pDoc) =>
+                admin.firestore().collection("parents").doc(pDoc).update({
+                  fcmTokens: FieldValue.arrayRemove(badToken),
+                  fcmToken: FieldValue.delete(), // legacy cleanup
+                  lastTokenError: "not-registered",
+                  updatedAt: FieldValue.serverTimestamp(),
+                }).catch(() => { })
+              ));
             }
 
             // 2. مسحه من بيانات الطالب (لو موجود هناك)
@@ -319,7 +338,7 @@ async function sendNotificationToParent(studentData, payload, context, studentId
             }
           }
         }
-      });
+      }));
     } catch (error) {
       console.error(`${context}: ❌ Failed to send multicast notification:`, error);
       notificationRecord.status = "error";
@@ -341,6 +360,10 @@ async function sendNotificationToParent(studentData, payload, context, studentId
       console.error(`${context}: Error saving notification history:`, dbError);
     }
   }
+
+  const isSent = (notificationRecord.tokensSummary?.success || 0) > 0;
+  const sCount = notificationRecord.tokensSummary?.success || 0;
+  return { sent: isSent, successCount: sCount };
 }
 
 // ===================================================================
@@ -452,7 +475,11 @@ exports.sendAbsenceNotifications = onCall({ cors: true }, async (request) => {
 
         promises.push(
           sendNotificationToParent(student, payload, "ManualAbsence", doc.id, teacherId, groupId)
-            .then(() => sentCount++),
+            .then((res) => {
+              if (res && res.sent === true) {
+                sentCount++;
+              }
+            }),
         );
       }
     });
@@ -712,7 +739,7 @@ exports.paymentReminder = onSchedule({
     isOverdue = true;
   }
 
-  const targetMonth = targetDate.toISOString().slice(0, 7); // Format: YYYY-MM
+  const targetMonth = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, "0")}`; // Format: YYYY-MM (Cairo local)
   const targetMonthNum = parseInt(targetMonth.split("-")[1], 10);
   if (targetMonthNum === 6 || targetMonthNum === 7) {
     console.log(`Skipping payment reminders for summer vacation month: ${targetMonth}`);
@@ -853,7 +880,7 @@ exports.getDashboardData = onCall({ cors: true }, async (request) => {
         // eslint-disable-next-line no-await-in-loop
         const schedulesSnap = await groupRef.collection("recurringSchedules").get();
         // eslint-disable-next-line no-await-in-loop
-        const exceptionsSnap = await groupRef.collection("scheduleExceptions").get();
+        const exceptionsSnap = await groupRef.collection("exceptions").get();
         const today = new Date();
         const todayString = formatDate(today);
         const currentDayDart = getDayDart(today);
@@ -875,12 +902,14 @@ exports.getDashboardData = onCall({ cors: true }, async (request) => {
         }
 
         for (const doc of exceptionsSnap.docs) {
-          const data = doc.data();
+          const data = doc.data() || {};
           if (data.date === todayString) {
-            if (data.status === "cancelled") {
+            const isCancelled = data.type === "cancelled" || data.status === "cancelled";
+            const isRescheduled = data.type === "modified" || data.status === "rescheduled";
+            if (isCancelled) {
               finalSchedule.length = 0;
               break;
-            } else if (data.status === "rescheduled" && finalSchedule.length > 0 && data.newTime) {
+            } else if (isRescheduled && finalSchedule.length > 0 && data.newTime) {
               finalSchedule[0].time = data.newTime;
             }
           }
@@ -1027,7 +1056,7 @@ exports.notifyOnPayment = onDocumentWritten(
 
     // eslint-disable-next-line no-restricted-syntax
     for (const record of afterRecords) {
-      const isNowPaid = record.amount > 0;
+      const isNowPaid = record.paid === true && (record.amount || 0) > 0;
       const wasPaid = beforeStatusMap[record.studentId] === true;
       const amountPaid = record.amount || 0;
 
@@ -2267,7 +2296,6 @@ exports.createCenter = onCall({ cors: true }, async (request) => {
   await db.collection('centers').doc(centerPhone).set({
     name: centerName,
     phone: centerPhone,
-    password: password,
     createdAt: FieldValue.serverTimestamp(),
     teachers: [] // Array of teacher IDs
   });
@@ -2323,7 +2351,6 @@ exports.createTeacher = onCall({ cors: true }, async (request) => {
   // 2. Create Teacher Profile
   const teacherData = {
     name: teacherName, // for compatibility
-    password: password,
     profile: {
       teacherName: teacherName,
       teacherSubject: teacherSubject || 'عام'
