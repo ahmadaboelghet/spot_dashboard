@@ -913,12 +913,12 @@
                     const name = d.name || "";
                     const type = d.type || "";
 
-                    if (s) {
-                        // هل هو واجب؟ (نوع daily أو اسمه يبدأ بـ Homework/واجب)
-                        const isHomework = type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
+                    // تحديد نوع السجل بدقة
+                    const isHomework = type === 'homework' || type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
 
-                        if (isHomework) {
-                            const isSubmitted = s.submitted;
+                    if (isHomework) {
+                        if (s) {
+                            const isSubmitted = s.submitted === true;
                             homeworkHtml += `
                         <div class="spot-card p-4 flex justify-between items-center border-r-4 ${isSubmitted ? 'border-green-500' : 'border-red-500'}">
                             <div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${name}</h4><span class="text-[10px] text-gray-400">${d.date}</span></div>
@@ -928,17 +928,27 @@
                             </div>
                         </div>`;
                         }
-                        // إذاً هو امتحان (حتى لو درجته مش موجودة هنعرضه)
-                        else {
-                            const displayScore = (s.score !== null && s.score !== undefined && s.score !== "") ? s.score : 'غائب';
-                            if (lastG === '--' && displayScore !== 'غائب') lastG = displayScore;
+                    }
+                    // إذاً هو امتحان (Exam)
+                    else {
+                        let displayScore = '<span class="text-xs text-amber-500 font-bold">لم تُرصد</span>';
+                        let subLabel = 'الدرجة';
+                        let scoreColor = 'text-gray-900 dark:text-white';
 
-                            gradesHtml += `
-                        <div class="spot-card p-4 flex justify-between items-center border-l-4 border-primary">
-                            <div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${name}</h4><span class="text-[10px] text-gray-400">${d.date}</span></div>
-                            <div class="text-center"><span class="block text-xl font-black text-gray-900 dark:text-white">${displayScore}</span><span class="text-[9px] text-gray-400">الدرجة</span></div>
-                        </div>`;
+                        if (s && s.score !== null && s.score !== undefined && s.score !== "") {
+                            displayScore = s.score;
+                            if (d.totalMark) subLabel = `من ${d.totalMark}`;
+                            if (lastG === '--') lastG = displayScore;
+                        } else if (s && s.absent) {
+                            displayScore = 'غائب';
+                            scoreColor = 'text-red-500';
                         }
+
+                        gradesHtml += `
+                    <div class="spot-card p-4 flex justify-between items-center border-l-4 border-primary">
+                        <div><h4 class="font-bold text-sm text-gray-900 dark:text-white">${name}</h4><span class="text-[10px] text-gray-400">${d.date}</span></div>
+                        <div class="text-center"><span class="block text-xl font-black ${scoreColor}">${displayScore}</span><span class="text-[9px] text-gray-400">${subLabel}</span></div>
+                    </div>`;
                     }
                 });
                 document.getElementById('modalGradesList').innerHTML = gradesHtml || '<p class="text-center text-gray-500 text-xs py-4">لا توجد امتحانات</p>';
@@ -951,7 +961,7 @@
                     .filter(d => {
                         const name = d.name || "";
                         const type = d.type || "";
-                        const isHomework = type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
+                        const isHomework = type === 'homework' || type === 'daily' || name.match(/^Homework/i) || name.match(/^واجب/i);
                         return !isHomework && d.scores?.[sId] && d.scores[sId].score !== null && d.scores[sId].score !== undefined && d.scores[sId].score !== "";
                     })
                     .map(d => ({
@@ -1149,6 +1159,8 @@
             if (!assSnap.empty) {
                 for (const doc of assSnap.docs) {
                     const d = doc.data();
+                    const isHw = (d.type === 'homework' || d.type === 'daily' || (d.name || '').includes('واجب'));
+                    if (isHw) continue; // تجاهل الواجبات من حساب درجات الامتحانات
                     const sc = d.scores?.[student.sId];
                     if (sc && sc.score !== null && sc.score !== undefined && sc.score !== "" && !isNaN(sc.score)) {
                         lastGrade = parseFloat(sc.score);

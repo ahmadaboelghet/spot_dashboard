@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "start": "npx serve -l 5000 .",
     "build:css": "npx tailwindcss@3 -i css/tailwind-input.css -o css/tailwind.css --minify",
     "watch:css": "npx tailwindcss@3 -i css/tailwind-input.css -o css/tailwind.css --watch"
   },

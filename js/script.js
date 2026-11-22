@@ -373,6 +373,22 @@ const liveSessionData = { attendance: {}, homework: {}, date: null, groupId: nul
 // Structure: livePaymentData.records = { studentId: { amount, paid } }
 const livePaymentData = { groupId: null, month: null, records: {} };
 
+// ── Domain Helpers: Explicit Distinction Between Exams & Homework ─────────
+function isExamAssignment(asm) {
+    if (!asm) return false;
+    if (asm.type === 'exam') return true;
+    if (asm.type === 'homework' || asm.type === 'daily') return false;
+    if ((asm.name || '').includes('واجب') || (asm.name || '').match(/^Homework/i)) return false;
+    return asm.totalMark !== undefined;
+}
+
+function isHomeworkAssignment(asm) {
+    if (!asm) return false;
+    if (asm.type === 'homework' || asm.type === 'daily') return true;
+    if ((asm.name || '').includes('واجب') || (asm.name || '').match(/^Homework/i)) return true;
+    return false;
+}
+
 // ✅ PHASE 2: Throttled-save state — guarantees a save fires at most every 4s under rapid scans
 let _saveThrottleTimer = null;      // debounce arm (resets on each scan)
 let _saveThrottleForced = null;     // max-interval arm (fires regardless after 4s)
@@ -2851,10 +2867,9 @@ async function renderOverview() {
         // 1. Top Performers (from last real exam)
         const allAssignments = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
         if (allAssignments && allAssignments.length > 0) {
-            // Filter only EXAMS (not daily homework or anything starting with "واجب")
+            // Filter only EXAMS using domain helper
             const exams = allAssignments.filter(e =>
-                (e.type === 'exam' || !e.type) &&
-                !(e.name || '').includes("واجب") &&
+                isExamAssignment(e) &&
                 e.scores && Object.keys(e.scores).length > 0
             ).sort((a, b) => {
                 const dateDiff = new Date(b.date || 0) - new Date(a.date || 0);
@@ -2928,9 +2943,8 @@ async function renderOverview() {
         const chartContainer = document.getElementById('groupPerformanceChartContainer');
         if (allAssignments && allAssignments.length > 0) {
             const chartExams = allAssignments.filter(e =>
-                (e.type === 'exam' || !e.type) &&
+                isExamAssignment(e) &&
                 !e.isTransferHistory &&
-                !e.name.includes("واجب") &&
                 e.scores && Object.keys(e.scores).length > 0
             ).sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -3535,7 +3549,7 @@ async function updateGroupAnalyticsChart() {
         let hwData = [0, 0, 0, 0, 0, 0, 0];
 
         const filteredHw = filteredHwRaw
-            .filter(d => d.type === 'daily' && d.date && !d.isTransferHistory)
+            .filter(d => isHomeworkAssignment(d) && d.date && !d.isTransferHistory)
             .sort((a, b) => new Date(b.date) - new Date(a.date))
             .slice(0, 7)
             .reverse();
@@ -3686,8 +3700,7 @@ async function saveDailyData(isSilent = false) {
 
                 for (const [studentId, hwRec] of Object.entries(liveSessionData.homework)) {
                     scores[studentId] = {
-                        submitted: hwRec.submitted,
-                        score: hwRec.score
+                        submitted: !!hwRec.submitted
                     };
                 }
 
@@ -3703,6 +3716,7 @@ async function saveDailyData(isSilent = false) {
                             if (!hwData.scores) hwData.scores = {};
                             hwData.scores[sid] = { ...hwData.scores[sid], ...scores[sid] };
                         }
+                        hwData.type = 'homework';
                     } else {
                         hwData = {
                             id: hwId,
@@ -3711,7 +3725,7 @@ async function saveDailyData(isSilent = false) {
                             name: `واجب ${targetDate}`,
                             date: targetDate,
                             scores,
-                            type: 'daily'
+                            type: 'homework'
                         };
                     }
 
@@ -4170,7 +4184,7 @@ async function saveCrossGroupAttendance(student, homeworkSubmitted) {
                         name: `واجب ${date}`,
                         date: date,
                         scores: {},
-                        type: 'daily'
+                        type: 'homework'
                     };
                 }
 
@@ -4178,7 +4192,8 @@ async function saveCrossGroupAttendance(student, homeworkSubmitted) {
                 if (!hwDoc.scores) hwDoc.scores = {};
 
                 // تسجيل التسليم (submitted: true)
-                hwDoc.scores[student.id] = { submitted: true, score: null };
+                hwDoc.scores[student.id] = { submitted: true };
+                hwDoc.type = 'homework';
 
                 // حفظ الواجب (Local & Sync)
                 await putToDB('assignments', hwDoc);
@@ -4469,11 +4484,12 @@ async function processTargetedCrossGroupAttendance(student, targetDate, hwSubmit
                 name:      `واجب ${targetDate}`,
                 date:      targetDate,
                 scores:    {},
-                type:      'daily'
+                type:      'homework'
             };
         }
         if (!hwDoc.scores) hwDoc.scores = {};
-        hwDoc.scores[student.id] = { submitted: true, score: null };
+        hwDoc.scores[student.id] = { submitted: true };
+        hwDoc.type = 'homework';
 
         await putToDB('assignments', hwDoc);
         await addToSyncQueue({
@@ -5627,7 +5643,7 @@ async function loadExams() {
     const exams = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
     const sel = document.getElementById('examSelect');
     sel.innerHTML = `<option value="">${translations[currentLang].selectExamPlaceholder}</option>`;
-    exams.filter(e => e.type === 'exam').forEach(e => {
+    exams.filter(isExamAssignment).forEach(e => {
         const opt = document.createElement('option');
         opt.value = e.id; opt.innerText = e.name;
         sel.appendChild(opt);
@@ -5782,14 +5798,23 @@ async function saveExamGrades() {
     });
 
     const existing = await getFromDB('assignments', examId);
+    if (!existing) return;
     existing.scores = scores;
     existing.totalMark = parseInt(totalMark) || 30;
+    existing.type = 'exam';
 
     await putToDB('assignments', existing);
     await addToSyncQueue({
         type: 'set',
         path: `teachers/${TEACHER_ID}/groups/${SELECTED_GROUP_ID}/assignments/${examId}`,
-        data: { scores, totalMark: existing.totalMark }
+        data: { 
+            id: examId,
+            name: existing.name,
+            date: existing.date || getLocalDateString(),
+            type: 'exam',
+            totalMark: existing.totalMark,
+            scores 
+        }
     });
 }
 
@@ -7513,8 +7538,8 @@ async function loadStudentStats(studentId) {
         const assignments = await getAllFromDB('assignments', 'groupId', SELECTED_GROUP_ID);
         const hwMapByDate = {}; // للوصول السريع لحالة الواجب في الحصص
         assignments.forEach(asm => {
-            if (asm.type === 'daily') {
-                hwMapByDate[asm.date] = asm.scores ? asm.scores[studentId] : null;
+            if (isHomeworkAssignment(asm)) {
+                hwMapByDate[asm.date] = asm;
             }
         });
 
@@ -7545,16 +7570,33 @@ async function loadStudentStats(studentId) {
                 }
 
                 if (sortedAttDocs.indexOf(data) < 20) {
-                    // الربط مع حالة الواجب الحقيقية من الـ assignments
-                    const hwStatus = hwMapByDate[data.date];
-                    const isSubmitted = hwStatus && hwStatus.submitted;
+                    // الربط الدقيق مع حالة الواجب الحقيقية
+                    const hwDoc = hwMapByDate[data.date];
+                    let hwBadge = '';
+
+                    if (!hwDoc) {
+                        hwBadge = '<span class="text-gray-400 dark:text-gray-500 font-bold text-xs">— لا يوجد واجب</span>';
+                    } else {
+                        const hwStatus = hwDoc.scores ? hwDoc.scores[studentId] : null;
+                        const isSubmitted = hwStatus && hwStatus.submitted === true;
+
+                        if (record.status !== 'present') {
+                            hwBadge = isSubmitted 
+                                ? '<span class="text-green-500 font-bold text-xs">✅ تم التسليم</span>' 
+                                : '<span class="text-gray-400 dark:text-gray-500 font-bold text-xs">— غائب</span>';
+                        } else {
+                            hwBadge = isSubmitted 
+                                ? '<span class="text-green-500 font-bold text-xs">✅ تم التسليم</span>' 
+                                : '<span class="text-red-500 font-black text-xs">❌ لم يسلم</span>';
+                        }
+                    }
 
                     historyHTML += `
                         <tr class="hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-gray-800">
                             <td class="p-4 font-bold text-gray-700 dark:text-gray-300">${data.date}</td>
                             <td class="p-4 ${statusColor} font-black">${statusText}</td>
-                            <td class="p-4 text-gray-400 dark:text-gray-500 text-xs font-bold">
-                                ${isSubmitted ? '<span class="text-green-500">✅ تم التسليم</span>' : '<span class="text-red-500">❌ لم يسلم</span>'}
+                            <td class="p-4">
+                                ${hwBadge}
                             </td>
                         </tr>
                     `;
@@ -7566,30 +7608,37 @@ async function loadStudentStats(studentId) {
         let examsHTML = '';
         assignments.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        assignments.forEach(asm => {
-            // تجاهل الواجبات من قائمة "الامتحانات"
-            if (asm.type === 'daily' || (asm.name && asm.name.includes('واجب'))) return;
-
+        assignments.filter(isExamAssignment).forEach(asm => {
+            examCount++;
+            const total = asm.totalMark || 30;
             const scoreData = asm.scores ? asm.scores[studentId] : null;
-            if (scoreData) {
-                examCount++;
-                const total = asm.totalMark || 30;
-                const percent = Math.round((scoreData.score / total) * 100);
-                const colorClass = percent >= 50 ? 'text-green-500' : 'text-red-500';
 
-                examsHTML += `
-                    <div class="p-3 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800 flex justify-between items-center group">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-gray-700 dark:text-gray-200">${asm.name}</span>
-                            <span class="text-[11px] text-gray-600 dark:text-gray-300 font-black tracking-tighter">${asm.date || ''}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-lg font-black ${colorClass}">${scoreData.score}</span>
-                            <span class="text-xs text-gray-400 font-bold">/${total}</span>
-                        </div>
+            let scoreDisplay = '';
+            if (scoreData && scoreData.score !== null && scoreData.score !== undefined && scoreData.score !== '') {
+                const numScore = parseFloat(scoreData.score);
+                const percent = Math.round((numScore / total) * 100);
+                const colorClass = percent >= 50 ? 'text-green-500 font-black' : 'text-red-500 font-black';
+                scoreDisplay = `
+                    <div class="text-right">
+                        <span class="text-lg ${colorClass}">${scoreData.score}</span>
+                        <span class="text-xs text-gray-400 font-bold">/${total}</span>
                     </div>
                 `;
+            } else {
+                scoreDisplay = `
+                    <span class="text-xs text-amber-500 font-bold bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg">لم تُرصد بعد</span>
+                `;
             }
+
+            examsHTML += `
+                <div class="p-3 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800 flex justify-between items-center group">
+                    <div class="flex flex-col">
+                        <span class="font-bold text-gray-700 dark:text-gray-200">${asm.name}</span>
+                        <span class="text-[11px] text-gray-600 dark:text-gray-300 font-black tracking-tighter">${asm.date || ''}</span>
+                    </div>
+                    ${scoreDisplay}
+                </div>
+            `;
         });
 
         // 3. جلب حالة المدفوعات (آخر 6 شهور)

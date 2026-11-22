@@ -463,7 +463,10 @@ exports.notifyOnNewGrades = onDocumentWritten(
       return null;
     }
 
-    const assignmentName = afterData.name || "واجب/امتحان";
+    const isExam = afterData.type === 'exam' || (!afterData.type && afterData.totalMark !== undefined && !(afterData.name || '').includes('واجب'));
+    const isHomework = afterData.type === 'homework' || afterData.type === 'daily' || ((afterData.name || '').includes('واجب'));
+
+    const assignmentName = afterData.name || (isExam ? "امتحان" : "واجب");
     const scoresAfter = afterData.scores || {};
     const subjectName = await getTeacherSubject(teacherId);
 
@@ -480,24 +483,22 @@ exports.notifyOnNewGrades = onDocumentWritten(
             const submittedAfter = !!scoreData.submitted;
             
             const hasScore = scoreData.score !== "" && scoreData.score != null;
-            const isScoreChanged = hasScore && (scoreData.score != scoreBefore);
+            const isScoreChanged = isExam && hasScore && (scoreData.score != scoreBefore);
             
-            // تحقق إذا تم تغيير حالة تسليم الواجب بمعزل عن الدرجة
-            const isSubmittedChanged = (submittedAfter !== submittedBefore);
+            // تحقق إذا تم تغيير حالة تسليم الواجب فقط إذا كان واجباً
+            const isSubmittedChanged = isHomework && (submittedAfter !== submittedBefore);
 
             if (isScoreChanged || isSubmittedChanged) {
-              
-              // ✅ تعديل: فصلنا نوتيفيكاشن الواجب عن الحضور، فهنرسل ده دايما
-
               const sDoc = await admin.firestore().doc(`teachers/${teacherId}/groups/${groupId}/students/${studentId}`).get();
 
               if (sDoc.exists) {
                 const sData = sDoc.data();
-                let title = "تحديث من المدرس 📝";
+                let title = isExam ? "تحديث درجات الامتحان 📝" : "تحديث الواجب 📚";
                 let body = `تم تحديث بيانات "${assignmentName}" للطالب ${sData.name}.`;
+                const targetScreen = isHomework ? "homework" : "grades";
 
                 if (isScoreChanged) {
-                  title = "تم رصد درجة جديدة 📝";
+                  title = "تم رصد درجة الامتحان 📝";
                   body = `حصل الطالب ${sData.name} على ${scoreData.score} من ${afterData.totalMark || 30} في "${assignmentName}" لمادة ${subjectName}.`;
                 } else if (isSubmittedChanged) {
                   if (scoreData.submitted) {
@@ -511,7 +512,7 @@ exports.notifyOnNewGrades = onDocumentWritten(
 
                 const payload = {
                   notification: { title, body },
-                  data: { "screen": "grades", "assignmentId": assignmentId },
+                  data: { "screen": targetScreen, "assignmentId": assignmentId },
                 };
                 await sendNotificationToParent(sData, payload, "notifyOnNewGrades", studentId, teacherId, groupId);
               }
