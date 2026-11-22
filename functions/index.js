@@ -28,7 +28,7 @@ module.exports = {
   // 3. AI & Spot Bot
   processUploadedFile: ai.processUploadedFile,
   cleanupDeletedFile: ai.cleanupDeletedFile,
-  whatsappWebhook: ai.whatsappWebhook,
+  // whatsappWebhook: ai.whatsappWebhook,
   chatWithSpot: ai.chatWithSpot,
 
   // 4. Parent Portal

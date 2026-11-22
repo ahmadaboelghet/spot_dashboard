@@ -4,7 +4,7 @@ const { onObjectFinalized, onObjectDeleted } = require("firebase-functions/v2/st
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
-const twilio = require("twilio");
+// const twilio = require("twilio");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { GoogleAIFileManager } = require("@google/generative-ai/server");
 
@@ -12,8 +12,8 @@ const {
   admin,
   db,
   FieldValue,
-  TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN,
+  // TWILIO_ACCOUNT_SID,
+  // TWILIO_AUTH_TOKEN,
   GEMINI_API_KEY,
   verifyTeacherOrAdmin,
 } = require("./config");
@@ -280,8 +280,9 @@ const cleanupDeletedFile = onObjectDeleted({
 });
 
 /**
- * 3. بوت الواتساب (Twilio) - يعمل بنموذج gemini-2.5-flash ومحدد بـ 30 رسالة/يوم
+ * 3. بوت الواتساب (Twilio) - [معطل حالياً]
  */
+/*
 const whatsappWebhook = onRequest({
   secrets: [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, GEMINI_API_KEY],
 }, async (req, res) => {
@@ -424,6 +425,7 @@ const whatsappWebhook = onRequest({
     return res.status(500).send("ERROR");
   }
 });
+*/
 
 /**
  * 4. دالة الشات الذكي (chatWithSpot)
@@ -678,7 +680,7 @@ You are "Spot", a smart AI assistant for teachers. Communicate in a friendly yet
 module.exports = {
   processUploadedFile,
   cleanupDeletedFile,
-  whatsappWebhook,
+  // whatsappWebhook,
   chatWithSpot,
   ensureValidGeminiFile,
   checkAiRateLimit,

@@ -8,8 +8,8 @@ const { HttpsError } = require("firebase-functions/v2/https");
 setGlobalOptions({ maxInstances: 20 });
 
 // Secret definitions
-const TWILIO_ACCOUNT_SID = defineSecret("TWILIO_ACCOUNT_SID");
-const TWILIO_AUTH_TOKEN = defineSecret("TWILIO_AUTH_TOKEN");
+// const TWILIO_ACCOUNT_SID = defineSecret("TWILIO_ACCOUNT_SID");
+// const TWILIO_AUTH_TOKEN = defineSecret("TWILIO_AUTH_TOKEN");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 // Parent App base URL
@@ -106,8 +106,8 @@ module.exports = {
   admin,
   db,
   FieldValue,
-  TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN,
+  // TWILIO_ACCOUNT_SID,
+  // TWILIO_AUTH_TOKEN,
   GEMINI_API_KEY,
   PARENT_APP_BASE_URL,
   verifyTeacherOrAdmin,
