@@ -11,7 +11,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateOnlineStatus();
 
         const dailyInput = document.getElementById('dailyDateInput');
-        if (dailyInput) dailyInput.valueAsDate = new Date();
+        if (dailyInput) {
+            const savedDailyDate = localStorage.getItem('learnaria-daily-date');
+            if (savedDailyDate) {
+                dailyInput.value = savedDailyDate;
+            } else {
+                dailyInput.valueAsDate = new Date();
+            }
+        }
+        const pmInitInput = document.getElementById('paymentMonthInput');
+        if (pmInitInput) {
+            const savedMonth = localStorage.getItem('learnaria-pay-month');
+            if (savedMonth) pmInitInput.value = savedMonth;
+            else if (!pmInitInput.value) pmInitInput.value = getLocalMonthString();
+        }
 
         createTimePicker('recurringTimeContainer');
         createTimePicker('exceptionNewTimeContainer');
@@ -189,9 +202,12 @@ function setupListeners() {
         renderDailyList();
     });
     document.getElementById('dailyDateInput')?.addEventListener('change', (e) => {
-    sessionScannedStudents.clear(); // <--- أضف هذا السطر
-    renderDailyList();
-});
+        sessionScannedStudents.clear();
+        try {
+            if (e.target.value) localStorage.setItem('learnaria-daily-date', e.target.value);
+        } catch (_) {}
+        renderDailyList();
+    });
     document.getElementById('saveDailyBtn')?.addEventListener('click', saveDailyData);
 
 
@@ -280,7 +296,12 @@ function setupListeners() {
     document.getElementById('cancelSingleClassButton')?.addEventListener('click', cancelSingleClass);
 
     document.getElementById('scanPaymentsBtn')?.addEventListener('click', () => startScanner('payments'));
-    document.getElementById('paymentMonthInput')?.addEventListener('change', renderPaymentsList);
+    document.getElementById('paymentMonthInput')?.addEventListener('change', (e) => {
+        try {
+            if (e.target.value) localStorage.setItem('learnaria-pay-month', e.target.value);
+        } catch (_) {}
+        renderPaymentsList();
+    });
     document.getElementById('savePaymentsBtn')?.addEventListener('click', savePayments);
 
     document.getElementById('addNewExamBtn')?.addEventListener('click', addNewExam);
@@ -1565,8 +1586,10 @@ function switchTab(tabId) {
 
     if (tabId === 'daily') {
         const dailyInput = document.getElementById('dailyDateInput');
-        if (dailyInput) {
-            dailyInput.valueAsDate = new Date();
+        if (dailyInput && !dailyInput.value) {
+            const savedDailyDate = localStorage.getItem('learnaria-daily-date');
+            if (savedDailyDate) dailyInput.value = savedDailyDate;
+            else dailyInput.valueAsDate = new Date();
         }
         renderDailyList();
         updateGroupAnalyticsChart();
@@ -1574,7 +1597,11 @@ function switchTab(tabId) {
     if (tabId === 'students') renderStudents();
     if (tabId === 'payments') {
         const pm = document.getElementById('paymentMonthInput');
-        if (!pm.value) pm.value = getLocalMonthString();
+        if (pm) {
+            const savedMonth = localStorage.getItem('learnaria-pay-month');
+            if (savedMonth) pm.value = savedMonth;
+            else if (!pm.value) pm.value = getLocalMonthString();
+        }
         renderPaymentsList();
     }
     if (tabId === 'exams') loadExams();
@@ -1725,6 +1752,39 @@ async function renderDailyList(filter = "") {
                     score: hwDoc?.scores?.[s.id]?.score || null
                 };
             });
+
+            // ✅ LAYER 2 WAL: Check and merge uncommitted draft if one exists for this group and date
+            try {
+                const draftRaw = localStorage.getItem('elnazer_draft_daily');
+                if (draftRaw) {
+                    const draft = JSON.parse(draftRaw);
+                    if (draft && draft.groupId === SELECTED_GROUP_ID && draft.date === date) {
+                        if (draft.attendance) {
+                            Object.entries(draft.attendance).forEach(([sid, att]) => {
+                                if (liveSessionData.attendance[sid]) {
+                                    liveSessionData.attendance[sid] = { ...liveSessionData.attendance[sid], ...att };
+                                } else {
+                                    liveSessionData.attendance[sid] = att;
+                                }
+                            });
+                        }
+                        if (draft.homework) {
+                            Object.entries(draft.homework).forEach(([sid, hw]) => {
+                                if (liveSessionData.homework[sid]) {
+                                    liveSessionData.homework[sid] = { ...liveSessionData.homework[sid], ...hw };
+                                } else {
+                                    liveSessionData.homework[sid] = hw;
+                                }
+                            });
+                        }
+                        console.log('[DraftBuffer] Merged uncommitted daily draft into liveSessionData');
+                        // Trigger background save to commit draft to IndexedDB and syncQueue
+                        setTimeout(() => { saveDailyData(true); }, 50);
+                    }
+                }
+            } catch (err) {
+                console.warn('[DraftBuffer] Failed to restore daily draft:', err);
+            }
         }
 
         const hwToggle = document.getElementById('homeworkToggle');
@@ -1852,6 +1912,7 @@ async function renderDailyList(filter = "") {
                 }
 
                 updateAttendanceCount();
+                saveDailyDraftSync();
                 scheduleThrottledSave();
             }
 
@@ -1863,6 +1924,7 @@ async function renderDailyList(filter = "") {
                 }
                 liveSessionData.homework[studentId].submitted = e.target.checked;
                 
+                saveDailyDraftSync();
                 scheduleThrottledSave();
             }
         };
@@ -2130,6 +2192,11 @@ async function saveDailyData(isSilent = false) {
 
         if (promises.length > 0) {
             await Promise.all(promises);
+
+            // ✅ LAYER 2 WAL: Clear daily draft once committed to IndexedDB and syncQueue
+            try {
+                localStorage.removeItem('elnazer_draft_daily');
+            } catch (_) {}
 
             if (!isSilent) {
                 showToast(translations[currentLang]?.saved || "تم الحفظ");
@@ -2970,6 +3037,24 @@ async function renderPaymentsList(filter = "") {
             const amt = dbMap[s.id];
             livePaymentData.records[s.id] = { amount: parseInt(amt) || 0, paid: !!(amt && amt > 0) };
         });
+
+        // ✅ LAYER 2 WAL: Check and merge uncommitted draft if one exists for this group and month
+        try {
+            const draftRaw = localStorage.getItem('elnazer_draft_payments');
+            if (draftRaw) {
+                const draft = JSON.parse(draftRaw);
+                if (draft && draft.groupId === SELECTED_GROUP_ID && draft.month === month && draft.records) {
+                    Object.entries(draft.records).forEach(([sid, rec]) => {
+                        livePaymentData.records[sid] = rec;
+                    });
+                    console.log('[DraftBuffer] Merged uncommitted payment draft into livePaymentData');
+                    // Trigger background save to commit draft to IndexedDB and syncQueue
+                    setTimeout(() => { savePayments(true); }, 50);
+                }
+            }
+        } catch (err) {
+            console.warn('[DraftBuffer] Failed to restore payment draft:', err);
+        }
     }
 
     // ── Initial total from memory ─────────────────────────────────────────────
@@ -3039,6 +3124,7 @@ async function renderPaymentsList(filter = "") {
                 // Update memory first
                 livePaymentData.records[s.id] = { amount: newVal, paid: newVal > 0 };
                 recalculateGroupTotalFromMemory();
+                savePaymentDraftSync();
                 clearTimeout(savePaymentsTimeout);
                 savePaymentsTimeout = setTimeout(silentSavePayments, 1000);
             }
@@ -3071,6 +3157,7 @@ async function renderPaymentsList(filter = "") {
             }
 
             recalculateGroupTotalFromMemory();
+            savePaymentDraftSync();
             clearTimeout(savePaymentsTimeout);
             savePaymentsTimeout = setTimeout(silentSavePayments, 1000);
         });
@@ -3121,6 +3208,11 @@ async function savePayments(isSilent = false) {
         
         await putToDB('payments', { id: `${targetGroupId}_PAY_${targetMonth}`, month: targetMonth, records });
         await addToSyncQueue({ type: 'set', path: `teachers/${TEACHER_ID}/groups/${targetGroupId}/payments/${targetMonth}`, data: { month: targetMonth, records } });
+
+        // ✅ LAYER 2 WAL: Clear payment draft once committed to IndexedDB and syncQueue
+        try {
+            localStorage.removeItem('elnazer_draft_payments');
+        } catch (_) {}
         
         if (!isSilent) showToast(translations[currentLang].saved || "تم حفظ التحصيل بنجاح");
         else console.log("✅ Auto-saved payments successfully (Background)");
@@ -3485,22 +3577,69 @@ async function loadPreferences() {
             teacherData = await getFromDB('teachers', TEACHER_ID);
         } catch (e) { console.log("Auto-login fetch error:", e); }
 
-        // ✅ Wait for Firebase Auth session to be ready via built-in LOCAL persistence
+        // ✅ Wait for Firebase Auth session to be ready via built-in LOCAL persistence with offline fallback
         const authUser = await new Promise((resolve) => {
-            if (typeof firebase.auth !== 'function') {
+            if (typeof firebase === 'undefined' || !firebase || typeof firebase.auth !== 'function') {
                 resolve(null);
                 return;
             }
-            const unsubscribe = firebase.auth().onAuthStateChanged((user) => {
-                unsubscribe(); // مرة واحدة فقط
-                if (user) {
-                    console.log("✅ Firebase Auth session active:", user.email);
-                    resolve(user);
-                } else {
-                    console.log("ℹ️ No active Firebase Auth session found");
+
+            // If offline, don't wait for network: resolve immediately with cached currentUser
+            if (!navigator.onLine) {
+                try {
+                    const immediateUser = firebase.auth().currentUser || null;
+                    console.log("📴 Offline boot: Using cached Firebase Auth user:", immediateUser ? immediateUser.email : 'none');
+                    resolve(immediateUser);
+                    return;
+                } catch (_) {
+                    resolve(null);
+                    return;
+                }
+            }
+
+            let settled = false;
+            let unsubscribe = () => {};
+
+            // Fallback timeout to prevent hanging when offline or slow connection
+            const timer = setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    try { unsubscribe(); } catch (_) {}
+                    const fallbackUser = firebase.auth().currentUser || null;
+                    console.warn("⏱️ Firebase Auth check timed out (1500ms). Falling back to currentUser:", fallbackUser ? fallbackUser.email : 'none');
+                    resolve(fallbackUser);
+                }
+            }, 1500);
+
+            try {
+                unsubscribe = firebase.auth().onAuthStateChanged((user) => {
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timer);
+                        try { unsubscribe(); } catch (_) {}
+                        if (user) {
+                            console.log("✅ Firebase Auth session active:", user.email);
+                            resolve(user);
+                        } else {
+                            console.log("ℹ️ No active Firebase Auth session found");
+                            resolve(null);
+                        }
+                    }
+                }, (err) => {
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timer);
+                        console.warn("⚠️ Firebase Auth error during check:", err);
+                        resolve(firebase.auth().currentUser || null);
+                    }
+                });
+            } catch (authErr) {
+                if (!settled) {
+                    settled = true;
+                    clearTimeout(timer);
                     resolve(null);
                 }
-            });
+            }
         });
 
         // Now that Auth is ready, if we didn't have teacherData locally, fetch it from Firestore

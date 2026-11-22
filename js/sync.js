@@ -50,7 +50,11 @@ async function updateOnlineStatus() {
         const isRecovering = window.wasOffline === true;
         window.wasOffline = false;
         
-        processSyncQueue(isRecovering);
+        if (typeof firebase !== 'undefined' && firebase.auth && typeof firebase.auth === 'function' && firebase.auth().currentUser) {
+            processSyncQueue(isRecovering || true);
+        } else {
+            console.log("ℹ️ Recovered online but waiting for Firebase Auth before processing sync queue.");
+        }
     } else {
         indicator.classList.remove('online');
         indicator.classList.add('offline');

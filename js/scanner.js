@@ -787,6 +787,7 @@ async function processDailyScan(student, scannerType = 'camera') {
         // --- 1st Scan: Attendance ---
         attState.status = 'present';
         attState.time = new Date().toISOString();
+        if (typeof saveDailyDraftSync === 'function') saveDailyDraftSync();
 
         if (row) {
             if (attSelect) attSelect.value = 'present';
@@ -808,6 +809,7 @@ async function processDailyScan(student, scannerType = 'camera') {
         if (hasHomeworkToday) {
             if (!isHwSubmitted) {
                 hwState.submitted = true;
+                if (typeof saveDailyDraftSync === 'function') saveDailyDraftSync();
                 
                 if (row) {
                     if (hwCheck) hwCheck.checked = true;
@@ -863,6 +865,7 @@ async function processPaymentScan(student) {
 
     // ── 3. State first — update memory immediately ────────────────────────────
     livePaymentData.records[student.id] = { amount, paid: true };
+    if (typeof savePaymentDraftSync === 'function') savePaymentDraftSync();
     recalculateGroupTotalFromMemory();
 
     // ── 4. DOM second — update visible row if it exists ───────────────────────

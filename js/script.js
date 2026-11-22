@@ -413,6 +413,40 @@ const liveSessionData = { attendance: {}, homework: {}, date: null, groupId: nul
 // Structure: livePaymentData.records = { studentId: { amount, paid } }
 const livePaymentData = { groupId: null, month: null, records: {} };
 
+// ✅ LAYER 2: Synchronous Crash-Proof Draft Buffer (Zero-Loss Write-Ahead Log)
+function saveDailyDraftSync() {
+    try {
+        const dateInput = document.getElementById('dailyDateInput');
+        const date = dateInput ? dateInput.value : (liveSessionData.date || getLocalDateString());
+        const draft = {
+            groupId: SELECTED_GROUP_ID,
+            date: date,
+            attendance: liveSessionData.attendance,
+            homework: liveSessionData.homework,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('elnazer_draft_daily', JSON.stringify(draft));
+    } catch (e) {
+        console.warn('[DraftBuffer] Failed to synchronously buffer daily draft:', e);
+    }
+}
+
+function savePaymentDraftSync() {
+    try {
+        const monthInput = document.getElementById('paymentMonthInput');
+        const month = monthInput ? monthInput.value : (livePaymentData.month || getLocalMonthString());
+        const draft = {
+            groupId: SELECTED_GROUP_ID,
+            month: month,
+            records: livePaymentData.records,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('elnazer_draft_payments', JSON.stringify(draft));
+    } catch (e) {
+        console.warn('[DraftBuffer] Failed to synchronously buffer payment draft:', e);
+    }
+}
+
 // ── Domain Helpers: Explicit Distinction Between Exams & Homework ─────────
 function isExamAssignment(asm) {
     if (!asm) return false;
@@ -1273,7 +1307,11 @@ async function updateOnlineStatus() {
         const isRecovering = window.wasOffline === true;
         window.wasOffline = false;
         
-        processSyncQueue(isRecovering);
+        if (typeof firebase !== 'undefined' && firebase.auth && typeof firebase.auth === 'function' && firebase.auth().currentUser) {
+            processSyncQueue(isRecovering || true);
+        } else {
+            console.log("ℹ️ Recovered online but waiting for Firebase Auth before processing sync queue.");
+        }
     } else {
         indicator.classList.remove('online');
         indicator.classList.add('offline');
@@ -4629,6 +4667,7 @@ async function processDailyScan(student, scannerType = 'camera') {
         }
         
         logEvent('scan_attendance', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: scannerType });
+        saveDailyDraftSync();
         showScanSuccessUI(student, 'attendance');
     } else {
         // --- 2nd Scan: Homework ---
@@ -4643,6 +4682,7 @@ async function processDailyScan(student, scannerType = 'camera') {
                 }
                 
                 logEvent('scan_homework', { student_id: studentId, student_name: student.name, group_id: SELECTED_GROUP_ID, scan_type: scannerType });
+                saveDailyDraftSync();
                 showScanSuccessUI(student, 'homework');
             } else {
                 showToast(`الطالب ${student.name} حضر وسلم الواجب مسبقاً`, 'info');
@@ -4691,6 +4731,7 @@ async function processPaymentScan(student) {
     // ── 3. State first — update memory immediately ────────────────────────────
     livePaymentData.records[student.id] = { amount, paid: true };
     recalculateGroupTotalFromMemory();
+    savePaymentDraftSync();
 
     // ── 4. DOM second — update visible row if it exists ───────────────────────
     let row = document.querySelector(`#paymentsList > div[data-sid="${student.id}"]`);
@@ -6044,22 +6085,69 @@ async function loadPreferences() {
             teacherData = await getFromDB('teachers', TEACHER_ID);
         } catch (e) { console.log("Auto-login fetch error:", e); }
 
-        // ✅ Wait for Firebase Auth session to be ready via built-in LOCAL persistence
+        // ✅ Wait for Firebase Auth session to be ready via built-in LOCAL persistence with offline fallback
         const authUser = await new Promise((resolve) => {
-            if (typeof firebase.auth !== 'function') {
+            if (typeof firebase === 'undefined' || !firebase || typeof firebase.auth !== 'function') {
                 resolve(null);
                 return;
             }
-            const unsubscribe = firebase.auth().onAuthStateChanged((user) => {
-                unsubscribe(); // مرة واحدة فقط
-                if (user) {
-                    console.log("✅ Firebase Auth session active:", user.email);
-                    resolve(user);
-                } else {
-                    console.log("ℹ️ No active Firebase Auth session found");
+
+            // If offline, don't wait for network: resolve immediately with cached currentUser
+            if (!navigator.onLine) {
+                try {
+                    const immediateUser = firebase.auth().currentUser || null;
+                    console.log("📴 Offline boot: Using cached Firebase Auth user:", immediateUser ? immediateUser.email : 'none');
+                    resolve(immediateUser);
+                    return;
+                } catch (_) {
+                    resolve(null);
+                    return;
+                }
+            }
+
+            let settled = false;
+            let unsubscribe = () => {};
+
+            // Fallback timeout to prevent hanging when offline or slow connection
+            const timer = setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    try { unsubscribe(); } catch (_) {}
+                    const fallbackUser = firebase.auth().currentUser || null;
+                    console.warn("⏱️ Firebase Auth check timed out (1500ms). Falling back to currentUser:", fallbackUser ? fallbackUser.email : 'none');
+                    resolve(fallbackUser);
+                }
+            }, 1500);
+
+            try {
+                unsubscribe = firebase.auth().onAuthStateChanged((user) => {
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timer);
+                        try { unsubscribe(); } catch (_) {}
+                        if (user) {
+                            console.log("✅ Firebase Auth session active:", user.email);
+                            resolve(user);
+                        } else {
+                            console.log("ℹ️ No active Firebase Auth session found");
+                            resolve(null);
+                        }
+                    }
+                }, (err) => {
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timer);
+                        console.warn("⚠️ Firebase Auth error during check:", err);
+                        resolve(firebase.auth().currentUser || null);
+                    }
+                });
+            } catch (authErr) {
+                if (!settled) {
+                    settled = true;
+                    clearTimeout(timer);
                     resolve(null);
                 }
-            });
+            }
         });
 
         // Now that Auth is ready, if we didn't have teacherData locally, fetch it from Firestore

@@ -205,6 +205,45 @@ const liveSessionData = { attendance: {}, homework: {}, date: null, groupId: nul
 // Structure: livePaymentData.records = { studentId: { amount, paid } }
 const livePaymentData = { groupId: null, month: null, records: {} };
 
+/**
+ * Synchronous write-ahead log for daily attendance/homework draft to survive unexpected refresh
+ */
+function saveDailyDraftSync() {
+    try {
+        if (!TEACHER_ID || !liveSessionData.groupId || !liveSessionData.date) return;
+        const draft = {
+            teacherId: TEACHER_ID,
+            groupId: liveSessionData.groupId,
+            date: liveSessionData.date,
+            attendance: liveSessionData.attendance,
+            homework: liveSessionData.homework,
+            updatedAt: Date.now()
+        };
+        localStorage.setItem('elnazer_draft_daily', JSON.stringify(draft));
+    } catch (e) {
+        console.warn('Failed to write daily draft to localStorage:', e);
+    }
+}
+
+/**
+ * Synchronous write-ahead log for payments draft to survive unexpected refresh
+ */
+function savePaymentDraftSync() {
+    try {
+        if (!TEACHER_ID || !livePaymentData.groupId || !livePaymentData.month) return;
+        const draft = {
+            teacherId: TEACHER_ID,
+            groupId: livePaymentData.groupId,
+            month: livePaymentData.month,
+            records: livePaymentData.records,
+            updatedAt: Date.now()
+        };
+        localStorage.setItem('elnazer_draft_payments', JSON.stringify(draft));
+    } catch (e) {
+        console.warn('Failed to write payment draft to localStorage:', e);
+    }
+}
+
 // ── Domain Helpers: Explicit Distinction Between Exams & Homework ─────────
 function isExamAssignment(asm) {
     if (!asm) return false;
