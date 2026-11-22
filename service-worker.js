@@ -1,6 +1,6 @@
-const CACHE_NAME = 'learnaria-cache-v5';
+const CACHE_NAME = 'learnaria-cache-v6';
 
-// Only cache truly static assets - NEVER cache script.js so updates are instant
+// Only cache truly static assets - NEVER cache dynamic scripts so updates are instant
 const urlsToCache = [
     '/',
     '/index.html',
@@ -12,7 +12,13 @@ const urlsToCache = [
 // Files that should NEVER be served from cache (always fetch fresh)
 const neverCache = [
     '/js/script.js',
-    'script.js'
+    'script.js',
+    '/js/config.js',
+    '/js/db.js',
+    '/js/sync.js',
+    '/js/scanner.js',
+    '/js/ai-chat.js',
+    '/js/dashboard.js'
 ];
 
 self.addEventListener('install', event => {
