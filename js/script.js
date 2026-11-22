@@ -76,7 +76,7 @@ const prodConfig = {
 const devConfig = {
     apiKey: "AIzaSyAvWZpOmVqXxJhpcnuUod-kGn_JEFN7XFE",
     authDomain: "spot-dev-17336.firebaseapp.com",
-    projectId: "learnaria-483e7",
+    projectId: "spot-dev-17336",
     storageBucket: "spot-dev-17336.firebasestorage.app",
     messagingSenderId: "581004817275",
     appId: "1:581004817275:web:59c8d43a4c4aeae7fd43de",
@@ -90,15 +90,20 @@ let app, firestoreDB, storage, functions;
 let activeConfig; // المتغير اللي شايل الكونفيج المختار
 
 try {
-    // الكشف عن البيئة (لو العنوان localhost أو 127.0.0.1 يبقى إحنا بنجرب)
-    if (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "file:") {
-        console.log("🚧 Running in DEVELOPMENT mode (Test DB)");
-        activeConfig = prodConfig;
+    // الكشف عن البيئة (لو العنوان localhost أو 127.0.0.1 أو سيرفر الـ dev يبقى إحنا في بيئة التطوير)
+    const isDevEnv = location.hostname === "localhost" || 
+                     location.hostname === "127.0.0.1" || 
+                     location.hostname.includes("spot-dev") ||
+                     location.protocol === "file:";
+
+    if (isDevEnv) {
+        console.log("🚧 Running in DEVELOPMENT mode (Connected to Spot-dev: spot-dev-17336)");
+        activeConfig = devConfig;
 
         // علامة أمان: خط أحمر فوق عشان تعرف إنك في التست وماتقلقش وانت بتمسح
         document.body.style.borderTop = "5px solid red";
     } else {
-        console.log("🟢 Running in PRODUCTION mode (Live DB)");
+        console.log("🟢 Running in PRODUCTION mode (Connected to Live DB: learnaria-483e7)");
         activeConfig = prodConfig;
     }
 
@@ -106,8 +111,8 @@ try {
         // تشغيل التطبيق بالكونفيج المختار
         app = firebase.initializeApp(activeConfig);
 
-        // Connect to Emulators if on localhost
-        if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+        // Connect to Emulators ONLY if explicitly requested via ?emulator=true in URL
+        if ((location.hostname === "localhost" || location.hostname === "127.0.0.1") && location.search.includes('emulator=true')) {
             firebase.auth().useEmulator('http://localhost:9090/');
             firebase.firestore().useEmulator('localhost', 8088);
             firebase.functions().useEmulator('localhost', 5011);

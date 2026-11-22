@@ -256,14 +256,35 @@
             appId: "1:573038013067:web:db6a78e8370d33b07a828e",
             measurementId: "G-T68CEZS4YC"
         };
+
+        const devConfig = {
+            apiKey: "AIzaSyAvWZpOmVqXxJhpcnuUod-kGn_JEFN7XFE",
+            authDomain: "spot-dev-17336.firebaseapp.com",
+            projectId: "spot-dev-17336",
+            storageBucket: "spot-dev-17336.firebasestorage.app",
+            messagingSenderId: "581004817275",
+            appId: "1:581004817275:web:59c8d43a4c4aeae7fd43de",
+            measurementId: "G-E4TN12XLED"
+        };
+
+        const isDevEnv = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' || 
+                         window.location.hostname.includes('spot-dev') ||
+                         window.location.protocol === 'file:';
+
+        const activeConfig = isDevEnv ? devConfig : prodConfig;
+        if (isDevEnv) {
+            document.body.style.borderTop = "5px solid red";
+            console.log("🚧 Running Admin in DEVELOPMENT mode (Connected to Spot-dev)");
+        }
         
         // Initialize Firebase
-        const app = firebase.initializeApp(prodConfig);
+        const app = firebase.initializeApp(activeConfig);
         const auth = firebase.auth();
         const functions = firebase.functions();
         const db = firebase.firestore();
 
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.search.includes('emulator=true')) {
             auth.useEmulator(`http://${window.location.hostname}:9090`);
             functions.useEmulator(window.location.hostname, 5011);
             db.useEmulator(window.location.hostname, 8088);
