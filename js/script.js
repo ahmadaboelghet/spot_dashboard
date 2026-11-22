@@ -5523,14 +5523,15 @@ async function renderPaymentsList(filter = "") {
 
         div.innerHTML = `
 <span onclick="openStudentProfile('${s.id}')" 
-      class="font-bold text-gray-700 dark:text-gray-200 w-1/3 truncate cursor-pointer hover:text-[#F2CE5A] transition-colors">
+      class="font-bold text-gray-700 dark:text-gray-200 flex-1 min-w-0 break-words cursor-pointer hover:text-[#F2CE5A] transition-colors leading-snug">
     ${s.name}
-</span>            <div class="flex items-center gap-3 justify-end w-2/3">
-                <input type="number"
-                       class="payment-input input-field h-9 w-24 text-center text-sm ${isPaid ? 'text-green-600 font-bold' : 'text-gray-400'}"
-                       placeholder="0" value="${amount}" min="0">
-                <input type="checkbox" class="payment-check w-6 h-6 accent-green-600 cursor-pointer" ${isPaid ? 'checked' : ''}>
-            </div>
+</span>
+<div class="flex items-center gap-2 sm:gap-3 justify-end shrink-0">
+    <input type="number"
+           class="payment-input input-field h-9 w-20 sm:w-24 text-center text-sm ${isPaid ? 'text-green-600 font-bold' : 'text-gray-400'}"
+           placeholder="0" value="${amount}" min="0">
+    <input type="checkbox" class="payment-check w-6 h-6 accent-green-600 cursor-pointer shrink-0" ${isPaid ? 'checked' : ''}>
+</div>
         `;
 
         const checkbox = div.querySelector('.payment-check');
@@ -5701,11 +5702,12 @@ async function renderExamGrades(filter = "") {
 
     // تفعيل الحفظ التلقائي للدرجة النهائية (مع التحقق من الدرجات الحالية)
     totalMarkInput.onchange = (e) => {
-        const newTotal = parseInt(e.target.value) || 0;
+        const newTotal = parseFloat(e.target.value) || 0;
         // التحقق لو فيه درجات أكبر من النهاية العظمى الجديدة
         let hasError = false;
         document.querySelectorAll('.exam-score-input').forEach(inp => {
-            if (parseInt(inp.value) > newTotal) {
+            const val = parseFloat(inp.value);
+            if (!isNaN(val) && val > newTotal) {
                 inp.value = newTotal;
                 inp.classList.add('border-red-500');
                 hasError = true;
@@ -5760,22 +5762,23 @@ async function renderExamGrades(filter = "") {
         };
         div.innerHTML = `<label class="text-sm font-bold w-1/2 truncate dark:text-white"> ${s.name}</label>
                          <div class="relative w-1/2">
-                            <input type="number" class="exam-score-input input-field w-full h-10 text-center font-bold" 
+                            <input type="number" step="any" min="0" class="exam-score-input input-field w-full h-10 text-center font-bold" 
                                    data-sid="${s.id}" value="${val}" placeholder="0">
                             <span class="absolute left-3 top-2 text-[10px] text-gray-400">/${totalMark}</span>
                          </div>`;
 
         const inp = div.querySelector('input');
         inp.addEventListener('input', (e) => {
-            const currentTotal = parseInt(totalMarkInput.value) || 0;
-            if (parseInt(e.target.value) > currentTotal) {
+            const currentTotal = parseFloat(totalMarkInput.value) || 0;
+            const val = parseFloat(e.target.value);
+            if (!isNaN(val) && val > currentTotal) {
                 e.target.classList.add('border-red-500');
                 showToast(`الدرجة لا يمكن أن تزيد عن ${currentTotal}`, 'error');
                 return;
             } else {
                 e.target.classList.remove('border-red-500');
             }
-            if (parseInt(e.target.value) === currentTotal && currentTotal > 0) {
+            if (!isNaN(val) && val === currentTotal && currentTotal > 0) {
                 showCelebration();
             }
             // Wait 3 seconds after the user stops typing before saving/sending notification
@@ -5800,7 +5803,7 @@ async function saveExamGrades() {
     const existing = await getFromDB('assignments', examId);
     if (!existing) return;
     existing.scores = scores;
-    existing.totalMark = parseInt(totalMark) || 30;
+    existing.totalMark = parseFloat(totalMark) || 30;
     existing.type = 'exam';
 
     await putToDB('assignments', existing);
@@ -6275,6 +6278,8 @@ function openGoldenSettings() {
 }
 
 // 5. دالة التحقق من الفوز (النسخة الآمنة - Safe Version)
+let goldenTicketTimer = null;
+
 function checkGoldenTicket(studentName) {
     // لو النظام مقفول أو مفيش جوائز، نخرج فوراً
     if (!goldenConfig || !goldenConfig.isEnabled || !goldenConfig.prizes || !goldenConfig.prizes.length) return;
@@ -6297,6 +6302,12 @@ function checkGoldenTicket(studentName) {
             prizeNameEl.innerText = randomPrize;
             modalEl.style.display = 'flex';
             isScannerPaused = true;
+
+            // إخفاء تلقائي بعد 4 ثواني
+            if (goldenTicketTimer) clearTimeout(goldenTicketTimer);
+            goldenTicketTimer = setTimeout(() => {
+                closeGoldenTicket();
+            }, 4000);
         }
 
         console.log(`🎰 Winner! Student: ${studentName}, Prize: ${randomPrize}`);
@@ -6325,6 +6336,10 @@ function launchConfetti() {
 
 // 7. دالة إغلاق النافذة
 function closeGoldenTicket() {
+    if (goldenTicketTimer) {
+        clearTimeout(goldenTicketTimer);
+        goldenTicketTimer = null;
+    }
     const modal = document.getElementById('goldenTicketModal');
     if (modal) modal.style.display = 'none';
     isScannerPaused = false;
